@@ -45,45 +45,80 @@ serve(async (req) => {
     // Calculate dimensions based on aspect ratio
     const dimensions = getImageDimensions(aspectRatio, resolution);
     
-    // Use Lovable AI Gateway for image generation
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+    // Use Lovable AI Gateway (Nano Banana Pro) via chat completions for image generation
+    const sizedPrompt = [
+      prompt,
+      "",
+      "Contraintes de sortie (IMPORTANT):",
+      "- Génère UNE image uniquement.",
+      "- Ne fournis aucune explication, aucun raisonnement, aucun texte hors image.",
+      `- Respecte le ratio ${aspectRatio}.`,
+      `- Taille cible ~ ${dimensions.width}x${dimensions.height} pixels.`,
+      `- Format souhaité: ${outputFormat}.`,
+    ].join("\n");
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        prompt: prompt,
-        n: 1,
-        size: `${dimensions.width}x${dimensions.height}`,
-        response_format: "url",
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Tu es un générateur d'images. Réponds avec une image (et éventuellement un court texte), sans raisonnement.",
+          },
+          {
+            role: "user",
+            content: sizedPrompt,
+          },
+        ],
+        modalities: ["image", "text"],
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Lovable AI API error:", response.status, errorText);
+
+      // Surface common Lovable AI billing/rate-limit errors
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Trop de requêtes. Réessayez dans quelques instants." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Crédits insuffisants. Ajoutez des crédits et réessayez." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       return new Response(
-        JSON.stringify({ 
-          error: "Failed to generate image", 
+        JSON.stringify({
+          error: "Failed to generate image",
           details: errorText,
-          status: response.status 
+          status: response.status,
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const data = await response.json();
     console.log("Lovable AI response received");
 
-    const imageUrl = data.data?.[0]?.url;
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageUrl) {
       console.error("No image URL in response:", data);
       return new Response(
         JSON.stringify({ error: "No image URL in response", details: data }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
