@@ -10,6 +10,27 @@ interface GenerateImageRequest {
   aspectRatio?: string;
   resolution?: string;
   outputFormat?: string;
+  referenceImageUrl?: string;
+}
+
+interface KieTaskResponse {
+  code: number;
+  message: string;
+  data: {
+    taskId: string;
+  };
+}
+
+interface KieTaskStatusResponse {
+  code: number;
+  message: string;
+  data: {
+    taskId: string;
+    state: "pending" | "processing" | "success" | "fail";
+    resultJson?: string;
+    failCode?: string;
+    failMsg?: string;
+  };
 }
 
 serve(async (req) => {
@@ -19,17 +40,23 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    const KIE_AI_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+
+    if (!KIE_AI_API_KEY) {
+      console.error("KIE_AI_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: "API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { prompt, aspectRatio = "1:1", resolution = "1K", outputFormat = "png" } = await req.json() as GenerateImageRequest;
+    const {
+      prompt,
+      aspectRatio = "1:1",
+      resolution = "1K",
+      outputFormat = "png",
+      referenceImageUrl,
+    } = (await req.json()) as GenerateImageRequest;
 
     if (!prompt) {
       return new Response(
@@ -38,101 +65,154 @@ serve(async (req) => {
       );
     }
 
-    console.log("Generating image with Lovable AI...");
+    console.log("Creating task with KIE AI Nano Banana Pro...");
     console.log("Prompt:", prompt.substring(0, 200) + "...");
     console.log("Parameters:", { aspectRatio, resolution, outputFormat });
 
-    // Calculate dimensions based on aspect ratio
-    const dimensions = getImageDimensions(aspectRatio, resolution);
-    
-    // Use Lovable AI Gateway (Nano Banana Pro) via chat completions for image generation
-    const sizedPrompt = [
-      prompt,
-      "",
-      "Contraintes de sortie (IMPORTANT):",
-      "- Génère UNE image uniquement.",
-      "- Ne fournis aucune explication, aucun raisonnement, aucun texte hors image.",
-      `- Respecte le ratio ${aspectRatio}.`,
-      `- Taille cible ~ ${dimensions.width}x${dimensions.height} pixels.`,
-      `- Format souhaité: ${outputFormat}.`,
-    ].join("\n");
+    // Map aspect ratio format (our format uses ":" but KIE uses ":" as well)
+    const kieAspectRatio = aspectRatio;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Build image_input array if reference image is provided
+    const imageInput: string[] = [];
+    if (referenceImageUrl) {
+      imageInput.push(referenceImageUrl);
+    }
+
+    // Step 1: Create task
+    const createTaskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${KIE_AI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Tu es un générateur d'images. Réponds avec une image (et éventuellement un court texte), sans raisonnement.",
-          },
-          {
-            role: "user",
-            content: sizedPrompt,
-          },
-        ],
-        modalities: ["image", "text"],
+        model: "nano-banana-pro",
+        input: {
+          prompt: prompt,
+          image_input: imageInput.length > 0 ? imageInput : undefined,
+          aspect_ratio: kieAspectRatio,
+          resolution: resolution,
+          output_format: outputFormat.toLowerCase(),
+        },
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Lovable AI API error:", response.status, errorText);
-
-      // Surface common Lovable AI billing/rate-limit errors
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Trop de requêtes. Réessayez dans quelques instants." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crédits insuffisants. Ajoutez des crédits et réessayez." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
+    if (!createTaskResponse.ok) {
+      const errorText = await createTaskResponse.text();
+      console.error("KIE AI createTask error:", createTaskResponse.status, errorText);
       return new Response(
         JSON.stringify({
-          error: "Failed to generate image",
+          error: "Failed to create generation task",
           details: errorText,
-          status: response.status,
+          status: createTaskResponse.status,
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const data = await response.json();
-    console.log("Lovable AI response received");
+    const createTaskData = (await createTaskResponse.json()) as KieTaskResponse;
+    console.log("Task created:", createTaskData);
 
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageUrl) {
-      console.error("No image URL in response:", data);
+    if (createTaskData.code !== 200 || !createTaskData.data?.taskId) {
+      console.error("Task creation failed:", createTaskData);
       return new Response(
-        JSON.stringify({ error: "No image URL in response", details: data }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: "Task creation failed",
+          details: createTaskData.message,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Image generated successfully");
-    
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        imageUrl,
-        taskId: crypto.randomUUID(),
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const taskId = createTaskData.data.taskId;
+    console.log("Task ID:", taskId);
 
+    // Step 2: Poll for task completion
+    const maxAttempts = 60; // 60 attempts * 3 seconds = 3 minutes max
+    const pollInterval = 3000; // 3 seconds
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+      console.log(`Polling attempt ${attempt + 1}/${maxAttempts}...`);
+
+      const statusResponse = await fetch("https://api.kie.ai/api/v1/jobs/getTask", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${KIE_AI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ taskId }),
+      });
+
+      if (!statusResponse.ok) {
+        console.error("Status poll error:", statusResponse.status);
+        continue; // Retry on transient errors
+      }
+
+      const statusData = (await statusResponse.json()) as KieTaskStatusResponse;
+      console.log("Task status:", statusData.data?.state);
+
+      if (statusData.code !== 200) {
+        console.error("Status check failed:", statusData);
+        continue;
+      }
+
+      const taskState = statusData.data?.state;
+
+      if (taskState === "success") {
+        // Parse resultJson to get image URL
+        try {
+          const result = JSON.parse(statusData.data.resultJson || "{}");
+          const imageUrl = result.resultUrls?.[0];
+
+          if (!imageUrl) {
+            console.error("No image URL in result:", result);
+            return new Response(
+              JSON.stringify({ error: "No image URL in result" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          console.log("Image generated successfully:", imageUrl);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              imageUrl,
+              taskId,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (parseError) {
+          console.error("Failed to parse result:", parseError, statusData.data.resultJson);
+          return new Response(
+            JSON.stringify({ error: "Failed to parse generation result" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      if (taskState === "fail") {
+        console.error("Task failed:", statusData.data.failMsg);
+        return new Response(
+          JSON.stringify({
+            error: "Image generation failed",
+            details: statusData.data.failMsg || "Unknown error",
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // pending or processing - continue polling
+    }
+
+    // Timeout
+    console.error("Task timed out");
+    return new Response(
+      JSON.stringify({ error: "Generation timed out. Please try again." }),
+      { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Error in generate-image function:", error);
     return new Response(
@@ -141,31 +221,3 @@ serve(async (req) => {
     );
   }
 });
-
-function getImageDimensions(aspectRatio: string, resolution: string): { width: number; height: number } {
-  // Base size based on resolution
-  const baseSize = resolution === "2K" ? 1024 : resolution === "4K" ? 1536 : 512;
-  
-  const ratios: Record<string, { w: number; h: number }> = {
-    "1:1": { w: 1, h: 1 },
-    "4:3": { w: 4, h: 3 },
-    "3:4": { w: 3, h: 4 },
-    "16:9": { w: 16, h: 9 },
-    "9:16": { w: 9, h: 16 },
-    "3:2": { w: 3, h: 2 },
-    "2:3": { w: 2, h: 3 },
-  };
-  
-  const ratio = ratios[aspectRatio] || ratios["1:1"];
-  
-  // Calculate dimensions maintaining aspect ratio
-  if (ratio.w >= ratio.h) {
-    const width = baseSize;
-    const height = Math.round((baseSize * ratio.h) / ratio.w);
-    return { width, height };
-  } else {
-    const height = baseSize;
-    const width = Math.round((baseSize * ratio.w) / ratio.h);
-    return { width, height };
-  }
-}
