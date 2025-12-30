@@ -81,19 +81,29 @@ function buildFinalPrompt({
   prompt: string;
   aspectRatio: string;
 }) {
-  const systemPart = [
-    "Affiche publicitaire professionnelle.",
-    `Format: ${aspectRatio}.`,
-    "Haute résolution, texte lisible.",
-    "Personnages africains si personnes présentes.",
-    "---",
+  // Instructions système professionnelles optimisées pour la génération d'affiches
+  const systemInstructions = [
+    "Create a professional advertising poster design.",
+    "High-quality graphic design with clean typography.",
+    "Modern, polished aesthetic suitable for print.",
+    "Text must be clearly legible and well-positioned.",
+    "Apply the color palette harmoniously throughout the design.",
+    "Do NOT display color codes or hex values as text.",
+    "If people are shown, use African characters with authentic features.",
+    `Poster format: ${aspectRatio}.`,
   ].join(" ");
   
-  // Calculate available space for user prompt
-  const availableLength = MAX_PROMPT_LENGTH - systemPart.length - 5;
-  const truncatedPrompt = truncateText(prompt.trim(), availableLength);
+  // Nettoyer le prompt utilisateur de tout code hex résiduel
+  const cleanedPrompt = prompt
+    .replace(/#[0-9A-Fa-f]{6}/gi, "") // Supprimer les codes hex
+    .replace(/\s+/g, " ") // Normaliser les espaces
+    .trim();
   
-  return `${systemPart}\n${truncatedPrompt}`;
+  // Combiner avec priorité au style
+  const fullPrompt = `${systemInstructions}\n\n${cleanedPrompt}`;
+  
+  // Tronquer si nécessaire
+  return truncateText(fullPrompt, MAX_PROMPT_LENGTH);
 }
 
 async function pollForResult(taskId: string, apiKey: string, maxAttempts = 40, intervalMs = 3000): Promise<string> {
