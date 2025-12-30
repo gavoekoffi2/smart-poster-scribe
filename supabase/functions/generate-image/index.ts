@@ -328,6 +328,27 @@ async function pollForResult(
   throw new Error("Délai d'attente dépassé pour la génération");
 }
 
+// ============ INPUT VALIDATION CONSTANTS ============
+const MAX_PROMPT_LENGTH = 5000;
+const MAX_IMAGE_SIZE_MB = 10;
+const MAX_LOGO_COUNT = 5;
+const ALLOWED_ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
+const ALLOWED_RESOLUTIONS = ['1K', '2K', '4K'];
+const ALLOWED_OUTPUT_FORMATS = ['png', 'jpg', 'webp'];
+
+function validateBase64Size(base64: string, maxMB: number, fieldName: string): void {
+  if (typeof base64 !== 'string') {
+    throw new Error(`${fieldName}: format invalide`);
+  }
+  // Remove data URL prefix if present
+  const base64Content = base64.includes(',') ? base64.split(',')[1] : base64;
+  const sizeInBytes = (base64Content.length * 3) / 4;
+  const sizeInMB = sizeInBytes / (1024 * 1024);
+  if (sizeInMB > maxMB) {
+    throw new Error(`${fieldName}: taille maximale dépassée (${maxMB}MB)`);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -350,6 +371,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const body = await req.json();
     const {
       prompt,
       referenceImage,
@@ -359,20 +381,68 @@ serve(async (req) => {
       aspectRatio = "3:4",
       resolution = "2K",
       outputFormat = "png",
-    } = await req.json();
+    } = body;
 
-    console.log("Request received:");
-    console.log("- Prompt length:", prompt?.length || 0);
+    // ============ INPUT VALIDATION ============
+    // Validate prompt
+    if (!prompt || typeof prompt !== 'string') {
+      throw new Error("Le prompt est requis et doit être une chaîne de caractères");
+    }
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      throw new Error(`Le prompt dépasse la limite de ${MAX_PROMPT_LENGTH} caractères`);
+    }
+
+    // Validate aspect ratio
+    if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
+      throw new Error(`Format invalide. Formats acceptés: ${ALLOWED_ASPECT_RATIOS.join(', ')}`);
+    }
+
+    // Validate resolution
+    if (!ALLOWED_RESOLUTIONS.includes(resolution)) {
+      throw new Error(`Résolution invalide. Résolutions acceptées: ${ALLOWED_RESOLUTIONS.join(', ')}`);
+    }
+
+    // Validate output format
+    if (!ALLOWED_OUTPUT_FORMATS.includes(outputFormat)) {
+      throw new Error(`Format de sortie invalide. Formats acceptés: ${ALLOWED_OUTPUT_FORMATS.join(', ')}`);
+    }
+
+    // Validate reference image size
+    if (referenceImage) {
+      validateBase64Size(referenceImage, MAX_IMAGE_SIZE_MB, "Image de référence");
+    }
+
+    // Validate content image size
+    if (contentImage) {
+      validateBase64Size(contentImage, MAX_IMAGE_SIZE_MB, "Image de contenu");
+    }
+
+    // Validate logo images
+    if (logoImages) {
+      if (!Array.isArray(logoImages)) {
+        throw new Error("logoImages doit être un tableau");
+      }
+      if (logoImages.length > MAX_LOGO_COUNT) {
+        throw new Error(`Maximum ${MAX_LOGO_COUNT} logos autorisés`);
+      }
+      for (let i = 0; i < logoImages.length; i++) {
+        validateBase64Size(logoImages[i], MAX_IMAGE_SIZE_MB, `Logo ${i + 1}`);
+      }
+    }
+
+    // Validate logo positions
+    if (logoPositions && !Array.isArray(logoPositions)) {
+      throw new Error("logoPositions doit être un tableau");
+    }
+
+    console.log("Request validated:");
+    console.log("- Prompt length:", prompt.length);
     console.log("- Has reference image:", !!referenceImage);
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Logo positions:", logoPositions);
     console.log("- Has content image:", !!contentImage);
     console.log("- Aspect ratio:", aspectRatio);
     console.log("- Resolution:", resolution);
-
-    if (!prompt) {
-      throw new Error("Le prompt est requis");
-    }
 
     // Préparer les URLs des images
     const imageInputs: string[] = [];

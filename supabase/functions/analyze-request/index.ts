@@ -21,6 +21,9 @@ interface AnalysisResult {
   summary: string;
 }
 
+// ============ INPUT VALIDATION CONSTANTS ============
+const MAX_TEXT_LENGTH = 5000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,16 +40,33 @@ serve(async (req) => {
       });
     }
 
-    const { userText } = await req.json();
+    const body = await req.json();
+    const { userText } = body;
 
-    if (!userText?.trim()) {
-      return new Response(JSON.stringify({ error: "User text is required" }), {
+    // ============ INPUT VALIDATION ============
+    if (!userText || typeof userText !== 'string') {
+      return new Response(JSON.stringify({ error: "User text is required and must be a string" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Analyzing user request:", userText.substring(0, 200));
+    const trimmedText = userText.trim();
+    if (!trimmedText) {
+      return new Response(JSON.stringify({ error: "User text cannot be empty" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (trimmedText.length > MAX_TEXT_LENGTH) {
+      return new Response(JSON.stringify({ error: `Text exceeds maximum length of ${MAX_TEXT_LENGTH} characters` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Analyzing user request:", trimmedText.substring(0, 200));
 
     const systemPrompt = `Tu es un assistant spécialisé dans l'analyse de demandes de création d'affiches publicitaires.
 
