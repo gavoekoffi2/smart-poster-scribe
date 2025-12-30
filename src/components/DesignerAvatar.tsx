@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import designerAvatar from "@/assets/designer-avatar.png";
 
@@ -14,9 +15,10 @@ const sizeClasses = {
   xl: "w-24 h-24",
 };
 
-export function DesignerAvatar({ isWorking = false, size = "md", className }: DesignerAvatarProps) {
+export const DesignerAvatar = forwardRef<HTMLDivElement, DesignerAvatarProps>(
+  function DesignerAvatar({ isWorking = false, size = "md", className }, ref) {
   return (
-    <div className={cn("avatar-container flex-shrink-0", isWorking && "is-working", className)}>
+    <div ref={ref} className={cn("avatar-container flex-shrink-0", isWorking && "is-working", className)}>
       {/* Ambient glow */}
       <div className="avatar-glow" />
       
@@ -36,4 +38,4 @@ export function DesignerAvatar({ isWorking = false, size = "md", className }: De
       )}
     </div>
   );
-}
+});
