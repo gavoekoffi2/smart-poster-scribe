@@ -2,21 +2,22 @@ export type AspectRatio = "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" 
 export type Resolution = "1K" | "2K" | "4K";
 export type OutputFormat = "png" | "jpg";
 
-export type Domain = "professional" | "creative" | "personal" | "event" | "commercial";
+export type Domain = 
+  | "church" 
+  | "event" 
+  | "education" 
+  | "restaurant" 
+  | "fashion" 
+  | "music" 
+  | "sport" 
+  | "technology" 
+  | "health" 
+  | "realestate"
+  | "other";
 
 export interface DomainInfo {
   id: Domain;
   label: string;
-  description: string;
-  icon: string;
-  questions: DomainQuestion[];
-}
-
-export interface DomainQuestion {
-  id: string;
-  question: string;
-  placeholder: string;
-  required?: boolean;
 }
 
 export interface GenerationParams {
@@ -27,7 +28,8 @@ export interface GenerationParams {
   domain?: Domain;
   referenceImageUrl?: string;
   referenceDescription?: string;
-  domainAnswers?: Record<string, string>;
+  colorPalette?: string[];
+  contentImageUrl?: string;
 }
 
 export interface GeneratedImage {
@@ -52,4 +54,27 @@ export interface ImageAnalysisResult {
   success: boolean;
   description?: string;
   error?: string;
+}
+
+// Chat types
+export type MessageRole = "assistant" | "user";
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  timestamp: Date;
+  image?: string;
+  isLoading?: boolean;
+}
+
+export interface ConversationState {
+  step: "greeting" | "domain" | "details" | "reference" | "colors" | "content_image" | "generating" | "complete";
+  domain?: Domain;
+  description?: string;
+  referenceImage?: string;
+  referenceDescription?: string;
+  colorPalette?: string[];
+  contentImage?: string;
+  needsContentImage?: boolean;
 }
