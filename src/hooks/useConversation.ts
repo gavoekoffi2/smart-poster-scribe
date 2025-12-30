@@ -14,6 +14,64 @@ import { toast } from "sonner";
 const INITIAL_MESSAGE =
   "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
 
+// Convertit un code hex en description de couleur naturelle
+function hexToColorName(hex: string): string {
+  const colorMap: Record<string, string> = {
+    // Rouges
+    "#FF0000": "rouge vif", "#FF6B6B": "rouge corail", "#DC143C": "rouge cramoisi",
+    "#8B0000": "rouge foncé", "#FF4500": "rouge orangé", "#CD5C5C": "rouge indien",
+    // Oranges
+    "#FFA500": "orange", "#FF8C00": "orange foncé", "#FF7F50": "orange corail",
+    "#E67E22": "orange citrouille", "#F39C12": "orange doré",
+    // Jaunes
+    "#FFFF00": "jaune vif", "#FFD700": "jaune doré", "#F1C40F": "jaune soleil",
+    "#FFEAA7": "jaune pâle", "#FFC300": "jaune safran",
+    // Verts
+    "#00FF00": "vert vif", "#228B22": "vert forêt", "#32CD32": "vert lime",
+    "#2ECC71": "vert émeraude", "#27AE60": "vert jade", "#1ABC9C": "vert turquoise",
+    "#006400": "vert foncé", "#90EE90": "vert clair",
+    // Bleus
+    "#0000FF": "bleu vif", "#1E90FF": "bleu dodger", "#4169E1": "bleu royal",
+    "#000080": "bleu marine", "#87CEEB": "bleu ciel", "#3498DB": "bleu azur",
+    "#2980B9": "bleu océan", "#00CED1": "bleu turquoise",
+    // Violets/Mauves
+    "#800080": "violet", "#9B59B6": "violet améthyste", "#8E44AD": "violet profond",
+    "#E91E63": "rose magenta", "#FF69B4": "rose vif", "#FFC0CB": "rose pâle",
+    // Marrons/Beiges
+    "#8B4513": "marron", "#D2691E": "chocolat", "#A0522D": "terre de sienne",
+    "#DEB887": "beige", "#F5DEB3": "blé", "#D2B48C": "brun clair",
+    // Gris/Noir/Blanc
+    "#000000": "noir", "#FFFFFF": "blanc", "#808080": "gris",
+    "#C0C0C0": "gris argent", "#2C3E50": "gris anthracite", "#34495E": "gris ardoise",
+    // Dorés/Métalliques
+    "#C0A000": "or antique", "#B8860B": "or foncé",
+  };
+  
+  const upperHex = hex.toUpperCase();
+  if (colorMap[upperHex]) return colorMap[upperHex];
+  
+  // Parse RGB et déterminer une description générique
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2 / 255;
+  
+  if (lightness < 0.2) return "sombre";
+  if (lightness > 0.85) return "clair lumineux";
+  
+  if (r > g && r > b) return g > b ? "orangé chaud" : "rouge";
+  if (g > r && g > b) return r > b ? "vert olive" : "vert";
+  if (b > r && b > g) return r > g ? "violet" : "bleu";
+  if (r === g && r > b) return "jaune doré";
+  if (r === b && r > g) return "magenta";
+  if (g === b && g > r) return "cyan";
+  
+  return "couleur harmonieuse";
+}
+
 function buildPrompt(state: ConversationState) {
   const { 
     description, 
@@ -27,53 +85,60 @@ function buildPrompt(state: ConversationState) {
 
   const parts: string[] = [];
 
-  // Domain
+  // 1. STYLE VISUEL D'ABORD (le plus important pour la cohérence)
+  if (referenceDescription) {
+    // Extraire et reformuler le style de référence de façon concise
+    const styleKeywords = referenceDescription
+      .replace(/\n/g, " ")
+      .slice(0, 600);
+    parts.push(`STYLE VISUEL À REPRODUIRE: ${styleKeywords}`);
+  }
+
+  // 2. PALETTE DE COULEURS (intégrée naturellement, pas en codes hex)
+  if (colorPalette?.length) {
+    const colorDescriptions = colorPalette
+      .slice(0, 5) // Max 5 couleurs principales
+      .map(hexToColorName);
+    const uniqueColors = [...new Set(colorDescriptions)];
+    parts.push(`PALETTE: tons ${uniqueColors.join(", ")}`);
+  }
+
+  // 3. TYPE D'AFFICHE
   const domainLabel = domain === "other" && customDomain ? customDomain : domain;
   if (domainLabel) {
-    parts.push(`Affiche (${domainLabel}).`);
+    parts.push(`TYPE: affiche ${domainLabel}`);
   }
 
-  // Reference style - condensed to max 500 chars to avoid API limits
-  if (referenceDescription) {
-    const condensedStyle = referenceDescription.length > 500 
-      ? referenceDescription.slice(0, 500) + "..." 
-      : referenceDescription;
-    parts.push(`Style: ${condensedStyle}`);
-  }
-
-  // Extracted info details
+  // 4. CONTENU TEXTUEL (ce qui doit apparaître sur l'affiche)
   if (extractedInfo) {
-    const details: string[] = [];
-    if (extractedInfo.title) details.push(`Titre: ${extractedInfo.title}`);
-    if (extractedInfo.organizer) details.push(`Organisateur: ${extractedInfo.organizer}`);
-    if (extractedInfo.dates) details.push(`Dates: ${extractedInfo.dates}`);
-    if (extractedInfo.prices) details.push(`Prix: ${extractedInfo.prices}`);
-    if (extractedInfo.contact) details.push(`Contact: ${extractedInfo.contact}`);
-    if (extractedInfo.location) details.push(`Lieu: ${extractedInfo.location}`);
-    if (extractedInfo.targetAudience) details.push(`Public: ${extractedInfo.targetAudience}`);
-    if (extractedInfo.additionalDetails) details.push(extractedInfo.additionalDetails);
+    const textElements: string[] = [];
+    if (extractedInfo.title) textElements.push(`"${extractedInfo.title}"`);
+    if (extractedInfo.dates) textElements.push(`date: ${extractedInfo.dates}`);
+    if (extractedInfo.location) textElements.push(`lieu: ${extractedInfo.location}`);
+    if (extractedInfo.organizer) textElements.push(`par ${extractedInfo.organizer}`);
+    if (extractedInfo.prices) textElements.push(`tarif: ${extractedInfo.prices}`);
+    if (extractedInfo.contact) textElements.push(`contact: ${extractedInfo.contact}`);
     
-    if (details.length > 0) {
-      parts.push(`Détails: ${details.join(". ")}.`);
+    if (textElements.length > 0) {
+      parts.push(`TEXTES SUR L'AFFICHE: ${textElements.join(", ")}`);
     }
   }
 
-  // Original description (may contain additional context)
+  // 5. INSTRUCTIONS ADDITIONNELLES
   if (description) {
-    parts.push(description);
+    // Nettoyer la description des potentiels codes couleurs
+    const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
+    if (cleanDesc) {
+      parts.push(cleanDesc);
+    }
   }
 
-  // Colors
-  if (colorPalette?.length) {
-    parts.push(`Palette de couleurs: ${colorPalette.join(", ")}.`);
-  }
-
-  // African characters instruction
+  // 6. PERSONNAGES AFRICAINS si nécessaire
   if (needsContentImage) {
-    parts.push("Si l'affiche nécessite des personnes, utiliser des personnages africains.");
+    parts.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
   }
 
-  return parts.join(" ").trim();
+  return parts.join(". ").trim();
 }
 
 function formatMissingInfo(missingInfo: string[]): string {
