@@ -10,144 +10,82 @@ interface GenerateImageRequest {
   aspectRatio?: string;
   resolution?: string;
   outputFormat?: string;
-  referenceImageUrl?: string;
+  referenceImage?: string; // Base64 de l'image de référence (style)
+  contentImage?: string;   // Base64 de l'image de contenu à intégrer
 }
 
-interface KieCreateTaskResponse {
-  code: number;
-  msg: string;
-  data?: {
-    taskId?: string;
-    // Some API responses return recordId instead of taskId
-    recordId?: string;
+interface NanoBananaResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      images?: Array<{
+        type: string;
+        image_url: {
+          url: string;
+        };
+      }>;
+    };
+  }>;
+  error?: {
+    message?: string;
   };
 }
 
-interface KieRecordInfoResponse {
-  code: number;
-  msg: string;
-  data?: {
-    state: "waiting" | "success" | "fail";
-    failMsg?: string;
-    // resultJson is a JSON string containing resultUrls array
-    resultJson?: string;
-    // Alternative structures
-    resultList?: Array<{
-      url?: string;
-    }>;
-  };
-}
-
-// Parse the resultJson to extract image URL
-function extractImageUrl(data: KieRecordInfoResponse["data"]): string | null {
-  if (!data) return null;
-  
-  // Primary: resultJson contains {"resultUrls": ["url1", "url2"]}
-  if (data.resultJson) {
-    try {
-      const parsed = JSON.parse(data.resultJson);
-      if (parsed.resultUrls?.length > 0) {
-        return parsed.resultUrls[0];
-      }
-    } catch (e) {
-      console.error("Failed to parse resultJson:", e);
-    }
-  }
-  
-  // Fallback: resultList array
-  if (data.resultList?.[0]?.url) {
-    return data.resultList[0].url;
-  }
-  
-  return null;
-}
-
-function mapResolutionToQuality(resolution: string): "basic" | "high" {
-  return resolution === "4K" ? "high" : "basic";
-}
-
-// Max prompt length for Kie AI Seedream API
-const MAX_PROMPT_LENGTH = 2800; // Leave buffer for safety under 3000 limit
-
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + "...";
-}
-
-function buildFinalPrompt({
-  prompt,
+function buildProfessionalPrompt({
+  userPrompt,
+  hasReferenceImage,
+  hasContentImage,
   aspectRatio,
 }: {
-  prompt: string;
+  userPrompt: string;
+  hasReferenceImage: boolean;
+  hasContentImage: boolean;
   aspectRatio: string;
-}) {
-  // Instructions système professionnelles optimisées pour la génération d'affiches
-  const systemInstructions = [
-    "Create a professional advertising poster design.",
-    "High-quality graphic design with clean typography.",
-    "Modern, polished aesthetic suitable for print.",
-    "Text must be clearly legible and well-positioned.",
-    "Apply the color palette harmoniously throughout the design.",
-    "Do NOT display color codes or hex values as text.",
-    "If people are shown, use African characters with authentic features.",
-    `Poster format: ${aspectRatio}.`,
-  ].join(" ");
+}): string {
+  const instructions: string[] = [];
+
+  // Instructions de base pour une affiche professionnelle
+  instructions.push("Create a professional advertising poster with the following specifications:");
+  instructions.push(`- Format: ${aspectRatio} aspect ratio`);
+  instructions.push("- High-quality graphic design suitable for print");
+  instructions.push("- Clean, legible typography with clear visual hierarchy");
+  instructions.push("- Modern, polished aesthetic");
+  instructions.push("- African characters with authentic features when people are shown");
   
-  // Nettoyer le prompt utilisateur de tout code hex résiduel
-  const cleanedPrompt = prompt
-    .replace(/#[0-9A-Fa-f]{6}/gi, "") // Supprimer les codes hex
-    .replace(/\s+/g, " ") // Normaliser les espaces
-    .trim();
-  
-  // Combiner avec priorité au style
-  const fullPrompt = `${systemInstructions}\n\n${cleanedPrompt}`;
-  
-  // Tronquer si nécessaire
-  return truncateText(fullPrompt, MAX_PROMPT_LENGTH);
-}
-
-async function pollForResult(taskId: string, apiKey: string, maxAttempts = 40, intervalMs = 3000): Promise<string> {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    console.log(`Polling attempt ${attempt + 1}/${maxAttempts} for taskId: ${taskId}`);
-    
-    const response = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${taskId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Polling error: ${response.status}`);
-      throw new Error(`Erreur lors de la vérification du statut: ${response.status}`);
-    }
-
-    const data = (await response.json()) as KieRecordInfoResponse;
-    console.log(`Poll response state: ${data.data?.state}`);
-    console.log(`Full poll response: ${JSON.stringify(data)}`);
-
-    if (data.data?.state === "success") {
-      // Use the helper function to extract image URL
-      const imageUrl = extractImageUrl(data.data);
-      
-      if (!imageUrl) {
-        console.error("No image URL found in response:", JSON.stringify(data));
-        throw new Error("Aucune image retournée par l'API - structure de réponse inattendue");
-      }
-      console.log("Found image URL:", imageUrl.substring(0, 100) + "...");
-      return imageUrl;
-    }
-
-    if (data.data?.state === "fail") {
-      throw new Error(data.data.failMsg || "Échec de la génération d'image");
-    }
-
-    // state === "waiting", continue polling
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  // Instructions spécifiques si image de référence
+  if (hasReferenceImage) {
+    instructions.push("");
+    instructions.push("CRITICAL - STYLE REFERENCE:");
+    instructions.push("- Reproduce EXACTLY the visual style, composition, and layout from the reference image");
+    instructions.push("- Match the typography style, color scheme, and design elements");
+    instructions.push("- Keep the same professional aesthetic and visual hierarchy");
+    instructions.push("- Adapt the style to the new content while maintaining visual consistency");
   }
-
-  throw new Error("La génération a pris trop de temps, veuillez réessayer");
+  
+  // Instructions spécifiques si image de contenu
+  if (hasContentImage) {
+    instructions.push("");
+    instructions.push("CRITICAL - CONTENT IMAGE:");
+    instructions.push("- INTEGRATE the provided content image prominently in the poster");
+    instructions.push("- The content image should be the main visual element");
+    instructions.push("- Position it professionally within the layout");
+    instructions.push("- Do NOT replace or generate a different image - USE the one provided");
+  }
+  
+  // Instructions générales
+  instructions.push("");
+  instructions.push("IMPORTANT RULES:");
+  instructions.push("- Do NOT display any color codes, hex values, or technical text");
+  instructions.push("- All text on the poster must be from the user's specifications");
+  instructions.push("- Apply colors harmoniously throughout the design");
+  instructions.push("- Ensure professional print quality");
+  
+  // Ajouter le prompt utilisateur
+  instructions.push("");
+  instructions.push("USER SPECIFICATIONS:");
+  instructions.push(userPrompt);
+  
+  return instructions.join("\n");
 }
 
 serve(async (req) => {
@@ -157,11 +95,11 @@ serve(async (req) => {
   }
 
   try {
-    const KIE_AI_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!KIE_AI_API_KEY) {
-      console.error("KIE_AI_API_KEY is not configured");
-      return new Response(JSON.stringify({ error: "Clé API Kie AI non configurée" }), {
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(JSON.stringify({ error: "Clé API Lovable non configurée" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -170,8 +108,8 @@ serve(async (req) => {
     const {
       prompt,
       aspectRatio = "3:4",
-      resolution = "2K",
-      outputFormat = "png",
+      referenceImage,
+      contentImage,
     } = (await req.json()) as GenerateImageRequest;
 
     if (!prompt?.trim()) {
@@ -181,67 +119,102 @@ serve(async (req) => {
       });
     }
 
-    const finalPrompt = buildFinalPrompt({
-      prompt,
+    const hasReferenceImage = !!referenceImage;
+    const hasContentImage = !!contentImage;
+    
+    console.log("Generating with Nano Banana Pro (Gemini Flash Image)");
+    console.log("Has reference image:", hasReferenceImage);
+    console.log("Has content image:", hasContentImage);
+    console.log("Aspect ratio:", aspectRatio);
+
+    // Construire le prompt professionnel
+    const finalPrompt = buildProfessionalPrompt({
+      userPrompt: prompt,
+      hasReferenceImage,
+      hasContentImage,
       aspectRatio,
     });
-
-    console.log("Creating task with Seedream 4.5...");
-    console.log("Prompt:", finalPrompt.slice(0, 200) + "...");
-    console.log("Aspect ratio:", aspectRatio);
-    console.log("Quality:", mapResolutionToQuality(resolution));
-
-    // Step 1: Create the task with proper nested input structure
-    const requestBody = {
-      model: "seedream/4.5-text-to-image",
-      input: {
-        prompt: finalPrompt,
-        aspect_ratio: aspectRatio,
-        quality: mapResolutionToQuality(resolution),
-      },
-    };
     
-    console.log("Request body:", JSON.stringify(requestBody, null, 2));
+    console.log("Final prompt length:", finalPrompt.length);
+    console.log("Prompt preview:", finalPrompt.substring(0, 500) + "...");
+
+    // Construire le contenu du message avec les images
+    const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
     
-    const createTaskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
+    // Ajouter le prompt textuel
+    messageContent.push({
+      type: "text",
+      text: finalPrompt,
+    });
+    
+    // Ajouter l'image de référence si présente
+    if (referenceImage) {
+      console.log("Adding reference image to request");
+      messageContent.push({
+        type: "image_url",
+        image_url: {
+          url: referenceImage,
+        },
+      });
+    }
+    
+    // Ajouter l'image de contenu si présente
+    if (contentImage) {
+      console.log("Adding content image to request");
+      messageContent.push({
+        type: "image_url",
+        image_url: {
+          url: contentImage,
+        },
+      });
+    }
+
+    // Appeler l'API Nano Banana Pro
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${KIE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: messageContent,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
     });
 
-    if (!createTaskResponse.ok) {
-      const errorText = await createTaskResponse.text();
-      console.error("Kie AI createTask error:", createTaskResponse.status, errorText);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Nano Banana Pro error:", response.status, errorText);
 
-      if (createTaskResponse.status === 401) {
-        return new Response(JSON.stringify({ error: "Erreur d'authentification avec l'API Kie AI" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (createTaskResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Solde insuffisant sur le compte Kie AI" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (createTaskResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans quelques instants." }), {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          error: "Limite de requêtes atteinte. Réessayez dans quelques instants." 
+        }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ 
+          error: "Crédits insuffisants. Veuillez recharger votre compte." 
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(
         JSON.stringify({
-          error: "Erreur serveur Kie AI",
+          error: "Erreur lors de la génération",
           details: errorText,
-          status: createTaskResponse.status,
+          status: response.status,
         }),
         {
           status: 500,
@@ -250,18 +223,18 @@ serve(async (req) => {
       );
     }
 
-    const createTaskData = (await createTaskResponse.json()) as KieCreateTaskResponse;
-    console.log("Task created:", JSON.stringify(createTaskData));
-
-    const taskId = createTaskData.data?.taskId ?? createTaskData.data?.recordId;
-    const isOkCode = createTaskData.code === 0 || createTaskData.code === 200;
-
-    if (!isOkCode || !taskId) {
-      console.error("Failed to create task:", createTaskData.msg);
+    const data = (await response.json()) as NanoBananaResponse;
+    console.log("Nano Banana Pro response received");
+    
+    // Extraire l'image générée
+    const generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!generatedImage) {
+      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
       return new Response(
-        JSON.stringify({
-          error: createTaskData.msg || "Échec de la création de la tâche",
-          code: createTaskData.code,
+        JSON.stringify({ 
+          error: "Aucune image générée par l'API",
+          details: data.choices?.[0]?.message?.content || "Réponse vide"
         }),
         {
           status: 500,
@@ -270,19 +243,13 @@ serve(async (req) => {
       );
     }
 
-    console.log("Task ID:", taskId);
-
-    // Step 2: Poll for result
-    const imageUrl = await pollForResult(taskId, KIE_AI_API_KEY);
-    console.log("Image generated successfully:", imageUrl.slice(0, 100) + "...");
+    console.log("Image generated successfully, length:", generatedImage.length);
 
     return new Response(
       JSON.stringify({
         success: true,
-        imageUrl,
-        taskId,
-        outputFormat: outputFormat.toLowerCase(),
-        provider: "kie-ai-seedream",
+        imageUrl: generatedImage,
+        provider: "nano-banana-pro",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -290,9 +257,14 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in generate-image function:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Erreur inconnue" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Erreur inconnue" 
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });

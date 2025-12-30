@@ -232,14 +232,18 @@ export function useConversation() {
           return;
         }
 
-        console.log("Generating with prompt:", prompt);
+        console.log("Generating with Nano Banana Pro");
+        console.log("Prompt:", prompt);
+        console.log("Reference image:", state.referenceImage ? "Present" : "None");
+        console.log("Content image:", state.contentImage ? "Present" : "None");
 
+        // Envoyer les images avec le prompt
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
             aspectRatio: "3:4" as AspectRatio,
-            resolution: "2K" as Resolution,
-            outputFormat: "png" as OutputFormat,
+            referenceImage: state.referenceImage || undefined, // Image de référence (style)
+            contentImage: state.contentImage || undefined,     // Image de contenu
           },
         });
 
