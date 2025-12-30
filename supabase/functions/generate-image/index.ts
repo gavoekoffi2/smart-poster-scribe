@@ -117,57 +117,86 @@ function buildProfessionalPrompt({
 }): string {
   const instructions: string[] = [];
 
-  // Instructions de base pour une affiche professionnelle
-  instructions.push("You are an expert graphic designer. Create a UNIQUE, ORIGINAL and PROFESSIONAL advertising poster.");
+  // Base instructions
+  instructions.push(
+    "You are an elite graphic designer. Produce a PRINT-READY advertising poster with agency-level polish."
+  );
+  instructions.push(
+    "The poster must look professionally art-directed: clean grid, deliberate spacing, strong hierarchy, premium finishing."
+  );
   instructions.push("");
-  instructions.push("SPECIFICATIONS:");
-  instructions.push(`- Format: ${aspectRatio} aspect ratio`);
-  instructions.push("- Ultra high-quality print-ready design");
-  instructions.push("- Modern, sophisticated and premium aesthetic");
-  instructions.push("- Professional typography with perfect visual hierarchy");
-  instructions.push("- When depicting people: use authentic African characters with natural features");
-  
-  // Instructions spécifiques si image de référence - S'INSPIRER SEULEMENT DU STYLE
+
+  instructions.push("OUTPUT SPECS:");
+  instructions.push(`- Aspect ratio: ${aspectRatio}`);
+  instructions.push("- High resolution, crisp details, no artifacts");
+  instructions.push("- Perfect typography: consistent alignment, kerning, and hierarchy");
+  instructions.push("- No watermarks, no mockups, no frames");
+
+  // Make sure model doesn't invent text beyond user specs
+  instructions.push("");
+  instructions.push("TEXT RULES:");
+  instructions.push(
+    "- The user specifications may be in French. Keep ALL required poster text EXACTLY as provided (do not translate names/titles unless explicitly asked)."
+  );
+  instructions.push(
+    "- Do NOT invent extra phone numbers, addresses, prices, dates, or claims."
+  );
+
+  // Reference image guidance (stronger style fidelity)
   if (hasReferenceImage) {
     instructions.push("");
-    instructions.push("STYLE INSPIRATION (First image provided):");
-    instructions.push("- ANALYZE the reference image to understand its design principles, visual style, and aesthetic approach");
-    instructions.push("- GET INSPIRED by the layout structure, typography choices, and color harmony");
-    instructions.push("- DO NOT COPY the reference image content, text, or specific elements");
-    instructions.push("- DO NOT USE any information, text, or details FROM the reference image");
-    instructions.push("- CREATE something COMPLETELY NEW and MORE ORIGINAL based on the user's specifications");
-    instructions.push("- ELEVATE the design to be MORE PROFESSIONAL and MORE POLISHED than the reference");
-    instructions.push("- Use the reference ONLY as stylistic inspiration, not as a template to copy");
+    instructions.push("REFERENCE STYLE (First image provided): HIGH FIDELITY STYLE MATCH");
+    instructions.push(
+      "- Treat the reference image as a STYLE BLUEPRINT. Match its overall art direction closely."
+    );
+    instructions.push(
+      "- Reproduce the same era/decade vibe if present (e.g., 2010s, 90s, vintage, modern, minimal, etc.)."
+    );
+    instructions.push(
+      "- Match these STYLE ATTRIBUTES as closely as possible: composition/grid, spacing, alignment, typography vibe (serif/sans, weight, contrast), color mood and contrast, background treatment (solid/gradient/texture), graphic shapes, icon style, and overall tone."
+    );
+    instructions.push(
+      "- Use the reference color palette as guidance (apply it), but do NOT print hex codes or technical notes on the poster."
+    );
+    instructions.push("");
+    instructions.push("IMPORTANT (originality + compliance):");
+    instructions.push(
+      "- Do NOT copy or reuse any text, logos, brand names, faces, or unique copyrighted elements from the reference image."
+    );
+    instructions.push(
+      "- Create an ORIGINAL poster that follows the reference style, but with NEW visuals and layout details."
+    );
+    instructions.push(
+      "- Upgrade the execution: cleaner layout, better hierarchy, more professional typography and spacing."
+    );
   }
-  
-  // Instructions spécifiques si image de contenu
+
+  // Content image guidance
   if (hasContentImage) {
     instructions.push("");
-    instructions.push("MAIN VISUAL ELEMENT (Second image provided):");
-    instructions.push("- INTEGRATE the provided content image as the PRIMARY visual element of the poster");
-    instructions.push("- Position it prominently and professionally within the composition");
-    instructions.push("- The content image MUST be the central focus of the design");
-    instructions.push("- DO NOT replace, modify, or generate a different main image - USE the one provided exactly");
-    instructions.push("- Build the entire poster design around this central image");
+    instructions.push("MAIN VISUAL (Second image provided):");
+    instructions.push(
+      "- Integrate the provided content image as the PRIMARY visual element and design the layout around it."
+    );
+    instructions.push(
+      "- Keep the content image recognizable and prominent; do not replace it with a different generated subject."
+    );
   }
-  
-  // Instructions générales renforcées
+
+  // General quality constraints
   instructions.push("");
-  instructions.push("CRITICAL RULES:");
-  instructions.push("- USE ONLY the user's specifications below for ALL text and content");
-  instructions.push("- DO NOT display any color codes, hex values, or technical information");
-  instructions.push("- DO NOT copy any text or information from the reference image");
-  instructions.push("- Apply the specified colors harmoniously and professionally");
-  instructions.push("- Create a design that is MORE original and MORE professional than any reference");
-  instructions.push("- Ensure the final result is unique, memorable, and print-ready");
-  instructions.push("- The poster must look like it was created by a top-tier design agency");
-  
-  // Ajouter le prompt utilisateur avec emphase
+  instructions.push("QUALITY CHECKLIST:");
+  instructions.push("- Strong visual hierarchy (headline > subhead > details)");
+  instructions.push("- Balanced margins and whitespace");
+  instructions.push("- Cohesive color harmony and contrast");
+  instructions.push("- Professional finishing: subtle shadows/overlays only when needed");
   instructions.push("");
-  instructions.push("=== USER SPECIFICATIONS (Use ONLY this information) ===");
+
+  // User specs
+  instructions.push("=== USER SPECIFICATIONS (ONLY source of facts & text) ===");
   instructions.push(userPrompt);
-  instructions.push("=== END OF USER SPECIFICATIONS ===");
-  
+  instructions.push("=== END USER SPECIFICATIONS ===");
+
   return instructions.join("\n");
 }
 
