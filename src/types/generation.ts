@@ -87,8 +87,15 @@ export interface ChatMessage {
   isLoading?: boolean;
 }
 
+export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
+
+export interface LogoWithPosition {
+  imageUrl: string;
+  position: LogoPosition;
+}
+
 export interface ConversationState {
-  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "content_image" | "generating" | "complete";
+  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "logo_position" | "content_image" | "generating" | "complete";
   domain?: Domain;
   customDomain?: string;
   description?: string;
@@ -97,7 +104,8 @@ export interface ConversationState {
   referenceImage?: string;
   referenceDescription?: string;
   colorPalette?: string[];
-  logoImage?: string;
+  logos?: LogoWithPosition[];
+  currentLogoImage?: string; // Temporary storage for logo before position selection
   contentImage?: string;
   needsContentImage?: boolean;
 }

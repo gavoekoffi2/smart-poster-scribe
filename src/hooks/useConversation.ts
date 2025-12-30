@@ -7,6 +7,8 @@ import {
   Resolution,
   OutputFormat,
   ExtractedInfo,
+  LogoPosition,
+  LogoWithPosition,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -237,14 +239,20 @@ export function useConversation() {
         console.log("Reference image:", state.referenceImage ? "Present" : "None");
         console.log("Content image:", state.contentImage ? "Present" : "None");
 
+        // Préparer les logos pour l'envoi
+        const logos = state.logos || [];
+        const logoImages = logos.map(l => l.imageUrl);
+        const logoPositions = logos.map(l => l.position);
+
         // Envoyer les images avec le prompt
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
             aspectRatio: "3:4" as AspectRatio,
-            referenceImage: state.referenceImage || undefined, // Image de référence (style)
-            logoImage: state.logoImage || undefined,           // Logo de l'entreprise
-            contentImage: state.contentImage || undefined,     // Image de contenu
+            referenceImage: state.referenceImage || undefined,
+            logoImages: logoImages.length > 0 ? logoImages : undefined,
+            logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
+            contentImage: state.contentImage || undefined,
           },
         });
 
@@ -541,11 +549,53 @@ export function useConversation() {
   const handleLogoImage = useCallback(
     (imageDataUrl: string) => {
       addMessage("user", "Logo envoyé", imageDataUrl);
-      setConversationState((prev) => ({ ...prev, step: "content_image", logoImage: imageDataUrl }));
+      // Store the logo temporarily and ask for position
+      setConversationState((prev) => ({ 
+        ...prev, 
+        step: "logo_position", 
+        currentLogoImage: imageDataUrl 
+      }));
       setTimeout(() => {
         addMessage(
           "assistant",
-          "Logo reçu ! Avez-vous une image à intégrer dans l'affiche (produit, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
+          "Où souhaitez-vous positionner ce logo sur l'affiche ?"
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleLogoPosition = useCallback(
+    (position: LogoPosition) => {
+      const positionLabels: Record<LogoPosition, string> = {
+        "top-left": "Haut gauche",
+        "top-right": "Haut droite",
+        "center": "Centre",
+        "bottom-left": "Bas gauche",
+        "bottom-right": "Bas droite",
+      };
+      
+      addMessage("user", `Position : ${positionLabels[position]}`);
+      
+      const currentLogo = conversationStateRef.current.currentLogoImage;
+      if (!currentLogo) return;
+
+      const newLogo: LogoWithPosition = {
+        imageUrl: currentLogo,
+        position,
+      };
+
+      setConversationState((prev) => ({
+        ...prev,
+        logos: [...(prev.logos || []), newLogo],
+        currentLogoImage: undefined,
+        step: "logo",
+      }));
+
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "Logo ajouté ! Avez-vous un autre logo à ajouter ? Envoyez-le ou cliquez sur 'Continuer' pour passer à l'étape suivante."
         );
       }, 250);
     },
@@ -553,7 +603,8 @@ export function useConversation() {
   );
 
   const handleSkipLogo = useCallback(() => {
-    addMessage("user", "Passer le logo");
+    const logosCount = conversationStateRef.current.logos?.length || 0;
+    addMessage("user", logosCount > 0 ? "Continuer sans autre logo" : "Passer le logo");
     setConversationState((prev) => ({ ...prev, step: "content_image" }));
     setTimeout(() => {
       addMessage(
@@ -630,6 +681,7 @@ export function useConversation() {
     handleSkipReference,
     handleColorsConfirm,
     handleLogoImage,
+    handleLogoPosition,
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,

@@ -353,7 +353,8 @@ serve(async (req) => {
     const {
       prompt,
       referenceImage,
-      logoImage,
+      logoImages,
+      logoPositions,
       contentImage,
       aspectRatio = "3:4",
       resolution = "2K",
@@ -363,7 +364,8 @@ serve(async (req) => {
     console.log("Request received:");
     console.log("- Prompt length:", prompt?.length || 0);
     console.log("- Has reference image:", !!referenceImage);
-    console.log("- Has logo image:", !!logoImage);
+    console.log("- Logo images count:", logoImages?.length || 0);
+    console.log("- Logo positions:", logoPositions);
     console.log("- Has content image:", !!contentImage);
     console.log("- Aspect ratio:", aspectRatio);
     console.log("- Resolution:", resolution);
@@ -388,15 +390,18 @@ serve(async (req) => {
       }
     }
 
-    // Upload du logo si présent
-    if (logoImage) {
-      try {
-        const logoUrl = await uploadBase64ToStorage(supabase, logoImage, 'logo');
-        imageInputs.push(logoUrl);
-        tempFilePaths.push(logoUrl);
-      } catch (e) {
-        console.error("Error uploading logo image:", e);
-        throw new Error(`Erreur avec le logo: ${e instanceof Error ? e.message : String(e)}`);
+    // Upload des logos si présents
+    const uploadedLogoUrls: string[] = [];
+    if (logoImages && Array.isArray(logoImages)) {
+      for (let i = 0; i < logoImages.length; i++) {
+        try {
+          const logoUrl = await uploadBase64ToStorage(supabase, logoImages[i], `logo_${i}`);
+          imageInputs.push(logoUrl);
+          tempFilePaths.push(logoUrl);
+          uploadedLogoUrls.push(logoUrl);
+        } catch (e) {
+          console.error(`Error uploading logo ${i}:`, e);
+        }
       }
     }
 
@@ -412,12 +417,16 @@ serve(async (req) => {
       }
     }
 
-    // Construire le prompt professionnel
+    // Construire le prompt professionnel avec positions des logos
+    const logoPositionText = logoPositions?.length > 0 
+      ? `LOGOS PLACEMENT: ${logoPositions.map((pos: string, i: number) => `Logo ${i+1} at ${pos}`).join(", ")}.`
+      : "";
+    
     const professionalPrompt = buildProfessionalPrompt({
-      userPrompt: prompt,
+      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : ""),
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
-      hasLogoImage: !!logoImage,
+      hasLogoImage: uploadedLogoUrls.length > 0,
       aspectRatio,
     });
 

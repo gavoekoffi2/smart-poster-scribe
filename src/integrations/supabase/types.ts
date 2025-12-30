@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      generated_images: {
+        Row: {
+          aspect_ratio: string
+          color_palette: string[] | null
+          content_image_url: string | null
+          created_at: string
+          domain: string | null
+          id: string
+          image_url: string
+          logo_positions: string[] | null
+          logo_urls: string[] | null
+          prompt: string
+          reference_image_url: string | null
+          resolution: string
+        }
+        Insert: {
+          aspect_ratio: string
+          color_palette?: string[] | null
+          content_image_url?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          image_url: string
+          logo_positions?: string[] | null
+          logo_urls?: string[] | null
+          prompt: string
+          reference_image_url?: string | null
+          resolution: string
+        }
+        Update: {
+          aspect_ratio?: string
+          color_palette?: string[] | null
+          content_image_url?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          image_url?: string
+          logo_positions?: string[] | null
+          logo_urls?: string[] | null
+          prompt?: string
+          reference_image_url?: string | null
+          resolution?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
