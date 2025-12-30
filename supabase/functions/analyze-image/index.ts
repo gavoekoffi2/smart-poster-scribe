@@ -9,6 +9,22 @@ interface AnalyzeImageRequest {
   imageData: string; // base64 image data
 }
 
+// ============ INPUT VALIDATION CONSTANTS ============
+const MAX_IMAGE_SIZE_MB = 10;
+
+function validateBase64ImageSize(base64: string, maxMB: number): void {
+  if (typeof base64 !== 'string') {
+    throw new Error("Image data must be a string");
+  }
+  // Remove data URL prefix if present
+  const base64Content = base64.includes(',') ? base64.split(',')[1] : base64;
+  const sizeInBytes = (base64Content.length * 3) / 4;
+  const sizeInMB = sizeInBytes / (1024 * 1024);
+  if (sizeInMB > maxMB) {
+    throw new Error(`Image exceeds maximum size of ${maxMB}MB`);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -26,11 +42,31 @@ serve(async (req) => {
       );
     }
 
-    const { imageData } = await req.json() as AnalyzeImageRequest;
+    const body = await req.json();
+    const { imageData } = body as AnalyzeImageRequest;
 
-    if (!imageData) {
+    // ============ INPUT VALIDATION ============
+    if (!imageData || typeof imageData !== 'string') {
       return new Response(
-        JSON.stringify({ error: "Image data is required" }),
+        JSON.stringify({ error: "Image data is required and must be a string" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate image size
+    try {
+      validateBase64ImageSize(imageData, MAX_IMAGE_SIZE_MB);
+    } catch (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Invalid image" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate image format
+    if (!imageData.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid image format. Accepted formats: jpeg, png, webp, gif" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
