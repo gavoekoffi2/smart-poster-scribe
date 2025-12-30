@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useConversation } from "@/hooks/useConversation";
+import { useHistory } from "@/hooks/useHistory";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
+import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Zap, Send, Download, RotateCcw, SkipForward } from "lucide-react";
+import { Zap, Send, Download, RotateCcw, SkipForward, History } from "lucide-react";
+import { GeneratedImage } from "@/types/generation";
 
 export default function Index() {
   const {
@@ -21,16 +25,21 @@ export default function Index() {
     handleSkipReference,
     handleColorsConfirm,
     handleLogoImage,
+    handleLogoPosition,
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
     resetConversation,
   } = useConversation();
 
+  const { history, saveToHistory, clearHistory } = useHistory();
+
   const [inputValue, setInputValue] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedHistoryImage, setSelectedHistoryImage] = useState<GeneratedImage | null>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -39,7 +48,6 @@ export default function Index() {
 
   const handleSend = () => {
     if (inputValue.trim() && !isProcessing) {
-      // Check if user wants to skip reference or content image
       const lower = inputValue.toLowerCase().trim();
       if (conversationState.step === "reference" && (lower === "non" || lower === "passer" || lower === "skip")) {
         handleSkipReference();
@@ -60,9 +68,10 @@ export default function Index() {
   };
 
   const handleDownload = () => {
-    if (generatedImage) {
+    const imageToDownload = generatedImage || selectedHistoryImage?.imageUrl;
+    if (imageToDownload) {
       const link = document.createElement("a");
-      link.href = generatedImage;
+      link.href = imageToDownload;
       link.download = `affiche-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
@@ -76,7 +85,19 @@ export default function Index() {
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
   const showLogoUpload = step === "logo";
+  const showLogoPosition = step === "logo_position";
   const showContentImageUpload = step === "content_image";
+
+  const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
+
+  const handleHistorySelect = (image: GeneratedImage) => {
+    setSelectedHistoryImage(image);
+  };
+
+  const handleReset = () => {
+    resetConversation();
+    setSelectedHistoryImage(null);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -94,10 +115,16 @@ export default function Index() {
               <p className="text-xs text-muted-foreground">Votre assistant créatif</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={resetConversation}>
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Nouveau
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
+              <History className="w-4 h-4 mr-2" />
+              Historique
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Nouveau
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -180,8 +207,17 @@ export default function Index() {
                 />
                 <Button variant="ghost" size="sm" onClick={handleSkipLogo} disabled={isProcessing}>
                   <SkipForward className="w-4 h-4 mr-2" />
-                  Passer
+                  {(conversationState.logos?.length || 0) > 0 ? "Continuer" : "Passer"}
                 </Button>
+              </div>
+            )}
+
+            {showLogoPosition && (
+              <div className="animate-in fade-in slide-in-from-bottom-2">
+                <LogoPositionSelect
+                  onSelect={handleLogoPosition}
+                  disabled={isProcessing}
+                />
               </div>
             )}
 
@@ -201,7 +237,7 @@ export default function Index() {
 
             {(step === "generating" || step === "complete") && !showTextInput && (
               <div className="flex justify-center">
-                <Button variant="outline" onClick={resetConversation}>
+                <Button variant="outline" onClick={handleReset}>
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Créer une nouvelle affiche
                 </Button>
@@ -210,17 +246,29 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Preview Panel - smaller and only visible when generating or complete, or on larger screens */}
-        <div className={`lg:w-80 glass-panel p-3 flex flex-col ${!generatedImage && step !== "generating" ? "hidden lg:flex" : ""}`}>
+        {/* History Panel - Collapsible */}
+        {showHistory && (
+          <div className="lg:w-64 glass-panel p-3 animate-in slide-in-from-right-5">
+            <HistoryPanel
+              history={history}
+              currentImage={selectedHistoryImage}
+              onSelect={handleHistorySelect}
+              onClear={clearHistory}
+            />
+          </div>
+        )}
+
+        {/* Preview Panel */}
+        <div className={`lg:w-80 glass-panel p-3 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""}`}>
           <h2 className="font-display text-xs tracking-wide text-foreground mb-3 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             APERÇU
           </h2>
           
           <div className="flex items-center justify-center min-h-[200px] lg:min-h-[280px] rounded-lg bg-background/50 border border-border/30 overflow-hidden">
-            {generatedImage ? (
+            {displayImage ? (
               <img
-                src={generatedImage}
+                src={displayImage}
                 alt="Affiche générée"
                 className="max-w-full max-h-full object-contain"
               />
@@ -237,7 +285,7 @@ export default function Index() {
             )}
           </div>
 
-          {generatedImage && (
+          {displayImage && (
             <Button onClick={handleDownload} className="mt-4 w-full">
               <Download className="w-4 h-4 mr-2" />
               Télécharger l'affiche
