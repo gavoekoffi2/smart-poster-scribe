@@ -103,17 +103,17 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/20 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="border-b border-border/30 bg-card/40 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <DesignerAvatar size="md" isWorking={isProcessing} />
             <div>
               <h1 className="font-display text-2xl md:text-3xl font-bold gradient-text">
                 Graphiste GPT
               </h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-brand-orange" />
-                Votre assistant créatif IA
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-primary" />
+                Votre assistant design premium
               </p>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function Index() {
               variant="ghost" 
               size="sm" 
               onClick={() => setShowHistory(!showHistory)}
-              className="hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+              className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
             >
               <History className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Historique</span>
@@ -131,7 +131,7 @@ export default function Index() {
               variant="ghost" 
               size="sm" 
               onClick={handleReset}
-              className="hover:bg-brand-orange/10 hover:text-brand-orange transition-colors"
+              className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Nouveau</span>
@@ -193,7 +193,7 @@ export default function Index() {
                 <Button 
                   onClick={handleSend} 
                   disabled={!inputValue.trim() || isProcessing}
-                  className="bg-gradient-to-r from-brand-orange to-brand-blue hover:opacity-90 transition-opacity px-6"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -279,9 +279,9 @@ export default function Index() {
         )}
 
         {/* Preview Panel */}
-        <div className={`lg:w-96 glass-panel p-4 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""} animate-scale-in`}>
+        <div className={`lg:w-96 glass-panel gradient-border p-4 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""}`} style={{ animation: 'scale-in 0.4s ease-out' }}>
           <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-orange to-brand-blue animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             APERÇU EN DIRECT
           </h2>
           
@@ -324,7 +324,7 @@ export default function Index() {
           {displayImage && (
             <Button 
               onClick={handleDownload} 
-              className="mt-4 w-full bg-gradient-to-r from-brand-orange to-brand-blue hover:opacity-90 transition-opacity font-medium"
+              className="mt-4 w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
             >
               <Download className="w-4 h-4 mr-2" />
               Télécharger l'affiche
