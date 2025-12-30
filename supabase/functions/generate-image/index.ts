@@ -17,7 +17,9 @@ interface KieCreateTaskResponse {
   code: number;
   msg: string;
   data?: {
-    taskId: string;
+    taskId?: string;
+    // Some API responses return recordId instead of taskId
+    recordId?: string;
   };
 }
 
@@ -209,15 +211,23 @@ serve(async (req) => {
     const createTaskData = (await createTaskResponse.json()) as KieCreateTaskResponse;
     console.log("Task created:", JSON.stringify(createTaskData));
 
-    if (createTaskData.code !== 0 || !createTaskData.data?.taskId) {
+    const taskId = createTaskData.data?.taskId ?? createTaskData.data?.recordId;
+    const isOkCode = createTaskData.code === 0 || createTaskData.code === 200;
+
+    if (!isOkCode || !taskId) {
       console.error("Failed to create task:", createTaskData.msg);
-      return new Response(JSON.stringify({ error: createTaskData.msg || "Échec de la création de la tâche" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: createTaskData.msg || "Échec de la création de la tâche",
+          code: createTaskData.code,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const taskId = createTaskData.data.taskId;
     console.log("Task ID:", taskId);
 
     // Step 2: Poll for result
