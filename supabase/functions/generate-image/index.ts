@@ -147,7 +147,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "seedream/4.5-text-to-image",
-        prompt: finalPrompt,
+        input: finalPrompt,
         aspect_ratio: aspectRatio,
         quality: mapResolutionToQuality(resolution),
       }),
