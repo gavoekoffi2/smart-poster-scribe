@@ -29,9 +29,20 @@ interface KieRecordInfoResponse {
   data?: {
     state: "waiting" | "success" | "fail";
     failMsg?: string;
+    // Multiple possible structures from Kie AI API
     resultList?: Array<{
-      url: string;
+      url?: string;
+      imageUrl?: string;
+      result?: string;
     }>;
+    // Alternative response structures
+    url?: string;
+    imageUrl?: string;
+    result?: string;
+    output?: {
+      url?: string;
+      imageUrl?: string;
+    };
   };
 }
 
@@ -88,12 +99,25 @@ async function pollForResult(taskId: string, apiKey: string, maxAttempts = 40, i
 
     const data = (await response.json()) as KieRecordInfoResponse;
     console.log(`Poll response state: ${data.data?.state}`);
+    console.log(`Full poll response: ${JSON.stringify(data)}`);
 
     if (data.data?.state === "success") {
-      const imageUrl = data.data.resultList?.[0]?.url;
+      // Try multiple possible locations for the image URL
+      const imageUrl = 
+        data.data.resultList?.[0]?.url ||
+        data.data.resultList?.[0]?.imageUrl ||
+        data.data.resultList?.[0]?.result ||
+        data.data.url ||
+        data.data.imageUrl ||
+        data.data.result ||
+        data.data.output?.url ||
+        data.data.output?.imageUrl;
+      
       if (!imageUrl) {
-        throw new Error("Aucune image retournée par l'API");
+        console.error("No image URL found in response:", JSON.stringify(data));
+        throw new Error("Aucune image retournée par l'API - structure de réponse inattendue");
       }
+      console.log("Found image URL:", imageUrl.substring(0, 100) + "...");
       return imageUrl;
     }
 
