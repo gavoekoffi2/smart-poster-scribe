@@ -118,11 +118,11 @@
 
   /* Avatar System */
   .avatar-container {
-    @apply relative;
+    @apply relative inline-flex items-center justify-center;
   }
 
   .avatar-glow {
-    @apply absolute inset-[-8px] rounded-full opacity-0 transition-opacity duration-500;
+    @apply absolute inset-[-6px] rounded-full opacity-0 transition-opacity duration-500;
     background: radial-gradient(circle, hsl(42 85% 55% / 0.4) 0%, transparent 70%);
   }
 
@@ -132,7 +132,7 @@
   }
 
   .avatar-ring {
-    @apply absolute inset-[-3px] rounded-full opacity-0 transition-opacity duration-300;
+    @apply absolute inset-[-2px] rounded-full opacity-0 transition-opacity duration-300;
     background: conic-gradient(from 0deg, hsl(42 90% 70%), hsl(42 85% 55%), hsl(35 80% 50%), hsl(42 90% 70%));
   }
 
@@ -142,7 +142,8 @@
   }
 
   .avatar-image {
-    @apply relative z-10 rounded-full object-cover border-2 border-card transition-transform duration-300;
+    @apply relative z-10 rounded-full object-cover border-2 border-primary/30 transition-transform duration-300;
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.3);
   }
 
   .avatar-container.is-working .avatar-image {
