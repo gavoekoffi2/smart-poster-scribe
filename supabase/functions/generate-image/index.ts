@@ -29,21 +29,37 @@ interface KieRecordInfoResponse {
   data?: {
     state: "waiting" | "success" | "fail";
     failMsg?: string;
-    // Multiple possible structures from Kie AI API
+    // resultJson is a JSON string containing resultUrls array
+    resultJson?: string;
+    // Alternative structures
     resultList?: Array<{
       url?: string;
-      imageUrl?: string;
-      result?: string;
     }>;
-    // Alternative response structures
-    url?: string;
-    imageUrl?: string;
-    result?: string;
-    output?: {
-      url?: string;
-      imageUrl?: string;
-    };
   };
+}
+
+// Parse the resultJson to extract image URL
+function extractImageUrl(data: KieRecordInfoResponse["data"]): string | null {
+  if (!data) return null;
+  
+  // Primary: resultJson contains {"resultUrls": ["url1", "url2"]}
+  if (data.resultJson) {
+    try {
+      const parsed = JSON.parse(data.resultJson);
+      if (parsed.resultUrls?.length > 0) {
+        return parsed.resultUrls[0];
+      }
+    } catch (e) {
+      console.error("Failed to parse resultJson:", e);
+    }
+  }
+  
+  // Fallback: resultList array
+  if (data.resultList?.[0]?.url) {
+    return data.resultList[0].url;
+  }
+  
+  return null;
 }
 
 function mapResolutionToQuality(resolution: string): "basic" | "high" {
@@ -102,16 +118,8 @@ async function pollForResult(taskId: string, apiKey: string, maxAttempts = 40, i
     console.log(`Full poll response: ${JSON.stringify(data)}`);
 
     if (data.data?.state === "success") {
-      // Try multiple possible locations for the image URL
-      const imageUrl = 
-        data.data.resultList?.[0]?.url ||
-        data.data.resultList?.[0]?.imageUrl ||
-        data.data.resultList?.[0]?.result ||
-        data.data.url ||
-        data.data.imageUrl ||
-        data.data.result ||
-        data.data.output?.url ||
-        data.data.output?.imageUrl;
+      // Use the helper function to extract image URL
+      const imageUrl = extractImageUrl(data.data);
       
       if (!imageUrl) {
         console.error("No image URL found in response:", JSON.stringify(data));
