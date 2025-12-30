@@ -138,19 +138,25 @@ serve(async (req) => {
     console.log("Aspect ratio:", aspectRatio);
     console.log("Quality:", mapResolutionToQuality(resolution));
 
-    // Step 1: Create the task
+    // Step 1: Create the task with proper nested input structure
+    const requestBody = {
+      model: "seedream/4.5-text-to-image",
+      input: {
+        prompt: finalPrompt,
+        aspect_ratio: aspectRatio,
+        quality: mapResolutionToQuality(resolution),
+      },
+    };
+    
+    console.log("Request body:", JSON.stringify(requestBody, null, 2));
+    
     const createTaskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${KIE_AI_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "seedream/4.5-text-to-image",
-        input: finalPrompt,
-        aspect_ratio: aspectRatio,
-        quality: mapResolutionToQuality(resolution),
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!createTaskResponse.ok) {
