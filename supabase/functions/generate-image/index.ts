@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +13,8 @@ interface GenerateImageRequest {
   aspectRatio?: string;
   resolution?: string;
   outputFormat?: string;
-  referenceImage?: string; // URL de l'image de référence (style)
-  contentImage?: string;   // URL de l'image de contenu à intégrer
+  referenceImage?: string; // Base64 ou URL de l'image de référence (style)
+  contentImage?: string;   // Base64 ou URL de l'image de contenu à intégrer
 }
 
 interface KieCreateTaskResponse {
@@ -39,6 +40,61 @@ interface KieRecordInfoResponse {
     completeTime?: number;
     createTime: number;
   };
+}
+
+// Convertir une image base64 en URL publique via Supabase Storage
+async function uploadBase64ToStorage(
+  supabase: any,
+  base64Data: string,
+  prefix: string
+): Promise<string> {
+  console.log(`Uploading ${prefix} image to storage...`);
+  
+  // Extraire le type MIME et les données
+  const matches = base64Data.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
+  if (!matches) {
+    throw new Error(`Format d'image invalide pour ${prefix}. Formats acceptés: jpeg, png, webp`);
+  }
+  
+  const mimeType = matches[1].toLowerCase();
+  const base64Content = matches[2];
+  
+  // Convertir base64 en Uint8Array
+  const binaryString = atob(base64Content);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  // Générer un nom de fichier unique
+  const extension = mimeType === 'jpeg' || mimeType === 'jpg' ? 'jpg' : mimeType;
+  const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+  
+  // Upload vers Supabase Storage
+  const { data, error } = await supabase.storage
+    .from('temp-images')
+    .upload(fileName, bytes, {
+      contentType: `image/${mimeType}`,
+      upsert: false,
+    });
+  
+  if (error) {
+    console.error(`Storage upload error for ${prefix}:`, error);
+    throw new Error(`Erreur upload ${prefix}: ${error.message}`);
+  }
+  
+  // Obtenir l'URL publique
+  const { data: urlData } = supabase.storage
+    .from('temp-images')
+    .getPublicUrl(fileName);
+  
+  console.log(`${prefix} uploaded successfully:`, urlData.publicUrl);
+  return urlData.publicUrl;
+}
+
+// Vérifier si c'est une URL ou du base64
+function isUrl(str: string): boolean {
+  return str.startsWith('http://') || str.startsWith('https://');
 }
 
 function buildProfessionalPrompt({
@@ -110,6 +166,7 @@ async function createTask(
   console.log("Image inputs count:", imageInputs.length);
   console.log("Aspect ratio:", aspectRatio);
   console.log("Resolution:", resolution);
+  console.log("Output format:", outputFormat);
 
   const response = await fetch(`${KIE_API_BASE}/createTask`, {
     method: "POST",
@@ -220,6 +277,8 @@ serve(async (req) => {
 
   try {
     const KIE_AI_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!KIE_AI_API_KEY) {
       console.error("KIE_AI_API_KEY is not configured");
@@ -228,6 +287,17 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Supabase credentials not configured");
+      return new Response(JSON.stringify({ error: "Configuration Supabase manquante" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Créer le client Supabase avec le service role pour l'upload
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const {
       prompt,
@@ -255,6 +325,33 @@ serve(async (req) => {
     console.log("Resolution:", resolution);
     console.log("Output format:", outputFormat);
 
+    // Convertir les images base64 en URLs si nécessaire
+    const imageInputs: string[] = [];
+    
+    if (referenceImage) {
+      if (isUrl(referenceImage)) {
+        console.log("Reference image is already a URL");
+        imageInputs.push(referenceImage);
+      } else {
+        // C'est du base64, uploader vers Storage
+        const referenceUrl = await uploadBase64ToStorage(supabase, referenceImage, "reference");
+        imageInputs.push(referenceUrl);
+      }
+    }
+    
+    if (contentImage) {
+      if (isUrl(contentImage)) {
+        console.log("Content image is already a URL");
+        imageInputs.push(contentImage);
+      } else {
+        // C'est du base64, uploader vers Storage
+        const contentUrl = await uploadBase64ToStorage(supabase, contentImage, "content");
+        imageInputs.push(contentUrl);
+      }
+    }
+
+    console.log("Final image URLs count:", imageInputs.length);
+
     // Construire le prompt professionnel
     const finalPrompt = buildProfessionalPrompt({
       userPrompt: prompt,
@@ -265,19 +362,6 @@ serve(async (req) => {
     
     console.log("Final prompt length:", finalPrompt.length);
     console.log("Prompt preview:", finalPrompt.substring(0, 500) + "...");
-
-    // Préparer les images en entrée (URLs)
-    const imageInputs: string[] = [];
-    
-    if (referenceImage) {
-      console.log("Adding reference image URL");
-      imageInputs.push(referenceImage);
-    }
-    
-    if (contentImage) {
-      console.log("Adding content image URL");
-      imageInputs.push(contentImage);
-    }
 
     // Étape 1: Créer la tâche
     const taskId = await createTask(
