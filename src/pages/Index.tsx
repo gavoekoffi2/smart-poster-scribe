@@ -193,14 +193,14 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Preview Panel */}
-        <div className="lg:w-96 glass-panel p-4 flex flex-col">
-          <h2 className="font-display text-sm tracking-wide text-foreground mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        {/* Preview Panel - smaller and only visible when generating or complete, or on larger screens */}
+        <div className={`lg:w-80 glass-panel p-3 flex flex-col ${!generatedImage && step !== "generating" ? "hidden lg:flex" : ""}`}>
+          <h2 className="font-display text-xs tracking-wide text-foreground mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             APERÇU
           </h2>
           
-          <div className="flex-1 flex items-center justify-center min-h-[400px] rounded-lg bg-background/50 border border-border/30 overflow-hidden">
+          <div className="flex items-center justify-center min-h-[200px] lg:min-h-[280px] rounded-lg bg-background/50 border border-border/30 overflow-hidden">
             {generatedImage ? (
               <img
                 src={generatedImage}

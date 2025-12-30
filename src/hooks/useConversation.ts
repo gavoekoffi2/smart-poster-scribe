@@ -234,13 +234,10 @@ export function useConversation() {
           setSuggestedDomain(analysis.suggestedDomain);
 
           // Store extracted info
-          setConversationState((prev) => ({
-            ...prev,
-            step: "domain",
-            extractedInfo: analysis.extractedInfo,
-            missingInfo: analysis.missingInfo,
-          }));
-
+          const detectedDomain = analysis.suggestedDomain as Domain | null;
+          const validDomains: Domain[] = ["church", "event", "education", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "formation", "other"];
+          const isValidDomain = detectedDomain && validDomains.includes(detectedDomain);
+          
           // Build response based on what was understood
           let response = `J'ai bien compris : ${analysis.summary}. `;
           
@@ -252,7 +249,42 @@ export function useConversation() {
             response += "J'ai noté les informations fournies. ";
           }
 
-          response += "Sélectionnez le domaine de l'affiche :";
+          // If domain detected, skip domain selection
+          if (isValidDomain) {
+            const missingInfo = analysis.missingInfo || [];
+            
+            if (missingInfo.length > 0) {
+              // Ask for missing info
+              setConversationState((prev) => ({
+                ...prev,
+                step: "details",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: analysis.missingInfo,
+              }));
+              const missingText = formatMissingInfo(missingInfo);
+              response += `Pour compléter l'affiche, pouvez-vous me donner ${missingText} ?`;
+            } else {
+              // All info provided, go to reference
+              setConversationState((prev) => ({
+                ...prev,
+                step: "reference",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: [],
+              }));
+              response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+            }
+          } else {
+            // Domain not detected, ask user to select
+            setConversationState((prev) => ({
+              ...prev,
+              step: "domain",
+              extractedInfo: analysis.extractedInfo,
+              missingInfo: analysis.missingInfo,
+            }));
+            response += "Sélectionnez le domaine de l'affiche :";
+          }
 
           addMessage("assistant", response);
         } catch (err) {
