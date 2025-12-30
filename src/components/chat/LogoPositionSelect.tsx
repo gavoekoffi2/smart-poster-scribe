@@ -1,6 +1,6 @@
+import { forwardRef } from "react";
 import { LogoPosition } from "@/types/generation";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface LogoPositionSelectProps {
   onSelect: (position: LogoPosition) => void;
@@ -15,9 +15,10 @@ const positions: { id: LogoPosition; label: string; icon: string }[] = [
   { id: "bottom-right", label: "Bas droite", icon: "↘" },
 ];
 
-export function LogoPositionSelect({ onSelect, disabled }: LogoPositionSelectProps) {
+export const LogoPositionSelect = forwardRef<HTMLDivElement, LogoPositionSelectProps>(
+  function LogoPositionSelect({ onSelect, disabled }, ref) {
   return (
-    <div className="space-y-3">
+    <div ref={ref} className="space-y-3">
       <p className="text-sm text-muted-foreground">Où souhaitez-vous placer le logo ?</p>
       
       {/* Visual grid representation */}
@@ -90,4 +91,4 @@ export function LogoPositionSelect({ onSelect, disabled }: LogoPositionSelectPro
       </div>
     </div>
   );
-}
+});

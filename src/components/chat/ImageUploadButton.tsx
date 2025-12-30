@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ImagePlus } from "lucide-react";
 
@@ -8,11 +8,8 @@ interface ImageUploadButtonProps {
   label?: string;
 }
 
-export function ImageUploadButton({
-  onImageSelect,
-  disabled,
-  label = "Envoyer une image",
-}: ImageUploadButtonProps) {
+export const ImageUploadButton = forwardRef<HTMLButtonElement, ImageUploadButtonProps>(
+  function ImageUploadButton({ onImageSelect, disabled, label = "Envoyer une image" }, ref) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = () => {
@@ -47,6 +44,7 @@ export function ImageUploadButton({
         disabled={disabled}
       />
       <Button
+        ref={ref}
         variant="outline"
         size="sm"
         onClick={handleClick}
@@ -58,4 +56,4 @@ export function ImageUploadButton({
       </Button>
     </>
   );
-}
+});
