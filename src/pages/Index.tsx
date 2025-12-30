@@ -7,9 +7,10 @@ import { ColorPalette } from "@/components/chat/ColorPalette";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
 import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Zap, Send, Download, RotateCcw, SkipForward, History } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
 
 export default function Index() {
@@ -72,7 +73,7 @@ export default function Index() {
     if (imageToDownload) {
       const link = document.createElement("a");
       link.href = imageToDownload;
-      link.download = `affiche-${Date.now()}.png`;
+      link.download = `graphiste-gpt-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -100,42 +101,53 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary" />
-            </div>
+      <header className="border-b border-border/30 bg-card/20 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <DesignerAvatar size="md" isWorking={isProcessing} />
             <div>
-              <h1 className="font-display text-xl md:text-2xl tracking-wider text-foreground neon-text">
-                PRO GRAPHISTE AI
+              <h1 className="font-display text-2xl md:text-3xl font-bold gradient-text">
+                Graphiste GPT
               </h1>
-              <p className="text-xs text-muted-foreground">Votre assistant créatif</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-brand-orange" />
+                Votre assistant créatif IA
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowHistory(!showHistory)}
+              className="hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+            >
               <History className="w-4 h-4 mr-2" />
-              Historique
+              <span className="hidden sm:inline">Historique</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleReset}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleReset}
+              className="hover:bg-brand-orange/10 hover:text-brand-orange transition-colors"
+            >
               <RotateCcw className="w-4 h-4 mr-2" />
-              Nouveau
+              <span className="hidden sm:inline">Nouveau</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Chat Area */}
-      <main className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl overflow-hidden">
         {/* Chat Panel */}
-        <div className="flex-1 flex flex-col glass-panel overflow-hidden">
+        <div className="flex-1 flex flex-col glass-panel overflow-hidden animate-scale-in">
           {/* Messages */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4"
+            className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
           >
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
@@ -143,7 +155,7 @@ export default function Index() {
             
             {/* Interactive elements based on step */}
             {showDomainSelect && (
-              <div className="ml-11 animate-in fade-in slide-in-from-bottom-2">
+              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
                 <DomainSelect 
                   onSelect={handleDomainSelect} 
                   disabled={isProcessing}
@@ -153,7 +165,7 @@ export default function Index() {
             )}
 
             {showColorPalette && (
-              <div className="ml-11 animate-in fade-in slide-in-from-bottom-2">
+              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
                 <ColorPalette
                   selectedColors={selectedColors}
                   onColorsChange={setSelectedColors}
@@ -167,31 +179,35 @@ export default function Index() {
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-border/50 p-4 bg-card/30">
+          <div className="border-t border-border/30 p-4 bg-card/30 backdrop-blur-sm">
             {showTextInput && (
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Écrivez votre message..."
+                  placeholder="Décrivez votre projet créatif..."
                   disabled={isProcessing}
-                  className="flex-1 bg-background/50"
+                  className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
                 />
-                <Button onClick={handleSend} disabled={!inputValue.trim() || isProcessing}>
+                <Button 
+                  onClick={handleSend} 
+                  disabled={!inputValue.trim() || isProcessing}
+                  className="bg-gradient-to-r from-brand-orange to-brand-blue hover:opacity-90 transition-opacity px-6"
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
             )}
 
             {showReferenceUpload && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 <ImageUploadButton
                   onImageSelect={handleReferenceImage}
                   disabled={isProcessing}
                   label="Envoyer image de référence"
                 />
-                <Button variant="ghost" size="sm" onClick={handleSkipReference} disabled={isProcessing}>
+                <Button variant="ghost" size="sm" onClick={handleSkipReference} disabled={isProcessing} className="hover:bg-muted/50">
                   <SkipForward className="w-4 h-4 mr-2" />
                   Passer
                 </Button>
@@ -199,13 +215,13 @@ export default function Index() {
             )}
 
             {showLogoUpload && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 <ImageUploadButton
                   onImageSelect={handleLogoImage}
                   disabled={isProcessing}
-                  label="Envoyer le logo"
+                  label="Ajouter un logo"
                 />
-                <Button variant="ghost" size="sm" onClick={handleSkipLogo} disabled={isProcessing}>
+                <Button variant="ghost" size="sm" onClick={handleSkipLogo} disabled={isProcessing} className="hover:bg-muted/50">
                   <SkipForward className="w-4 h-4 mr-2" />
                   {(conversationState.logos?.length || 0) > 0 ? "Continuer" : "Passer"}
                 </Button>
@@ -213,7 +229,7 @@ export default function Index() {
             )}
 
             {showLogoPosition && (
-              <div className="animate-in fade-in slide-in-from-bottom-2">
+              <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
                 <LogoPositionSelect
                   onSelect={handleLogoPosition}
                   disabled={isProcessing}
@@ -222,13 +238,13 @@ export default function Index() {
             )}
 
             {showContentImageUpload && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 <ImageUploadButton
                   onImageSelect={handleContentImage}
                   disabled={isProcessing}
-                  label="Envoyer image de contenu"
+                  label="Ajouter image de contenu"
                 />
-                <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing}>
+                <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing} className="hover:bg-muted/50">
                   <SkipForward className="w-4 h-4 mr-2" />
                   Générer automatiquement
                 </Button>
@@ -237,7 +253,11 @@ export default function Index() {
 
             {(step === "generating" || step === "complete") && !showTextInput && (
               <div className="flex justify-center">
-                <Button variant="outline" onClick={handleReset}>
+                <Button 
+                  variant="outline" 
+                  onClick={handleReset}
+                  className="border-border/40 hover:border-brand-orange/50 hover:bg-brand-orange/5 transition-all"
+                >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Créer une nouvelle affiche
                 </Button>
@@ -248,7 +268,7 @@ export default function Index() {
 
         {/* History Panel - Collapsible */}
         {showHistory && (
-          <div className="lg:w-64 glass-panel p-3 animate-in slide-in-from-right-5">
+          <div className="lg:w-72 glass-panel p-4 animate-in slide-in-from-right-5 duration-300">
             <HistoryPanel
               history={history}
               currentImage={selectedHistoryImage}
@@ -259,34 +279,53 @@ export default function Index() {
         )}
 
         {/* Preview Panel */}
-        <div className={`lg:w-80 glass-panel p-3 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""}`}>
-          <h2 className="font-display text-xs tracking-wide text-foreground mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            APERÇU
+        <div className={`lg:w-96 glass-panel p-4 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""} animate-scale-in`}>
+          <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-orange to-brand-blue animate-pulse" />
+            APERÇU EN DIRECT
           </h2>
           
-          <div className="flex items-center justify-center min-h-[200px] lg:min-h-[280px] rounded-lg bg-background/50 border border-border/30 overflow-hidden">
+          <div className="flex-1 flex items-center justify-center min-h-[240px] lg:min-h-[320px] rounded-xl bg-background/40 border border-border/20 overflow-hidden relative">
             {displayImage ? (
               <img
                 src={displayImage}
                 alt="Affiche générée"
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain animate-scale-in"
               />
             ) : isProcessing && step === "generating" ? (
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-                <p className="text-sm text-muted-foreground">Génération en cours...</p>
+              <div className="text-center space-y-6">
+                <div className="relative mx-auto w-24 h-24">
+                  <DesignerAvatar size="xl" isWorking={true} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Création en cours...</p>
+                  <p className="text-xs text-muted-foreground">Notre graphiste travaille sur votre affiche</p>
+                </div>
+                <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mx-auto">
+                  <div 
+                    className="h-full bg-gradient-to-r from-brand-orange to-brand-blue rounded-full"
+                    style={{
+                      animation: "shimmer 1.5s infinite",
+                      backgroundSize: "200% 100%"
+                    }}
+                  />
+                </div>
               </div>
             ) : (
-              <div className="text-center text-muted-foreground p-8">
-                <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p className="text-sm">Votre affiche apparaîtra ici</p>
+              <div className="text-center text-muted-foreground p-8 space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-brand-orange/20 to-brand-blue/20 flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm">Votre création apparaîtra ici</p>
               </div>
             )}
           </div>
 
           {displayImage && (
-            <Button onClick={handleDownload} className="mt-4 w-full">
+            <Button 
+              onClick={handleDownload} 
+              className="mt-4 w-full bg-gradient-to-r from-brand-orange to-brand-blue hover:opacity-90 transition-opacity font-medium"
+            >
               <Download className="w-4 h-4 mr-2" />
               Télécharger l'affiche
             </Button>
