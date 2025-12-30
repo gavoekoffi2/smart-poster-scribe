@@ -158,14 +158,14 @@ export default function Index() {
     <div className="min-h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border/30 bg-card/40 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <DesignerAvatar size="md" isWorking={isProcessing} />
-            <div>
-              <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight gradient-text">
+            <DesignerAvatar size="sm" isWorking={isProcessing} />
+            <div className="flex flex-col justify-center">
+              <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight gradient-text leading-tight">
                 Graphiste GPT
               </h1>
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1 leading-tight">
                 <Sparkles className="w-2.5 h-2.5 text-primary" />
                 Assistant design premium
               </p>

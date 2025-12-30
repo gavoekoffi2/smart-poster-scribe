@@ -8,15 +8,15 @@ interface DesignerAvatarProps {
 }
 
 const sizeClasses = {
-  sm: "w-10 h-10",
-  md: "w-14 h-14",
-  lg: "w-20 h-20",
-  xl: "w-28 h-28",
+  sm: "w-9 h-9",
+  md: "w-12 h-12",
+  lg: "w-16 h-16",
+  xl: "w-24 h-24",
 };
 
 export function DesignerAvatar({ isWorking = false, size = "md", className }: DesignerAvatarProps) {
   return (
-    <div className={cn("avatar-container", isWorking && "is-working", className)}>
+    <div className={cn("avatar-container flex-shrink-0", isWorking && "is-working", className)}>
       {/* Ambient glow */}
       <div className="avatar-glow" />
       
@@ -27,7 +27,7 @@ export function DesignerAvatar({ isWorking = false, size = "md", className }: De
       <img
         src={designerAvatar}
         alt="Graphiste GPT"
-        className={cn("avatar-image", sizeClasses[size])}
+        className={cn("avatar-image rounded-full", sizeClasses[size])}
       />
       
       {/* Working indicator dot */}
