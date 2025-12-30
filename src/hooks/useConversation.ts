@@ -33,9 +33,12 @@ function buildPrompt(state: ConversationState) {
     parts.push(`Affiche (${domainLabel}).`);
   }
 
-  // Reference style
+  // Reference style - condensed to max 500 chars to avoid API limits
   if (referenceDescription) {
-    parts.push(`Style de référence: ${referenceDescription}.`);
+    const condensedStyle = referenceDescription.length > 500 
+      ? referenceDescription.slice(0, 500) + "..." 
+      : referenceDescription;
+    parts.push(`Style: ${condensedStyle}`);
   }
 
   // Extracted info details

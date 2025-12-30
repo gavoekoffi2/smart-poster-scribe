@@ -37,24 +37,34 @@ function mapResolutionToQuality(resolution: string): "basic" | "high" {
   return resolution === "4K" ? "high" : "basic";
 }
 
+// Max prompt length for Kie AI Seedream API
+const MAX_PROMPT_LENGTH = 2800; // Leave buffer for safety under 3000 limit
+
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength - 3) + "...";
+}
+
 function buildFinalPrompt({
   prompt,
   aspectRatio,
-  resolution,
 }: {
   prompt: string;
   aspectRatio: string;
-  resolution: string;
 }) {
-  return [
-    "Génère une affiche publicitaire prête à publier.",
-    `Format: ${aspectRatio} (vertical).`,
-    `Qualité: ${resolution}, ultra haute résolution, texte net et lisible.`,
-    "Si une personne apparaît, elle doit être africaine.",
-    "Respecte strictement les informations fournies.",
+  const systemPart = [
+    "Affiche publicitaire professionnelle.",
+    `Format: ${aspectRatio}.`,
+    "Haute résolution, texte lisible.",
+    "Personnages africains si personnes présentes.",
     "---",
-    prompt.trim(),
-  ].join("\n");
+  ].join(" ");
+  
+  // Calculate available space for user prompt
+  const availableLength = MAX_PROMPT_LENGTH - systemPart.length - 5;
+  const truncatedPrompt = truncateText(prompt.trim(), availableLength);
+  
+  return `${systemPart}\n${truncatedPrompt}`;
 }
 
 async function pollForResult(taskId: string, apiKey: string, maxAttempts = 40, intervalMs = 3000): Promise<string> {
@@ -130,7 +140,6 @@ serve(async (req) => {
     const finalPrompt = buildFinalPrompt({
       prompt,
       aspectRatio,
-      resolution,
     });
 
     console.log("Creating task with Seedream 4.5...");
