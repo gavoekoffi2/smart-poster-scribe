@@ -1,9 +1,41 @@
-import { useState, useRef, useCallback } from "react";
-import { ChatMessage, ConversationState, Domain, AspectRatio, Resolution, OutputFormat } from "@/types/generation";
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  ChatMessage,
+  ConversationState,
+  Domain,
+  AspectRatio,
+  Resolution,
+  OutputFormat,
+} from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const INITIAL_MESSAGE = "Bonjour ! 👋 Je suis votre assistant graphiste. Que souhaitez-vous créer aujourd'hui ? Décrivez-moi votre projet d'affiche en quelques mots.";
+const INITIAL_MESSAGE =
+  "Bonjour ! Je suis votre assistant graphiste. Que souhaitez-vous créer aujourd'hui ? Décrivez votre affiche en quelques mots.";
+
+function buildPrompt(state: ConversationState) {
+  const { description, domain, referenceDescription, colorPalette, needsContentImage } = state;
+
+  let prompt = (description ?? "").trim();
+
+  if (domain) {
+    prompt = `Affiche (${domain}). ${prompt}`.trim();
+  }
+
+  if (referenceDescription) {
+    prompt = `Style de référence: ${referenceDescription}. ${prompt}`.trim();
+  }
+
+  if (colorPalette?.length) {
+    prompt = `${prompt}. Palette de couleurs: ${colorPalette.join(", ")}`.trim();
+  }
+
+  if (needsContentImage) {
+    prompt = `${prompt}. Si l'affiche nécessite des personnes, utiliser des personnages africains.`.trim();
+  }
+
+  return prompt;
+}
 
 export function useConversation() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -18,6 +50,11 @@ export function useConversation() {
   const [conversationState, setConversationState] = useState<ConversationState>({
     step: "greeting",
   });
+
+  const conversationStateRef = useRef<ConversationState>(conversationState);
+  useEffect(() => {
+    conversationStateRef.current = conversationState;
+  }, [conversationState]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -49,187 +86,223 @@ export function useConversation() {
     setMessages((prev) => prev.filter((m) => m.id !== "loading"));
   }, []);
 
-  const handleUserMessage = useCallback(async (content: string) => {
-    addMessage("user", content);
-    
-    const { step } = conversationState;
+  const generatePoster = useCallback(
+    async (stateOverride?: ConversationState) => {
+      setIsProcessing(true);
 
-    if (step === "greeting") {
-      // User described their project, ask for domain
-      setConversationState((prev) => ({ ...prev, step: "domain", description: content }));
-      setTimeout(() => {
-        addMessage(
-          "assistant",
-          "Super projet ! 🎨 Pour mieux vous aider, veuillez sélectionner le domaine de votre affiche dans la liste ci-dessous :"
-        );
-      }, 500);
-    } else if (step === "details") {
-      // Additional details provided
-      setConversationState((prev) => ({ 
-        ...prev, 
-        step: "reference",
-        description: `${prev.description}. ${content}`
-      }));
-      setTimeout(() => {
-        addMessage(
-          "assistant",
-          "Parfait ! Avez-vous une image de référence (une affiche existante dont vous aimez le style) ? Si oui, envoyez-la maintenant. Sinon, tapez 'non' ou 'passer'."
-        );
-      }, 500);
-    }
-  }, [conversationState, addMessage]);
+      try {
+        const state = stateOverride ?? conversationStateRef.current;
+        const prompt = buildPrompt(state);
 
-  const handleDomainSelect = useCallback((domain: Domain) => {
-    addMessage("user", `Domaine sélectionné : ${domain}`);
-    setConversationState((prev) => ({ ...prev, step: "details", domain }));
-    setTimeout(() => {
-      addMessage(
-        "assistant",
-        "Excellent choix ! Maintenant, donnez-moi plus de détails sur votre affiche : quel message voulez-vous transmettre, quels textes inclure, quelle ambiance souhaitez-vous ?"
-      );
-    }, 500);
-  }, [addMessage]);
+        if (!prompt.trim()) {
+          addMessage(
+            "assistant",
+            "Il me manque la description de l'affiche. Dites-moi en une phrase ce que vous voulez créer (ex: ‘Affiche formation design graphique, dates, prix, contact’)."
+          );
+          toast.error("Description manquante");
+          setConversationState({ step: "greeting" });
+          return;
+        }
 
-  const handleReferenceImage = useCallback(async (imageDataUrl: string) => {
-    addMessage("user", "Image de référence envoyée", imageDataUrl);
-    addLoadingMessage();
-    setIsProcessing(true);
+        const { data, error } = await supabase.functions.invoke("generate-image", {
+          body: {
+            prompt,
+            aspectRatio: "3:4" as AspectRatio,
+            resolution: "2K" as Resolution,
+            outputFormat: "png" as OutputFormat,
+          },
+        });
 
-    try {
-      // Analyze the reference image
-      const { data, error } = await supabase.functions.invoke("analyze-image", {
-        body: { imageData: imageDataUrl },
-      });
+        if (error || !data?.success) {
+          const msg = data?.error || error?.message || "Erreur inconnue";
+          addMessage(
+            "assistant",
+            `Désolé, la génération a échoué : ${msg}. Pouvez-vous réessayer ?`
+          );
+          toast.error("Erreur lors de la génération");
+          setConversationState((prev) => ({ ...prev, step: "content_image" }));
+          return;
+        }
 
-      removeLoadingMessage();
-
-      if (error || !data?.success) {
-        addMessage("assistant", "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue. Passons aux couleurs ! Choisissez une palette de couleurs pour votre affiche :");
-      } else {
-        addMessage(
-          "assistant",
-          `J'ai analysé votre image de référence ! Je note un style : ${data.description?.substring(0, 100)}... Maintenant, choisissez une palette de couleurs pour personnaliser votre affiche :`
-        );
-        setConversationState((prev) => ({ 
-          ...prev, 
-          referenceImage: imageDataUrl,
-          referenceDescription: data.description 
-        }));
-      }
-
-      setConversationState((prev) => ({ ...prev, step: "colors", referenceImage: imageDataUrl }));
-    } catch (err) {
-      removeLoadingMessage();
-      addMessage("assistant", "Une erreur est survenue lors de l'analyse. Passons aux couleurs ! Choisissez une palette :");
-      setConversationState((prev) => ({ ...prev, step: "colors", referenceImage: imageDataUrl }));
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [addMessage, addLoadingMessage, removeLoadingMessage]);
-
-  const handleSkipReference = useCallback(() => {
-    addMessage("user", "Pas d'image de référence");
-    setConversationState((prev) => ({ ...prev, step: "colors" }));
-    setTimeout(() => {
-      addMessage(
-        "assistant",
-        "Pas de souci ! Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :"
-      );
-    }, 500);
-  }, [addMessage]);
-
-  const handleColorsConfirm = useCallback((colors: string[]) => {
-    addMessage("user", `Couleurs choisies : ${colors.join(", ")}`);
-    setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: colors }));
-    setTimeout(() => {
-      addMessage(
-        "assistant",
-        "Parfait ! Avez-vous une image spécifique que vous souhaitez intégrer dans l'affiche (photo d'un produit, personne, etc.) ? Si oui, envoyez-la. Sinon, tapez 'non' et je générerai une image adaptée au contexte."
-      );
-    }, 500);
-  }, [addMessage]);
-
-  const handleContentImage = useCallback((imageDataUrl: string) => {
-    addMessage("user", "Image de contenu envoyée", imageDataUrl);
-    setConversationState((prev) => ({ 
-      ...prev, 
-      step: "generating",
-      contentImage: imageDataUrl,
-      needsContentImage: false
-    }));
-    setTimeout(() => {
-      addMessage("assistant", "Parfait ! J'ai tous les éléments. Génération de votre affiche en cours... 🎨");
-      generatePoster();
-    }, 500);
-  }, [addMessage]);
-
-  const handleSkipContentImage = useCallback(() => {
-    addMessage("user", "Pas d'image de contenu, générer automatiquement");
-    setConversationState((prev) => ({ 
-      ...prev, 
-      step: "generating",
-      needsContentImage: true
-    }));
-    setTimeout(() => {
-      addMessage("assistant", "Compris ! Je vais générer une image adaptée au contexte (avec des personnages africains si nécessaire). Génération de votre affiche en cours... 🎨");
-      generatePoster();
-    }, 500);
-  }, [addMessage]);
-
-  const generatePoster = useCallback(async () => {
-    setIsProcessing(true);
-
-    try {
-      const { description, domain, referenceDescription, colorPalette, contentImage, needsContentImage } = conversationState;
-
-      // Build the prompt
-      let prompt = description || "";
-      
-      if (domain) {
-        prompt = `Affiche de type ${domain}. ${prompt}`;
-      }
-
-      if (referenceDescription) {
-        prompt = `Style de référence: ${referenceDescription}. ${prompt}`;
-      }
-
-      if (colorPalette && colorPalette.length > 0) {
-        prompt = `${prompt}. Utiliser la palette de couleurs: ${colorPalette.join(", ")}`;
-      }
-
-      if (needsContentImage) {
-        prompt = `${prompt}. Si l'affiche nécessite des personnes, utiliser des personnages africains.`;
-      }
-
-      const { data, error } = await supabase.functions.invoke("generate-image", {
-        body: {
-          prompt,
-          aspectRatio: "3:4" as AspectRatio,
-          resolution: "2K" as Resolution,
-          outputFormat: "png" as OutputFormat,
-        },
-      });
-
-      if (error || !data?.success) {
-        addMessage("assistant", `Désolé, une erreur est survenue lors de la génération : ${data?.error || error?.message || "Erreur inconnue"}. Voulez-vous réessayer ?`);
-        toast.error("Erreur lors de la génération");
-      } else {
         setGeneratedImage(data.imageUrl);
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
-          "🎉 Votre affiche est prête ! Vous pouvez la télécharger ci-dessous. Voulez-vous en créer une autre ou apporter des modifications ?"
+          "Votre affiche est prête ! Vous pouvez la télécharger à droite. Souhaitez-vous en créer une autre ?"
         );
         toast.success("Affiche générée avec succès !");
+      } catch (err) {
+        console.error("Generation error:", err);
+        addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
+        toast.error("Erreur inattendue");
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (err) {
-      console.error("Generation error:", err);
-      addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
-      toast.error("Erreur inattendue");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [conversationState, addMessage]);
+    },
+    [addMessage]
+  );
+
+  const handleUserMessage = useCallback(
+    async (content: string) => {
+      addMessage("user", content);
+
+      const { step } = conversationStateRef.current;
+
+      if (step === "greeting") {
+        setConversationState((prev) => ({ ...prev, step: "domain", description: content }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Super. Sélectionnez le domaine de l'affiche dans la liste ci-dessous :"
+          );
+        }, 250);
+        return;
+      }
+
+      if (step === "details") {
+        setConversationState((prev) => ({
+          ...prev,
+          step: "reference",
+          description: `${prev.description}. ${content}`,
+        }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la maintenant, ou cliquez sur ‘Passer’."
+          );
+        }, 250);
+      }
+    },
+    [addMessage]
+  );
+
+  const handleDomainSelect = useCallback(
+    (domain: Domain) => {
+      addMessage("user", `Domaine sélectionné : ${domain}`);
+      setConversationState((prev) => ({ ...prev, step: "details", domain }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "Donnez-moi les détails : textes à mettre (titre, dates, prix, contact), public visé et ambiance." 
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleReferenceImage = useCallback(
+    async (imageDataUrl: string) => {
+      addMessage("user", "Image de référence envoyée", imageDataUrl);
+      addLoadingMessage();
+      setIsProcessing(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("analyze-image", {
+          body: { imageData: imageDataUrl },
+        });
+
+        removeLoadingMessage();
+
+        if (error || !data?.success) {
+          addMessage(
+            "assistant",
+            "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue. Choisissez maintenant une palette de couleurs :"
+          );
+          setConversationState((prev) => ({
+            ...prev,
+            step: "colors",
+            referenceImage: imageDataUrl,
+          }));
+          return;
+        }
+
+        addMessage(
+          "assistant",
+          `Image analysée. Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :`
+        );
+
+        setConversationState((prev) => ({
+          ...prev,
+          step: "colors",
+          referenceImage: imageDataUrl,
+          referenceDescription: data.description,
+        }));
+      } catch (err) {
+        removeLoadingMessage();
+        addMessage(
+          "assistant",
+          "Une erreur est survenue pendant l'analyse. Choisissez quand même une palette de couleurs :"
+        );
+        setConversationState((prev) => ({ ...prev, step: "colors", referenceImage: imageDataUrl }));
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [addMessage, addLoadingMessage, removeLoadingMessage]
+  );
+
+  const handleSkipReference = useCallback(() => {
+    addMessage("user", "Passer l'image de référence");
+    setConversationState((prev) => ({ ...prev, step: "colors" }));
+    setTimeout(() => {
+      addMessage("assistant", "Choisissez maintenant une palette de couleurs :");
+    }, 250);
+  }, [addMessage]);
+
+  const handleColorsConfirm = useCallback(
+    (colors: string[]) => {
+      addMessage("user", `Couleurs choisies : ${colors.join(", ")}`);
+      setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: colors }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "Avez-vous une image à intégrer (produit, personne, logo) ? Envoyez-la, ou cliquez sur ‘Générer automatiquement’."
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleContentImage = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Image de contenu envoyée", imageDataUrl);
+
+      const nextState: ConversationState = {
+        ...conversationStateRef.current,
+        step: "generating",
+        contentImage: imageDataUrl,
+        needsContentImage: false,
+      };
+
+      setConversationState(nextState);
+
+      setTimeout(() => {
+        addMessage("assistant", "Parfait. Génération de votre affiche en cours...");
+        generatePoster(nextState);
+      }, 250);
+    },
+    [addMessage, generatePoster]
+  );
+
+  const handleSkipContentImage = useCallback(() => {
+    addMessage("user", "Générer l'image de contenu automatiquement");
+
+    const nextState: ConversationState = {
+      ...conversationStateRef.current,
+      step: "generating",
+      needsContentImage: true,
+    };
+
+    setConversationState(nextState);
+
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Compris. Génération de votre affiche en cours (avec des personnages africains si nécessaire)..."
+      );
+      generatePoster(nextState);
+    }, 250);
+  }, [addMessage, generatePoster]);
 
   const resetConversation = useCallback(() => {
     setMessages([
