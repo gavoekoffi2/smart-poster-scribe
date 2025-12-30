@@ -108,11 +108,13 @@ function buildProfessionalPrompt({
   userPrompt,
   hasReferenceImage,
   hasContentImage,
+  hasLogoImage,
   aspectRatio,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
   hasContentImage: boolean;
+  hasLogoImage: boolean;
   aspectRatio: string;
 }): string {
   const instructions: string[] = [];
@@ -142,39 +144,55 @@ function buildProfessionalPrompt({
     "- Do NOT invent extra phone numbers, addresses, prices, dates, or claims."
   );
 
-  // Reference image guidance (stronger style fidelity)
+  // Reference image guidance - ULTRA STRICT DESIGN MATCHING
   if (hasReferenceImage) {
     instructions.push("");
-    instructions.push("REFERENCE STYLE (First image provided): HIGH FIDELITY STYLE MATCH");
+    instructions.push("=== CRITICAL: REFERENCE IMAGE DESIGN REPLICATION ===");
     instructions.push(
-      "- Treat the reference image as a STYLE BLUEPRINT. Match its overall art direction closely."
-    );
-    instructions.push(
-      "- Reproduce the same era/decade vibe if present (e.g., 2010s, 90s, vintage, modern, minimal, etc.)."
-    );
-    instructions.push(
-      "- Match these STYLE ATTRIBUTES as closely as possible: composition/grid, spacing, alignment, typography vibe (serif/sans, weight, contrast), color mood and contrast, background treatment (solid/gradient/texture), graphic shapes, icon style, and overall tone."
-    );
-    instructions.push(
-      "- Use the reference color palette as guidance (apply it), but do NOT print hex codes or technical notes on the poster."
+      "The FIRST image provided is the DESIGN REFERENCE. You MUST replicate its design with MAXIMUM FIDELITY."
     );
     instructions.push("");
-    instructions.push("IMPORTANT (originality + compliance):");
+    instructions.push("MANDATORY DESIGN ELEMENTS TO COPY EXACTLY:");
+    instructions.push("1. LAYOUT STRUCTURE: Copy the exact grid system, margins, content placement, and spacing proportions.");
+    instructions.push("2. TYPOGRAPHY STYLE: Match font categories (serif/sans-serif/display), weight hierarchy, text sizes ratios, and alignment patterns.");
+    instructions.push("3. COLOR TREATMENT: Replicate the color scheme, gradients, overlays, and color distribution pattern.");
+    instructions.push("4. GRAPHIC ELEMENTS: Copy decorative shapes, lines, frames, icons style, and ornamental patterns.");
+    instructions.push("5. BACKGROUND TREATMENT: Match solid/gradient/texture/photo treatment exactly.");
+    instructions.push("6. VISUAL ATMOSPHERE: Reproduce the mood, era/decade aesthetic, lighting style, and overall vibe.");
+    instructions.push("7. COMPOSITION BALANCE: Match the visual weight distribution, white space usage, and focal points.");
+    instructions.push("8. FINISHING DETAILS: Copy shadows, glows, textures, grain, and post-processing effects.");
+    instructions.push("");
+    instructions.push("The result should look like it was designed by the SAME DESIGNER using the SAME DESIGN TEMPLATE.");
+    instructions.push("Someone seeing both posters should immediately recognize they share the same design language.");
+    instructions.push("");
+    instructions.push("ORIGINALITY RULES:");
+    instructions.push("- Do NOT copy any text, brand names, logos, or faces from the reference.");
+    instructions.push("- Create NEW content following the EXACT SAME visual style.");
+    instructions.push("- The design system must match, the content must be original.");
+  }
+
+  // Logo image guidance
+  if (hasLogoImage) {
+    instructions.push("");
+    instructions.push("LOGO INTEGRATION (Logo image provided):");
     instructions.push(
-      "- Do NOT copy or reuse any text, logos, brand names, faces, or unique copyrighted elements from the reference image."
+      "- A logo image is provided. Integrate it prominently and professionally into the poster design."
     );
     instructions.push(
-      "- Create an ORIGINAL poster that follows the reference style, but with NEW visuals and layout details."
+      "- Place the logo in a strategic position (header, corner, or center based on design)."
     );
     instructions.push(
-      "- Upgrade the execution: cleaner layout, better hierarchy, more professional typography and spacing."
+      "- Preserve the logo's original appearance - do not distort, recolor, or modify it."
+    );
+    instructions.push(
+      "- Ensure the logo has proper contrast against its background for visibility."
     );
   }
 
   // Content image guidance
   if (hasContentImage) {
     instructions.push("");
-    instructions.push("MAIN VISUAL (Second image provided):");
+    instructions.push("MAIN VISUAL (Content image provided):");
     instructions.push(
       "- Integrate the provided content image as the PRIMARY visual element and design the layout around it."
     );
@@ -335,6 +353,7 @@ serve(async (req) => {
     const {
       prompt,
       referenceImage,
+      logoImage,
       contentImage,
       aspectRatio = "3:4",
       resolution = "2K",
@@ -344,6 +363,7 @@ serve(async (req) => {
     console.log("Request received:");
     console.log("- Prompt length:", prompt?.length || 0);
     console.log("- Has reference image:", !!referenceImage);
+    console.log("- Has logo image:", !!logoImage);
     console.log("- Has content image:", !!contentImage);
     console.log("- Aspect ratio:", aspectRatio);
     console.log("- Resolution:", resolution);
@@ -356,7 +376,7 @@ serve(async (req) => {
     const imageInputs: string[] = [];
     const tempFilePaths: string[] = [];
 
-    // Upload de l'image de référence si présente
+    // Upload de l'image de référence si présente (en premier pour le style)
     if (referenceImage) {
       try {
         const refUrl = await uploadBase64ToStorage(supabase, referenceImage, 'reference');
@@ -365,6 +385,18 @@ serve(async (req) => {
       } catch (e) {
         console.error("Error uploading reference image:", e);
         throw new Error(`Erreur avec l'image de référence: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    // Upload du logo si présent
+    if (logoImage) {
+      try {
+        const logoUrl = await uploadBase64ToStorage(supabase, logoImage, 'logo');
+        imageInputs.push(logoUrl);
+        tempFilePaths.push(logoUrl);
+      } catch (e) {
+        console.error("Error uploading logo image:", e);
+        throw new Error(`Erreur avec le logo: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
@@ -385,6 +417,7 @@ serve(async (req) => {
       userPrompt: prompt,
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
+      hasLogoImage: !!logoImage,
       aspectRatio,
     });
 

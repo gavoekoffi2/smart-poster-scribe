@@ -20,6 +20,8 @@ export default function Index() {
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
+    handleLogoImage,
+    handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
     resetConversation,
@@ -73,6 +75,7 @@ export default function Index() {
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
+  const showLogoUpload = step === "logo";
   const showContentImageUpload = step === "content_image";
 
   return (
@@ -162,6 +165,20 @@ export default function Index() {
                   label="Envoyer image de référence"
                 />
                 <Button variant="ghost" size="sm" onClick={handleSkipReference} disabled={isProcessing}>
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Passer
+                </Button>
+              </div>
+            )}
+
+            {showLogoUpload && (
+              <div className="flex flex-wrap gap-2">
+                <ImageUploadButton
+                  onImageSelect={handleLogoImage}
+                  disabled={isProcessing}
+                  label="Envoyer le logo"
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipLogo} disabled={isProcessing}>
                   <SkipForward className="w-4 h-4 mr-2" />
                   Passer
                 </Button>
