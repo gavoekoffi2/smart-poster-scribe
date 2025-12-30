@@ -13,24 +13,39 @@ interface GenerateImageRequest {
   referenceImageUrl?: string;
 }
 
-interface KieTaskResponse {
-  code: number;
-  message: string;
-  data: {
-    taskId: string;
-  };
-}
+type LovableGatewayResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      images?: Array<{
+        type?: string;
+        image_url?: {
+          url?: string;
+        };
+      }>;
+    };
+  }>;
+};
 
-interface KieTaskStatusResponse {
-  code: number;
-  message: string;
-  data: {
-    taskId: string;
-    state: "pending" | "processing" | "success" | "fail";
-    resultJson?: string;
-    failCode?: string;
-    failMsg?: string;
-  };
+function buildFinalPrompt({
+  prompt,
+  aspectRatio,
+  resolution,
+}: {
+  prompt: string;
+  aspectRatio: string;
+  resolution: string;
+}) {
+  // L'API image ne garantit pas un ratio exact via paramètre, donc on l'ancre dans le prompt.
+  return [
+    "Génère une affiche publicitaire prête à publier.",
+    `Format: ${aspectRatio} (vertical).`,
+    `Qualité: ${resolution}, ultra haute résolution, texte net et lisible.`,
+    "Si une personne apparaît, elle doit être africaine.",
+    "Respecte strictement les informations fournies.",
+    "---",
+    prompt.trim(),
+  ].join("\n");
 }
 
 serve(async (req) => {
@@ -40,184 +55,127 @@ serve(async (req) => {
   }
 
   try {
-    const KIE_AI_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!KIE_AI_API_KEY) {
-      console.error("KIE_AI_API_KEY is not configured");
-      return new Response(
-        JSON.stringify({ error: "API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(JSON.stringify({ error: "AI key not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const {
       prompt,
-      aspectRatio = "1:1",
-      resolution = "1K",
+      aspectRatio = "3:4",
+      resolution = "2K",
       outputFormat = "png",
       referenceImageUrl,
     } = (await req.json()) as GenerateImageRequest;
 
-    if (!prompt) {
-      return new Response(
-        JSON.stringify({ error: "Prompt is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!prompt?.trim()) {
+      return new Response(JSON.stringify({ error: "Prompt is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log("Creating task with KIE AI Nano Banana Pro...");
-    console.log("Prompt:", prompt.substring(0, 200) + "...");
-    console.log("Parameters:", { aspectRatio, resolution, outputFormat });
+    const finalPrompt = buildFinalPrompt({
+      prompt,
+      aspectRatio,
+      resolution,
+    });
 
-    // Map aspect ratio format (our format uses ":" but KIE uses ":" as well)
-    const kieAspectRatio = aspectRatio;
+    const model = "google/gemini-2.5-flash-image-preview";
 
-    // Build image_input array if reference image is provided
-    const imageInput: string[] = [];
-    if (referenceImageUrl) {
-      imageInput.push(referenceImageUrl);
-    }
+    const userMessage: any = referenceImageUrl
+      ? {
+          role: "user",
+          content: [
+            { type: "text", text: finalPrompt },
+            { type: "image_url", image_url: { url: referenceImageUrl } },
+          ],
+        }
+      : { role: "user", content: finalPrompt };
 
-    // Step 1: Create task
-    const createTaskResponse = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
+    const gatewayResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${KIE_AI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "nano-banana-pro",
-        input: {
-          prompt: prompt,
-          image_input: imageInput.length > 0 ? imageInput : undefined,
-          aspect_ratio: kieAspectRatio,
-          resolution: resolution,
-          output_format: outputFormat.toLowerCase(),
-        },
+        model,
+        messages: [userMessage],
+        modalities: ["image", "text"],
       }),
     });
 
-    if (!createTaskResponse.ok) {
-      const errorText = await createTaskResponse.text();
-      console.error("KIE AI createTask error:", createTaskResponse.status, errorText);
-      return new Response(
-        JSON.stringify({
-          error: "Failed to create generation task",
-          details: errorText,
-          status: createTaskResponse.status,
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!gatewayResp.ok) {
+      const text = await gatewayResp.text();
+      console.error("AI gateway error:", gatewayResp.status, text);
 
-    const createTaskData = (await createTaskResponse.json()) as KieTaskResponse;
-    console.log("Task created:", createTaskData);
-
-    if (createTaskData.code !== 200 || !createTaskData.data?.taskId) {
-      console.error("Task creation failed:", createTaskData);
-      return new Response(
-        JSON.stringify({
-          error: "Task creation failed",
-          details: createTaskData.message,
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const taskId = createTaskData.data.taskId;
-    console.log("Task ID:", taskId);
-
-    // Step 2: Poll for task completion
-    const maxAttempts = 60; // 60 attempts * 3 seconds = 3 minutes max
-    const pollInterval = 3000; // 3 seconds
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-
-      console.log(`Polling attempt ${attempt + 1}/${maxAttempts}...`);
-
-      const statusResponse = await fetch("https://api.kie.ai/api/v1/jobs/getTask", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${KIE_AI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ taskId }),
-      });
-
-      if (!statusResponse.ok) {
-        console.error("Status poll error:", statusResponse.status);
-        continue; // Retry on transient errors
+      if (gatewayResp.status === 429) {
+        return new Response(JSON.stringify({ error: "Trop de demandes. Réessayez dans quelques instants." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      const statusData = (await statusResponse.json()) as KieTaskStatusResponse;
-      console.log("Task status:", statusData.data?.state);
-
-      if (statusData.code !== 200) {
-        console.error("Status check failed:", statusData);
-        continue;
-      }
-
-      const taskState = statusData.data?.state;
-
-      if (taskState === "success") {
-        // Parse resultJson to get image URL
-        try {
-          const result = JSON.parse(statusData.data.resultJson || "{}");
-          const imageUrl = result.resultUrls?.[0];
-
-          if (!imageUrl) {
-            console.error("No image URL in result:", result);
-            return new Response(
-              JSON.stringify({ error: "No image URL in result" }),
-              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
-          console.log("Image generated successfully:", imageUrl);
-
-          return new Response(
-            JSON.stringify({
-              success: true,
-              imageUrl,
-              taskId,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        } catch (parseError) {
-          console.error("Failed to parse result:", parseError, statusData.data.resultJson);
-          return new Response(
-            JSON.stringify({ error: "Failed to parse generation result" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
-
-      if (taskState === "fail") {
-        console.error("Task failed:", statusData.data.failMsg);
+      if (gatewayResp.status === 402) {
         return new Response(
           JSON.stringify({
-            error: "Image generation failed",
-            details: statusData.data.failMsg || "Unknown error",
+            error: "Crédits insuffisants pour générer. Veuillez recharger l'usage IA du projet.",
           }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
 
-      // pending or processing - continue polling
+      return new Response(
+        JSON.stringify({
+          error: "AI gateway error",
+          details: text,
+          status: gatewayResp.status,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Timeout
-    console.error("Task timed out");
+    const data = (await gatewayResp.json()) as LovableGatewayResponse;
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+    if (!imageUrl) {
+      console.error("No image returned from AI gateway", JSON.stringify(data)?.slice(0, 2000));
+      return new Response(JSON.stringify({ error: "No image returned" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: "Generation timed out. Please try again." }),
-      { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: true,
+        imageUrl,
+        // keep taskId for compatibility with existing frontend code
+        taskId: crypto.randomUUID(),
+        outputFormat: outputFormat.toLowerCase(),
+        provider: "lovable-ai",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
     console.error("Error in generate-image function:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
