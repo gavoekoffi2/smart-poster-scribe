@@ -95,8 +95,9 @@ export interface LogoWithPosition {
 }
 
 export interface ConversationState {
-  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "logo_position" | "content_image" | "generating" | "complete";
+  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "logo_position" | "content_image" | "generating" | "complete" | "modifying";
   domain?: Domain;
+  modificationRequest?: string;
   customDomain?: string;
   description?: string;
   extractedInfo?: ExtractedInfo;

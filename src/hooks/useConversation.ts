@@ -271,7 +271,7 @@ export function useConversation() {
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
-          "Votre affiche est prête ! Vous pouvez la télécharger à droite. Souhaitez-vous en créer une autre ?"
+          "Votre affiche est prête ! 🎨 Si vous souhaitez des modifications (changer un texte, ajuster les couleurs, déplacer un élément...), décrivez-les moi. Sinon, téléchargez-la ou créez-en une nouvelle !"
         );
         toast.success("Affiche générée avec succès !");
       } catch (err) {
@@ -285,10 +285,79 @@ export function useConversation() {
     [addMessage]
   );
 
+  const handleModificationRequest = useCallback(
+    async (request: string) => {
+      setIsProcessing(true);
+      setConversationState((prev) => ({ ...prev, step: "modifying" }));
+      addLoadingMessage();
+
+      try {
+        const state = conversationStateRef.current;
+        // Build a modification prompt that includes the original prompt + modification request
+        const originalPrompt = buildPrompt(state);
+        const modificationPrompt = `${originalPrompt}. MODIFICATIONS DEMANDÉES: ${request}`;
+
+        console.log("Regenerating with modifications:", request);
+        console.log("Modified prompt:", modificationPrompt);
+
+        const logos = state.logos || [];
+        const logoImages = logos.map(l => l.imageUrl);
+        const logoPositions = logos.map(l => l.position);
+
+        const { data, error } = await supabase.functions.invoke("generate-image", {
+          body: {
+            prompt: modificationPrompt,
+            aspectRatio: "3:4",
+            referenceImage: state.referenceImage || undefined,
+            logoImages: logoImages.length > 0 ? logoImages : undefined,
+            logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
+            contentImage: state.contentImage || undefined,
+          },
+        });
+
+        removeLoadingMessage();
+
+        if (error || !data?.success) {
+          const msg = data?.error || error?.message || "Erreur inconnue";
+          addMessage(
+            "assistant",
+            `Désolé, la modification a échoué : ${msg}. Décrivez à nouveau ce que vous voulez changer.`
+          );
+          setConversationState((prev) => ({ ...prev, step: "complete" }));
+          toast.error("Erreur lors de la modification");
+          return;
+        }
+
+        setGeneratedImage(data.imageUrl);
+        setConversationState((prev) => ({ ...prev, step: "complete" }));
+        addMessage(
+          "assistant",
+          "J'ai appliqué vos modifications ! Si vous voulez d'autres changements, dites-le moi. Sinon, téléchargez votre affiche !"
+        );
+        toast.success("Modifications appliquées !");
+      } catch (err) {
+        console.error("Modification error:", err);
+        removeLoadingMessage();
+        addMessage("assistant", "Une erreur est survenue. Réessayez de décrire vos modifications.");
+        setConversationState((prev) => ({ ...prev, step: "complete" }));
+        toast.error("Erreur inattendue");
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [addMessage, addLoadingMessage, removeLoadingMessage]
+  );
+
   const handleUserMessage = useCallback(
     async (content: string) => {
       addMessage("user", content);
       const { step } = conversationStateRef.current;
+
+      // Handle modification requests when in complete state
+      if (step === "complete") {
+        handleModificationRequest(content);
+        return;
+      }
 
       // Initial greeting - analyze the request
       if (step === "greeting") {
@@ -430,7 +499,7 @@ export function useConversation() {
         return;
       }
     },
-    [addMessage, addLoadingMessage, removeLoadingMessage]
+    [addMessage, addLoadingMessage, removeLoadingMessage, handleModificationRequest]
   );
 
   const handleDomainSelect = useCallback(
