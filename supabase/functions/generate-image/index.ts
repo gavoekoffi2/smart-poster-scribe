@@ -3,19 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 const KIE_API_BASE = "https://api.kie.ai/api/v1/jobs";
-
-interface GenerateImageRequest {
-  prompt: string;
-  aspectRatio?: string;
-  resolution?: string;
-  outputFormat?: string;
-  referenceImage?: string; // Base64 ou URL de l'image de référence (style)
-  contentImage?: string;   // Base64 ou URL de l'image de contenu à intégrer
-}
 
 interface KieCreateTaskResponse {
   code: number;
@@ -42,7 +34,12 @@ interface KieRecordInfoResponse {
   };
 }
 
-// Convertir une image base64 en URL publique via Supabase Storage
+interface KieResultJson {
+  resultUrls?: string[];
+  resultObject?: Record<string, unknown>;
+}
+
+// Fonction pour uploader une image base64 vers Supabase Storage
 async function uploadBase64ToStorage(
   supabase: any,
   base64Data: string,
@@ -92,9 +89,19 @@ async function uploadBase64ToStorage(
   return urlData.publicUrl;
 }
 
-// Vérifier si c'est une URL ou du base64
-function isUrl(str: string): boolean {
-  return str.startsWith('http://') || str.startsWith('https://');
+// Fonction pour supprimer les images temporaires après utilisation
+async function cleanupTempImages(supabase: any, filePaths: string[]) {
+  for (const path of filePaths) {
+    try {
+      const fileName = path.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('temp-images').remove([fileName]);
+        console.log(`Cleaned up temp image: ${fileName}`);
+      }
+    } catch (e) {
+      console.warn(`Failed to cleanup temp image: ${path}`, e);
+    }
+  }
 }
 
 function buildProfessionalPrompt({
@@ -111,45 +118,55 @@ function buildProfessionalPrompt({
   const instructions: string[] = [];
 
   // Instructions de base pour une affiche professionnelle
-  instructions.push("Create a professional advertising poster with the following specifications:");
+  instructions.push("You are an expert graphic designer. Create a UNIQUE, ORIGINAL and PROFESSIONAL advertising poster.");
+  instructions.push("");
+  instructions.push("SPECIFICATIONS:");
   instructions.push(`- Format: ${aspectRatio} aspect ratio`);
-  instructions.push("- High-quality graphic design suitable for print");
-  instructions.push("- Clean, legible typography with clear visual hierarchy");
-  instructions.push("- Modern, polished aesthetic");
-  instructions.push("- African characters with authentic features when people are shown");
+  instructions.push("- Ultra high-quality print-ready design");
+  instructions.push("- Modern, sophisticated and premium aesthetic");
+  instructions.push("- Professional typography with perfect visual hierarchy");
+  instructions.push("- When depicting people: use authentic African characters with natural features");
   
-  // Instructions spécifiques si image de référence
+  // Instructions spécifiques si image de référence - S'INSPIRER SEULEMENT DU STYLE
   if (hasReferenceImage) {
     instructions.push("");
-    instructions.push("CRITICAL - STYLE REFERENCE (First image provided):");
-    instructions.push("- Reproduce EXACTLY the visual style, composition, and layout from the reference image");
-    instructions.push("- Match the typography style, color scheme, and design elements");
-    instructions.push("- Keep the same professional aesthetic and visual hierarchy");
-    instructions.push("- Adapt the style to the new content while maintaining visual consistency");
+    instructions.push("STYLE INSPIRATION (First image provided):");
+    instructions.push("- ANALYZE the reference image to understand its design principles, visual style, and aesthetic approach");
+    instructions.push("- GET INSPIRED by the layout structure, typography choices, and color harmony");
+    instructions.push("- DO NOT COPY the reference image content, text, or specific elements");
+    instructions.push("- DO NOT USE any information, text, or details FROM the reference image");
+    instructions.push("- CREATE something COMPLETELY NEW and MORE ORIGINAL based on the user's specifications");
+    instructions.push("- ELEVATE the design to be MORE PROFESSIONAL and MORE POLISHED than the reference");
+    instructions.push("- Use the reference ONLY as stylistic inspiration, not as a template to copy");
   }
   
   // Instructions spécifiques si image de contenu
   if (hasContentImage) {
     instructions.push("");
-    instructions.push("CRITICAL - CONTENT IMAGE (Second image provided):");
-    instructions.push("- INTEGRATE the provided content image prominently in the poster");
-    instructions.push("- The content image should be the main visual element");
-    instructions.push("- Position it professionally within the layout");
-    instructions.push("- Do NOT replace or generate a different image - USE the one provided");
+    instructions.push("MAIN VISUAL ELEMENT (Second image provided):");
+    instructions.push("- INTEGRATE the provided content image as the PRIMARY visual element of the poster");
+    instructions.push("- Position it prominently and professionally within the composition");
+    instructions.push("- The content image MUST be the central focus of the design");
+    instructions.push("- DO NOT replace, modify, or generate a different main image - USE the one provided exactly");
+    instructions.push("- Build the entire poster design around this central image");
   }
   
-  // Instructions générales
+  // Instructions générales renforcées
   instructions.push("");
-  instructions.push("IMPORTANT RULES:");
-  instructions.push("- Do NOT display any color codes, hex values, or technical text");
-  instructions.push("- All text on the poster must be from the user's specifications");
-  instructions.push("- Apply colors harmoniously throughout the design");
-  instructions.push("- Ensure professional print quality");
+  instructions.push("CRITICAL RULES:");
+  instructions.push("- USE ONLY the user's specifications below for ALL text and content");
+  instructions.push("- DO NOT display any color codes, hex values, or technical information");
+  instructions.push("- DO NOT copy any text or information from the reference image");
+  instructions.push("- Apply the specified colors harmoniously and professionally");
+  instructions.push("- Create a design that is MORE original and MORE professional than any reference");
+  instructions.push("- Ensure the final result is unique, memorable, and print-ready");
+  instructions.push("- The poster must look like it was created by a top-tier design agency");
   
-  // Ajouter le prompt utilisateur
+  // Ajouter le prompt utilisateur avec emphase
   instructions.push("");
-  instructions.push("USER SPECIFICATIONS:");
+  instructions.push("=== USER SPECIFICATIONS (Use ONLY this information) ===");
   instructions.push(userPrompt);
+  instructions.push("=== END OF USER SPECIFICATIONS ===");
   
   return instructions.join("\n");
 }
@@ -219,54 +236,49 @@ async function pollForResult(
   maxAttempts: number = 60,
   intervalMs: number = 2000
 ): Promise<string> {
-  console.log(`Polling for task ${taskId} result...`);
+  console.log(`Polling for result, taskId: ${taskId}`);
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    console.log(`Poll attempt ${attempt}/${maxAttempts}`);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Poll attempt ${attempt + 1}/${maxAttempts}`);
 
-    const response = await fetch(`${KIE_API_BASE}/recordInfo?taskId=${taskId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
+    const response = await fetch(
+      `${KIE_API_BASE}/recordInfo?taskId=${taskId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Poll error:", response.status, errorText);
-      throw new Error(`Erreur polling: ${response.status}`);
+      console.error("Poll error:", response.status);
+      throw new Error(`Erreur récupération statut: ${response.status}`);
     }
 
     const data = (await response.json()) as KieRecordInfoResponse;
-    console.log(`Task state: ${data.data?.state}`);
+    console.log(`Poll response state: ${data.data?.state}`);
 
-    if (data.data?.state === "success") {
-      // Extraire l'URL de l'image depuis resultJson
-      if (data.data.resultJson) {
-        try {
-          const resultData = JSON.parse(data.data.resultJson);
-          const imageUrl = resultData.resultUrls?.[0];
-          if (imageUrl) {
-            console.log("Image URL extracted:", imageUrl.substring(0, 100) + "...");
-            return imageUrl;
-          }
-        } catch (e) {
-          console.error("Error parsing resultJson:", e);
-        }
+    if (data.data?.state === "success" && data.data.resultJson) {
+      const result = JSON.parse(data.data.resultJson) as KieResultJson;
+      if (result.resultUrls && result.resultUrls.length > 0) {
+        console.log("Generation successful, URL:", result.resultUrls[0]);
+        return result.resultUrls[0];
       }
-      throw new Error("Pas d'URL d'image dans la réponse");
+      throw new Error("Pas d'URL dans le résultat");
     }
 
     if (data.data?.state === "fail") {
-      console.error("Task failed:", data.data.failMsg);
-      throw new Error(`Génération échouée: ${data.data.failMsg || data.data.failCode || "Erreur inconnue"}`);
+      throw new Error(
+        `Génération échouée: ${data.data.failMsg || data.data.failCode || "Erreur inconnue"}`
+      );
     }
 
-    // Task is still waiting, continue polling
+    // Attendre avant le prochain polling
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
-  throw new Error("Timeout: la génération a pris trop de temps");
+  throw new Error("Délai d'attente dépassé pour la génération");
 }
 
 serve(async (req) => {
@@ -276,115 +288,101 @@ serve(async (req) => {
   }
 
   try {
-    const KIE_AI_API_KEY = Deno.env.get("KIE_AI_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!KIE_AI_API_KEY) {
-      console.error("KIE_AI_API_KEY is not configured");
-      return new Response(JSON.stringify({ error: "Clé API Kie AI non configurée" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const KIE_API_KEY = Deno.env.get("KIE_API_KEY");
+    if (!KIE_API_KEY) {
+      throw new Error("KIE_API_KEY non configurée");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("Supabase credentials not configured");
-      return new Response(JSON.stringify({ error: "Configuration Supabase manquante" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Initialiser le client Supabase pour le storage
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Variables Supabase non configurées");
     }
-
-    // Créer le client Supabase avec le service role pour l'upload
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const {
       prompt,
+      referenceImage,
+      contentImage,
       aspectRatio = "3:4",
       resolution = "2K",
       outputFormat = "png",
-      referenceImage,
-      contentImage,
-    } = (await req.json()) as GenerateImageRequest;
+    } = await req.json();
 
-    if (!prompt?.trim()) {
-      return new Response(JSON.stringify({ error: "Le prompt est requis" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    console.log("Request received:");
+    console.log("- Prompt length:", prompt?.length || 0);
+    console.log("- Has reference image:", !!referenceImage);
+    console.log("- Has content image:", !!contentImage);
+    console.log("- Aspect ratio:", aspectRatio);
+    console.log("- Resolution:", resolution);
+
+    if (!prompt) {
+      throw new Error("Le prompt est requis");
     }
 
-    const hasReferenceImage = !!referenceImage;
-    const hasContentImage = !!contentImage;
-    
-    console.log("=== Generating with Kie AI Nano Banana Pro ===");
-    console.log("Has reference image:", hasReferenceImage);
-    console.log("Has content image:", hasContentImage);
-    console.log("Aspect ratio:", aspectRatio);
-    console.log("Resolution:", resolution);
-    console.log("Output format:", outputFormat);
-
-    // Convertir les images base64 en URLs si nécessaire
+    // Préparer les URLs des images
     const imageInputs: string[] = [];
-    
+    const tempFilePaths: string[] = [];
+
+    // Upload de l'image de référence si présente
     if (referenceImage) {
-      if (isUrl(referenceImage)) {
-        console.log("Reference image is already a URL");
-        imageInputs.push(referenceImage);
-      } else {
-        // C'est du base64, uploader vers Storage
-        const referenceUrl = await uploadBase64ToStorage(supabase, referenceImage, "reference");
-        imageInputs.push(referenceUrl);
-      }
-    }
-    
-    if (contentImage) {
-      if (isUrl(contentImage)) {
-        console.log("Content image is already a URL");
-        imageInputs.push(contentImage);
-      } else {
-        // C'est du base64, uploader vers Storage
-        const contentUrl = await uploadBase64ToStorage(supabase, contentImage, "content");
-        imageInputs.push(contentUrl);
+      try {
+        const refUrl = await uploadBase64ToStorage(supabase, referenceImage, 'reference');
+        imageInputs.push(refUrl);
+        tempFilePaths.push(refUrl);
+      } catch (e) {
+        console.error("Error uploading reference image:", e);
+        throw new Error(`Erreur avec l'image de référence: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
-    console.log("Final image URLs count:", imageInputs.length);
+    // Upload de l'image de contenu si présente
+    if (contentImage) {
+      try {
+        const contentUrl = await uploadBase64ToStorage(supabase, contentImage, 'content');
+        imageInputs.push(contentUrl);
+        tempFilePaths.push(contentUrl);
+      } catch (e) {
+        console.error("Error uploading content image:", e);
+        throw new Error(`Erreur avec l'image de contenu: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
 
     // Construire le prompt professionnel
-    const finalPrompt = buildProfessionalPrompt({
+    const professionalPrompt = buildProfessionalPrompt({
       userPrompt: prompt,
-      hasReferenceImage,
-      hasContentImage,
+      hasReferenceImage: !!referenceImage,
+      hasContentImage: !!contentImage,
       aspectRatio,
     });
-    
-    console.log("Final prompt length:", finalPrompt.length);
-    console.log("Prompt preview:", finalPrompt.substring(0, 500) + "...");
 
-    // Étape 1: Créer la tâche
+    console.log("Professional prompt built, length:", professionalPrompt.length);
+
+    // Créer la tâche
     const taskId = await createTask(
-      KIE_AI_API_KEY,
-      finalPrompt,
+      KIE_API_KEY,
+      professionalPrompt,
       imageInputs,
       aspectRatio,
       resolution,
       outputFormat
     );
-    
-    console.log("Task created:", taskId);
 
-    // Étape 2: Attendre le résultat
-    const imageUrl = await pollForResult(KIE_AI_API_KEY, taskId);
-    
-    console.log("Image generated successfully!");
+    // Attendre le résultat
+    const resultUrl = await pollForResult(KIE_API_KEY, taskId);
+
+    // Nettoyer les images temporaires
+    if (tempFilePaths.length > 0) {
+      await cleanupTempImages(supabase, tempFilePaths);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        imageUrl: imageUrl,
-        provider: "nano-banana-pro",
+        imageUrl: resultUrl,
         taskId: taskId,
       }),
       {
@@ -392,11 +390,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error in generate-image function:", error);
+    console.error("Generate image error:", error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Erreur inconnue" 
-      }), 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Erreur inconnue",
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
