@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ChatMessage as ChatMessageType } from "@/types/generation";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
-import { User, Loader2 } from "lucide-react";
+import { User } from "lucide-react";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -13,7 +13,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className={cn(
-        "flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "flex gap-4 animate-fade-up",
         isAssistant ? "flex-row" : "flex-row-reverse"
       )}
     >
@@ -23,28 +23,28 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <DesignerAvatar size="sm" isWorking={message.isLoading} />
         </div>
       ) : (
-        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-brand-orange to-brand-blue">
-          <User className="w-5 h-5 text-primary-foreground" />
+        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/20 border border-primary/30">
+          <User className="w-5 h-5 text-primary" />
         </div>
       )}
 
       {/* Message content */}
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-3 shadow-lg",
+          "max-w-[80%] px-5 py-4 shadow-lg transition-all duration-300",
           isAssistant
-            ? "bg-card/80 backdrop-blur-sm border border-border/40 text-foreground"
-            : "bg-gradient-to-br from-brand-orange to-brand-blue text-primary-foreground"
+            ? "chat-bubble-assistant"
+            : "chat-bubble-user"
         )}
       >
         {message.isLoading ? (
           <div className="flex items-center gap-3">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 rounded-full bg-brand-orange animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2 h-2 rounded-full bg-brand-blue animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2 h-2 rounded-full bg-brand-orange animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="flex gap-1.5">
+              <span className="thinking-dot" />
+              <span className="thinking-dot" />
+              <span className="thinking-dot" />
             </div>
-            <span className="text-sm text-muted-foreground">En train de créer...</span>
+            <span className="text-sm text-muted-foreground">Création en cours...</span>
           </div>
         ) : (
           <>
@@ -53,7 +53,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <img
                 src={message.image}
                 alt="Image partagée"
-                className="mt-3 rounded-xl max-w-full max-h-48 object-contain border border-border/20"
+                className="mt-3 rounded-lg max-w-full max-h-48 object-contain border border-border/20"
               />
             )}
           </>
