@@ -243,6 +243,7 @@ export function useConversation() {
             prompt,
             aspectRatio: "3:4" as AspectRatio,
             referenceImage: state.referenceImage || undefined, // Image de référence (style)
+            logoImage: state.logoImage || undefined,           // Logo de l'entreprise
             contentImage: state.contentImage || undefined,     // Image de contenu
           },
         });
@@ -526,16 +527,41 @@ export function useConversation() {
   const handleColorsConfirm = useCallback(
     (colors: string[]) => {
       addMessage("user", `Couleurs : ${colors.join(", ")}`);
-      setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: colors }));
+      setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: colors }));
       setTimeout(() => {
         addMessage(
           "assistant",
-          "Avez-vous une image à intégrer dans l'affiche (produit, logo, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
+          "Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
         );
       }, 250);
     },
     [addMessage]
   );
+
+  const handleLogoImage = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Logo envoyé", imageDataUrl);
+      setConversationState((prev) => ({ ...prev, step: "content_image", logoImage: imageDataUrl }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "Logo reçu ! Avez-vous une image à intégrer dans l'affiche (produit, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleSkipLogo = useCallback(() => {
+    addMessage("user", "Passer le logo");
+    setConversationState((prev) => ({ ...prev, step: "content_image" }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Avez-vous une image à intégrer dans l'affiche (produit, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
+      );
+    }, 250);
+  }, [addMessage]);
 
   const handleContentImage = useCallback(
     (imageDataUrl: string) => {
@@ -603,6 +629,8 @@ export function useConversation() {
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
+    handleLogoImage,
+    handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
     resetConversation,

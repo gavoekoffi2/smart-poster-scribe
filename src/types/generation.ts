@@ -88,7 +88,7 @@ export interface ChatMessage {
 }
 
 export interface ConversationState {
-  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "content_image" | "generating" | "complete";
+  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "content_image" | "generating" | "complete";
   domain?: Domain;
   customDomain?: string;
   description?: string;
@@ -97,6 +97,7 @@ export interface ConversationState {
   referenceImage?: string;
   referenceDescription?: string;
   colorPalette?: string[];
+  logoImage?: string;
   contentImage?: string;
   needsContentImage?: boolean;
 }
