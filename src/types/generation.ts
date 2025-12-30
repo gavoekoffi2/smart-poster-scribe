@@ -13,11 +13,30 @@ export type Domain =
   | "technology" 
   | "health" 
   | "realestate"
+  | "formation"
   | "other";
 
 export interface DomainInfo {
   id: Domain;
   label: string;
+}
+
+export interface ExtractedInfo {
+  title?: string;
+  dates?: string;
+  prices?: string;
+  contact?: string;
+  location?: string;
+  organizer?: string;
+  targetAudience?: string;
+  additionalDetails?: string;
+}
+
+export interface AnalysisResult {
+  suggestedDomain: string | null;
+  extractedInfo: ExtractedInfo;
+  missingInfo: string[];
+  summary: string;
 }
 
 export interface GenerationParams {
@@ -69,9 +88,12 @@ export interface ChatMessage {
 }
 
 export interface ConversationState {
-  step: "greeting" | "domain" | "details" | "reference" | "colors" | "content_image" | "generating" | "complete";
+  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "content_image" | "generating" | "complete";
   domain?: Domain;
+  customDomain?: string;
   description?: string;
+  extractedInfo?: ExtractedInfo;
+  missingInfo?: string[];
   referenceImage?: string;
   referenceDescription?: string;
   colorPalette?: string[];
