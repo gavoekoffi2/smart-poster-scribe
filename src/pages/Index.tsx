@@ -135,7 +135,7 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
@@ -239,8 +239,8 @@ export default function Index() {
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
                   onKeyPress={handleKeyPress}
-                  placeholder="Décrivez votre projet créatif..."
                   disabled={isProcessing}
                   className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
                 />
@@ -305,16 +305,11 @@ export default function Index() {
               </div>
             )}
 
-            {(step === "generating" || step === "complete") && !showTextInput && (
+            {(step === "generating" || step === "modifying") && (
               <div className="flex justify-center">
-                <Button 
-                  variant="outline" 
-                  onClick={handleReset}
-                  className="border-border/40 hover:border-brand-orange/50 hover:bg-brand-orange/5 transition-all"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Créer une nouvelle affiche
-                </Button>
+                <p className="text-sm text-muted-foreground animate-pulse">
+                  {step === "modifying" ? "Application des modifications..." : "Génération en cours..."}
+                </p>
               </div>
             )}
           </div>
