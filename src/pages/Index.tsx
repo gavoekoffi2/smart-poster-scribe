@@ -14,6 +14,7 @@ export default function Index() {
     conversationState,
     isProcessing,
     generatedImage,
+    suggestedDomain,
     handleUserMessage,
     handleDomainSelect,
     handleReferenceImage,
@@ -68,7 +69,7 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
@@ -113,7 +114,11 @@ export default function Index() {
             {/* Interactive elements based on step */}
             {showDomainSelect && (
               <div className="ml-11 animate-in fade-in slide-in-from-bottom-2">
-                <DomainSelect onSelect={handleDomainSelect} disabled={isProcessing} />
+                <DomainSelect 
+                  onSelect={handleDomainSelect} 
+                  disabled={isProcessing}
+                  suggestedDomain={suggestedDomain}
+                />
               </div>
             )}
 

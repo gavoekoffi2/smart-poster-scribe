@@ -8,40 +8,53 @@ import {
 } from "@/components/ui/select";
 
 const domains: DomainInfo[] = [
-  { id: "church", label: "Affiche d'église" },
-  { id: "event", label: "Affiche événementielle" },
-  { id: "education", label: "Affiche éducation" },
-  { id: "restaurant", label: "Affiche restaurant" },
-  { id: "fashion", label: "Affiche mode" },
-  { id: "music", label: "Affiche musique" },
-  { id: "sport", label: "Affiche sport" },
-  { id: "technology", label: "Affiche technologie" },
-  { id: "health", label: "Affiche santé" },
-  { id: "realestate", label: "Affiche immobilier" },
-  { id: "other", label: "Autre" },
+  { id: "formation", label: "Formation" },
+  { id: "church", label: "Église / Culte" },
+  { id: "event", label: "Événement" },
+  { id: "education", label: "Éducation" },
+  { id: "restaurant", label: "Restaurant / Food" },
+  { id: "fashion", label: "Mode" },
+  { id: "music", label: "Musique" },
+  { id: "sport", label: "Sport" },
+  { id: "technology", label: "Technologie" },
+  { id: "health", label: "Santé" },
+  { id: "realestate", label: "Immobilier" },
+  { id: "other", label: "Autre (préciser)" },
 ];
 
 interface DomainSelectProps {
   value?: Domain;
   onSelect: (domain: Domain) => void;
   disabled?: boolean;
+  suggestedDomain?: string | null;
 }
 
-export function DomainSelect({ value, onSelect, disabled }: DomainSelectProps) {
+export function DomainSelect({ value, onSelect, disabled, suggestedDomain }: DomainSelectProps) {
+  // Find if suggested domain matches one of our domains
+  const suggestion = suggestedDomain 
+    ? domains.find((d) => d.id === suggestedDomain || d.id.includes(suggestedDomain.toLowerCase()))
+    : null;
+
   return (
-    <div className="w-full max-w-xs">
+    <div className="w-full max-w-xs space-y-2">
+      {suggestion && !value && (
+        <p className="text-xs text-muted-foreground">
+          Suggestion : <span className="font-medium text-primary">{suggestion.label}</span>
+        </p>
+      )}
       <Select
         value={value}
         onValueChange={(val) => onSelect(val as Domain)}
         disabled={disabled}
       >
-        <SelectTrigger className="bg-card/50 border-border/50">
+        <SelectTrigger className="bg-card border-border">
           <SelectValue placeholder="Choisir un domaine..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-card border-border z-50">
           {domains.map((domain) => (
             <SelectItem key={domain.id} value={domain.id}>
               {domain.label}
+              {suggestion?.id === domain.id && " ✓"}
             </SelectItem>
           ))}
         </SelectContent>

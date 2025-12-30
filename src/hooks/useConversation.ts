@@ -6,35 +6,94 @@ import {
   AspectRatio,
   Resolution,
   OutputFormat,
+  ExtractedInfo,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const INITIAL_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Que souhaitez-vous créer aujourd'hui ? Décrivez votre affiche en quelques mots.";
+  "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
 
 function buildPrompt(state: ConversationState) {
-  const { description, domain, referenceDescription, colorPalette, needsContentImage } = state;
+  const { 
+    description, 
+    domain, 
+    customDomain,
+    referenceDescription, 
+    colorPalette, 
+    needsContentImage,
+    extractedInfo 
+  } = state;
 
-  let prompt = (description ?? "").trim();
+  const parts: string[] = [];
 
-  if (domain) {
-    prompt = `Affiche (${domain}). ${prompt}`.trim();
+  // Domain
+  const domainLabel = domain === "other" && customDomain ? customDomain : domain;
+  if (domainLabel) {
+    parts.push(`Affiche (${domainLabel}).`);
   }
 
+  // Reference style
   if (referenceDescription) {
-    prompt = `Style de référence: ${referenceDescription}. ${prompt}`.trim();
+    parts.push(`Style de référence: ${referenceDescription}.`);
   }
 
+  // Extracted info details
+  if (extractedInfo) {
+    const details: string[] = [];
+    if (extractedInfo.title) details.push(`Titre: ${extractedInfo.title}`);
+    if (extractedInfo.organizer) details.push(`Organisateur: ${extractedInfo.organizer}`);
+    if (extractedInfo.dates) details.push(`Dates: ${extractedInfo.dates}`);
+    if (extractedInfo.prices) details.push(`Prix: ${extractedInfo.prices}`);
+    if (extractedInfo.contact) details.push(`Contact: ${extractedInfo.contact}`);
+    if (extractedInfo.location) details.push(`Lieu: ${extractedInfo.location}`);
+    if (extractedInfo.targetAudience) details.push(`Public: ${extractedInfo.targetAudience}`);
+    if (extractedInfo.additionalDetails) details.push(extractedInfo.additionalDetails);
+    
+    if (details.length > 0) {
+      parts.push(`Détails: ${details.join(". ")}.`);
+    }
+  }
+
+  // Original description (may contain additional context)
+  if (description) {
+    parts.push(description);
+  }
+
+  // Colors
   if (colorPalette?.length) {
-    prompt = `${prompt}. Palette de couleurs: ${colorPalette.join(", ")}`.trim();
+    parts.push(`Palette de couleurs: ${colorPalette.join(", ")}.`);
   }
 
+  // African characters instruction
   if (needsContentImage) {
-    prompt = `${prompt}. Si l'affiche nécessite des personnes, utiliser des personnages africains.`.trim();
+    parts.push("Si l'affiche nécessite des personnes, utiliser des personnages africains.");
   }
 
-  return prompt;
+  return parts.join(" ").trim();
+}
+
+function formatMissingInfo(missingInfo: string[]): string {
+  const translations: Record<string, string> = {
+    dates: "les dates",
+    contact: "le contact (téléphone/email)",
+    prix: "les prix/tarifs",
+    prices: "les prix/tarifs",
+    location: "le lieu",
+    lieu: "le lieu",
+    organizer: "l'organisateur",
+    organisateur: "l'organisateur",
+    title: "le titre",
+    titre: "le titre",
+  };
+
+  const translated = missingInfo.map((info) => translations[info.toLowerCase()] || info);
+  
+  if (translated.length === 0) return "";
+  if (translated.length === 1) return translated[0];
+  
+  const last = translated.pop();
+  return `${translated.join(", ")} et ${last}`;
 }
 
 export function useConversation() {
@@ -58,6 +117,7 @@ export function useConversation() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [suggestedDomain, setSuggestedDomain] = useState<string | null>(null);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, image?: string) => {
     const newMessage: ChatMessage = {
@@ -97,12 +157,14 @@ export function useConversation() {
         if (!prompt.trim()) {
           addMessage(
             "assistant",
-            "Il me manque la description de l'affiche. Dites-moi en une phrase ce que vous voulez créer (ex: ‘Affiche formation design graphique, dates, prix, contact’)."
+            "Il me manque des informations pour créer l'affiche. Pouvez-vous me décrire ce que vous voulez ?"
           );
           toast.error("Description manquante");
           setConversationState({ step: "greeting" });
           return;
         }
+
+        console.log("Generating with prompt:", prompt);
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
@@ -117,7 +179,7 @@ export function useConversation() {
           const msg = data?.error || error?.message || "Erreur inconnue";
           addMessage(
             "assistant",
-            `Désolé, la génération a échoué : ${msg}. Pouvez-vous réessayer ?`
+            `Désolé, la génération a échoué : ${msg}. Voulez-vous réessayer ?`
           );
           toast.error("Erreur lors de la génération");
           setConversationState((prev) => ({ ...prev, step: "content_image" }));
@@ -145,47 +207,155 @@ export function useConversation() {
   const handleUserMessage = useCallback(
     async (content: string) => {
       addMessage("user", content);
-
       const { step } = conversationStateRef.current;
 
+      // Initial greeting - analyze the request
       if (step === "greeting") {
-        setConversationState((prev) => ({ ...prev, step: "domain", description: content }));
+        setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
+        addLoadingMessage();
+        setIsProcessing(true);
+
+        try {
+          const { data, error } = await supabase.functions.invoke("analyze-request", {
+            body: { userText: content },
+          });
+
+          removeLoadingMessage();
+          setIsProcessing(false);
+
+          if (error || !data?.success) {
+            // Fallback: just ask for domain
+            setConversationState((prev) => ({ ...prev, step: "domain" }));
+            addMessage("assistant", "Merci ! Sélectionnez le domaine de votre affiche :");
+            return;
+          }
+
+          const analysis = data.analysis;
+          setSuggestedDomain(analysis.suggestedDomain);
+
+          // Store extracted info
+          setConversationState((prev) => ({
+            ...prev,
+            step: "domain",
+            extractedInfo: analysis.extractedInfo,
+            missingInfo: analysis.missingInfo,
+          }));
+
+          // Build response based on what was understood
+          let response = `J'ai bien compris : ${analysis.summary}. `;
+          
+          // Mention what info was extracted
+          const extractedKeys = Object.keys(analysis.extractedInfo || {}).filter(
+            (k) => analysis.extractedInfo[k]
+          );
+          if (extractedKeys.length > 0) {
+            response += "J'ai noté les informations fournies. ";
+          }
+
+          response += "Sélectionnez le domaine de l'affiche :";
+
+          addMessage("assistant", response);
+        } catch (err) {
+          removeLoadingMessage();
+          setIsProcessing(false);
+          setConversationState((prev) => ({ ...prev, step: "domain" }));
+          addMessage("assistant", "Merci ! Sélectionnez le domaine de votre affiche :");
+        }
+        return;
+      }
+
+      // Custom domain input
+      if (step === "custom_domain") {
+        setConversationState((prev) => ({
+          ...prev,
+          step: "details",
+          customDomain: content,
+        }));
+
+        // Check if there are missing infos to ask
+        const missingInfo = conversationStateRef.current.missingInfo || [];
+        if (missingInfo.length > 0) {
+          const missingText = formatMissingInfo(missingInfo);
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              `Domaine "${content}" noté. Pour compléter l'affiche, pouvez-vous me donner ${missingText} ?`
+            );
+          }, 250);
+        } else {
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+            setConversationState((prev) => ({ ...prev, step: "reference" }));
+          }, 250);
+        }
+        return;
+      }
+
+      // Additional details
+      if (step === "details") {
+        // Merge additional details into extractedInfo
+        setConversationState((prev) => ({
+          ...prev,
+          step: "reference",
+          extractedInfo: {
+            ...prev.extractedInfo,
+            additionalDetails: [prev.extractedInfo?.additionalDetails, content]
+              .filter(Boolean)
+              .join(". "),
+          },
+        }));
+
         setTimeout(() => {
           addMessage(
             "assistant",
-            "Super. Sélectionnez le domaine de l'affiche dans la liste ci-dessous :"
+            "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
           );
         }, 250);
         return;
       }
-
-      if (step === "details") {
-        setConversationState((prev) => ({
-          ...prev,
-          step: "reference",
-          description: `${prev.description}. ${content}`,
-        }));
-        setTimeout(() => {
-          addMessage(
-            "assistant",
-            "Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la maintenant, ou cliquez sur ‘Passer’."
-          );
-        }, 250);
-      }
     },
-    [addMessage]
+    [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
   const handleDomainSelect = useCallback(
     (domain: Domain) => {
-      addMessage("user", `Domaine sélectionné : ${domain}`);
-      setConversationState((prev) => ({ ...prev, step: "details", domain }));
-      setTimeout(() => {
-        addMessage(
-          "assistant",
-          "Donnez-moi les détails : textes à mettre (titre, dates, prix, contact), public visé et ambiance." 
-        );
-      }, 250);
+      addMessage("user", `Domaine : ${domain}`);
+
+      if (domain === "other") {
+        setConversationState((prev) => ({ ...prev, step: "custom_domain", domain }));
+        setTimeout(() => {
+          addMessage("assistant", "Précisez le domaine de votre affiche :");
+        }, 250);
+        return;
+      }
+
+      setConversationState((prev) => ({ ...prev, domain }));
+
+      // Check if there's missing info to request
+      const missingInfo = conversationStateRef.current.missingInfo || [];
+      
+      if (missingInfo.length > 0) {
+        const missingText = formatMissingInfo(missingInfo);
+        setConversationState((prev) => ({ ...prev, step: "details" }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            `Pour compléter l'affiche, pouvez-vous me donner ${missingText} ?`
+          );
+        }, 250);
+      } else {
+        // All info already provided, go to reference
+        setConversationState((prev) => ({ ...prev, step: "reference" }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Parfait, j'ai toutes les infos ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+          );
+        }, 250);
+      }
     },
     [addMessage]
   );
@@ -218,7 +388,7 @@ export function useConversation() {
 
         addMessage(
           "assistant",
-          `Image analysée. Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :`
+          "Image analysée ! Choisissez une palette de couleurs pour personnaliser votre affiche :"
         );
 
         setConversationState((prev) => ({
@@ -231,7 +401,7 @@ export function useConversation() {
         removeLoadingMessage();
         addMessage(
           "assistant",
-          "Une erreur est survenue pendant l'analyse. Choisissez quand même une palette de couleurs :"
+          "Une erreur est survenue. Choisissez quand même une palette de couleurs :"
         );
         setConversationState((prev) => ({ ...prev, step: "colors", referenceImage: imageDataUrl }));
       } finally {
@@ -245,18 +415,18 @@ export function useConversation() {
     addMessage("user", "Passer l'image de référence");
     setConversationState((prev) => ({ ...prev, step: "colors" }));
     setTimeout(() => {
-      addMessage("assistant", "Choisissez maintenant une palette de couleurs :");
+      addMessage("assistant", "Choisissez une palette de couleurs pour votre affiche :");
     }, 250);
   }, [addMessage]);
 
   const handleColorsConfirm = useCallback(
     (colors: string[]) => {
-      addMessage("user", `Couleurs choisies : ${colors.join(", ")}`);
+      addMessage("user", `Couleurs : ${colors.join(", ")}`);
       setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: colors }));
       setTimeout(() => {
         addMessage(
           "assistant",
-          "Avez-vous une image à intégrer (produit, personne, logo) ? Envoyez-la, ou cliquez sur ‘Générer automatiquement’."
+          "Avez-vous une image à intégrer dans l'affiche (produit, logo, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
         );
       }, 250);
     },
@@ -277,7 +447,7 @@ export function useConversation() {
       setConversationState(nextState);
 
       setTimeout(() => {
-        addMessage("assistant", "Parfait. Génération de votre affiche en cours...");
+        addMessage("assistant", "Parfait ! Génération de votre affiche en cours...");
         generatePoster(nextState);
       }, 250);
     },
@@ -285,7 +455,7 @@ export function useConversation() {
   );
 
   const handleSkipContentImage = useCallback(() => {
-    addMessage("user", "Générer l'image de contenu automatiquement");
+    addMessage("user", "Générer l'image automatiquement");
 
     const nextState: ConversationState = {
       ...conversationStateRef.current,
@@ -298,7 +468,7 @@ export function useConversation() {
     setTimeout(() => {
       addMessage(
         "assistant",
-        "Compris. Génération de votre affiche en cours (avec des personnages africains si nécessaire)..."
+        "Génération de votre affiche en cours (avec des personnages africains si nécessaire)..."
       );
       generatePoster(nextState);
     }, 250);
@@ -315,6 +485,7 @@ export function useConversation() {
     ]);
     setConversationState({ step: "greeting" });
     setGeneratedImage(null);
+    setSuggestedDomain(null);
   }, []);
 
   return {
@@ -322,6 +493,7 @@ export function useConversation() {
     conversationState,
     isProcessing,
     generatedImage,
+    suggestedDomain,
     handleUserMessage,
     handleDomainSelect,
     handleReferenceImage,
