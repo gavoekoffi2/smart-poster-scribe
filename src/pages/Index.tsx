@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
 import { ChatMessage } from "@/components/chat/ChatMessage";
@@ -12,6 +13,50 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
+
+const fireConfetti = () => {
+  const count = 200;
+  const defaults = {
+    origin: { y: 0.7 },
+    zIndex: 9999,
+  };
+
+  function fire(particleRatio: number, opts: confetti.Options) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+    });
+  }
+
+  fire(0.25, {
+    spread: 26,
+    startVelocity: 55,
+    colors: ['#D4AF37', '#1a1a2e', '#FFD700'],
+  });
+  fire(0.2, {
+    spread: 60,
+    colors: ['#D4AF37', '#C5A028', '#FFD700'],
+  });
+  fire(0.35, {
+    spread: 100,
+    decay: 0.91,
+    scalar: 0.8,
+    colors: ['#D4AF37', '#1a1a2e', '#FFD700', '#B8860B'],
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 25,
+    decay: 0.92,
+    scalar: 1.2,
+    colors: ['#FFD700', '#D4AF37'],
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 45,
+    colors: ['#D4AF37', '#C5A028', '#B8860B'],
+  });
+};
 
 export default function Index() {
   const {
@@ -41,11 +86,20 @@ export default function Index() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistoryImage, setSelectedHistoryImage] = useState<GeneratedImage | null>(null);
+  const [prevGeneratedImage, setPrevGeneratedImage] = useState<string | null>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Fire confetti when image is generated
+  useEffect(() => {
+    if (generatedImage && generatedImage !== prevGeneratedImage) {
+      fireConfetti();
+      setPrevGeneratedImage(generatedImage);
+    }
+  }, [generatedImage, prevGeneratedImage]);
 
   const handleSend = () => {
     if (inputValue.trim() && !isProcessing) {
@@ -105,15 +159,15 @@ export default function Index() {
       {/* Header */}
       <header className="border-b border-border/30 bg-card/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <DesignerAvatar size="md" isWorking={isProcessing} />
             <div>
-              <h1 className="font-display text-2xl md:text-3xl font-bold gradient-text">
+              <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight gradient-text">
                 Graphiste GPT
               </h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-primary" />
-                Votre assistant design premium
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-primary" />
+                Assistant design premium
               </p>
             </div>
           </div>
