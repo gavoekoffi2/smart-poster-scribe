@@ -288,9 +288,9 @@ serve(async (req) => {
   }
 
   try {
-    const KIE_API_KEY = Deno.env.get("KIE_API_KEY");
+    const KIE_API_KEY = Deno.env.get("KIE_AI_API_KEY");
     if (!KIE_API_KEY) {
-      throw new Error("KIE_API_KEY non configurée");
+      throw new Error("KIE_AI_API_KEY non configurée");
     }
 
     // Initialiser le client Supabase pour le storage
