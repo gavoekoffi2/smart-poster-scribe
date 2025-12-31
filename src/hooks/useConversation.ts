@@ -412,6 +412,159 @@ export function useConversation() {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
+  // Handler pour les préférences de style et sélection automatique de template
+  // MUST BE DECLARED BEFORE handleUserMessage since it's used there
+  const handleStylePreferencesAndSelectTemplate = useCallback(
+    async (preferences?: string) => {
+      if (preferences) {
+        addMessage("user", preferences);
+      } else {
+        addMessage("user", "Continuer sans préférences spécifiques");
+      }
+      
+      addLoadingMessage();
+      setIsProcessing(true);
+      
+      const currentDomain = conversationStateRef.current.domain;
+      const restaurantInfo = conversationStateRef.current.restaurantInfo;
+      
+      try {
+        // Fetch templates for the domain
+        let templates: any[] = [];
+        
+        if (currentDomain) {
+          const { data, error } = await supabase
+            .from("reference_templates")
+            .select("*")
+            .eq("domain", currentDomain);
+          
+          if (!error && data) {
+            templates = data;
+          }
+        }
+        
+        // If no templates for this domain, get all templates for inspiration
+        if (templates.length === 0) {
+          const { data: allTemplates, error } = await supabase
+            .from("reference_templates")
+            .select("*")
+            .limit(20);
+          
+          if (!error && allTemplates) {
+            templates = allTemplates;
+          }
+        }
+        
+        removeLoadingMessage();
+        setIsProcessing(false);
+        
+        if (templates.length > 0) {
+          // Smart template selection based on user context
+          let selectedTemplate = templates[0];
+          
+          // For restaurant, try to find a template that matches menu/no-menu preference
+          if (currentDomain === "restaurant" && restaurantInfo) {
+            const hasMenu = restaurantInfo.hasMenu;
+            
+            // Filter templates by tags or description matching
+            const filteredTemplates = templates.filter(t => {
+              const desc = (t.description || "").toLowerCase();
+              const tags = (t.tags || []).map((tag: string) => tag.toLowerCase());
+              
+              if (hasMenu) {
+                // Look for templates with menu
+                return desc.includes("menu") || tags.includes("menu") || 
+                       desc.includes("carte") || tags.includes("carte");
+              } else {
+                // Look for promo/event templates without menu
+                return !desc.includes("menu") && !tags.includes("menu") ||
+                       desc.includes("promo") || tags.includes("promo") ||
+                       desc.includes("offre") || tags.includes("offre");
+              }
+            });
+            
+            if (filteredTemplates.length > 0) {
+              selectedTemplate = filteredTemplates[Math.floor(Math.random() * filteredTemplates.length)];
+            } else {
+              selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
+            }
+          } else {
+            // Random selection for other domains
+            selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
+          }
+          
+          const imageUrl = selectedTemplate.image_url.startsWith('/')
+            ? window.location.origin + selectedTemplate.image_url
+            : selectedTemplate.image_url;
+          
+          // Build a description that focuses only on STYLE, not content
+          let styleDescription = selectedTemplate.description || "";
+          
+          // If the template has a description, extract only style-related keywords
+          if (styleDescription) {
+            // Add instruction to use only style, not content
+            styleDescription = `STYLE À REPRODUIRE (ignorer le contenu textuel de ce template, utiliser uniquement le style visuel): ${styleDescription}`;
+          }
+          
+          // Add user's style preferences if provided
+          if (preferences) {
+            styleDescription = `${styleDescription}. PRÉFÉRENCES DE STYLE UTILISATEUR: ${preferences}`;
+          }
+          
+          // Add instruction for originality
+          styleDescription = `${styleDescription}. IMPORTANT: Créer un design ORIGINAL en s'inspirant de ce style, ne pas copier exactement. Ajouter de la créativité et de l'originalité.`;
+          
+          setConversationState((prev) => ({
+            ...prev,
+            step: "colors",
+            referenceImage: imageUrl,
+            referenceDescription: styleDescription,
+            stylePreferences: preferences,
+            usingAutoTemplate: true,
+          }));
+          
+          const domainMessage = currentDomain 
+            ? `J'ai sélectionné un style adapté au domaine "${currentDomain}".`
+            : "J'ai sélectionné un style à partir de notre collection.";
+          
+          addMessage(
+            "assistant",
+            `${domainMessage} Je vais créer un design original en m'inspirant de ce style, en utilisant uniquement VOS informations. Choisissez une palette de couleurs :`
+          );
+        } else {
+          // No templates found - will generate purely from description
+          setConversationState((prev) => ({
+            ...prev,
+            step: "colors",
+            stylePreferences: preferences,
+            usingAutoTemplate: false,
+            referenceDescription: preferences 
+              ? `STYLE DEMANDÉ: ${preferences}. Créer un design professionnel et original.`
+              : "Créer un design professionnel, moderne et original adapté au domaine.",
+          }));
+          
+          addMessage(
+            "assistant",
+            "Je vais créer un design original adapté à vos besoins. Choisissez une palette de couleurs :"
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching templates:", err);
+        removeLoadingMessage();
+        setIsProcessing(false);
+        
+        // Fallback
+        setConversationState((prev) => ({ 
+          ...prev, 
+          step: "colors",
+          stylePreferences: preferences,
+        }));
+        addMessage("assistant", "Choisissez une palette de couleurs pour votre affiche :");
+      }
+    },
+    [addMessage, addLoadingMessage, removeLoadingMessage]
+  );
+
   const handleUserMessage = useCallback(
     async (content: string) => {
       addMessage("user", content);
@@ -892,8 +1045,14 @@ export function useConversation() {
         }, 250);
         return;
       }
+
+      // Style preferences - user provides optional style instructions
+      if (step === "style_preferences") {
+        handleStylePreferencesAndSelectTemplate(content.trim());
+        return;
+      }
     },
-    [addMessage, addLoadingMessage, removeLoadingMessage, handleModificationRequest]
+    [addMessage, addLoadingMessage, removeLoadingMessage, handleModificationRequest, handleStylePreferencesAndSelectTemplate]
   );
 
   const handleDomainSelect = useCallback(
@@ -1234,111 +1393,20 @@ export function useConversation() {
   const handleSkipReference = useCallback(async () => {
     addMessage("user", "Passer l'image de référence");
     
-    const currentDomain = conversationStateRef.current.domain;
-    
-    // If we have a domain, try to get a random template from the database
-    if (currentDomain) {
-      addLoadingMessage();
-      setIsProcessing(true);
-      
-      try {
-        // Fetch a random template for this domain
-        const { data: templates, error } = await supabase
-          .from("reference_templates")
-          .select("*")
-          .eq("domain", currentDomain);
-        
-        removeLoadingMessage();
-        setIsProcessing(false);
-        
-        if (!error && templates && templates.length > 0) {
-          // Pick a random template
-          const randomIndex = Math.floor(Math.random() * templates.length);
-          const template = templates[randomIndex];
-          
-          // Analyze the template image to get its description
-          const imageUrl = template.image_url.startsWith('/')
-            ? window.location.origin + template.image_url
-            : template.image_url;
-          
-          // Use the template description or fetch from image
-          if (template.description) {
-            setConversationState((prev) => ({
-              ...prev,
-              step: "colors",
-              referenceImage: imageUrl,
-              referenceDescription: template.description,
-            }));
-            addMessage(
-              "assistant",
-              "J'ai sélectionné un style adapté à votre domaine. Choisissez une palette de couleurs :"
-            );
-            return;
-          }
-          
-          // If no description, try to analyze the template image
-          try {
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            const reader = new FileReader();
-            
-            reader.onloadend = async () => {
-              const base64 = reader.result as string;
-              
-              const { data: analysisData } = await supabase.functions.invoke("analyze-image", {
-                body: { imageData: base64 },
-              });
-              
-              if (analysisData?.success && analysisData.description) {
-                setConversationState((prev) => ({
-                  ...prev,
-                  step: "colors",
-                  referenceImage: imageUrl,
-                  referenceDescription: analysisData.description,
-                }));
-              } else {
-                setConversationState((prev) => ({
-                  ...prev,
-                  step: "colors",
-                  referenceImage: imageUrl,
-                }));
-              }
-              
-              addMessage(
-                "assistant",
-                "J'ai sélectionné un style adapté à votre domaine. Choisissez une palette de couleurs :"
-              );
-            };
-            
-            reader.readAsDataURL(blob);
-            return;
-          } catch {
-            // If analysis fails, just use the template without description
-            setConversationState((prev) => ({
-              ...prev,
-              step: "colors",
-              referenceImage: imageUrl,
-            }));
-            addMessage(
-              "assistant",
-              "J'ai sélectionné un style adapté. Choisissez une palette de couleurs :"
-            );
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching template:", err);
-        removeLoadingMessage();
-        setIsProcessing(false);
-      }
-    }
-    
-    // Fallback: no template found, proceed without reference
-    setConversationState((prev) => ({ ...prev, step: "colors" }));
+    // Demander des instructions de style optionnelles avant de sélectionner un template
+    setConversationState((prev) => ({ ...prev, step: "style_preferences" }));
     setTimeout(() => {
-      addMessage("assistant", "Choisissez une palette de couleurs pour votre affiche :");
+      addMessage(
+        "assistant",
+        "Avez-vous des préférences de style particulières ? (Par exemple : style moderne, coloré, sobre, élégant, festif...) Décrivez brièvement ou cliquez sur 'Continuer' pour que je choisisse automatiquement."
+      );
     }, 250);
-  }, [addMessage, addLoadingMessage, removeLoadingMessage]);
+  }, [addMessage]);
+
+  // Handler pour passer les préférences de style
+  const handleSkipStylePreferences = useCallback(() => {
+    handleStylePreferencesAndSelectTemplate(undefined);
+  }, [handleStylePreferencesAndSelectTemplate]);
 
   const handleColorsConfirm = useCallback(
     (colors: string[]) => {
@@ -1635,6 +1703,8 @@ export function useConversation() {
     // Other handlers
     handleReferenceImage,
     handleSkipReference,
+    handleStylePreferencesAndSelectTemplate,
+    handleSkipStylePreferences,
     handleColorsConfirm,
     handleLogoImage,
     handleLogoPosition,

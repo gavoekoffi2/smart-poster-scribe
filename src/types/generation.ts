@@ -139,6 +139,7 @@ export interface ConversationState {
     | "restaurant_beverages_photos" // Photos des boissons
     | "restaurant_dishes_check" // Demander si des plats à inclure
     | "restaurant_dishes_photos" // Photos des plats
+    | "style_preferences" // Demander des préférences de style optionnelles
     | "reference" 
     | "colors" 
     | "logo" 
@@ -173,4 +174,8 @@ export interface ConversationState {
   currentDishImages?: string[];
   // Language preference (default: French)
   language?: string;
+  // Style preferences for template selection
+  stylePreferences?: string;
+  // Flag to indicate if we're using auto-selected template
+  usingAutoTemplate?: boolean;
 }
