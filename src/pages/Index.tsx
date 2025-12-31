@@ -153,7 +153,7 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
@@ -166,6 +166,7 @@ export default function Index() {
   const showGuestPhotoUpload = step === "guest_photo";
   const showProductCharacterSkip = step === "product_character_check";
   const showStylePreferencesSkip = step === "style_preferences";
+  const showDomainQuestionImages = step === "domain_question_images";
 
   const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
 

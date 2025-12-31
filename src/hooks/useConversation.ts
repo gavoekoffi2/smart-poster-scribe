@@ -12,9 +12,11 @@ import {
   Speaker,
   ProductDisplay,
   RestaurantInfo,
+  DomainQuestionState,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getDomainQuestions, getNextQuestion, domainHasQuestions, DomainQuestion } from "@/config/domainQuestions";
 
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
@@ -706,41 +708,180 @@ export function useConversation() {
           },
         }));
 
-        // Check if this domain might have speakers, products, or restaurant
+        // Check if this domain has intelligent questions configured
         const currentDomain = conversationStateRef.current.domain;
-        if (currentDomain && SPEAKER_DOMAINS.includes(currentDomain)) {
-          setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
-            );
-          }, 250);
-        } else if (currentDomain === RESTAURANT_DOMAIN) {
-          // Restaurant domain - demander les informations spécifiques
-          setConversationState((prev) => ({ ...prev, step: "restaurant_menu_check" }));
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              "Souhaitez-vous inclure un menu (liste des plats avec prix) sur votre affiche ?"
-            );
-          }, 250);
-        } else if (currentDomain && PRODUCT_DOMAINS.includes(currentDomain)) {
-          setConversationState((prev) => ({ ...prev, step: "product_character_check" }));
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              "Souhaitez-vous qu'un personnage mette en valeur votre produit sur l'affiche ? (Par exemple : quelqu'un qui tient le produit, l'utilise, le porte...)"
-            );
-          }, 250);
-        } else {
-          setConversationState((prev) => ({ ...prev, step: "reference" }));
-          setTimeout(() => {
-            addMessage(
-              "assistant",
-              "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
-            );
-          }, 250);
+        
+        if (currentDomain && domainHasQuestions(currentDomain)) {
+          // Use the new intelligent domain questions system
+          const questions = getDomainQuestions(currentDomain);
+          if (questions.length > 0) {
+            const firstQuestion = questions[0];
+            setConversationState((prev) => ({
+              ...prev,
+              step: "domain_questions",
+              domainQuestionState: {
+                currentQuestionId: firstQuestion.id,
+                answeredQuestions: {},
+                collectedImages: {},
+                collectedTexts: {},
+              },
+            }));
+            setTimeout(() => {
+              addMessage("assistant", firstQuestion.question);
+            }, 250);
+            return;
+          }
+        }
+        
+        // Fallback to legacy flow for domains without questions
+        setConversationState((prev) => ({ ...prev, step: "reference" }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
+          );
+        }, 250);
+        return;
+      }
+      
+      // Handle domain questions boolean responses (oui/non)
+      if (step === "domain_questions") {
+        const lowerContent = content.toLowerCase().trim();
+        const isYes = ["oui", "yes", "o", "y", "1", "ok", "d'accord", "bien sûr", "absolument"].some(w => lowerContent.includes(w));
+        const isNo = ["non", "no", "n", "0", "pas", "aucun", "jamais"].some(w => lowerContent.includes(w));
+        
+        const state = conversationStateRef.current.domainQuestionState;
+        const domain = conversationStateRef.current.domain;
+        
+        if (state && domain && state.currentQuestionId) {
+          const questions = getDomainQuestions(domain);
+          const currentQuestion = questions.find(q => q.id === state.currentQuestionId);
+          
+          if (currentQuestion) {
+            const newAnsweredQuestions = {
+              ...state.answeredQuestions,
+              [state.currentQuestionId]: isYes,
+            };
+            
+            // If yes and has follow-up with image upload
+            if (isYes && currentQuestion.followUp?.imageUpload) {
+              setConversationState((prev) => ({
+                ...prev,
+                step: "domain_question_images",
+                domainQuestionState: {
+                  ...state,
+                  answeredQuestions: newAnsweredQuestions,
+                  pendingImageUpload: {
+                    type: state.currentQuestionId!,
+                    multiple: currentQuestion.followUp!.imageUpload!.multiple,
+                    label: currentQuestion.followUp!.imageUpload!.label,
+                    hint: currentQuestion.followUp!.imageUpload!.hint,
+                  },
+                },
+              }));
+              setTimeout(() => {
+                addMessage("assistant", `📸 ${currentQuestion.followUp!.imageUpload!.label}\n\n${currentQuestion.followUp!.imageUpload!.hint}`);
+              }, 250);
+              return;
+            }
+            
+            // If yes and has follow-up with text input
+            if (isYes && currentQuestion.followUp?.textInput) {
+              setConversationState((prev) => ({
+                ...prev,
+                step: "domain_question_text",
+                domainQuestionState: {
+                  ...state,
+                  answeredQuestions: newAnsweredQuestions,
+                  pendingTextInput: {
+                    type: state.currentQuestionId!,
+                    label: currentQuestion.followUp!.textInput!.label,
+                    placeholder: currentQuestion.followUp!.textInput!.placeholder,
+                    multiline: currentQuestion.followUp!.textInput!.multiline || false,
+                  },
+                },
+              }));
+              setTimeout(() => {
+                addMessage("assistant", `📝 ${currentQuestion.followUp!.textInput!.label}\n\n${currentQuestion.followUp!.textInput!.placeholder}`);
+              }, 250);
+              return;
+            }
+            
+            // Move to next question
+            const nextQuestion = getNextQuestion(domain, newAnsweredQuestions);
+            if (nextQuestion) {
+              setConversationState((prev) => ({
+                ...prev,
+                domainQuestionState: {
+                  ...state,
+                  currentQuestionId: nextQuestion.id,
+                  answeredQuestions: newAnsweredQuestions,
+                },
+              }));
+              setTimeout(() => {
+                addMessage("assistant", nextQuestion.question);
+              }, 250);
+            } else {
+              // All questions answered, go to reference
+              setConversationState((prev) => ({
+                ...prev,
+                step: "reference",
+                domainQuestionState: {
+                  ...state,
+                  currentQuestionId: null,
+                  answeredQuestions: newAnsweredQuestions,
+                },
+              }));
+              setTimeout(() => {
+                addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+              }, 250);
+            }
+          }
+        }
+        return;
+      }
+      
+      // Handle domain question text input
+      if (step === "domain_question_text") {
+        const state = conversationStateRef.current.domainQuestionState;
+        const domain = conversationStateRef.current.domain;
+        
+        if (state && domain && state.pendingTextInput) {
+          const newCollectedTexts = {
+            ...state.collectedTexts,
+            [state.pendingTextInput.type]: content,
+          };
+          
+          const nextQuestion = getNextQuestion(domain, state.answeredQuestions);
+          if (nextQuestion) {
+            setConversationState((prev) => ({
+              ...prev,
+              step: "domain_questions",
+              domainQuestionState: {
+                ...state,
+                currentQuestionId: nextQuestion.id,
+                collectedTexts: newCollectedTexts,
+                pendingTextInput: undefined,
+              },
+            }));
+            setTimeout(() => {
+              addMessage("assistant", nextQuestion.question);
+            }, 250);
+          } else {
+            setConversationState((prev) => ({
+              ...prev,
+              step: "reference",
+              domainQuestionState: {
+                ...state,
+                currentQuestionId: null,
+                collectedTexts: newCollectedTexts,
+                pendingTextInput: undefined,
+              },
+            }));
+            setTimeout(() => {
+              addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+            }, 250);
+          }
         }
         return;
       }
