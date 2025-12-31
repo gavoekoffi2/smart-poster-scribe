@@ -68,6 +68,10 @@ export default function Index() {
     suggestedDomain,
     handleUserMessage,
     handleDomainSelect,
+    handleMainSpeakerPhoto,
+    handleGuestPhoto,
+    handleSkipSpeakers,
+    handleSkipGuests,
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
@@ -137,13 +141,15 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
   const showLogoUpload = step === "logo";
   const showLogoPosition = step === "logo_position";
   const showContentImageUpload = step === "content_image";
+  const showMainSpeakerPhotoUpload = step === "main_speaker_photo";
+  const showGuestPhotoUpload = step === "guest_photo";
 
   const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
 
@@ -262,6 +268,34 @@ export default function Index() {
                   className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
                 >
                   <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {showMainSpeakerPhotoUpload && (
+              <div className="flex flex-wrap gap-3">
+                <ImageUploadButton
+                  onImageSelect={handleMainSpeakerPhoto}
+                  disabled={isProcessing}
+                  label="Envoyer photo de l'orateur"
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipSpeakers} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Pas d'orateur
+                </Button>
+              </div>
+            )}
+
+            {showGuestPhotoUpload && (
+              <div className="flex flex-wrap gap-3">
+                <ImageUploadButton
+                  onImageSelect={handleGuestPhoto}
+                  disabled={isProcessing}
+                  label="Envoyer photo d'invité"
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipGuests} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  {(conversationState.guests?.length || 0) > 0 ? "Continuer" : "Pas d'invité"}
                 </Button>
               </div>
             )}

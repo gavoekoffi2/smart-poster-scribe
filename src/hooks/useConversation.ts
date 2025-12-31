@@ -9,9 +9,13 @@ import {
   ExtractedInfo,
   LogoPosition,
   LogoWithPosition,
+  Speaker,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// Domaines qui peuvent avoir des orateurs/artistes/invités
+const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
 const INITIAL_MESSAGE =
   "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
@@ -82,14 +86,15 @@ function buildPrompt(state: ConversationState) {
     referenceDescription, 
     colorPalette, 
     needsContentImage,
-    extractedInfo 
+    extractedInfo,
+    mainSpeaker,
+    guests,
   } = state;
 
   const parts: string[] = [];
 
   // 1. STYLE VISUEL D'ABORD (le plus important pour la cohérence)
   if (referenceDescription) {
-    // Extraire et reformuler le style de référence de façon concise
     const styleKeywords = referenceDescription
       .replace(/\n/g, " ")
       .slice(0, 600);
@@ -99,7 +104,7 @@ function buildPrompt(state: ConversationState) {
   // 2. PALETTE DE COULEURS (intégrée naturellement, pas en codes hex)
   if (colorPalette?.length) {
     const colorDescriptions = colorPalette
-      .slice(0, 5) // Max 5 couleurs principales
+      .slice(0, 5)
       .map(hexToColorName);
     const uniqueColors = [...new Set(colorDescriptions)];
     parts.push(`PALETTE: tons ${uniqueColors.join(", ")}`);
@@ -126,17 +131,25 @@ function buildPrompt(state: ConversationState) {
     }
   }
 
-  // 5. INSTRUCTIONS ADDITIONNELLES
+  // 5. ORATEURS/ARTISTES/INVITÉS
+  if (mainSpeaker) {
+    parts.push(`ORATEUR PRINCIPAL: ${mainSpeaker.name} (mettre en avant, grande photo)`);
+  }
+  if (guests && guests.length > 0) {
+    const guestNames = guests.map(g => g.name).join(", ");
+    parts.push(`INVITÉS: ${guestNames} (photos plus petites)`);
+  }
+
+  // 6. INSTRUCTIONS ADDITIONNELLES
   if (description) {
-    // Nettoyer la description des potentiels codes couleurs
     const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
     if (cleanDesc) {
       parts.push(cleanDesc);
     }
   }
 
-  // 6. PERSONNAGES AFRICAINS si nécessaire
-  if (needsContentImage) {
+  // 7. PERSONNAGES AFRICAINS si nécessaire
+  if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0)) {
     parts.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
   }
 
@@ -481,7 +494,6 @@ export function useConversation() {
         // Merge additional details into extractedInfo
         setConversationState((prev) => ({
           ...prev,
-          step: "reference",
           extractedInfo: {
             ...prev.extractedInfo,
             additionalDetails: [prev.extractedInfo?.additionalDetails, content]
@@ -490,10 +502,124 @@ export function useConversation() {
           },
         }));
 
+        // Check if this domain might have speakers
+        const currentDomain = conversationStateRef.current.domain;
+        if (currentDomain && SPEAKER_DOMAINS.includes(currentDomain)) {
+          setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ ...prev, step: "reference" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Speakers check - user responds yes/no
+      if (step === "speakers_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ ...prev, step: "main_speaker_photo", hasSpeakers: true }));
+          setTimeout(() => {
+            addMessage("assistant", "Envoyez la photo de l'orateur/artiste principal :");
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Main speaker name
+      if (step === "main_speaker_name") {
+        const speakerImage = conversationStateRef.current.currentSpeakerImage;
+        if (!speakerImage) return;
+
+        const newMainSpeaker: Speaker = {
+          id: crypto.randomUUID(),
+          name: content.trim(),
+          imageUrl: speakerImage,
+          role: "main",
+        };
+
+        setConversationState((prev) => ({
+          ...prev,
+          step: "guests_check",
+          mainSpeaker: newMainSpeaker,
+          currentSpeakerImage: undefined,
+        }));
+
         setTimeout(() => {
           addMessage(
             "assistant",
-            "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
+            "Y a-t-il des invités ou d'autres intervenants à ajouter sur l'affiche ?"
+          );
+        }, 250);
+        return;
+      }
+
+      // Guests check
+      if (step === "guests_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ ...prev, step: "guest_photo" }));
+          setTimeout(() => {
+            addMessage("assistant", "Envoyez la photo du premier invité :");
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ ...prev, step: "reference" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Guest name
+      if (step === "guest_name") {
+        const guestImage = conversationStateRef.current.currentSpeakerImage;
+        if (!guestImage) return;
+
+        const newGuest: Speaker = {
+          id: crypto.randomUUID(),
+          name: content.trim(),
+          imageUrl: guestImage,
+          role: "guest",
+        };
+
+        setConversationState((prev) => ({
+          ...prev,
+          step: "guest_photo",
+          guests: [...(prev.guests || []), newGuest],
+          currentSpeakerImage: undefined,
+        }));
+
+        setTimeout(() => {
+          const guestCount = (conversationStateRef.current.guests?.length || 0) + 1;
+          addMessage(
+            "assistant",
+            `Invité ${guestCount} ajouté ! Envoyez la photo d'un autre invité ou cliquez sur 'Continuer' pour passer à l'étape suivante.`
           );
         }, 250);
         return;
@@ -529,18 +655,85 @@ export function useConversation() {
           );
         }, 250);
       } else {
-        // All info already provided, go to reference
-        setConversationState((prev) => ({ ...prev, step: "reference" }));
-        setTimeout(() => {
-          addMessage(
-            "assistant",
-            "Parfait, j'ai toutes les infos ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
-          );
-        }, 250);
+        // Check if this domain might have speakers
+        if (SPEAKER_DOMAINS.includes(domain)) {
+          setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ ...prev, step: "reference" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Parfait, j'ai toutes les infos ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
       }
     },
     [addMessage]
   );
+
+  // Handler pour la photo de l'orateur principal
+  const handleMainSpeakerPhoto = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Photo de l'orateur principal", imageDataUrl);
+      setConversationState((prev) => ({
+        ...prev,
+        step: "main_speaker_name",
+        currentSpeakerImage: imageDataUrl,
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Quel est le nom de cet orateur/artiste ? (Ce nom apparaîtra sur l'affiche)");
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  // Handler pour la photo d'un invité
+  const handleGuestPhoto = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Photo d'invité", imageDataUrl);
+      setConversationState((prev) => ({
+        ...prev,
+        step: "guest_name",
+        currentSpeakerImage: imageDataUrl,
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Quel est le nom de cet invité ? (Ce nom apparaîtra sur l'affiche)");
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  // Handler pour passer les orateurs
+  const handleSkipSpeakers = useCallback(() => {
+    addMessage("user", "Pas d'orateur principal");
+    setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // Handler pour passer les invités
+  const handleSkipGuests = useCallback(() => {
+    const guestsCount = conversationStateRef.current.guests?.length || 0;
+    addMessage("user", guestsCount > 0 ? "Pas d'autre invité" : "Pas d'invité");
+    setConversationState((prev) => ({ ...prev, step: "reference" }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
 
   const handleReferenceImage = useCallback(
     async (imageDataUrl: string) => {
@@ -744,6 +937,10 @@ export function useConversation() {
       greeting: "Décrivez-moi l'affiche que vous souhaitez créer :",
       domain: "Sélectionnez le domaine de l'affiche :",
       details: "Quelles informations souhaitez-vous ajouter ou modifier ?",
+      speakers_check: "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?",
+      main_speaker_photo: "Envoyez la photo de l'orateur/artiste principal :",
+      guests_check: "Y a-t-il des invités ou d'autres intervenants à ajouter sur l'affiche ?",
+      guest_photo: "Envoyez la photo d'un invité :",
       reference: "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.",
       colors: "Choisissez une palette de couleurs pour votre affiche :",
       logo: "Souhaitez-vous ajouter ou modifier un logo ?",
@@ -776,6 +973,25 @@ export function useConversation() {
           missingInfo: prev.missingInfo,
         };
       }
+      if (targetStep === "speakers_check" || targetStep === "main_speaker_photo") {
+        return { 
+          step: targetStep, 
+          description: prev.description,
+          domain: prev.domain,
+          customDomain: prev.customDomain,
+          extractedInfo: prev.extractedInfo,
+          hasSpeakers: undefined,
+          mainSpeaker: undefined,
+          guests: undefined,
+        };
+      }
+      if (targetStep === "guests_check" || targetStep === "guest_photo") {
+        return { 
+          ...newState,
+          guests: targetStep === "guest_photo" ? prev.guests : undefined,
+          currentSpeakerImage: undefined,
+        };
+      }
       if (targetStep === "reference") {
         return { 
           step: "reference", 
@@ -783,6 +999,9 @@ export function useConversation() {
           domain: prev.domain,
           customDomain: prev.customDomain,
           extractedInfo: prev.extractedInfo,
+          mainSpeaker: prev.mainSpeaker,
+          guests: prev.guests,
+          hasSpeakers: prev.hasSpeakers,
           missingInfo: [],
         };
       }
@@ -798,7 +1017,7 @@ export function useConversation() {
       if (targetStep === "logo") {
         return { 
           ...newState,
-          logos: prev.logos, // Garder les logos existants pour modification
+          logos: prev.logos,
           currentLogoImage: undefined,
           contentImage: undefined,
           needsContentImage: undefined,
@@ -823,6 +1042,10 @@ export function useConversation() {
     suggestedDomain,
     handleUserMessage,
     handleDomainSelect,
+    handleMainSpeakerPhoto,
+    handleGuestPhoto,
+    handleSkipSpeakers,
+    handleSkipGuests,
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,

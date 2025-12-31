@@ -94,8 +94,35 @@ export interface LogoWithPosition {
   position: LogoPosition;
 }
 
+// Type pour les orateurs/artistes/invités
+export interface Speaker {
+  id: string;
+  name: string;
+  imageUrl: string;
+  role: "main" | "guest"; // Orateur principal ou invité
+}
+
 export interface ConversationState {
-  step: "greeting" | "analyzing" | "domain" | "custom_domain" | "details" | "reference" | "colors" | "logo" | "logo_position" | "content_image" | "generating" | "complete" | "modifying";
+  step: 
+    | "greeting" 
+    | "analyzing" 
+    | "domain" 
+    | "custom_domain" 
+    | "details" 
+    | "speakers_check" // Demander si orateur principal + invités
+    | "main_speaker_photo" // Photo orateur principal
+    | "main_speaker_name" // Nom orateur principal
+    | "guests_check" // Demander si invités
+    | "guest_photo" // Photo invité
+    | "guest_name" // Nom invité
+    | "reference" 
+    | "colors" 
+    | "logo" 
+    | "logo_position" 
+    | "content_image" 
+    | "generating" 
+    | "complete" 
+    | "modifying";
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
@@ -106,7 +133,12 @@ export interface ConversationState {
   referenceDescription?: string;
   colorPalette?: string[];
   logos?: LogoWithPosition[];
-  currentLogoImage?: string; // Temporary storage for logo before position selection
+  currentLogoImage?: string;
   contentImage?: string;
   needsContentImage?: boolean;
+  // Speakers/Artists
+  hasSpeakers?: boolean;
+  mainSpeaker?: Speaker;
+  currentSpeakerImage?: string; // Temporary storage for speaker photo
+  guests?: Speaker[];
 }
