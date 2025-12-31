@@ -105,17 +105,128 @@ export interface Speaker {
 // Type pour la mise en valeur du produit
 export interface ProductDisplay {
   hasCharacter: boolean;
-  characterInteraction?: string; // Description de comment le personnage interagit avec le produit
+  characterInteraction?: string;
 }
 
 // Type pour les informations restaurant
 export interface RestaurantInfo {
   hasMenu: boolean;
-  menuContent?: string; // Le contenu du menu avec les plats et prix
+  menuContent?: string;
   hasBeverages: boolean;
-  beverageImages?: string[]; // Images des boissons
+  beverageImages?: string[];
   hasDishes: boolean;
-  dishImages?: string[]; // Images des plats/repas
+  dishImages?: string[];
+}
+
+// Type pour les informations immobilier
+export interface RealEstateInfo {
+  hasMultipleImages: boolean;
+  propertyImages?: string[];
+  hasAgentPhoto: boolean;
+  agentPhoto?: string;
+  propertyFeatures?: string;
+}
+
+// Type pour les informations formation
+export interface FormationInfo {
+  hasTrainerPhoto: boolean;
+  trainerPhoto?: string;
+  hasCertification: boolean;
+  certificationDetails?: string;
+  programOutline?: string;
+}
+
+// Type pour les informations mode/fashion
+export interface FashionInfo {
+  hasMultipleProducts: boolean;
+  productImages?: string[];
+  hasModel: boolean;
+  modelPhoto?: string;
+  collectionName?: string;
+}
+
+// Type pour les informations santé
+export interface HealthInfo {
+  hasDoctorPhoto: boolean;
+  doctorPhoto?: string;
+  hasFacilityImages: boolean;
+  facilityImages?: string[];
+  servicesList?: string;
+}
+
+// Type pour les informations musique
+export interface MusicInfo {
+  hasArtistPhotos: boolean;
+  artistPhotos?: string[];
+  hasAlbumCover: boolean;
+  albumCover?: string;
+  hasStreamingLinks: boolean;
+}
+
+// Type pour les informations sport
+export interface SportInfo {
+  hasAthletePhotos: boolean;
+  athletePhotos?: string[];
+  hasTeamLogos: boolean;
+  teamLogos?: string[];
+  matchDetails?: string;
+}
+
+// Type pour les informations éducation
+export interface EducationInfo {
+  hasCampusImages: boolean;
+  campusImages?: string[];
+  programsOffered?: string;
+  hasRegistrationDeadline: boolean;
+}
+
+// Type pour les informations église
+export interface ChurchInfo {
+  hasPastorPhoto: boolean;
+  pastorPhoto?: string;
+  hasGuestSpeakers: boolean;
+  guestSpeakerPhotos?: string[];
+  bibleVerse?: string;
+}
+
+// Type pour les informations événement
+export interface EventInfo {
+  hasVenueImage: boolean;
+  venueImage?: string;
+  dressCode?: string;
+}
+
+// Type générique pour stocker les infos spécifiques au domaine
+export interface DomainSpecificInfo {
+  realEstate?: RealEstateInfo;
+  formation?: FormationInfo;
+  fashion?: FashionInfo;
+  health?: HealthInfo;
+  music?: MusicInfo;
+  sport?: SportInfo;
+  education?: EducationInfo;
+  church?: ChurchInfo;
+  event?: EventInfo;
+}
+
+// Type pour suivre les questions posées et réponses
+export interface DomainQuestionState {
+  currentQuestionId: string | null;
+  answeredQuestions: Record<string, boolean | string>;
+  pendingImageUpload?: {
+    type: string;
+    multiple: boolean;
+    label: string;
+    hint: string;
+  };
+  pendingTextInput?: {
+    type: string;
+    label: string;
+    placeholder: string;
+    multiline: boolean;
+  };
+  collectedImages: Record<string, string[]>;
+  collectedTexts: Record<string, string>;
 }
 
 export interface ConversationState {
@@ -131,15 +242,18 @@ export interface ConversationState {
     | "guests_check"
     | "guest_photo"
     | "guest_name"
-    | "product_character_check" // Demander si personnage sur l'affiche produit
-    | "product_character_interaction" // Comment le personnage interagit avec le produit
-    | "restaurant_menu_check" // Demander si l'affiche doit inclure un menu
-    | "restaurant_menu_content" // Capturer le contenu du menu
-    | "restaurant_beverages_check" // Demander si des boissons à inclure
-    | "restaurant_beverages_photos" // Photos des boissons
-    | "restaurant_dishes_check" // Demander si des plats à inclure
-    | "restaurant_dishes_photos" // Photos des plats
-    | "style_preferences" // Demander des préférences de style optionnelles
+    | "product_character_check"
+    | "product_character_interaction"
+    | "restaurant_menu_check"
+    | "restaurant_menu_content"
+    | "restaurant_beverages_check"
+    | "restaurant_beverages_photos"
+    | "restaurant_dishes_check"
+    | "restaurant_dishes_photos"
+    | "style_preferences"
+    | "domain_questions" // Nouvelle étape pour les questions intelligentes par domaine
+    | "domain_question_images" // Collecte d'images suite à une question
+    | "domain_question_text" // Collecte de texte suite à une question
     | "reference" 
     | "colors" 
     | "logo" 
@@ -178,4 +292,8 @@ export interface ConversationState {
   stylePreferences?: string;
   // Flag to indicate if we're using auto-selected template
   usingAutoTemplate?: boolean;
+  // Nouveau: État des questions intelligentes par domaine
+  domainQuestionState?: DomainQuestionState;
+  // Nouveau: Informations spécifiques au domaine collectées
+  domainSpecificInfo?: DomainSpecificInfo;
 }
