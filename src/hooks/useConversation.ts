@@ -738,6 +738,83 @@ export function useConversation() {
     setSuggestedDomain(null);
   }, []);
 
+  // Fonction pour revenir à une étape précédente
+  const goBackToStep = useCallback((targetStep: ConversationState["step"]) => {
+    const stepMessages: Record<string, string> = {
+      greeting: "Décrivez-moi l'affiche que vous souhaitez créer :",
+      domain: "Sélectionnez le domaine de l'affiche :",
+      details: "Quelles informations souhaitez-vous ajouter ou modifier ?",
+      reference: "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.",
+      colors: "Choisissez une palette de couleurs pour votre affiche :",
+      logo: "Souhaitez-vous ajouter ou modifier un logo ?",
+      content_image: "Avez-vous une image à intégrer dans l'affiche ? Envoyez-la, ou cliquez sur 'Générer automatiquement'.",
+    };
+
+    // Définir quelles données garder selon l'étape cible
+    setConversationState((prev) => {
+      const newState: ConversationState = { ...prev, step: targetStep };
+      
+      // Nettoyer les données des étapes après l'étape cible
+      if (targetStep === "greeting") {
+        return { step: "greeting" };
+      }
+      if (targetStep === "domain") {
+        return { 
+          step: "domain", 
+          description: prev.description,
+          extractedInfo: prev.extractedInfo,
+          missingInfo: prev.missingInfo,
+        };
+      }
+      if (targetStep === "details") {
+        return { 
+          step: "details", 
+          description: prev.description,
+          domain: prev.domain,
+          customDomain: prev.customDomain,
+          extractedInfo: prev.extractedInfo,
+          missingInfo: prev.missingInfo,
+        };
+      }
+      if (targetStep === "reference") {
+        return { 
+          step: "reference", 
+          description: prev.description,
+          domain: prev.domain,
+          customDomain: prev.customDomain,
+          extractedInfo: prev.extractedInfo,
+          missingInfo: [],
+        };
+      }
+      if (targetStep === "colors") {
+        return { 
+          ...newState,
+          logos: undefined,
+          currentLogoImage: undefined,
+          contentImage: undefined,
+          needsContentImage: undefined,
+        };
+      }
+      if (targetStep === "logo") {
+        return { 
+          ...newState,
+          logos: prev.logos, // Garder les logos existants pour modification
+          currentLogoImage: undefined,
+          contentImage: undefined,
+          needsContentImage: undefined,
+        };
+      }
+      
+      return newState;
+    });
+
+    // Ajouter un message système pour indiquer le retour
+    addMessage("user", `↩️ Retour à l'étape : ${targetStep}`);
+    setTimeout(() => {
+      addMessage("assistant", stepMessages[targetStep] || "Continuons...");
+    }, 250);
+  }, [addMessage]);
+
   return {
     messages,
     conversationState,
@@ -755,5 +832,6 @@ export function useConversation() {
     handleContentImage,
     handleSkipContentImage,
     resetConversation,
+    goBackToStep,
   };
 }
