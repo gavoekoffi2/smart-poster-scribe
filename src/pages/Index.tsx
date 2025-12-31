@@ -66,6 +66,7 @@ export default function Index() {
     isProcessing,
     generatedImage,
     suggestedDomain,
+    visitedSteps,
     handleUserMessage,
     handleDomainSelect,
     handleMainSpeakerPhoto,
@@ -83,6 +84,7 @@ export default function Index() {
     handleSkipContentImage,
     resetConversation,
     goBackToStep,
+    goForwardToStep,
   } = useConversation();
 
   const { history, saveToHistory, clearHistory } = useHistory();
@@ -247,10 +249,12 @@ export default function Index() {
 
           {/* Input Area */}
           <div className="border-t border-border/30 p-4 bg-card/30 backdrop-blur-sm">
-            {/* Navigation de retour */}
+            {/* Navigation avant/arrière */}
             <StepNavigation 
               currentStep={step} 
-              onGoBack={goBackToStep} 
+              onGoBack={goBackToStep}
+              onGoForward={goForwardToStep}
+              visitedSteps={visitedSteps}
               disabled={isProcessing} 
             />
             

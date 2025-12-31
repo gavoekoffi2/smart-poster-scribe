@@ -212,6 +212,20 @@ export function useConversation() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [suggestedDomain, setSuggestedDomain] = useState<string | null>(null);
+  const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["greeting"]);
+
+  // Mettre à jour les étapes visitées quand on change d'étape
+  useEffect(() => {
+    const currentStep = conversationState.step;
+    setVisitedSteps(prev => {
+      // Si on revient en arrière, on garde l'historique
+      const stepIndex = prev.indexOf(currentStep);
+      if (stepIndex !== -1) {
+        return prev; // L'étape existe déjà, on ne modifie pas
+      }
+      return [...prev, currentStep];
+    });
+  }, [conversationState.step]);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, image?: string) => {
     const newMessage: ChatMessage = {
@@ -1129,12 +1143,39 @@ export function useConversation() {
     }, 250);
   }, [addMessage]);
 
+  // Fonction pour avancer vers une étape déjà visitée
+  const goForwardToStep = useCallback((targetStep: ConversationState["step"]) => {
+    const stepIndex = visitedSteps.indexOf(targetStep);
+    if (stepIndex === -1) return;
+
+    const stepMessages: Record<string, string> = {
+      domain: "Dans quel domaine souhaitez-vous créer votre affiche ?",
+      details: "Parfait ! Y a-t-il des informations supplémentaires à ajouter ?",
+      speakers_check: "Voulez-vous ajouter un orateur principal ou des invités sur l'affiche ?",
+      main_speaker_photo: "Envoyez la photo de l'orateur principal.",
+      guests_check: "Voulez-vous ajouter des invités ?",
+      guest_photo: "Envoyez la photo de l'invité.",
+      reference: "Avez-vous une image de référence pour le style ?",
+      colors: "Choisissez les couleurs pour votre affiche.",
+      logo: "Souhaitez-vous ajouter un logo ?",
+      content_image: "Voulez-vous ajouter une image de contenu ?",
+    };
+
+    setConversationState(prev => ({ ...prev, step: targetStep }));
+
+    addMessage("user", `➡️ Retour à l'étape : ${targetStep}`);
+    setTimeout(() => {
+      addMessage("assistant", stepMessages[targetStep] || "Continuons...");
+    }, 250);
+  }, [addMessage, visitedSteps]);
+
   return {
     messages,
     conversationState,
     isProcessing,
     generatedImage,
     suggestedDomain,
+    visitedSteps,
     handleUserMessage,
     handleDomainSelect,
     handleMainSpeakerPhoto,
@@ -1152,5 +1193,6 @@ export function useConversation() {
     handleSkipContentImage,
     resetConversation,
     goBackToStep,
+    goForwardToStep,
   };
 }
