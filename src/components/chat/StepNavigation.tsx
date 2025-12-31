@@ -14,6 +14,8 @@ const STEP_ORDER = [
   "guests_check",
   "guest_photo",
   "guest_name",
+  "product_character_check",
+  "product_character_interaction",
   "reference",
   "colors",
   "logo",
@@ -34,6 +36,8 @@ const STEP_LABELS: Record<string, string> = {
   guests_check: "Invités",
   guest_photo: "Photo invité",
   guest_name: "Nom invité",
+  product_character_check: "Personnage produit",
+  product_character_interaction: "Interaction produit",
   reference: "Image de référence",
   colors: "Couleurs",
   logo: "Logo",
@@ -83,6 +87,12 @@ export function StepNavigation({ currentStep, onGoBack, disabled }: StepNavigati
     
     // Pour guest_name, retourner à guest_photo
     if (currentStep === "guest_name") return "guest_photo";
+
+    // Pour product_character_check, retourner à details
+    if (currentStep === "product_character_check") return "details";
+
+    // Pour product_character_interaction, retourner à product_character_check
+    if (currentStep === "product_character_interaction") return "product_character_check";
     
     // Pour les autres étapes, trouver l'étape précédente
     if (currentIndex > 0) {
@@ -91,6 +101,7 @@ export function StepNavigation({ currentStep, onGoBack, disabled }: StepNavigati
       for (const step of previousSteps) {
         if (step === "greeting" || step === "domain" || step === "details" || 
             step === "speakers_check" || step === "main_speaker_photo" || step === "guests_check" || step === "guest_photo" ||
+            step === "product_character_check" || step === "product_character_interaction" ||
             step === "reference" || step === "colors" || step === "logo" || step === "content_image") {
           return step;
         }
@@ -132,6 +143,8 @@ export function StepIndicator({ currentStep }: { currentStep: ConversationState[
     guests_check: "speakers_check",
     guest_photo: "speakers_check",
     guest_name: "speakers_check",
+    product_character_check: "speakers_check", // Map product to same visual step
+    product_character_interaction: "speakers_check",
     logo_position: "logo",
   };
   
@@ -141,7 +154,7 @@ export function StepIndicator({ currentStep }: { currentStep: ConversationState[
   // Ne pas afficher pour les étapes non principales
   if (mappedIndex === -1 && currentStep !== "greeting") return null;
 
-  const stepLabels = ["Domaine", "Détails", "Intervenants", "Référence", "Couleurs", "Logo", "Image", "Terminé"];
+  const stepLabels = ["Domaine", "Détails", "Contenu", "Référence", "Couleurs", "Logo", "Image", "Terminé"];
 
   return (
     <div className="flex items-center justify-center gap-1 py-2 px-4 overflow-x-auto">

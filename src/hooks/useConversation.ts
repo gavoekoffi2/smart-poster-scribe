@@ -10,12 +10,16 @@ import {
   LogoPosition,
   LogoWithPosition,
   Speaker,
+  ProductDisplay,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
+
+// Domaines qui sont orientés produit/e-commerce
+const PRODUCT_DOMAINS: Domain[] = ["restaurant", "fashion", "technology", "health", "realestate"];
 
 const INITIAL_MESSAGE =
   "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
@@ -89,6 +93,7 @@ function buildPrompt(state: ConversationState) {
     extractedInfo,
     mainSpeaker,
     guests,
+    productDisplay,
   } = state;
 
   const parts: string[] = [];
@@ -140,7 +145,13 @@ function buildPrompt(state: ConversationState) {
     parts.push(`INVITÉS: ${guestNames} (photos plus petites)`);
   }
 
-  // 6. INSTRUCTIONS ADDITIONNELLES
+  // 6. MISE EN VALEUR PRODUIT avec personnage
+  if (productDisplay?.hasCharacter && productDisplay.characterInteraction) {
+    parts.push(`PERSONNAGE METTANT EN VALEUR LE PRODUIT: ${productDisplay.characterInteraction}`);
+    parts.push("PERSONNAGES: personne africaine avec traits authentiques");
+  }
+
+  // 7. INSTRUCTIONS ADDITIONNELLES
   if (description) {
     const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
     if (cleanDesc) {
@@ -148,8 +159,8 @@ function buildPrompt(state: ConversationState) {
     }
   }
 
-  // 7. PERSONNAGES AFRICAINS si nécessaire
-  if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0)) {
+  // 8. PERSONNAGES AFRICAINS si nécessaire (et pas déjà couvert)
+  if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0) && !productDisplay?.hasCharacter) {
     parts.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
   }
 
@@ -502,7 +513,7 @@ export function useConversation() {
           },
         }));
 
-        // Check if this domain might have speakers
+        // Check if this domain might have speakers or products
         const currentDomain = conversationStateRef.current.domain;
         if (currentDomain && SPEAKER_DOMAINS.includes(currentDomain)) {
           setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
@@ -510,6 +521,14 @@ export function useConversation() {
             addMessage(
               "assistant",
               "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else if (currentDomain && PRODUCT_DOMAINS.includes(currentDomain)) {
+          setConversationState((prev) => ({ ...prev, step: "product_character_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous qu'un personnage mette en valeur votre produit sur l'affiche ? (Par exemple : quelqu'un qui tient le produit, l'utilise, le porte...)"
             );
           }, 250);
         } else {
@@ -521,6 +540,58 @@ export function useConversation() {
             );
           }, 250);
         }
+        return;
+      }
+
+      // Product character check - user responds yes/no
+      if (step === "product_character_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "product_character_interaction",
+            productDisplay: { hasCharacter: true }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Comment le personnage doit-il mettre en valeur le produit ? Décrivez la scène (ex: \"une femme élégante qui boit le jus\", \"un homme assis sur le canapé\", \"une personne qui tient le téléphone\"):"
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "reference",
+            productDisplay: { hasCharacter: false }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Product character interaction description
+      if (step === "product_character_interaction") {
+        setConversationState((prev) => ({
+          ...prev,
+          step: "reference",
+          productDisplay: {
+            hasCharacter: true,
+            characterInteraction: content.trim(),
+          },
+        }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+          );
+        }, 250);
         return;
       }
 
@@ -655,13 +726,21 @@ export function useConversation() {
           );
         }, 250);
       } else {
-        // Check if this domain might have speakers
+        // Check if this domain might have speakers or products
         if (SPEAKER_DOMAINS.includes(domain)) {
           setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
           setTimeout(() => {
             addMessage(
               "assistant",
               "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else if (PRODUCT_DOMAINS.includes(domain)) {
+          setConversationState((prev) => ({ ...prev, step: "product_character_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous qu'un personnage mette en valeur votre produit sur l'affiche ? (Par exemple : quelqu'un qui tient le produit, l'utilise, le porte...)"
             );
           }, 250);
         } else {
@@ -727,6 +806,22 @@ export function useConversation() {
     const guestsCount = conversationStateRef.current.guests?.length || 0;
     addMessage("user", guestsCount > 0 ? "Pas d'autre invité" : "Pas d'invité");
     setConversationState((prev) => ({ ...prev, step: "reference" }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // Handler pour passer le personnage produit
+  const handleSkipProductCharacter = useCallback(() => {
+    addMessage("user", "Pas de personnage sur l'affiche");
+    setConversationState((prev) => ({ 
+      ...prev, 
+      step: "reference",
+      productDisplay: { hasCharacter: false }
+    }));
     setTimeout(() => {
       addMessage(
         "assistant",
@@ -1046,6 +1141,7 @@ export function useConversation() {
     handleGuestPhoto,
     handleSkipSpeakers,
     handleSkipGuests,
+    handleSkipProductCharacter,
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
