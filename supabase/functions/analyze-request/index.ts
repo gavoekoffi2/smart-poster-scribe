@@ -68,32 +68,55 @@ serve(async (req) => {
 
     console.log("Analyzing user request:", trimmedText.substring(0, 200));
 
-    const systemPrompt = `Tu es un assistant spécialisé dans l'analyse de demandes de création d'affiches publicitaires.
+const systemPrompt = `Tu es un assistant expert en analyse de demandes d'affiches publicitaires.
 
-Analyse le texte de l'utilisateur et extrais les informations suivantes au format JSON:
+OBJECTIF PRINCIPAL: Analyser le texte de l'utilisateur pour en extraire TOUTES les informations déjà fournies et détecter le domaine avec CERTITUDE quand c'est possible.
 
+DOMAINES DISPONIBLES (utilise EXACTEMENT ces valeurs):
+- "church" : église, culte, messe, prière, pasteur, évangélisation, concert gospel, veillée
+- "event" : événement, conférence, séminaire, gala, cérémonie, anniversaire, mariage, fête
+- "education" : école, université, cours, formation académique, diplôme, études
+- "formation" : formation professionnelle, atelier, workshop, masterclass, coaching, stage
+- "restaurant" : restaurant, menu, plat, cuisine, nourriture, boisson, café, bar
+- "fashion" : mode, vêtements, collection, défilé, boutique, accessoires
+- "music" : concert, artiste, album, musique, DJ, festival musical, showcase
+- "sport" : sport, match, tournoi, compétition sportive, marathon, fitness
+- "technology" : tech, application, logiciel, startup, innovation, digital
+- "health" : santé, médecin, clinique, bien-être, pharmacie, soins
+- "realestate" : immobilier, maison, appartement, location, vente immobilière
+
+RÈGLES DE DÉTECTION DU DOMAINE:
+1. Si le texte contient des mots-clés CLAIRS d'un domaine, mets ce domaine avec CERTITUDE (ne mets PAS null)
+2. Exemples de détection automatique:
+   - "affiche pour ma boutique de vêtements" → "fashion"
+   - "je veux promouvoir mon restaurant" → "restaurant"  
+   - "affiche pour un concert" → "music"
+   - "événement d'église" ou "culte" → "church"
+   - "formation en marketing" → "formation"
+   - "conférence sur le leadership" → "event"
+3. Ne mets null QUE si le texte est vraiment ambigu ou ne donne aucune indication
+
+Réponds UNIQUEMENT avec ce JSON (sans markdown):
 {
-  "suggestedDomain": "Le domaine le plus probable parmi: education, marketing, event, restaurant, real_estate, health, technology, formation, eglise, autre. Si incertain, mettre null.",
+  "suggestedDomain": "domaine_détecté ou null si vraiment incertain",
   "extractedInfo": {
-    "title": "Titre ou sujet principal de l'affiche si mentionné",
-    "dates": "Dates mentionnées (formation, événement, etc.)",
-    "prices": "Prix, tarifs, frais mentionnés",
-    "contact": "Numéros de téléphone, emails, contacts",
-    "location": "Lieu, adresse, quartier mentionné",
-    "organizer": "Nom de l'organisateur, entreprise, église",
+    "title": "Titre ou sujet si mentionné",
+    "dates": "Dates si mentionnées",
+    "prices": "Prix si mentionnés",
+    "contact": "Contact si mentionné",
+    "location": "Lieu si mentionné",
+    "organizer": "Organisateur si mentionné",
     "targetAudience": "Public cible si mentionné",
-    "additionalDetails": "Autres détails importants (modules, programme, etc.)"
+    "additionalDetails": "Autres détails importants"
   },
-  "missingInfo": ["Liste des informations manquantes importantes pour créer l'affiche, par exemple: 'dates', 'contact', 'prix', 'lieu'"],
-  "summary": "Résumé court de ce que l'utilisateur veut créer"
+  "missingInfo": ["liste des infos ESSENTIELLES manquantes uniquement"],
+  "summary": "Résumé court de la demande"
 }
 
-Règles:
-- Ne mets que les champs qui sont explicitement mentionnés dans le texte
-- Pour missingInfo, liste uniquement les éléments vraiment essentiels qui manquent
-- Si le texte mentionne une formation, suggère "formation" comme domaine
-- Si le texte mentionne église, culte, messe, prière, suggère "eglise"
-- Réponds UNIQUEMENT avec le JSON, sans markdown ni explication`;
+IMPORTANT: 
+- N'inclus dans extractedInfo QUE les champs explicitement mentionnés
+- Pour missingInfo, ne liste que ce qui est vraiment ESSENTIEL (dates pour un événement, contact pour une promo...)
+- Le summary doit être une phrase courte et claire`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
