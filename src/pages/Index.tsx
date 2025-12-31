@@ -7,6 +7,7 @@ import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
 import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
+import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ export default function Index() {
     handleContentImage,
     handleSkipContentImage,
     resetConversation,
+    goBackToStep,
   } = useConversation();
 
   const { history, saveToHistory, clearHistory } = useHistory();
@@ -198,6 +200,9 @@ export default function Index() {
       <main className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl overflow-hidden">
         {/* Chat Panel */}
         <div className="flex-1 flex flex-col glass-panel overflow-hidden animate-scale-in">
+          {/* Step Indicator */}
+          <StepIndicator currentStep={step} />
+          
           {/* Messages */}
           <div
             ref={chatContainerRef}
@@ -234,6 +239,13 @@ export default function Index() {
 
           {/* Input Area */}
           <div className="border-t border-border/30 p-4 bg-card/30 backdrop-blur-sm">
+            {/* Navigation de retour */}
+            <StepNavigation 
+              currentStep={step} 
+              onGoBack={goBackToStep} 
+              disabled={isProcessing} 
+            />
+            
             {showTextInput && (
               <div className="flex gap-3">
                 <Input
