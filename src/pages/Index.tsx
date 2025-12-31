@@ -72,6 +72,7 @@ export default function Index() {
     handleGuestPhoto,
     handleSkipSpeakers,
     handleSkipGuests,
+    handleSkipProductCharacter,
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
@@ -141,7 +142,7 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
@@ -150,6 +151,7 @@ export default function Index() {
   const showContentImageUpload = step === "content_image";
   const showMainSpeakerPhotoUpload = step === "main_speaker_photo";
   const showGuestPhotoUpload = step === "guest_photo";
+  const showProductCharacterSkip = step === "product_character_check";
 
   const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
 
@@ -268,6 +270,15 @@ export default function Index() {
                   className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
                 >
                   <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {showProductCharacterSkip && (
+              <div className="flex flex-wrap gap-3 mt-2">
+                <Button variant="ghost" size="sm" onClick={handleSkipProductCharacter} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Non, pas de personnage
                 </Button>
               </div>
             )}

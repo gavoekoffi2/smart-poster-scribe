@@ -99,7 +99,13 @@ export interface Speaker {
   id: string;
   name: string;
   imageUrl: string;
-  role: "main" | "guest"; // Orateur principal ou invité
+  role: "main" | "guest";
+}
+
+// Type pour la mise en valeur du produit
+export interface ProductDisplay {
+  hasCharacter: boolean;
+  characterInteraction?: string; // Description de comment le personnage interagit avec le produit
 }
 
 export interface ConversationState {
@@ -109,12 +115,14 @@ export interface ConversationState {
     | "domain" 
     | "custom_domain" 
     | "details" 
-    | "speakers_check" // Demander si orateur principal + invités
-    | "main_speaker_photo" // Photo orateur principal
-    | "main_speaker_name" // Nom orateur principal
-    | "guests_check" // Demander si invités
-    | "guest_photo" // Photo invité
-    | "guest_name" // Nom invité
+    | "speakers_check"
+    | "main_speaker_photo"
+    | "main_speaker_name"
+    | "guests_check"
+    | "guest_photo"
+    | "guest_name"
+    | "product_character_check" // Demander si personnage sur l'affiche produit
+    | "product_character_interaction" // Comment le personnage interagit avec le produit
     | "reference" 
     | "colors" 
     | "logo" 
@@ -139,6 +147,8 @@ export interface ConversationState {
   // Speakers/Artists
   hasSpeakers?: boolean;
   mainSpeaker?: Speaker;
-  currentSpeakerImage?: string; // Temporary storage for speaker photo
+  currentSpeakerImage?: string;
   guests?: Speaker[];
+  // Product display
+  productDisplay?: ProductDisplay;
 }
