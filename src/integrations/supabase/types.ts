@@ -59,6 +59,36 @@ export type Database = {
         }
         Relationships: []
       }
+      reference_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          design_category: string
+          domain: string
+          id: string
+          image_url: string
+          tags: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          design_category: string
+          domain: string
+          id?: string
+          image_url: string
+          tags?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          design_category?: string
+          domain?: string
+          id?: string
+          image_url?: string
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
