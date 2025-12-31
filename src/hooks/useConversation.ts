@@ -11,6 +11,7 @@ import {
   LogoWithPosition,
   Speaker,
   ProductDisplay,
+  RestaurantInfo,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,8 +19,11 @@ import { toast } from "sonner";
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
-// Domaines qui sont orientés produit/e-commerce
-const PRODUCT_DOMAINS: Domain[] = ["restaurant", "fashion", "technology", "health", "realestate"];
+// Domaines qui sont orientés produit/e-commerce (sans restaurant qui a un traitement spécial)
+const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestate"];
+
+// Domaine restaurant avec traitement spécial
+const RESTAURANT_DOMAIN: Domain = "restaurant";
 
 const INITIAL_MESSAGE =
   "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
@@ -94,9 +98,14 @@ function buildPrompt(state: ConversationState) {
     mainSpeaker,
     guests,
     productDisplay,
+    restaurantInfo,
+    language = "français", // Français par défaut
   } = state;
 
   const parts: string[] = [];
+
+  // 0. LANGUE - Toujours en français par défaut
+  parts.push(`LANGUE: Tous les textes de l'affiche doivent être en ${language}`);
 
   // 1. STYLE VISUEL D'ABORD (le plus important pour la cohérence)
   if (referenceDescription) {
@@ -151,7 +160,24 @@ function buildPrompt(state: ConversationState) {
     parts.push("PERSONNAGES: personne africaine avec traits authentiques");
   }
 
-  // 7. INSTRUCTIONS ADDITIONNELLES
+  // 7. INFORMATIONS RESTAURANT
+  if (restaurantInfo) {
+    if (restaurantInfo.hasMenu && restaurantInfo.menuContent) {
+      parts.push(`MENU À AFFICHER: ${restaurantInfo.menuContent}`);
+      parts.push("STYLE: affiche avec espace menu, disposition claire des plats et prix");
+    }
+    if (restaurantInfo.hasBeverages && restaurantInfo.beverageImages?.length) {
+      parts.push(`BOISSONS: ${restaurantInfo.beverageImages.length} images de boissons à intégrer sur l'affiche`);
+    }
+    if (restaurantInfo.hasDishes && restaurantInfo.dishImages?.length) {
+      parts.push(`PLATS: ${restaurantInfo.dishImages.length} images de plats/repas à mettre en valeur sur l'affiche`);
+    }
+    if (!restaurantInfo.hasMenu) {
+      parts.push("STYLE: affiche promotionnelle restaurant sans menu détaillé");
+    }
+  }
+
+  // 8. INSTRUCTIONS ADDITIONNELLES
   if (description) {
     const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
     if (cleanDesc) {
@@ -159,7 +185,7 @@ function buildPrompt(state: ConversationState) {
     }
   }
 
-  // 8. PERSONNAGES AFRICAINS si nécessaire (et pas déjà couvert)
+  // 9. PERSONNAGES AFRICAINS si nécessaire (et pas déjà couvert)
   if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0) && !productDisplay?.hasCharacter) {
     parts.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
   }
@@ -527,7 +553,7 @@ export function useConversation() {
           },
         }));
 
-        // Check if this domain might have speakers or products
+        // Check if this domain might have speakers, products, or restaurant
         const currentDomain = conversationStateRef.current.domain;
         if (currentDomain && SPEAKER_DOMAINS.includes(currentDomain)) {
           setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
@@ -535,6 +561,15 @@ export function useConversation() {
             addMessage(
               "assistant",
               "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else if (currentDomain === RESTAURANT_DOMAIN) {
+          // Restaurant domain - demander les informations spécifiques
+          setConversationState((prev) => ({ ...prev, step: "restaurant_menu_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous inclure un menu (liste des plats avec prix) sur votre affiche ?"
             );
           }, 250);
         } else if (currentDomain && PRODUCT_DOMAINS.includes(currentDomain)) {
@@ -551,6 +586,154 @@ export function useConversation() {
             addMessage(
               "assistant",
               "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // =========== RESTAURANT STEPS ===========
+      
+      // Restaurant menu check - user responds yes/no
+      if (step === "restaurant_menu_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "restaurant_menu_content",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasMenu: true,
+              hasBeverages: false,
+              hasDishes: false,
+            }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Décrivez le menu que vous souhaitez afficher (plats et prix). Par exemple :\n- Poulet braisé : 5000 FCFA\n- Poisson grillé : 6000 FCFA\n- Riz sauce arachide : 3000 FCFA"
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "restaurant_beverages_check",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasMenu: false,
+              hasBeverages: false,
+              hasDishes: false,
+            }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous inclure des images de boissons sur l'affiche ?"
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Restaurant menu content
+      if (step === "restaurant_menu_content") {
+        setConversationState((prev) => ({
+          ...prev,
+          step: "restaurant_beverages_check",
+          restaurantInfo: {
+            ...prev.restaurantInfo,
+            hasMenu: true,
+            hasBeverages: false,
+            hasDishes: false,
+            menuContent: content.trim(),
+          },
+        }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Menu noté ! Souhaitez-vous inclure des images de boissons sur l'affiche ?"
+          );
+        }, 250);
+        return;
+      }
+
+      // Restaurant beverages check
+      if (step === "restaurant_beverages_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "restaurant_beverages_photos",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasBeverages: true,
+            },
+            currentBeverageImages: [],
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Envoyez les photos de vos boissons (vous pouvez en envoyer plusieurs). Cliquez sur 'Continuer' quand vous avez terminé."
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "restaurant_dishes_check",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasBeverages: false,
+            }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous inclure des images de plats/repas sur l'affiche ?"
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Restaurant dishes check
+      if (step === "restaurant_dishes_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+        
+        if (isYes) {
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "restaurant_dishes_photos",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasDishes: true,
+            },
+            currentDishImages: [],
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Envoyez les photos de vos plats/repas (vous pouvez en envoyer plusieurs). Cliquez sur 'Continuer' quand vous avez terminé."
+            );
+          }, 250);
+        } else {
+          // Check if user wants a character on the poster
+          setConversationState((prev) => ({ 
+            ...prev, 
+            step: "product_character_check",
+            restaurantInfo: { 
+              ...prev.restaurantInfo,
+              hasDishes: false,
+            }
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous qu'un personnage mette en valeur vos produits sur l'affiche ? (Par exemple : un chef qui présente le plat, une personne qui mange...)"
             );
           }, 250);
         }
@@ -740,13 +923,22 @@ export function useConversation() {
           );
         }, 250);
       } else {
-        // Check if this domain might have speakers or products
+        // Check if this domain might have speakers, products, or restaurant
         if (SPEAKER_DOMAINS.includes(domain)) {
           setConversationState((prev) => ({ ...prev, step: "speakers_check" }));
           setTimeout(() => {
             addMessage(
               "assistant",
               "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+            );
+          }, 250);
+        } else if (domain === RESTAURANT_DOMAIN) {
+          // Restaurant domain - demander les informations spécifiques
+          setConversationState((prev) => ({ ...prev, step: "restaurant_menu_check" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Souhaitez-vous inclure un menu (liste des plats avec prix) sur votre affiche ?"
             );
           }, 250);
         } else if (PRODUCT_DOMAINS.includes(domain)) {
@@ -840,6 +1032,125 @@ export function useConversation() {
       addMessage(
         "assistant",
         "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // =========== RESTAURANT HANDLERS ===========
+
+  // Handler pour passer la question du menu
+  const handleSkipRestaurantMenu = useCallback(() => {
+    addMessage("user", "Pas de menu sur l'affiche");
+    setConversationState((prev) => ({ 
+      ...prev, 
+      step: "restaurant_beverages_check",
+      restaurantInfo: { 
+        ...prev.restaurantInfo,
+        hasMenu: false,
+        hasBeverages: false,
+        hasDishes: false,
+      }
+    }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Souhaitez-vous inclure des images de boissons sur l'affiche ?"
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // Handler pour les photos de boissons
+  const handleBeveragePhoto = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Photo de boisson envoyée", imageDataUrl);
+      setConversationState((prev) => ({
+        ...prev,
+        currentBeverageImages: [...(prev.currentBeverageImages || []), imageDataUrl],
+        restaurantInfo: {
+          ...prev.restaurantInfo,
+          hasBeverages: true,
+          hasDishes: prev.restaurantInfo?.hasDishes || false,
+          hasMenu: prev.restaurantInfo?.hasMenu || false,
+          beverageImages: [...(prev.restaurantInfo?.beverageImages || []), imageDataUrl],
+        },
+      }));
+      setTimeout(() => {
+        const count = (conversationStateRef.current.currentBeverageImages?.length || 0) + 1;
+        addMessage(
+          "assistant",
+          `${count} photo(s) de boisson ajoutée(s) ! Envoyez d'autres photos ou cliquez sur 'Continuer'.`
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  // Handler pour passer les boissons
+  const handleSkipBeverages = useCallback(() => {
+    const beveragesCount = conversationStateRef.current.currentBeverageImages?.length || 0;
+    addMessage("user", beveragesCount > 0 ? "Continuer sans autre boisson" : "Pas de boissons");
+    setConversationState((prev) => ({ 
+      ...prev, 
+      step: "restaurant_dishes_check",
+      restaurantInfo: {
+        ...prev.restaurantInfo,
+        hasBeverages: beveragesCount > 0,
+        hasDishes: false,
+        hasMenu: prev.restaurantInfo?.hasMenu || false,
+      }
+    }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Souhaitez-vous inclure des images de plats/repas sur l'affiche ?"
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // Handler pour les photos de plats
+  const handleDishPhoto = useCallback(
+    (imageDataUrl: string) => {
+      addMessage("user", "Photo de plat envoyée", imageDataUrl);
+      setConversationState((prev) => ({
+        ...prev,
+        currentDishImages: [...(prev.currentDishImages || []), imageDataUrl],
+        restaurantInfo: {
+          ...prev.restaurantInfo,
+          hasDishes: true,
+          hasBeverages: prev.restaurantInfo?.hasBeverages || false,
+          hasMenu: prev.restaurantInfo?.hasMenu || false,
+          dishImages: [...(prev.restaurantInfo?.dishImages || []), imageDataUrl],
+        },
+      }));
+      setTimeout(() => {
+        const count = (conversationStateRef.current.currentDishImages?.length || 0) + 1;
+        addMessage(
+          "assistant",
+          `${count} photo(s) de plat(s) ajoutée(s) ! Envoyez d'autres photos ou cliquez sur 'Continuer'.`
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  // Handler pour passer les plats et aller vers personnage
+  const handleSkipDishes = useCallback(() => {
+    const dishesCount = conversationStateRef.current.currentDishImages?.length || 0;
+    addMessage("user", dishesCount > 0 ? "Continuer sans autre plat" : "Pas de plats");
+    setConversationState((prev) => ({ 
+      ...prev, 
+      step: "product_character_check",
+      restaurantInfo: {
+        ...prev.restaurantInfo,
+        hasDishes: dishesCount > 0,
+        hasBeverages: prev.restaurantInfo?.hasBeverages || false,
+        hasMenu: prev.restaurantInfo?.hasMenu || false,
+      }
+    }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Souhaitez-vous qu'un personnage mette en valeur vos produits sur l'affiche ? (Par exemple : un chef qui présente le plat, une personne qui mange...)"
       );
     }, 250);
   }, [addMessage]);
@@ -1281,6 +1592,12 @@ export function useConversation() {
       main_speaker_photo: "Envoyez la photo de l'orateur principal.",
       guests_check: "Voulez-vous ajouter des invités ?",
       guest_photo: "Envoyez la photo de l'invité.",
+      restaurant_menu_check: "Souhaitez-vous inclure un menu sur l'affiche ?",
+      restaurant_menu_content: "Décrivez le menu avec les plats et les prix.",
+      restaurant_beverages_check: "Souhaitez-vous inclure des images de boissons ?",
+      restaurant_beverages_photos: "Envoyez les photos de vos boissons.",
+      restaurant_dishes_check: "Souhaitez-vous inclure des images de plats ?",
+      restaurant_dishes_photos: "Envoyez les photos de vos plats.",
       reference: "Avez-vous une image de référence pour le style ?",
       colors: "Choisissez les couleurs pour votre affiche.",
       logo: "Souhaitez-vous ajouter un logo ?",
@@ -1309,6 +1626,13 @@ export function useConversation() {
     handleSkipSpeakers,
     handleSkipGuests,
     handleSkipProductCharacter,
+    // Restaurant handlers
+    handleSkipRestaurantMenu,
+    handleBeveragePhoto,
+    handleSkipBeverages,
+    handleDishPhoto,
+    handleSkipDishes,
+    // Other handlers
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,

@@ -108,6 +108,16 @@ export interface ProductDisplay {
   characterInteraction?: string; // Description de comment le personnage interagit avec le produit
 }
 
+// Type pour les informations restaurant
+export interface RestaurantInfo {
+  hasMenu: boolean;
+  menuContent?: string; // Le contenu du menu avec les plats et prix
+  hasBeverages: boolean;
+  beverageImages?: string[]; // Images des boissons
+  hasDishes: boolean;
+  dishImages?: string[]; // Images des plats/repas
+}
+
 export interface ConversationState {
   step: 
     | "greeting" 
@@ -123,6 +133,12 @@ export interface ConversationState {
     | "guest_name"
     | "product_character_check" // Demander si personnage sur l'affiche produit
     | "product_character_interaction" // Comment le personnage interagit avec le produit
+    | "restaurant_menu_check" // Demander si l'affiche doit inclure un menu
+    | "restaurant_menu_content" // Capturer le contenu du menu
+    | "restaurant_beverages_check" // Demander si des boissons à inclure
+    | "restaurant_beverages_photos" // Photos des boissons
+    | "restaurant_dishes_check" // Demander si des plats à inclure
+    | "restaurant_dishes_photos" // Photos des plats
     | "reference" 
     | "colors" 
     | "logo" 
@@ -151,4 +167,10 @@ export interface ConversationState {
   guests?: Speaker[];
   // Product display
   productDisplay?: ProductDisplay;
+  // Restaurant info
+  restaurantInfo?: RestaurantInfo;
+  currentBeverageImages?: string[];
+  currentDishImages?: string[];
+  // Language preference (default: French)
+  language?: string;
 }

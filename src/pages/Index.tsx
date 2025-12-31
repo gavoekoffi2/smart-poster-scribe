@@ -74,6 +74,13 @@ export default function Index() {
     handleSkipSpeakers,
     handleSkipGuests,
     handleSkipProductCharacter,
+    // Restaurant handlers
+    handleSkipRestaurantMenu,
+    handleBeveragePhoto,
+    handleSkipBeverages,
+    handleDishPhoto,
+    handleSkipDishes,
+    // Other handlers
     handleReferenceImage,
     handleSkipReference,
     handleColorsConfirm,
@@ -144,10 +151,12 @@ export default function Index() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction";
+  const showTextInput = step === "greeting" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check";
   const showDomainSelect = step === "domain";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
+  const showBeveragesUpload = step === "restaurant_beverages_photos";
+  const showDishesUpload = step === "restaurant_dishes_photos";
   const showLogoUpload = step === "logo";
   const showLogoPosition = step === "logo_position";
   const showContentImageUpload = step === "content_image";
@@ -311,6 +320,34 @@ export default function Index() {
                 <Button variant="ghost" size="sm" onClick={handleSkipGuests} disabled={isProcessing} className="hover:bg-muted/50">
                   <SkipForward className="w-4 h-4 mr-2" />
                   {(conversationState.guests?.length || 0) > 0 ? "Continuer" : "Pas d'invité"}
+                </Button>
+              </div>
+            )}
+
+            {showBeveragesUpload && (
+              <div className="flex flex-wrap gap-3">
+                <ImageUploadButton
+                  onImageSelect={handleBeveragePhoto}
+                  disabled={isProcessing}
+                  label="Envoyer photo de boisson"
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipBeverages} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  {(conversationState.currentBeverageImages?.length || 0) > 0 ? "Continuer" : "Pas de boissons"}
+                </Button>
+              </div>
+            )}
+
+            {showDishesUpload && (
+              <div className="flex flex-wrap gap-3">
+                <ImageUploadButton
+                  onImageSelect={handleDishPhoto}
+                  disabled={isProcessing}
+                  label="Envoyer photo de plat"
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipDishes} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  {(conversationState.currentDishImages?.length || 0) > 0 ? "Continuer" : "Pas de plats"}
                 </Button>
               </div>
             )}
