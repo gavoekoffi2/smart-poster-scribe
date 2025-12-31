@@ -895,13 +895,114 @@ export function useConversation() {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
-  const handleSkipReference = useCallback(() => {
+  const handleSkipReference = useCallback(async () => {
     addMessage("user", "Passer l'image de référence");
+    
+    const currentDomain = conversationStateRef.current.domain;
+    
+    // If we have a domain, try to get a random template from the database
+    if (currentDomain) {
+      addLoadingMessage();
+      setIsProcessing(true);
+      
+      try {
+        // Fetch a random template for this domain
+        const { data: templates, error } = await supabase
+          .from("reference_templates")
+          .select("*")
+          .eq("domain", currentDomain);
+        
+        removeLoadingMessage();
+        setIsProcessing(false);
+        
+        if (!error && templates && templates.length > 0) {
+          // Pick a random template
+          const randomIndex = Math.floor(Math.random() * templates.length);
+          const template = templates[randomIndex];
+          
+          // Analyze the template image to get its description
+          const imageUrl = template.image_url.startsWith('/')
+            ? window.location.origin + template.image_url
+            : template.image_url;
+          
+          // Use the template description or fetch from image
+          if (template.description) {
+            setConversationState((prev) => ({
+              ...prev,
+              step: "colors",
+              referenceImage: imageUrl,
+              referenceDescription: template.description,
+            }));
+            addMessage(
+              "assistant",
+              "J'ai sélectionné un style adapté à votre domaine. Choisissez une palette de couleurs :"
+            );
+            return;
+          }
+          
+          // If no description, try to analyze the template image
+          try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            
+            reader.onloadend = async () => {
+              const base64 = reader.result as string;
+              
+              const { data: analysisData } = await supabase.functions.invoke("analyze-image", {
+                body: { imageData: base64 },
+              });
+              
+              if (analysisData?.success && analysisData.description) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "colors",
+                  referenceImage: imageUrl,
+                  referenceDescription: analysisData.description,
+                }));
+              } else {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "colors",
+                  referenceImage: imageUrl,
+                }));
+              }
+              
+              addMessage(
+                "assistant",
+                "J'ai sélectionné un style adapté à votre domaine. Choisissez une palette de couleurs :"
+              );
+            };
+            
+            reader.readAsDataURL(blob);
+            return;
+          } catch {
+            // If analysis fails, just use the template without description
+            setConversationState((prev) => ({
+              ...prev,
+              step: "colors",
+              referenceImage: imageUrl,
+            }));
+            addMessage(
+              "assistant",
+              "J'ai sélectionné un style adapté. Choisissez une palette de couleurs :"
+            );
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching template:", err);
+        removeLoadingMessage();
+        setIsProcessing(false);
+      }
+    }
+    
+    // Fallback: no template found, proceed without reference
     setConversationState((prev) => ({ ...prev, step: "colors" }));
     setTimeout(() => {
       addMessage("assistant", "Choisissez une palette de couleurs pour votre affiche :");
     }, 250);
-  }, [addMessage]);
+  }, [addMessage, addLoadingMessage, removeLoadingMessage]);
 
   const handleColorsConfirm = useCallback(
     (colors: string[]) => {
