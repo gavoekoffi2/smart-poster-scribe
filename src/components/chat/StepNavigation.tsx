@@ -8,6 +8,12 @@ const STEP_ORDER = [
   "domain",
   "custom_domain", 
   "details",
+  "speakers_check",
+  "main_speaker_photo",
+  "main_speaker_name",
+  "guests_check",
+  "guest_photo",
+  "guest_name",
   "reference",
   "colors",
   "logo",
@@ -22,6 +28,12 @@ const STEP_LABELS: Record<string, string> = {
   domain: "Domaine",
   custom_domain: "Domaine personnalisé",
   details: "Détails",
+  speakers_check: "Orateurs",
+  main_speaker_photo: "Photo orateur",
+  main_speaker_name: "Nom orateur",
+  guests_check: "Invités",
+  guest_photo: "Photo invité",
+  guest_name: "Nom invité",
   reference: "Image de référence",
   colors: "Couleurs",
   logo: "Logo",
@@ -54,12 +66,31 @@ export function StepNavigation({ currentStep, onGoBack, disabled }: StepNavigati
     // Pour details après domain, on pourrait revenir à domain
     if (currentStep === "details") return "domain";
     
+    // Pour speakers_check, retourner à details ou domain
+    if (currentStep === "speakers_check") return "details";
+    
+    // Pour main_speaker_photo, retourner à speakers_check
+    if (currentStep === "main_speaker_photo") return "speakers_check";
+    
+    // Pour main_speaker_name, retourner à main_speaker_photo
+    if (currentStep === "main_speaker_name") return "main_speaker_photo";
+    
+    // Pour guests_check, retourner à main_speaker_name ou speakers_check
+    if (currentStep === "guests_check") return "main_speaker_photo";
+    
+    // Pour guest_photo, retourner à guests_check
+    if (currentStep === "guest_photo") return "guests_check";
+    
+    // Pour guest_name, retourner à guest_photo
+    if (currentStep === "guest_name") return "guest_photo";
+    
     // Pour les autres étapes, trouver l'étape précédente
     if (currentIndex > 0) {
       // Sauter les étapes intermédiaires non pertinentes
       const previousSteps = STEP_ORDER.slice(0, currentIndex).reverse();
       for (const step of previousSteps) {
         if (step === "greeting" || step === "domain" || step === "details" || 
+            step === "speakers_check" || step === "main_speaker_photo" || step === "guests_check" || step === "guest_photo" ||
             step === "reference" || step === "colors" || step === "logo" || step === "content_image") {
           return step;
         }
@@ -90,20 +121,34 @@ export function StepNavigation({ currentStep, onGoBack, disabled }: StepNavigati
 
 // Composant pour afficher la progression
 export function StepIndicator({ currentStep }: { currentStep: ConversationState["step"] }) {
-  const mainSteps = ["domain", "details", "reference", "colors", "logo", "content_image", "complete"];
+  const mainSteps = ["domain", "details", "speakers_check", "reference", "colors", "logo", "content_image", "complete"];
   const currentIndex = mainSteps.indexOf(currentStep as string);
   
+  // Mapper les sous-étapes aux étapes principales
+  const stepMapping: Record<string, string> = {
+    custom_domain: "domain",
+    main_speaker_photo: "speakers_check",
+    main_speaker_name: "speakers_check",
+    guests_check: "speakers_check",
+    guest_photo: "speakers_check",
+    guest_name: "speakers_check",
+    logo_position: "logo",
+  };
+  
+  const mappedStep = stepMapping[currentStep] || currentStep;
+  const mappedIndex = mainSteps.indexOf(mappedStep);
+  
   // Ne pas afficher pour les étapes non principales
-  if (currentIndex === -1 && currentStep !== "greeting") return null;
+  if (mappedIndex === -1 && currentStep !== "greeting") return null;
 
-  const stepLabels = ["Domaine", "Détails", "Référence", "Couleurs", "Logo", "Image", "Terminé"];
+  const stepLabels = ["Domaine", "Détails", "Intervenants", "Référence", "Couleurs", "Logo", "Image", "Terminé"];
 
   return (
     <div className="flex items-center justify-center gap-1 py-2 px-4 overflow-x-auto">
       {mainSteps.map((step, index) => {
-        const isActive = index === currentIndex || (currentStep === "greeting" && index === 0);
-        const isPast = index < currentIndex;
-        const isFuture = index > currentIndex && currentStep !== "greeting";
+        const isActive = index === mappedIndex || (currentStep === "greeting" && index === 0);
+        const isPast = index < mappedIndex;
+        const isFuture = index > mappedIndex && currentStep !== "greeting";
 
         return (
           <div key={step} className="flex items-center">
