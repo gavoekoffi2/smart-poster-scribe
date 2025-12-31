@@ -870,6 +870,31 @@ export function useConversation() {
           return;
         }
 
+        // Enrichir automatiquement la base de données avec cette image de référence
+        const currentDomain = conversationStateRef.current.domain;
+        if (currentDomain) {
+          // Lancer l'enrichissement en arrière-plan (ne pas bloquer l'utilisateur)
+          supabase.functions.invoke("enrich-templates", {
+            body: {
+              imageData: imageDataUrl,
+              domain: currentDomain,
+              description: data.description,
+              designCategory: "user-contributed",
+              tags: [currentDomain, "user-contributed", "auto-added"],
+            },
+          }).then(({ data: enrichData, error: enrichError }) => {
+            if (enrichError) {
+              console.error("Failed to enrich templates:", enrichError);
+            } else if (enrichData?.isDuplicate) {
+              console.log("Reference image already exists in database");
+            } else if (enrichData?.success) {
+              console.log("Reference image added to database:", enrichData.template?.id);
+            }
+          }).catch((err) => {
+            console.error("Error enriching templates:", err);
+          });
+        }
+
         addMessage(
           "assistant",
           "Image analysée ! Choisissez une palette de couleurs pour personnaliser votre affiche :"
