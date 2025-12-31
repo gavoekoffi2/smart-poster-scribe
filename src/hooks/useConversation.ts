@@ -1336,6 +1336,88 @@ export function useConversation() {
     }, 250);
   }, [addMessage]);
 
+  // =========== DOMAIN QUESTIONS HANDLERS ===========
+
+  // Handler pour les images de questions de domaine (ajout d'une image)
+  const handleDomainQuestionImage = useCallback(
+    (imageDataUrl: string) => {
+      const state = conversationStateRef.current.domainQuestionState;
+      const domain = conversationStateRef.current.domain;
+      
+      if (!state || !domain || !state.pendingImageUpload) return;
+      
+      const existingImages = state.collectedImages[state.pendingImageUpload.type] || [];
+      const newImages = [...existingImages, imageDataUrl];
+      
+      addMessage("user", "Photo envoyée", imageDataUrl);
+      
+      setConversationState((prev) => ({
+        ...prev,
+        domainQuestionState: {
+          ...state,
+          collectedImages: {
+            ...state.collectedImages,
+            [state.pendingImageUpload!.type]: newImages,
+          },
+        },
+      }));
+      
+      setTimeout(() => {
+        const label = state.pendingImageUpload!.multiple 
+          ? `${newImages.length} photo(s) ajoutée(s) ! Envoyez-en d'autres ou cliquez sur 'Continuer'.`
+          : "Photo ajoutée ! Cliquez sur 'Continuer' pour passer à la suite.";
+        addMessage("assistant", `📸 ${label}`);
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  // Handler pour passer/continuer les images de questions de domaine
+  const handleSkipDomainQuestionImages = useCallback(() => {
+    const state = conversationStateRef.current.domainQuestionState;
+    const domain = conversationStateRef.current.domain;
+    
+    if (!state || !domain) return;
+    
+    const imagesCount = state.pendingImageUpload 
+      ? (state.collectedImages[state.pendingImageUpload.type]?.length || 0)
+      : 0;
+    
+    addMessage("user", imagesCount > 0 ? "Continuer" : "Passer cette étape");
+    
+    // Passer à la question suivante
+    const nextQuestion = getNextQuestion(domain, state.answeredQuestions);
+    
+    if (nextQuestion) {
+      setConversationState((prev) => ({
+        ...prev,
+        step: "domain_questions",
+        domainQuestionState: {
+          ...state,
+          currentQuestionId: nextQuestion.id,
+          pendingImageUpload: undefined,
+        },
+      }));
+      setTimeout(() => {
+        addMessage("assistant", nextQuestion.question);
+      }, 250);
+    } else {
+      // Toutes les questions terminées, aller à l'étape référence
+      setConversationState((prev) => ({
+        ...prev,
+        step: "reference",
+        domainQuestionState: {
+          ...state,
+          currentQuestionId: null,
+          pendingImageUpload: undefined,
+        },
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+      }, 250);
+    }
+  }, [addMessage]);
+
   // =========== RESTAURANT HANDLERS ===========
 
   // Handler pour passer la question du menu
@@ -1841,6 +1923,9 @@ export function useConversation() {
     handleSkipBeverages,
     handleDishPhoto,
     handleSkipDishes,
+    // Domain questions handlers
+    handleDomainQuestionImage,
+    handleSkipDomainQuestionImages,
     // Other handlers
     handleReferenceImage,
     handleSkipReference,

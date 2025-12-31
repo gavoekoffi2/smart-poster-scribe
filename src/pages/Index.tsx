@@ -80,6 +80,9 @@ export default function Index() {
     handleSkipBeverages,
     handleDishPhoto,
     handleSkipDishes,
+    // Domain questions handlers
+    handleDomainQuestionImage,
+    handleSkipDomainQuestionImages,
     // Other handlers
     handleReferenceImage,
     handleSkipReference,
@@ -412,6 +415,22 @@ export default function Index() {
                 <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing} className="hover:bg-muted/50">
                   <SkipForward className="w-4 h-4 mr-2" />
                   Générer automatiquement
+                </Button>
+              </div>
+            )}
+
+            {showDomainQuestionImages && (
+              <div className="flex flex-wrap gap-3">
+                <ImageUploadButton
+                  onImageSelect={handleDomainQuestionImage}
+                  disabled={isProcessing}
+                  label={conversationState.domainQuestionState?.pendingImageUpload?.label || "Envoyer une photo"}
+                />
+                <Button variant="ghost" size="sm" onClick={handleSkipDomainQuestionImages} disabled={isProcessing} className="hover:bg-muted/50">
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  {(conversationState.domainQuestionState?.collectedImages?.[conversationState.domainQuestionState?.pendingImageUpload?.type || ""] || []).length > 0 
+                    ? "Continuer" 
+                    : "Passer"}
                 </Button>
               </div>
             )}
