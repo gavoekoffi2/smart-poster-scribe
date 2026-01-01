@@ -39,6 +39,63 @@ interface KieResultJson {
   resultObject?: Record<string, unknown>;
 }
 
+// Vérifie si la chaîne est une URL HTTP
+function isHttpUrl(str: string): boolean {
+  return str.startsWith('http://') || str.startsWith('https://');
+}
+
+// Fonction pour télécharger une image depuis une URL et l'uploader vers Supabase Storage
+async function downloadAndUploadImage(
+  supabase: any,
+  imageUrl: string,
+  prefix: string
+): Promise<string> {
+  console.log(`Downloading image from URL for ${prefix}:`, imageUrl);
+  
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    
+    // Déterminer l'extension depuis le content-type
+    let extension = 'jpg';
+    if (contentType.includes('png')) extension = 'png';
+    else if (contentType.includes('webp')) extension = 'webp';
+    
+    // Générer un nom de fichier unique
+    const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+    
+    // Upload vers Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('temp-images')
+      .upload(fileName, bytes, {
+        contentType: contentType,
+        upsert: false,
+      });
+    
+    if (error) {
+      console.error(`Storage upload error for ${prefix}:`, error);
+      throw new Error(`Erreur upload ${prefix}: ${error.message}`);
+    }
+    
+    // Obtenir l'URL publique
+    const { data: urlData } = supabase.storage
+      .from('temp-images')
+      .getPublicUrl(fileName);
+    
+    console.log(`${prefix} uploaded successfully from URL:`, urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.error(`Error downloading image from URL:`, e);
+    throw new Error(`Erreur téléchargement image ${prefix}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 // Fonction pour uploader une image base64 vers Supabase Storage
 async function uploadBase64ToStorage(
   supabase: any,
@@ -87,6 +144,19 @@ async function uploadBase64ToStorage(
   
   console.log(`${prefix} uploaded successfully:`, urlData.publicUrl);
   return urlData.publicUrl;
+}
+
+// Fonction unifiée pour traiter une image (URL ou base64)
+async function processImage(
+  supabase: any,
+  imageData: string,
+  prefix: string
+): Promise<string> {
+  if (isHttpUrl(imageData)) {
+    return await downloadAndUploadImage(supabase, imageData, prefix);
+  } else {
+    return await uploadBase64ToStorage(supabase, imageData, prefix);
+  }
 }
 
 // Fonction pour supprimer les images temporaires après utilisation
@@ -153,22 +223,32 @@ function buildProfessionalPrompt({
     );
     instructions.push("");
     instructions.push("MANDATORY DESIGN ELEMENTS TO COPY EXACTLY:");
-    instructions.push("1. LAYOUT STRUCTURE: Copy the exact grid system, margins, content placement, and spacing proportions.");
-    instructions.push("2. TYPOGRAPHY STYLE: Match font categories (serif/sans-serif/display), weight hierarchy, text sizes ratios, and alignment patterns.");
-    instructions.push("3. COLOR TREATMENT: Replicate the color scheme, gradients, overlays, and color distribution pattern.");
-    instructions.push("4. GRAPHIC ELEMENTS: Copy decorative shapes, lines, frames, icons style, and ornamental patterns.");
-    instructions.push("5. BACKGROUND TREATMENT: Match solid/gradient/texture/photo treatment exactly.");
-    instructions.push("6. VISUAL ATMOSPHERE: Reproduce the mood, era/decade aesthetic, lighting style, and overall vibe.");
-    instructions.push("7. COMPOSITION BALANCE: Match the visual weight distribution, white space usage, and focal points.");
-    instructions.push("8. FINISHING DETAILS: Copy shadows, glows, textures, grain, and post-processing effects.");
+    instructions.push("1. LAYOUT STRUCTURE: Copy the EXACT grid system, margins, content zones, and spacing proportions pixel by pixel.");
+    instructions.push("2. TYPOGRAPHY STYLE: Match font families (serif/sans-serif/display), weight hierarchy, text sizes ratios, alignment patterns, and decorative text effects.");
+    instructions.push("3. COLOR TREATMENT: Replicate the EXACT color scheme - same hues, saturations, gradients, overlays, and color distribution.");
+    instructions.push("4. GRAPHIC ELEMENTS: Copy ALL decorative shapes, lines, frames, borders, icons style, patterns, and ornamental elements.");
+    instructions.push("5. BACKGROUND TREATMENT: Reproduce the EXACT background - solid colors, gradients, textures, patterns, or photo placement style.");
+    instructions.push("6. VISUAL ATMOSPHERE: Reproduce the mood, era/decade aesthetic, lighting style, and overall visual energy.");
+    instructions.push("7. COMPOSITION BALANCE: Match the visual weight distribution, white space usage, and focal point placement.");
+    instructions.push("8. FINISHING DETAILS: Copy shadows, glows, textures, grain, overlays, and all post-processing effects.");
     instructions.push("");
-    instructions.push("The result should look like it was designed by the SAME DESIGNER using the SAME DESIGN TEMPLATE.");
-    instructions.push("Someone seeing both posters should immediately recognize they share the same design language.");
+    instructions.push("The result MUST look like it was designed using the EXACT SAME TEMPLATE by the SAME DESIGNER.");
+    instructions.push("Someone seeing both posters should IMMEDIATELY recognize they are from the same design template.");
     instructions.push("");
-    instructions.push("ORIGINALITY RULES:");
-    instructions.push("- Do NOT copy any text, brand names, logos, or faces from the reference.");
-    instructions.push("- Create NEW content following the EXACT SAME visual style.");
-    instructions.push("- The design system must match, the content must be original.");
+    instructions.push("=== CRITICAL: CHARACTER/PERSON REPLACEMENT RULES ===");
+    instructions.push("NEVER copy or reuse ANY person, face, character, or human figure from the reference image!");
+    instructions.push("If the reference contains people/characters, you MUST:");
+    instructions.push("1. GENERATE COMPLETELY NEW AND DIFFERENT people/characters");
+    instructions.push("2. Use DIFFERENT poses, clothing, hairstyles, and appearances");
+    instructions.push("3. Keep the SAME position and size proportions for people in the layout");
+    instructions.push("4. For African-themed posters: create authentic African characters with diverse features");
+    instructions.push("5. NEVER duplicate or copy the face, body, or appearance of anyone from the reference");
+    instructions.push("");
+    instructions.push("CONTENT ORIGINALITY RULES:");
+    instructions.push("- Do NOT copy any text, brand names, logos, phone numbers, or addresses from the reference");
+    instructions.push("- REPLACE all people/characters with NEW, DIFFERENT generated characters");
+    instructions.push("- Create NEW visual content following the EXACT SAME visual design style");
+    instructions.push("- The design template must match EXACTLY, but all content must be 100% original");
   }
 
   // Logo image guidance
@@ -407,13 +487,13 @@ serve(async (req) => {
       throw new Error(`Format de sortie invalide. Formats acceptés: ${ALLOWED_OUTPUT_FORMATS.join(', ')}`);
     }
 
-    // Validate reference image size
-    if (referenceImage) {
+    // Validate reference image size (only for base64, skip for URLs)
+    if (referenceImage && !isHttpUrl(referenceImage)) {
       validateBase64Size(referenceImage, MAX_IMAGE_SIZE_MB, "Image de référence");
     }
 
-    // Validate content image size
-    if (contentImage) {
+    // Validate content image size (only for base64, skip for URLs)
+    if (contentImage && !isHttpUrl(contentImage)) {
       validateBase64Size(contentImage, MAX_IMAGE_SIZE_MB, "Image de contenu");
     }
 
@@ -426,7 +506,10 @@ serve(async (req) => {
         throw new Error(`Maximum ${MAX_LOGO_COUNT} logos autorisés`);
       }
       for (let i = 0; i < logoImages.length; i++) {
-        validateBase64Size(logoImages[i], MAX_IMAGE_SIZE_MB, `Logo ${i + 1}`);
+        // Only validate base64 size, skip for URLs
+        if (!isHttpUrl(logoImages[i])) {
+          validateBase64Size(logoImages[i], MAX_IMAGE_SIZE_MB, `Logo ${i + 1}`);
+        }
       }
     }
 
@@ -451,11 +534,11 @@ serve(async (req) => {
     // Upload de l'image de référence si présente (en premier pour le style)
     if (referenceImage) {
       try {
-        const refUrl = await uploadBase64ToStorage(supabase, referenceImage, 'reference');
+        const refUrl = await processImage(supabase, referenceImage, 'reference');
         imageInputs.push(refUrl);
         tempFilePaths.push(refUrl);
       } catch (e) {
-        console.error("Error uploading reference image:", e);
+        console.error("Error processing reference image:", e);
         throw new Error(`Erreur avec l'image de référence: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
@@ -465,12 +548,12 @@ serve(async (req) => {
     if (logoImages && Array.isArray(logoImages)) {
       for (let i = 0; i < logoImages.length; i++) {
         try {
-          const logoUrl = await uploadBase64ToStorage(supabase, logoImages[i], `logo_${i}`);
+          const logoUrl = await processImage(supabase, logoImages[i], `logo_${i}`);
           imageInputs.push(logoUrl);
           tempFilePaths.push(logoUrl);
           uploadedLogoUrls.push(logoUrl);
         } catch (e) {
-          console.error(`Error uploading logo ${i}:`, e);
+          console.error(`Error processing logo ${i}:`, e);
         }
       }
     }
@@ -478,11 +561,11 @@ serve(async (req) => {
     // Upload de l'image de contenu si présente
     if (contentImage) {
       try {
-        const contentUrl = await uploadBase64ToStorage(supabase, contentImage, 'content');
+        const contentUrl = await processImage(supabase, contentImage, 'content');
         imageInputs.push(contentUrl);
         tempFilePaths.push(contentUrl);
       } catch (e) {
-        console.error("Error uploading content image:", e);
+        console.error("Error processing content image:", e);
         throw new Error(`Erreur avec l'image de contenu: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
