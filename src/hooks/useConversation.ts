@@ -499,22 +499,22 @@ export function useConversation() {
             ? window.location.origin + selectedTemplate.image_url
             : selectedTemplate.image_url;
           
-          // Build a description that focuses only on STYLE, not content
+          // Build a description that emphasizes EXACT design replication but NEW content
           let styleDescription = selectedTemplate.description || "";
           
-          // If the template has a description, extract only style-related keywords
-          if (styleDescription) {
-            // Add instruction to use only style, not content
-            styleDescription = `STYLE À REPRODUIRE (ignorer le contenu textuel de ce template, utiliser uniquement le style visuel): ${styleDescription}`;
-          }
+          // Add strong instructions to copy design but create new content
+          styleDescription = `DESIGN TEMPLATE À REPRODUIRE EXACTEMENT: Ce template sert de modèle de design. ` +
+            `Reproduire FIDÈLEMENT: la mise en page, la disposition des éléments, les polices, les couleurs, ` +
+            `les formes décoratives, le style graphique, et l'atmosphère visuelle. ` +
+            `MAIS créer du contenu NOUVEAU: remplacer tous les textes par les informations de l'utilisateur, ` +
+            `et si le template contient des personnages/personnes, générer des NOUVEAUX personnages africains ` +
+            `avec des poses et apparences DIFFÉRENTES mais dans le même emplacement. ` +
+            (styleDescription ? `Description du template: ${styleDescription}` : "");
           
           // Add user's style preferences if provided
           if (preferences) {
-            styleDescription = `${styleDescription}. PRÉFÉRENCES DE STYLE UTILISATEUR: ${preferences}`;
+            styleDescription = `${styleDescription}. PRÉFÉRENCES ADDITIONNELLES: ${preferences}`;
           }
-          
-          // Add instruction for originality
-          styleDescription = `${styleDescription}. IMPORTANT: Créer un design ORIGINAL en s'inspirant de ce style, ne pas copier exactement. Ajouter de la créativité et de l'originalité.`;
           
           setConversationState((prev) => ({
             ...prev,
