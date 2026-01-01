@@ -244,11 +244,37 @@ function buildProfessionalPrompt({
     instructions.push("4. For African-themed posters: create authentic African characters with diverse features");
     instructions.push("5. NEVER duplicate or copy the face, body, or appearance of anyone from the reference");
     instructions.push("");
+    instructions.push("=== ABSOLUTE RULE: ONLY USER-PROVIDED DATA ===");
+    instructions.push("THIS IS THE MOST CRITICAL RULE - NO EXCEPTIONS!");
+    instructions.push("");
+    instructions.push("You must ONLY include information that appears in the USER SPECIFICATIONS section below.");
+    instructions.push("COMPLETELY IGNORE and DO NOT reproduce ANY of the following from the reference image:");
+    instructions.push("- Phone numbers, WhatsApp numbers, or any contact numbers");
+    instructions.push("- Email addresses or websites");
+    instructions.push("- Social media handles (Facebook, Instagram, Twitter, TikTok, etc.)");
+    instructions.push("- Physical addresses or locations");
+    instructions.push("- Names of people, organizations, or brands");
+    instructions.push("- Dates, times, or schedules");
+    instructions.push("- Prices, fees, or any monetary values");
+    instructions.push("- Any text content whatsoever");
+    instructions.push("");
+    instructions.push("If the reference image has social media icons but the user did NOT provide social media info:");
+    instructions.push("→ DO NOT include any social media section on the final poster");
+    instructions.push("");
+    instructions.push("If the reference image has contact details but the user did NOT provide contact info:");
+    instructions.push("→ DO NOT include any contact section on the final poster");
+    instructions.push("");
+    instructions.push("If the reference image has a price but the user did NOT provide a price:");
+    instructions.push("→ DO NOT include any price on the final poster");
+    instructions.push("");
+    instructions.push("RULE: If data is NOT in USER SPECIFICATIONS = it DOES NOT appear on the poster");
+    instructions.push("The design zones for missing information should be left empty or filled with decorative elements matching the design style.");
+    instructions.push("");
     instructions.push("CONTENT ORIGINALITY RULES:");
     instructions.push("- Do NOT copy any text, brand names, logos, phone numbers, or addresses from the reference");
     instructions.push("- REPLACE all people/characters with NEW, DIFFERENT generated characters");
     instructions.push("- Create NEW visual content following the EXACT SAME visual design style");
-    instructions.push("- The design template must match EXACTLY, but all content must be 100% original");
+    instructions.push("- The design template must match EXACTLY, but all content must be 100% USER-PROVIDED");
   }
 
   // Logo image guidance
