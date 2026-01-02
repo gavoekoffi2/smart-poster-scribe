@@ -504,7 +504,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       prompt,
-      referenceImage,
+      referenceImage: rawReferenceImage,
       logoImages,
       logoPositions,
       contentImage,
@@ -512,6 +512,9 @@ serve(async (req) => {
       resolution = "2K",
       outputFormat = "png",
     } = body;
+
+    // We may auto-pick a style reference when the user provides no images
+    let referenceImage = rawReferenceImage as string | undefined;
 
     // ============ INPUT VALIDATION ============
     // Validate prompt
@@ -585,6 +588,40 @@ serve(async (req) => {
       : refererHeader
         ? new URL(refererHeader).origin
         : undefined;
+
+    // If user provided NO images at all, auto-pick a template from the database
+    // so we still have a style reference and the generation doesn't fail.
+    if (!referenceImage && !contentImage && (!logoImages || logoImages.length === 0)) {
+      console.log("No user images provided. Selecting a fallback style template...");
+
+      try {
+        const { data: tplCandidates, error: tplError } = await supabase
+          .from("reference_templates")
+          .select("image_url, domain, design_category")
+          .order("created_at", { ascending: false })
+          .limit(40);
+
+        if (tplError) {
+          console.warn("Failed to fetch fallback templates:", tplError);
+        } else if (tplCandidates && tplCandidates.length > 0) {
+          const picked = tplCandidates[Math.floor(Math.random() * tplCandidates.length)];
+          referenceImage = picked.image_url;
+          console.log(
+            `Picked fallback template: domain=${picked.domain}, category=${picked.design_category}, image=${picked.image_url}`
+          );
+        }
+      } catch (e) {
+        console.warn("Unexpected error while selecting fallback template:", e);
+      }
+
+      // Last-resort fallback: if we still don't have a reference image, provide a tiny base64 image
+      // so the upstream API always receives at least one image input.
+      if (!referenceImage) {
+        console.log("Fallback template unavailable. Using 1x1 placeholder reference image.");
+        referenceImage =
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X2l1sAAAAASUVORK5CYII=";
+      }
+    }
 
     // Préparer les URLs des images
     const imageInputs: string[] = [];
