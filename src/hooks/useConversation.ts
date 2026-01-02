@@ -89,111 +89,114 @@ function hexToColorName(hex: string): string {
 }
 
 function buildPrompt(state: ConversationState) {
-  const { 
-    description, 
-    domain, 
+  const {
+    description,
+    domain,
     customDomain,
-    referenceDescription, 
-    colorPalette, 
+    referenceDescription,
+    colorPalette,
     needsContentImage,
     extractedInfo,
     mainSpeaker,
     guests,
     productDisplay,
     restaurantInfo,
-    language = "français", // Français par défaut
+    language = "français",
   } = state;
 
-  const parts: string[] = [];
+  const lines: string[] = [];
 
-  // 0. LANGUE - Toujours en français par défaut
-  parts.push(`LANGUE: Tous les textes de l'affiche doivent être en ${language}`);
+  // =============================
+  // IMPORTANT PROMPT STRUCTURE
+  // - STYLE GUIDE: design-only. NEVER copy its text/data to the final poster.
+  // - USER PROVIDED CONTENT: ONLY source of facts and printable text.
+  // =============================
 
-  // 1. STYLE VISUEL D'ABORD (le plus important pour la cohérence)
-  if (referenceDescription) {
-    const styleKeywords = referenceDescription
-      .replace(/\n/g, " ")
-      .slice(0, 600);
-    parts.push(`STYLE VISUEL À REPRODUIRE: ${styleKeywords}`);
-  }
+  lines.push(`LANGUE: Tous les textes de l'affiche doivent être en ${language}`);
+  lines.push("");
 
-  // 2. PALETTE DE COULEURS (intégrée naturellement, pas en codes hex)
-  if (colorPalette?.length) {
-    const colorDescriptions = colorPalette
-      .slice(0, 5)
-      .map(hexToColorName);
-    const uniqueColors = [...new Set(colorDescriptions)];
-    parts.push(`PALETTE: tons ${uniqueColors.join(", ")}`);
-  }
+  // -------- STYLE GUIDE (design-only) --------
+  if (referenceDescription || (colorPalette?.length ?? 0) > 0 || domain || customDomain) {
+    lines.push("=== STYLE GUIDE (DESIGN ONLY — NE JAMAIS COPIER DE TEXTE / CHIFFRES / CONTACTS DE CETTE SECTION) ===");
 
-  // 3. TYPE D'AFFICHE
-  const domainLabel = domain === "other" && customDomain ? customDomain : domain;
-  if (domainLabel) {
-    parts.push(`TYPE: affiche ${domainLabel}`);
-  }
-
-  // 4. CONTENU TEXTUEL (ce qui doit apparaître sur l'affiche)
-  if (extractedInfo) {
-    const textElements: string[] = [];
-    if (extractedInfo.title) textElements.push(`"${extractedInfo.title}"`);
-    if (extractedInfo.dates) textElements.push(`date: ${extractedInfo.dates}`);
-    if (extractedInfo.location) textElements.push(`lieu: ${extractedInfo.location}`);
-    if (extractedInfo.organizer) textElements.push(`par ${extractedInfo.organizer}`);
-    if (extractedInfo.prices) textElements.push(`tarif: ${extractedInfo.prices}`);
-    if (extractedInfo.contact) textElements.push(`contact: ${extractedInfo.contact}`);
-    
-    if (textElements.length > 0) {
-      parts.push(`TEXTES SUR L'AFFICHE: ${textElements.join(", ")}`);
+    const domainLabel = domain === "other" && customDomain ? customDomain : domain;
+    if (domainLabel) {
+      lines.push(`DOMAINE / TYPE VISÉ: ${domainLabel}`);
     }
+
+    if (referenceDescription) {
+      const styleText = referenceDescription.replace(/\n/g, " ").slice(0, 1200);
+      lines.push(`STYLE & LAYOUT À RESPECTER: ${styleText}`);
+      lines.push(
+        "RAPPEL: Tout exemple (prix, numéros, réseaux sociaux, noms) présent dans la description de style est un EXEMPLE et ne doit PAS apparaître sur l'affiche finale."
+      );
+    }
+
+    if (colorPalette?.length) {
+      const colorDescriptions = colorPalette.slice(0, 6).map(hexToColorName);
+      const uniqueColors = [...new Set(colorDescriptions)];
+      lines.push(`PALETTE (indicative): tons ${uniqueColors.join(", ")}`);
+    }
+
+    lines.push("=== END STYLE GUIDE ===");
+    lines.push("");
   }
 
-  // 5. ORATEURS/ARTISTES/INVITÉS
-  if (mainSpeaker) {
-    parts.push(`ORATEUR PRINCIPAL: ${mainSpeaker.name} (mettre en avant, grande photo)`);
-  }
-  if (guests && guests.length > 0) {
-    const guestNames = guests.map(g => g.name).join(", ");
-    parts.push(`INVITÉS: ${guestNames} (photos plus petites)`);
+  // -------- USER PROVIDED CONTENT (ONLY printable facts/text) --------
+  lines.push("=== USER PROVIDED CONTENT (SEULE SOURCE DES INFOS & TEXTES À IMPRIMER) ===");
+
+  if (extractedInfo) {
+    if (extractedInfo.title) lines.push(`TITRE: ${String(extractedInfo.title).slice(0, 140)}`);
+    if (extractedInfo.dates) lines.push(`DATES: ${String(extractedInfo.dates).slice(0, 220)}`);
+    if (extractedInfo.location) lines.push(`LIEU: ${String(extractedInfo.location).slice(0, 220)}`);
+    if (extractedInfo.organizer) lines.push(`ORGANISATEUR: ${String(extractedInfo.organizer).slice(0, 220)}`);
+    if (extractedInfo.prices) lines.push(`PRIX/TARIFS: ${String(extractedInfo.prices).slice(0, 220)}`);
+    if (extractedInfo.contact) lines.push(`CONTACT: ${String(extractedInfo.contact).slice(0, 220)}`);
   }
 
-  // 6. MISE EN VALEUR PRODUIT avec personnage
+  // Speakers / guests
+  if (mainSpeaker?.name) {
+    lines.push(`ORATEUR PRINCIPAL (nom): ${String(mainSpeaker.name).slice(0, 140)}`);
+  }
+  if (guests?.length) {
+    const guestNames = guests.map((g) => g.name).filter(Boolean).slice(0, 6).join(", ");
+    if (guestNames) lines.push(`INVITÉS (noms): ${guestNames}`);
+  }
+
+  // Product display
   if (productDisplay?.hasCharacter && productDisplay.characterInteraction) {
-    parts.push(`PERSONNAGE METTANT EN VALEUR LE PRODUIT: ${productDisplay.characterInteraction}`);
-    parts.push("PERSONNAGES: personne africaine avec traits authentiques");
+    lines.push(`PERSONNAGE (interaction produit): ${String(productDisplay.characterInteraction).slice(0, 240)}`);
+    lines.push("PERSONNAGES: personnes africaines avec traits authentiques");
   }
 
-  // 7. INFORMATIONS RESTAURANT
+  // Restaurant
   if (restaurantInfo) {
     if (restaurantInfo.hasMenu && restaurantInfo.menuContent) {
-      parts.push(`MENU À AFFICHER: ${restaurantInfo.menuContent}`);
-      parts.push("STYLE: affiche avec espace menu, disposition claire des plats et prix");
-    }
-    if (restaurantInfo.hasBeverages && restaurantInfo.beverageImages?.length) {
-      parts.push(`BOISSONS: ${restaurantInfo.beverageImages.length} images de boissons à intégrer sur l'affiche`);
-    }
-    if (restaurantInfo.hasDishes && restaurantInfo.dishImages?.length) {
-      parts.push(`PLATS: ${restaurantInfo.dishImages.length} images de plats/repas à mettre en valeur sur l'affiche`);
+      lines.push(`MENU (texte fourni): ${String(restaurantInfo.menuContent).slice(0, 900)}`);
     }
     if (!restaurantInfo.hasMenu) {
-      parts.push("STYLE: affiche promotionnelle restaurant sans menu détaillé");
+      lines.push("RESTAURANT: affiche promotionnelle sans menu détaillé");
     }
   }
 
-  // 8. INSTRUCTIONS ADDITIONNELLES
+  // Freeform user request (cleaned)
   if (description) {
     const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
     if (cleanDesc) {
-      parts.push(cleanDesc);
+      lines.push(`DEMANDE UTILISATEUR (texte libre): ${cleanDesc.slice(0, 900)}`);
     }
   }
 
-  // 9. PERSONNAGES AFRICAINS si nécessaire (et pas déjà couvert)
+  // If user asked for characters via content image need
   if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0) && !productDisplay?.hasCharacter) {
-    parts.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
+    lines.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
   }
 
-  return parts.join(". ").trim();
+  lines.push("=== END USER PROVIDED CONTENT ===");
+
+  return lines.join("\n").trim();
 }
+
 
 function formatMissingInfo(missingInfo: string[]): string {
   const translations: Record<string, string> = {

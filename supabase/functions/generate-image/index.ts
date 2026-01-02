@@ -39,10 +39,29 @@ interface KieResultJson {
   resultObject?: Record<string, unknown>;
 }
 
-// Vérifie si la chaîne est une URL HTTP
+// Détecte les formats d'entrée image supportés
 function isHttpUrl(str: string): boolean {
-  return str.startsWith('http://') || str.startsWith('https://');
+  return str.startsWith("http://") || str.startsWith("https://");
 }
+
+// URL absolue (http/https) OU chemin relatif commençant par "/"
+function isUrlLike(str: string): boolean {
+  return isHttpUrl(str) || str.startsWith("/");
+}
+
+function resolveUrlLike(input: string, origin?: string): string {
+  if (isHttpUrl(input)) return input;
+  if (input.startsWith("/")) {
+    if (!origin) {
+      throw new Error(
+        "URL relative reçue mais origin introuvable (header origin/referer manquant)"
+      );
+    }
+    return `${origin}${input}`;
+  }
+  throw new Error("Entrée URL invalide");
+}
+
 
 // Fonction pour télécharger une image depuis une URL et l'uploader vers Supabase Storage
 async function downloadAndUploadImage(
@@ -57,8 +76,14 @@ async function downloadAndUploadImage(
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      throw new Error(
+        `URL ne retourne pas une image (content-type=${contentType || "unknown"})`
+      );
+    }
+
     const arrayBuffer = await response.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     
@@ -146,18 +171,20 @@ async function uploadBase64ToStorage(
   return urlData.publicUrl;
 }
 
-// Fonction unifiée pour traiter une image (URL ou base64)
+// Fonction unifiée pour traiter une image (URL, chemin relatif, ou base64)
 async function processImage(
   supabase: any,
   imageData: string,
-  prefix: string
+  prefix: string,
+  origin?: string
 ): Promise<string> {
-  if (isHttpUrl(imageData)) {
-    return await downloadAndUploadImage(supabase, imageData, prefix);
-  } else {
-    return await uploadBase64ToStorage(supabase, imageData, prefix);
+  if (isUrlLike(imageData)) {
+    const resolved = resolveUrlLike(imageData, origin);
+    return await downloadAndUploadImage(supabase, resolved, prefix);
   }
+  return await uploadBase64ToStorage(supabase, imageData, prefix);
 }
+
 
 // Fonction pour supprimer les images temporaires après utilisation
 async function cleanupTempImages(supabase: any, filePaths: string[]) {
@@ -208,10 +235,16 @@ function buildProfessionalPrompt({
   instructions.push("");
   instructions.push("TEXT RULES:");
   instructions.push(
-    "- The user specifications may be in French. Keep ALL required poster text EXACTLY as provided (do not translate names/titles unless explicitly asked)."
+    "- The user prompt contains 2 sections: STYLE GUIDE and USER PROVIDED CONTENT."
   );
   instructions.push(
-    "- Do NOT invent extra phone numbers, addresses, prices, dates, or claims."
+    "- NEVER print or reuse any text/number/contact found in STYLE GUIDE (it is design-only)."
+  );
+  instructions.push(
+    "- ONLY print text and facts that appear in USER PROVIDED CONTENT."
+  );
+  instructions.push(
+    "- Do NOT invent extra phone numbers, addresses, prices, dates, socials, or claims."
   );
 
   // Reference image guidance - ULTRA STRICT DESIGN MATCHING
@@ -247,27 +280,18 @@ function buildProfessionalPrompt({
     instructions.push("=== ABSOLUTE RULE: ONLY USER-PROVIDED DATA ===");
     instructions.push("THIS IS THE MOST CRITICAL RULE - NO EXCEPTIONS!");
     instructions.push("");
-    instructions.push("You must ONLY include information that appears in the USER SPECIFICATIONS section below.");
-    instructions.push("COMPLETELY IGNORE and DO NOT reproduce ANY of the following from the reference image:");
+    instructions.push("You must ONLY include information that appears in the USER PROVIDED CONTENT section below.");
+    instructions.push("COMPLETELY IGNORE and DO NOT reproduce ANY of the following from the reference image OR from STYLE GUIDE:");
     instructions.push("- Phone numbers, WhatsApp numbers, or any contact numbers");
     instructions.push("- Email addresses or websites");
     instructions.push("- Social media handles (Facebook, Instagram, Twitter, TikTok, etc.)");
     instructions.push("- Physical addresses or locations");
-    instructions.push("- Names of people, organizations, or brands");
+    instructions.push("- Names of people, organizations, or brands (unless provided by the user)");
     instructions.push("- Dates, times, or schedules");
     instructions.push("- Prices, fees, or any monetary values");
     instructions.push("- Any text content whatsoever");
     instructions.push("");
-    instructions.push("If the reference image has social media icons but the user did NOT provide social media info:");
-    instructions.push("→ DO NOT include any social media section on the final poster");
-    instructions.push("");
-    instructions.push("If the reference image has contact details but the user did NOT provide contact info:");
-    instructions.push("→ DO NOT include any contact section on the final poster");
-    instructions.push("");
-    instructions.push("If the reference image has a price but the user did NOT provide a price:");
-    instructions.push("→ DO NOT include any price on the final poster");
-    instructions.push("");
-    instructions.push("RULE: If data is NOT in USER SPECIFICATIONS = it DOES NOT appear on the poster");
+    instructions.push("RULE: If data is NOT in USER PROVIDED CONTENT = it DOES NOT appear on the poster");
     instructions.push("The design zones for missing information should be left empty or filled with decorative elements matching the design style.");
     instructions.push("");
     instructions.push("CONTENT ORIGINALITY RULES:");
@@ -316,10 +340,10 @@ function buildProfessionalPrompt({
   instructions.push("- Professional finishing: subtle shadows/overlays only when needed");
   instructions.push("");
 
-  // User specs
-  instructions.push("=== USER SPECIFICATIONS (ONLY source of facts & text) ===");
+  // User prompt (contains STYLE GUIDE + USER PROVIDED CONTENT)
+  instructions.push("=== USER PROMPT (contains STYLE GUIDE + USER PROVIDED CONTENT) ===");
   instructions.push(userPrompt);
-  instructions.push("=== END USER SPECIFICATIONS ===");
+  instructions.push("=== END USER PROMPT ===");
 
   return instructions.join("\n");
 }
@@ -513,13 +537,13 @@ serve(async (req) => {
       throw new Error(`Format de sortie invalide. Formats acceptés: ${ALLOWED_OUTPUT_FORMATS.join(', ')}`);
     }
 
-    // Validate reference image size (only for base64, skip for URLs)
-    if (referenceImage && !isHttpUrl(referenceImage)) {
+    // Validate reference image size (only for base64, skip for URLs/paths)
+    if (referenceImage && !isUrlLike(referenceImage)) {
       validateBase64Size(referenceImage, MAX_IMAGE_SIZE_MB, "Image de référence");
     }
 
-    // Validate content image size (only for base64, skip for URLs)
-    if (contentImage && !isHttpUrl(contentImage)) {
+    // Validate content image size (only for base64, skip for URLs/paths)
+    if (contentImage && !isUrlLike(contentImage)) {
       validateBase64Size(contentImage, MAX_IMAGE_SIZE_MB, "Image de contenu");
     }
 
@@ -532,8 +556,8 @@ serve(async (req) => {
         throw new Error(`Maximum ${MAX_LOGO_COUNT} logos autorisés`);
       }
       for (let i = 0; i < logoImages.length; i++) {
-        // Only validate base64 size, skip for URLs
-        if (!isHttpUrl(logoImages[i])) {
+        // Only validate base64 size, skip for URLs/paths
+        if (!isUrlLike(logoImages[i])) {
           validateBase64Size(logoImages[i], MAX_IMAGE_SIZE_MB, `Logo ${i + 1}`);
         }
       }
@@ -553,6 +577,15 @@ serve(async (req) => {
     console.log("- Aspect ratio:", aspectRatio);
     console.log("- Resolution:", resolution);
 
+    // Déterminer l'origine du client (utile pour résoudre les chemins relatifs "/...")
+    const originHeader = req.headers.get("origin") || undefined;
+    const refererHeader = req.headers.get("referer") || undefined;
+    const requestOrigin = originHeader
+      ? originHeader
+      : refererHeader
+        ? new URL(refererHeader).origin
+        : undefined;
+
     // Préparer les URLs des images
     const imageInputs: string[] = [];
     const tempFilePaths: string[] = [];
@@ -560,12 +593,19 @@ serve(async (req) => {
     // Upload de l'image de référence si présente (en premier pour le style)
     if (referenceImage) {
       try {
-        const refUrl = await processImage(supabase, referenceImage, 'reference');
+        const refUrl = await processImage(
+          supabase,
+          referenceImage,
+          "reference",
+          requestOrigin
+        );
         imageInputs.push(refUrl);
         tempFilePaths.push(refUrl);
       } catch (e) {
         console.error("Error processing reference image:", e);
-        throw new Error(`Erreur avec l'image de référence: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(
+          `Erreur avec l'image de référence: ${e instanceof Error ? e.message : String(e)}`
+        );
       }
     }
 
@@ -574,7 +614,12 @@ serve(async (req) => {
     if (logoImages && Array.isArray(logoImages)) {
       for (let i = 0; i < logoImages.length; i++) {
         try {
-          const logoUrl = await processImage(supabase, logoImages[i], `logo_${i}`);
+          const logoUrl = await processImage(
+            supabase,
+            logoImages[i],
+            `logo_${i}`,
+            requestOrigin
+          );
           imageInputs.push(logoUrl);
           tempFilePaths.push(logoUrl);
           uploadedLogoUrls.push(logoUrl);
@@ -587,12 +632,19 @@ serve(async (req) => {
     // Upload de l'image de contenu si présente
     if (contentImage) {
       try {
-        const contentUrl = await processImage(supabase, contentImage, 'content');
+        const contentUrl = await processImage(
+          supabase,
+          contentImage,
+          "content",
+          requestOrigin
+        );
         imageInputs.push(contentUrl);
         tempFilePaths.push(contentUrl);
       } catch (e) {
         console.error("Error processing content image:", e);
-        throw new Error(`Erreur avec l'image de contenu: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(
+          `Erreur avec l'image de contenu: ${e instanceof Error ? e.message : String(e)}`
+        );
       }
     }
 
