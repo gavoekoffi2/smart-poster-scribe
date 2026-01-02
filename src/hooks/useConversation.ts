@@ -310,15 +310,38 @@ export function useConversation() {
 
         // Préparer les logos pour l'envoi
         const logos = state.logos || [];
-        const logoImages = logos.map(l => l.imageUrl);
-        const logoPositions = logos.map(l => l.position);
+        const logoImages = logos.map((l) => l.imageUrl);
+        const logoPositions = logos.map((l) => l.position);
+
+        // Si on utilise un template local (public/reference-templates), on l'envoie en base64
+        // pour éviter les échecs de téléchargement côté backend.
+        let referenceImageToSend: string | undefined = state.referenceImage || undefined;
+        if (referenceImageToSend && !referenceImageToSend.startsWith("data:image/")) {
+          const looksLikeLocalTemplate = referenceImageToSend.includes("/reference-templates/");
+          if (looksLikeLocalTemplate) {
+            try {
+              const res = await fetch(referenceImageToSend);
+              if (res.ok) {
+                const blob = await res.blob();
+                referenceImageToSend = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(String(reader.result));
+                  reader.onerror = () => reject(new Error("Impossible de lire l'image de template"));
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (e) {
+              console.warn("Impossible de convertir le template en base64, envoi de l'URL:", e);
+            }
+          }
+        }
 
         // Envoyer les images avec le prompt
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
             aspectRatio: "3:4" as AspectRatio,
-            referenceImage: state.referenceImage || undefined,
+            referenceImage: referenceImageToSend,
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
@@ -370,14 +393,36 @@ export function useConversation() {
         console.log("Modified prompt:", modificationPrompt);
 
         const logos = state.logos || [];
-        const logoImages = logos.map(l => l.imageUrl);
-        const logoPositions = logos.map(l => l.position);
+        const logoImages = logos.map((l) => l.imageUrl);
+        const logoPositions = logos.map((l) => l.position);
+
+        // Même logique: si référence = template local, envoyer en base64
+        let referenceImageToSend: string | undefined = state.referenceImage || undefined;
+        if (referenceImageToSend && !referenceImageToSend.startsWith("data:image/")) {
+          const looksLikeLocalTemplate = referenceImageToSend.includes("/reference-templates/");
+          if (looksLikeLocalTemplate) {
+            try {
+              const res = await fetch(referenceImageToSend);
+              if (res.ok) {
+                const blob = await res.blob();
+                referenceImageToSend = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(String(reader.result));
+                  reader.onerror = () => reject(new Error("Impossible de lire l'image de template"));
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (e) {
+              console.warn("Impossible de convertir le template en base64, envoi de l'URL:", e);
+            }
+          }
+        }
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt: modificationPrompt,
             aspectRatio: "3:4",
-            referenceImage: state.referenceImage || undefined,
+            referenceImage: referenceImageToSend,
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
