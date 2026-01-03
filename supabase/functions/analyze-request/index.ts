@@ -133,26 +133,60 @@ INSTRUCTIONS FINALES:
 - missingInfo: tableau VIDE ou avec 1-2 éléments vraiment essentiels MAXIMUM
 - Préfère générer l'affiche avec les infos disponibles plutôt que poser des questions`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userText },
-        ],
-      }),
-    });
+    // Retry logic for transient errors
+    const maxRetries = 3;
+    let lastError = "";
+    let response: Response | null = null;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`AI request attempt ${attempt}/${maxRetries}`);
+        response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userText },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          break; // Success, exit retry loop
+        }
+
+        lastError = await response.text();
+        console.error(`AI gateway error (attempt ${attempt}):`, response.status, lastError);
+
+        // Don't retry on 4xx errors (client errors)
+        if (response.status >= 400 && response.status < 500) {
+          break;
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          const waitMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          console.log(`Waiting ${waitMs}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+        }
+      } catch (fetchError) {
+        lastError = fetchError instanceof Error ? fetchError.message : "Network error";
+        console.error(`Fetch error (attempt ${attempt}):`, lastError);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    if (!response || !response.ok) {
+      console.error("All AI request attempts failed");
       return new Response(
-        JSON.stringify({ error: "AI analysis failed", details: errorText }),
+        JSON.stringify({ error: "AI analysis failed after retries", details: lastError }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
