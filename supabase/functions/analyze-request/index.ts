@@ -68,55 +68,70 @@ serve(async (req) => {
 
     console.log("Analyzing user request:", trimmedText.substring(0, 200));
 
-const systemPrompt = `Tu es un assistant expert en analyse de demandes d'affiches publicitaires.
+const systemPrompt = `Tu es un expert en analyse de demandes d'affiches publicitaires. Ton objectif: EXTRAIRE UN MAXIMUM D'INFORMATIONS du message et NE DEMANDER QUE LE STRICT MINIMUM.
 
-OBJECTIF PRINCIPAL: Analyser le texte de l'utilisateur pour en extraire TOUTES les informations déjà fournies et détecter le domaine avec CERTITUDE quand c'est possible.
+DOMAINES (utilise ces valeurs exactes):
+church, event, education, formation, restaurant, fashion, music, sport, technology, health, realestate
 
-DOMAINES DISPONIBLES (utilise EXACTEMENT ces valeurs):
-- "church" : église, culte, messe, prière, pasteur, évangélisation, concert gospel, veillée
-- "event" : événement, conférence, séminaire, gala, cérémonie, anniversaire, mariage, fête
-- "education" : école, université, cours, formation académique, diplôme, études
-- "formation" : formation professionnelle, atelier, workshop, masterclass, coaching, stage
-- "restaurant" : restaurant, menu, plat, cuisine, nourriture, boisson, café, bar
-- "fashion" : mode, vêtements, collection, défilé, boutique, accessoires
-- "music" : concert, artiste, album, musique, DJ, festival musical, showcase
-- "sport" : sport, match, tournoi, compétition sportive, marathon, fitness
-- "technology" : tech, application, logiciel, startup, innovation, digital
-- "health" : santé, médecin, clinique, bien-être, pharmacie, soins
-- "realestate" : immobilier, maison, appartement, location, vente immobilière
+DÉTECTION DU DOMAINE - SOIS AGRESSIF:
+- "église/culte/pasteur/prière/veillée/gospel" → "church"
+- "événement/conférence/séminaire/gala/mariage/fête/cérémonie" → "event"  
+- "formation/atelier/workshop/masterclass/coaching/stage" → "formation"
+- "restaurant/menu/plat/cuisine/nourriture/café/bar/maquis" → "restaurant"
+- "vêtements/mode/collection/boutique/accessoires" → "fashion"
+- "concert/artiste/album/musique/DJ/festival" → "music"
+- "match/tournoi/sport/marathon/fitness" → "sport"
+- "application/logiciel/tech/startup/digital" → "technology"
+- "santé/médecin/clinique/pharmacie/soins" → "health"
+- "immobilier/maison/appartement/location/vente" → "realestate"
+- "école/université/diplôme/études" → "education"
+NE RETOURNE NULL que si AUCUN indice n'existe.
 
-RÈGLES DE DÉTECTION DU DOMAINE:
-1. Si le texte contient des mots-clés CLAIRS d'un domaine, mets ce domaine avec CERTITUDE (ne mets PAS null)
-2. Exemples de détection automatique:
-   - "affiche pour ma boutique de vêtements" → "fashion"
-   - "je veux promouvoir mon restaurant" → "restaurant"  
-   - "affiche pour un concert" → "music"
-   - "événement d'église" ou "culte" → "church"
-   - "formation en marketing" → "formation"
-   - "conférence sur le leadership" → "event"
-3. Ne mets null QUE si le texte est vraiment ambigu ou ne donne aucune indication
+EXTRACTION - SOIS EXHAUSTIF:
+Cherche TOUT dans le texte:
+- title: thème, sujet, nom de l'événement, slogan
+- dates: dates, heures, jours (même partielles comme "samedi", "ce weekend", "le 15")
+- prices: prix, tarifs, entrée, gratuit, FCFA, €
+- contact: téléphone, WhatsApp, email, site web, réseaux sociaux (@handle, facebook, instagram)
+- location: adresse, ville, lieu, salle, église, restaurant
+- organizer: qui organise, nom de l'entreprise, église, association
+- speakers: orateurs, pasteurs, artistes, invités, chefs (avec leurs noms si mentionnés)
+- menu: plats, boissons, carte (pour restaurant)
+- products: produits, articles, collections (pour mode/commerce)
+- targetAudience: public cible si mentionné
+- additionalDetails: TOUT autre détail utile (dress code, thème vestimentaire, slogan, hashtag...)
 
-Réponds UNIQUEMENT avec ce JSON (sans markdown):
+RÈGLE CRITIQUE - MINIMISER LES QUESTIONS:
+missingInfo ne doit contenir QUE les infos VRAIMENT ESSENTIELLES qui manquent:
+- Pour un événement → dates EST essentiel
+- Pour une promo commerciale → rien n'est vraiment essentiel, on peut créer l'affiche
+- Pour un restaurant → rien n'est essentiel sauf si l'utilisateur veut un menu détaillé
+- NE DEMANDE JAMAIS: contact, organisateur, public cible, lieu (optionnels)
+
+Réponds UNIQUEMENT avec ce JSON:
 {
-  "suggestedDomain": "domaine_détecté ou null si vraiment incertain",
+  "suggestedDomain": "domaine_détecté ou null",
   "extractedInfo": {
-    "title": "Titre ou sujet si mentionné",
-    "dates": "Dates si mentionnées",
-    "prices": "Prix si mentionnés",
-    "contact": "Contact si mentionné",
-    "location": "Lieu si mentionné",
-    "organizer": "Organisateur si mentionné",
-    "targetAudience": "Public cible si mentionné",
-    "additionalDetails": "Autres détails importants"
+    "title": "...",
+    "dates": "...",
+    "prices": "...",
+    "contact": "...",
+    "location": "...",
+    "organizer": "...",
+    "speakers": "...",
+    "menu": "...",
+    "products": "...",
+    "targetAudience": "...",
+    "additionalDetails": "..."
   },
-  "missingInfo": ["liste des infos ESSENTIELLES manquantes uniquement"],
-  "summary": "Résumé court de la demande"
+  "missingInfo": [],
+  "summary": "résumé court"
 }
 
-IMPORTANT: 
-- N'inclus dans extractedInfo QUE les champs explicitement mentionnés
-- Pour missingInfo, ne liste que ce qui est vraiment ESSENTIEL (dates pour un événement, contact pour une promo...)
-- Le summary doit être une phrase courte et claire`;
+INSTRUCTIONS FINALES:
+- N'inclus dans extractedInfo QUE ce qui est explicitement mentionné
+- missingInfo: tableau VIDE ou avec 1-2 éléments vraiment essentiels MAXIMUM
+- Préfère générer l'affiche avec les infos disponibles plutôt que poser des questions`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
