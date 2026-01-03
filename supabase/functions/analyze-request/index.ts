@@ -14,6 +14,9 @@ interface AnalysisResult {
     contact?: string;
     location?: string;
     organizer?: string;
+    speakers?: string;
+    menu?: string;
+    products?: string;
     targetAudience?: string;
     additionalDetails?: string;
   };
@@ -23,6 +26,86 @@ interface AnalysisResult {
 
 // ============ INPUT VALIDATION CONSTANTS ============
 const MAX_TEXT_LENGTH = 5000;
+
+// ============ HEURISTIC FALLBACK (when AI gateway is temporarily unavailable) ============
+const DOMAIN_KEYWORDS: Array<{ domain: string; keywords: string[] }> = [
+  { domain: "church", keywords: ["église", "eglise", "culte", "pasteur", "prière", "priere", "gospel", "veillée", "veillee"] },
+  { domain: "restaurant", keywords: ["restaurant", "menu", "plat", "cuisine", "maquis", "bar", "café", "cafe"] },
+  { domain: "formation", keywords: ["formation", "atelier", "workshop", "masterclass", "coaching", "webinaire", "séminaire", "seminaire"] },
+  { domain: "event", keywords: ["événement", "evenement", "conférence", "conference", "gala", "mariage", "fête", "fete", "cérémonie", "ceremonie"] },
+  { domain: "fashion", keywords: ["mode", "couture", "collection", "boutique", "vêtement", "vetement", "accessoires"] },
+  { domain: "music", keywords: ["concert", "artiste", "album", "musique", "dj", "festival"] },
+  { domain: "sport", keywords: ["match", "tournoi", "sport", "marathon", "fitness", "gym"] },
+  { domain: "technology", keywords: ["application", "logiciel", "startup", "digital", "site web", "technologie"] },
+  { domain: "health", keywords: ["santé", "sante", "médecin", "medecin", "clinique", "pharmacie", "soins"] },
+  { domain: "realestate", keywords: ["immobilier", "maison", "appartement", "villa", "terrain", "location", "vente"] },
+  { domain: "education", keywords: ["école", "ecole", "université", "universite", "diplôme", "diplome", "inscription"] },
+];
+
+function detectDomainHeuristic(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const entry of DOMAIN_KEYWORDS) {
+    if (entry.keywords.some((k) => lower.includes(k))) return entry.domain;
+  }
+  return null;
+}
+
+function extractFirst(text: string, regex: RegExp): string | undefined {
+  const m = text.match(regex);
+  const v = m?.[1]?.trim();
+  return v ? v : undefined;
+}
+
+function buildHeuristicAnalysis(text: string): AnalysisResult {
+  const suggestedDomain = detectDomainHeuristic(text);
+
+  const title =
+    extractFirst(text, /(?:titre(?:\s+principal)?|title)\s*[:\-]\s*([^\n]+)/i) ??
+    text.split(/\n|\./)[0]?.trim()?.slice(0, 90);
+
+  const organizer =
+    extractFirst(text, /(?:organisé\s+par|organise\s+par|organisation|entreprise|société|societe)\s*[:\-]\s*([^\n.]+)/i) ??
+    text.match(/\b([A-Z][A-Z0-9&'’.\-]+(?:\s+[A-Z0-9&'’.\-]+){1,5})\b/)?.[1];
+
+  const location = extractFirst(text, /(?:lieu|adresse|localisation)\s*[:\-]\s*([^\n.]+)/i);
+
+  const phones = text.match(/(\+?\d[\d\s().\-]{7,}\d)/g) ?? [];
+  const emails = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [];
+  const websites = text.match(/\bhttps?:\/\/[^\s)]+|\bwww\.[^\s)]+/gi) ?? [];
+  const handles = text.match(/@[a-z0-9._-]{2,}/gi) ?? [];
+  const contactParts = [...phones, ...emails, ...websites, ...handles]
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const contact = contactParts.length ? Array.from(new Set(contactParts)).join(" · ") : undefined;
+
+  let prices: string | undefined;
+  if (/\bgratuit\b/i.test(text)) prices = "Gratuit";
+  const priceTokens = text.match(/\b\d+(?:[.,]\d+)?\s?(?:FCFA|XOF|CFA|€|\$|USD)\b/gi) ?? [];
+  if (!prices && priceTokens.length) prices = Array.from(new Set(priceTokens)).join(" · ");
+
+  const dateTokens = [
+    ...(text.match(/\b\d{1,2}[\/\-.]\d{1,2}(?:[\/\-.]\d{2,4})?\b/g) ?? []),
+    ...(text.match(/\b(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi) ?? []),
+    ...(text.match(/\b\d{1,2}\s?h(?:\s?\d{2})?\b/gi) ?? []),
+  ].map((s) => s.trim());
+  const dates = dateTokens.length ? Array.from(new Set(dateTokens)).join(" · ") : undefined;
+
+  const missingInfo = suggestedDomain === "event" && !dates ? ["date et heure (si vous voulez l'indiquer)"] : [];
+
+  return {
+    suggestedDomain,
+    extractedInfo: {
+      title: title || undefined,
+      dates,
+      prices,
+      contact,
+      location,
+      organizer,
+    },
+    missingInfo,
+    summary: text.substring(0, 160),
+  };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -141,20 +224,26 @@ INSTRUCTIONS FINALES:
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`AI request attempt ${attempt}/${maxRetries}`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+
         response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${LOVABLE_API_KEY}`,
             "Content-Type": "application/json",
           },
+          signal: controller.signal,
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
             messages: [
               { role: "system", content: systemPrompt },
-              { role: "user", content: userText },
+              { role: "user", content: trimmedText },
             ],
           }),
         });
+
+        clearTimeout(timeout);
 
         if (response.ok) {
           break; // Success, exit retry loop
@@ -185,9 +274,26 @@ INSTRUCTIONS FINALES:
 
     if (!response || !response.ok) {
       console.error("All AI request attempts failed");
+
+      // Surface billing/rate-limit errors explicitly so the client can show a proper message.
+      if (response?.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (response?.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Payment required, please add credits to continue." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Graceful degradation: avoid blocking the user when the AI gateway is temporarily down.
+      const analysis = buildHeuristicAnalysis(trimmedText);
       return new Response(
-        JSON.stringify({ error: "AI analysis failed after retries", details: lastError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, analysis, warning: "Analyse simplifiée (IA indisponible)." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -212,10 +318,10 @@ INSTRUCTIONS FINALES:
       console.error("Failed to parse AI response:", content);
       // Return a default analysis if parsing fails
       analysis = {
-        suggestedDomain: null,
+        suggestedDomain: detectDomainHeuristic(trimmedText),
         extractedInfo: {},
-        missingInfo: ["dates", "contact", "prix"],
-        summary: userText.substring(0, 100),
+        missingInfo: [],
+        summary: trimmedText.substring(0, 160),
       };
     }
 
