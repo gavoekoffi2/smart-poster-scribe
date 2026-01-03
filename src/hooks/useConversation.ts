@@ -477,6 +477,8 @@ export function useConversation() {
       
       const currentDomain = conversationStateRef.current.domain;
       const restaurantInfo = conversationStateRef.current.restaurantInfo;
+      const extractedInfo = conversationStateRef.current.extractedInfo;
+      const description = conversationStateRef.current.description || "";
       
       try {
         // Fetch templates for the domain
@@ -498,7 +500,7 @@ export function useConversation() {
           const { data: allTemplates, error } = await supabase
             .from("reference_templates")
             .select("*")
-            .limit(20);
+            .limit(30);
           
           if (!error && allTemplates) {
             templates = allTemplates;
@@ -509,54 +511,112 @@ export function useConversation() {
         setIsProcessing(false);
         
         if (templates.length > 0) {
-          // Smart template selection based on user context
-          let selectedTemplate = templates[0];
+          // =========== SÉLECTION CONTEXTUELLE DES TEMPLATES ===========
+          // Analyser quels éléments l'utilisateur a fournis
+          const hasLocation = !!(extractedInfo?.location);
+          const hasContact = !!(extractedInfo?.contact);
+          const hasPrice = !!(extractedInfo?.prices);
+          const hasDates = !!(extractedInfo?.dates);
+          const hasSpeakers = !!(extractedInfo?.speakers);
+          const hasMenu = restaurantInfo?.hasMenu;
           
-          // For restaurant, try to find a template that matches menu/no-menu preference
-          if (currentDomain === "restaurant" && restaurantInfo) {
-            const hasMenu = restaurantInfo.hasMenu;
+          // Créer un score pour chaque template basé sur la compatibilité
+          const scoredTemplates = templates.map(t => {
+            const desc = (t.description || "").toLowerCase();
+            const tags = (t.tags || []).map((tag: string) => tag.toLowerCase());
+            const allText = desc + " " + tags.join(" ");
             
-            // Filter templates by tags or description matching
-            const filteredTemplates = templates.filter(t => {
-              const desc = (t.description || "").toLowerCase();
-              const tags = (t.tags || []).map((tag: string) => tag.toLowerCase());
-              
-              if (hasMenu) {
-                // Look for templates with menu
-                return desc.includes("menu") || tags.includes("menu") || 
-                       desc.includes("carte") || tags.includes("carte");
-              } else {
-                // Look for promo/event templates without menu
-                return !desc.includes("menu") && !tags.includes("menu") ||
-                       desc.includes("promo") || tags.includes("promo") ||
-                       desc.includes("offre") || tags.includes("offre");
+            let score = 0;
+            let penalty = 0;
+            
+            // BONUS: template correspond aux éléments fournis
+            if (hasLocation && (allText.includes("lieu") || allText.includes("adresse") || allText.includes("location"))) {
+              score += 2;
+            }
+            if (hasContact && (allText.includes("contact") || allText.includes("phone") || allText.includes("tel"))) {
+              score += 2;
+            }
+            if (hasPrice && (allText.includes("prix") || allText.includes("price") || allText.includes("tarif"))) {
+              score += 2;
+            }
+            if (hasDates && (allText.includes("date") || allText.includes("heure") || allText.includes("time"))) {
+              score += 2;
+            }
+            if (hasSpeakers && (allText.includes("orateur") || allText.includes("speaker") || allText.includes("artiste") || allText.includes("invité"))) {
+              score += 3;
+            }
+            
+            // PÉNALITÉ: template contient des éléments NON fournis par l'utilisateur
+            // (pour éviter de choisir un template avec localisation si user n'a pas donné de lieu)
+            if (!hasLocation && (allText.includes("lieu") || allText.includes("adresse") || allText.includes("location icon"))) {
+              penalty += 1;
+            }
+            if (!hasContact && (allText.includes("contact") || allText.includes("whatsapp") || allText.includes("téléphone"))) {
+              penalty += 1;
+            }
+            
+            // Restaurant spécifique
+            if (currentDomain === "restaurant") {
+              if (hasMenu && (allText.includes("menu") || allText.includes("carte"))) {
+                score += 3;
+              } else if (!hasMenu && (allText.includes("menu") || allText.includes("carte"))) {
+                penalty += 2;
+              } else if (!hasMenu && (allText.includes("promo") || allText.includes("offre"))) {
+                score += 2;
               }
+            }
+            
+            // Match avec le domaine
+            if (t.domain === currentDomain) {
+              score += 5;
+            }
+            
+            // Match avec la description utilisateur (mots-clés)
+            const descWords = description.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+            descWords.forEach(word => {
+              if (allText.includes(word)) score += 1;
             });
             
-            if (filteredTemplates.length > 0) {
-              selectedTemplate = filteredTemplates[Math.floor(Math.random() * filteredTemplates.length)];
-            } else {
-              selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
+            // Préférences de style
+            if (preferences) {
+              const prefLower = preferences.toLowerCase();
+              if (prefLower.includes("moderne") && allText.includes("modern")) score += 2;
+              if (prefLower.includes("élégant") && (allText.includes("élégant") || allText.includes("luxe"))) score += 2;
+              if (prefLower.includes("coloré") && allText.includes("color")) score += 2;
+              if (prefLower.includes("sobre") && (allText.includes("sobre") || allText.includes("minimal"))) score += 2;
+              if (prefLower.includes("festif") && (allText.includes("fête") || allText.includes("celebration"))) score += 2;
             }
-          } else {
-            // Random selection for other domains
-            selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
-          }
+            
+            return { template: t, score: score - penalty };
+          });
+          
+          // Trier par score décroissant et prendre un des meilleurs (avec un peu d'aléatoire)
+          scoredTemplates.sort((a, b) => b.score - a.score);
+          const topTemplates = scoredTemplates.slice(0, Math.min(5, scoredTemplates.length));
+          const selectedTemplate = topTemplates[Math.floor(Math.random() * topTemplates.length)].template;
           
           const imageUrl = selectedTemplate.image_url.startsWith('/')
             ? window.location.origin + selectedTemplate.image_url
             : selectedTemplate.image_url;
           
           // Build a description that emphasizes EXACT design replication but NEW content
+          // PLUS: indiquer quels éléments NE PAS inclure
+          const missingElements: string[] = [];
+          if (!hasLocation) missingElements.push("lieu/adresse");
+          if (!hasContact) missingElements.push("contact/téléphone");
+          if (!hasPrice) missingElements.push("prix");
+          if (!hasDates) missingElements.push("dates");
+          
           let styleDescription = selectedTemplate.description || "";
           
           // Add strong instructions to copy design but create new content
-          styleDescription = `DESIGN TEMPLATE À REPRODUIRE EXACTEMENT: Ce template sert de modèle de design. ` +
+          styleDescription = `DESIGN TEMPLATE À REPRODUIRE: Ce template sert de modèle de design. ` +
             `Reproduire FIDÈLEMENT: la mise en page, la disposition des éléments, les polices, les couleurs, ` +
             `les formes décoratives, le style graphique, et l'atmosphère visuelle. ` +
             `MAIS créer du contenu NOUVEAU: remplacer tous les textes par les informations de l'utilisateur, ` +
             `et si le template contient des personnages/personnes, générer des NOUVEAUX personnages africains ` +
             `avec des poses et apparences DIFFÉRENTES mais dans le même emplacement. ` +
+            (missingElements.length > 0 ? `IMPORTANT: NE PAS inclure ces éléments car l'utilisateur ne les a pas fournis: ${missingElements.join(", ")}. ` : "") +
             (styleDescription ? `Description du template: ${styleDescription}` : "");
           
           // Add user's style preferences if provided
@@ -574,12 +634,12 @@ export function useConversation() {
           }));
           
           const domainMessage = currentDomain 
-            ? `J'ai sélectionné un style adapté au domaine "${currentDomain}".`
+            ? `J'ai sélectionné un style adapté à votre demande.`
             : "J'ai sélectionné un style à partir de notre collection.";
           
           addMessage(
             "assistant",
-            `${domainMessage} Je vais créer un design original en m'inspirant de ce style, en utilisant uniquement VOS informations. Choisissez une palette de couleurs :`
+            `${domainMessage} Je vais créer un design original en utilisant uniquement VOS informations. Choisissez une palette de couleurs :`
           );
         } else {
           // No templates found - will generate purely from description
@@ -670,19 +730,10 @@ export function useConversation() {
           if (isValidDomain) {
             const missingInfo = analysis.missingInfo || [];
             
-            if (missingInfo.length > 0) {
-              // Ask for missing info
-              setConversationState((prev) => ({
-                ...prev,
-                step: "details",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: analysis.missingInfo,
-              }));
-              const missingText = formatMissingInfo(missingInfo);
-              response += `Pour compléter l'affiche, pouvez-vous me donner ${missingText} ?`;
-            } else {
-              // All info provided, go to reference
+            // NOUVEAU: Si très peu d'infos manquantes, aller directement à l'étape référence
+            // pour minimiser les questions
+            if (missingInfo.length === 0) {
+              // Toutes les infos sont là - aller directement à reference
               setConversationState((prev) => ({
                 ...prev,
                 step: "reference",
@@ -691,6 +742,29 @@ export function useConversation() {
                 missingInfo: [],
               }));
               response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+            } else if (missingInfo.length <= 3) {
+              // GROUPER toutes les questions manquantes en une seule demande
+              setConversationState((prev) => ({
+                ...prev,
+                step: "details",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: analysis.missingInfo,
+              }));
+              const missingText = formatMissingInfo(missingInfo);
+              response += `Si vous les avez, pouvez-vous me donner ${missingText} ? (Sinon, répondez simplement "continuer")`;
+            } else {
+              // Trop d'infos manquantes - demander les plus importantes (3 max)
+              const priorityMissing = missingInfo.slice(0, 3);
+              setConversationState((prev) => ({
+                ...prev,
+                step: "details",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: priorityMissing,
+              }));
+              const missingText = formatMissingInfo(priorityMissing);
+              response += `Si vous les avez, pouvez-vous me donner ${missingText} ? (Sinon, répondez "continuer")`;
             }
           } else {
             // Domain not detected, ask user to select
@@ -745,48 +819,29 @@ export function useConversation() {
 
       // Additional details
       if (step === "details") {
-        // Merge additional details into extractedInfo
-        setConversationState((prev) => ({
-          ...prev,
-          extractedInfo: {
-            ...prev.extractedInfo,
-            additionalDetails: [prev.extractedInfo?.additionalDetails, content]
-              .filter(Boolean)
-              .join(". "),
-          },
-        }));
-
-        // Check if this domain has intelligent questions configured
-        const currentDomain = conversationStateRef.current.domain;
+        const lowerContent = content.toLowerCase().trim();
+        const isContinue = ["continuer", "continue", "passer", "skip", "non", "no", "rien", "je n'ai pas", "pas d'info", "pas maintenant"].some(w => lowerContent.includes(w));
         
-        if (currentDomain && domainHasQuestions(currentDomain)) {
-          // Use the new intelligent domain questions system
-          const questions = getDomainQuestions(currentDomain);
-          if (questions.length > 0) {
-            const firstQuestion = questions[0];
-            setConversationState((prev) => ({
-              ...prev,
-              step: "domain_questions",
-              domainQuestionState: {
-                currentQuestionId: firstQuestion.id,
-                answeredQuestions: {},
-                collectedImages: {},
-                collectedTexts: {},
-              },
-            }));
-            setTimeout(() => {
-              addMessage("assistant", firstQuestion.question);
-            }, 250);
-            return;
-          }
+        if (!isContinue) {
+          // Merge additional details into extractedInfo
+          setConversationState((prev) => ({
+            ...prev,
+            extractedInfo: {
+              ...prev.extractedInfo,
+              additionalDetails: [prev.extractedInfo?.additionalDetails, content]
+                .filter(Boolean)
+                .join(". "),
+            },
+          }));
         }
-        
-        // Fallback to legacy flow for domains without questions
+
+        // SIMPLIFICATION: Aller directement à l'étape référence
+        // On ne pose plus les questions spécifiques au domaine pour réduire les interactions
         setConversationState((prev) => ({ ...prev, step: "reference" }));
         setTimeout(() => {
           addMessage(
             "assistant",
-            "Merci ! Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
+            "Avez-vous une image de référence (une affiche dont vous aimez le style) ? Envoyez-la ou cliquez sur 'Passer'."
           );
         }, 250);
         return;

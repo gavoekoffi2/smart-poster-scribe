@@ -28,6 +28,9 @@ export interface ExtractedInfo {
   contact?: string;
   location?: string;
   organizer?: string;
+  speakers?: string;
+  menu?: string;
+  products?: string;
   targetAudience?: string;
   additionalDetails?: string;
 }
