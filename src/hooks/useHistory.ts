@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GeneratedImage, LogoPosition, AspectRatio, Resolution, Domain } from "@/types/generation";
 import { toast } from "sonner";
+import { User, Session } from "@supabase/supabase-js";
 
 interface SaveImageParams {
   imageUrl: string;
@@ -19,14 +20,43 @@ interface SaveImageParams {
 export function useHistory() {
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
-  // Fetch history on mount
+  // Set up auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch history on mount and when user changes
   const fetchHistory = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      setIsLoading(true);
+      
+      let query = supabase
         .from("generated_images")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // If user is logged in, only fetch their images
+      if (user) {
+        query = query.eq("user_id", user.id);
+      } else {
+        // For non-logged users, fetch images with null user_id
+        query = query.is("user_id", null);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching history:", error);
@@ -49,7 +79,7 @@ export function useHistory() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchHistory();
@@ -58,20 +88,27 @@ export function useHistory() {
   // Save a new image to history
   const saveToHistory = useCallback(async (params: SaveImageParams): Promise<GeneratedImage | null> => {
     try {
+      const insertData: any = {
+        image_url: params.imageUrl,
+        prompt: params.prompt,
+        aspect_ratio: params.aspectRatio,
+        resolution: params.resolution,
+        domain: params.domain || null,
+        reference_image_url: params.referenceImageUrl || null,
+        content_image_url: params.contentImageUrl || null,
+        logo_urls: params.logoUrls || null,
+        logo_positions: params.logoPositions || null,
+        color_palette: params.colorPalette || null,
+      };
+
+      // Add user_id if user is logged in
+      if (user) {
+        insertData.user_id = user.id;
+      }
+
       const { data, error } = await supabase
         .from("generated_images")
-        .insert({
-          image_url: params.imageUrl,
-          prompt: params.prompt,
-          aspect_ratio: params.aspectRatio,
-          resolution: params.resolution,
-          domain: params.domain || null,
-          reference_image_url: params.referenceImageUrl || null,
-          content_image_url: params.contentImageUrl || null,
-          logo_urls: params.logoUrls || null,
-          logo_positions: params.logoPositions || null,
-          color_palette: params.colorPalette || null,
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -92,20 +129,30 @@ export function useHistory() {
       };
 
       setHistory((prev) => [newImage, ...prev]);
+      
+      if (user) {
+        toast.success("Image sauvegardée dans votre historique");
+      }
+      
       return newImage;
     } catch (err) {
       console.error("Error saving to history:", err);
       return null;
     }
-  }, []);
+  }, [user]);
 
   // Clear all history
   const clearHistory = useCallback(async () => {
     try {
-      const { error } = await supabase
-        .from("generated_images")
-        .delete()
-        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
+      let query = supabase.from("generated_images").delete();
+      
+      if (user) {
+        query = query.eq("user_id", user.id);
+      } else {
+        query = query.is("user_id", null);
+      }
+
+      const { error } = await query;
 
       if (error) {
         console.error("Error clearing history:", error);
@@ -118,7 +165,7 @@ export function useHistory() {
     } catch (err) {
       console.error("Error clearing history:", err);
     }
-  }, []);
+  }, [user]);
 
   // Delete a single image
   const deleteFromHistory = useCallback(async (id: string) => {
@@ -143,6 +190,8 @@ export function useHistory() {
   return {
     history,
     isLoading,
+    isAuthenticated: !!user,
+    user,
     saveToHistory,
     clearHistory,
     deleteFromHistory,

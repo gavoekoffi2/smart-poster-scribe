@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
+import { useAuth } from "@/hooks/useAuth";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
@@ -12,8 +14,9 @@ import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
+import { toast } from "sonner";
 
 const fireConfetti = () => {
   const count = 200;
@@ -59,7 +62,9 @@ const fireConfetti = () => {
   });
 };
 
-export default function Index() {
+export default function AppPage() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, signOut } = useAuth();
   const {
     messages,
     conversationState,
@@ -99,7 +104,7 @@ export default function Index() {
     goForwardToStep,
   } = useConversation();
 
-  const { history, saveToHistory, clearHistory } = useHistory();
+  const { history, saveToHistory, clearHistory, isAuthenticated: historyAuth } = useHistory();
 
   const [inputValue, setInputValue] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -182,12 +187,18 @@ export default function Index() {
     setSelectedHistoryImage(null);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Déconnexion réussie");
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border/30 bg-card/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <DesignerAvatar size="sm" isWorking={isProcessing} />
             <div className="flex flex-col justify-center">
               <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight gradient-text leading-tight">
@@ -198,7 +209,7 @@ export default function Index() {
                 Assistant design premium
               </p>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
@@ -218,6 +229,28 @@ export default function Index() {
               <RotateCcw className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Nouveau</span>
             </Button>
+            {isAuthenticated ? (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleSignOut}
+                className="hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Déconnexion</span>
+              </Button>
+            ) : (
+              <Link to="/auth">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Connexion</span>
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </header>
