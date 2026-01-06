@@ -128,29 +128,35 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/15 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/15 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[200px]" />
       
       <div className="w-full max-w-md relative z-10">
         {/* Back Link */}
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-8">
-          <ArrowLeft className="w-4 h-4" />
+        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-8 group">
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Retour à l'accueil
         </Link>
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/30 rounded-xl blur-xl" />
+            <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+              <Sparkles className="w-7 h-7 text-primary-foreground" />
+            </div>
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold gradient-text">Graphiste GPT</h1>
-            <p className="text-xs text-muted-foreground">Assistant design premium</p>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Graphiste <span className="gradient-text">GPT</span>
+            </h1>
+            <p className="text-xs text-muted-foreground">IA Design Premium</p>
           </div>
         </div>
 
-        <Card className="bg-card/60 backdrop-blur-xl border-border/40">
-          <CardHeader className="text-center">
+        <Card className="bg-card/60 backdrop-blur-xl border-border/40 shadow-2xl shadow-primary/5">
+          <CardHeader className="text-center pb-4">
             <CardTitle className="font-display text-2xl">Bienvenue</CardTitle>
             <CardDescription>
               Connectez-vous ou créez un compte pour accéder à votre historique
@@ -158,9 +164,13 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin">Connexion</TabsTrigger>
-                <TabsTrigger value="signup">Inscription</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary">
+                <TabsTrigger value="signin" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
+                  Connexion
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
+                  Inscription
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -175,7 +185,7 @@ export default function AuthPage() {
                         placeholder="votre@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-secondary border-border focus:border-primary"
                         disabled={isLoading}
                       />
                     </div>
@@ -190,12 +200,16 @@ export default function AuthPage() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-secondary border-border focus:border-primary"
                         disabled={isLoading}
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full glow-gold" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
+                    disabled={isLoading}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -220,7 +234,7 @@ export default function AuthPage() {
                         placeholder="John Doe"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-secondary border-border focus:border-primary"
                         disabled={isLoading}
                       />
                     </div>
@@ -235,7 +249,7 @@ export default function AuthPage() {
                         placeholder="votre@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-secondary border-border focus:border-primary"
                         disabled={isLoading}
                       />
                     </div>
@@ -250,12 +264,16 @@ export default function AuthPage() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 bg-secondary border-border focus:border-primary"
                         disabled={isLoading}
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full glow-gold" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
+                    disabled={isLoading}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

@@ -16,26 +16,29 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
-      {/* 3D Background */}
+      {/* 3D Background - Interactive */}
       <Scene3D />
       
-      {/* Navigation */}
-      <Navbar onGetStarted={handleGetStarted} />
-      
-      {/* Hero Section */}
-      <HeroSection onGetStarted={handleGetStarted} />
-      
-      {/* Features Section */}
-      <FeaturesSection />
-      
-      {/* Domains Section */}
-      <DomainsSection />
-      
-      {/* CTA Section */}
-      <CTASection onGetStarted={handleGetStarted} />
-      
-      {/* Footer */}
-      <Footer />
+      {/* Main Content */}
+      <div className="relative z-10">
+        {/* Navigation */}
+        <Navbar onGetStarted={handleGetStarted} />
+        
+        {/* Hero Section */}
+        <HeroSection onGetStarted={handleGetStarted} />
+        
+        {/* Features/Services Section */}
+        <FeaturesSection />
+        
+        {/* Domains Section */}
+        <DomainsSection />
+        
+        {/* CTA Section */}
+        <CTASection onGetStarted={handleGetStarted} />
+        
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 }

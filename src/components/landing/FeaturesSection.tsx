@@ -1,102 +1,170 @@
-import { Sparkles, Palette, Zap, Image, MessageSquare, Download, Layers, Clock } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Sparkles, Palette, Zap, Image, MessageSquare, Download, Layers, Clock, ArrowUpRight } from "lucide-react";
+
+const services = [
+  {
+    icon: Palette,
+    title: "UI/UX Design",
+    description: "Interfaces modernes et intuitives pour vos applications web et mobile.",
+    image: "/reference-templates/service/smart-design-flyer.jpg"
+  },
+  {
+    icon: Layers,
+    title: "Web Design",
+    description: "Sites web professionnels qui convertissent vos visiteurs en clients.",
+    image: "/reference-templates/formation/formation-1.jpg"
+  },
+  {
+    icon: Image,
+    title: "Landing Page",
+    description: "Pages d'atterrissage optimisées pour maximiser vos conversions.",
+    image: "/reference-templates/event/concert-gospel-cct.jpg"
+  }
+];
 
 const features = [
   {
     icon: MessageSquare,
     title: "Conversation Naturelle",
     description: "Décrivez votre projet en langage naturel, notre IA comprend vos besoins.",
-    gradient: "from-violet-500 to-purple-600"
   },
   {
     icon: Palette,
     title: "Palette de Couleurs",
     description: "Personnalisez les couleurs de votre visuel avec notre sélecteur intelligent.",
-    gradient: "from-pink-500 to-rose-600"
   },
   {
     icon: Layers,
     title: "Templates Pro",
     description: "Plus de 50 templates professionnels adaptés à chaque domaine d'activité.",
-    gradient: "from-blue-500 to-cyan-600"
   },
   {
     icon: Image,
     title: "Références Visuelles",
     description: "Uploadez des images de référence pour guider la création.",
-    gradient: "from-emerald-500 to-teal-600"
   },
   {
     icon: Zap,
     title: "Génération Rapide",
     description: "Obtenez vos visuels en quelques secondes grâce à notre IA optimisée.",
-    gradient: "from-amber-500 to-orange-600"
   },
   {
     icon: Clock,
     title: "Historique Complet",
     description: "Retrouvez toutes vos créations dans votre espace personnel.",
-    gradient: "from-indigo-500 to-blue-600"
   },
   {
     icon: Download,
     title: "Export HD",
     description: "Téléchargez vos créations en haute définition, prêtes à l'impression.",
-    gradient: "from-fuchsia-500 to-pink-600"
   },
   {
     icon: Sparkles,
     title: "IA Avancée",
     description: "Notre IA apprend de vos préférences pour des résultats toujours meilleurs.",
-    gradient: "from-purple-500 to-violet-600"
   }
 ];
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-24 px-4 relative">
-      <div className="container mx-auto max-w-7xl">
+    <section id="services" className="py-24 px-4 relative overflow-hidden">
+      {/* Diagonal stripes background */}
+      <div className="absolute inset-0 diagonal-stripes opacity-50" />
+      
+      {/* Organic shapes */}
+      <div className="absolute top-20 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px]" />
+      <div className="absolute bottom-20 left-0 w-80 h-80 bg-accent/10 rounded-full blur-[120px]" />
+      
+      <div className="container mx-auto max-w-7xl relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Fonctionnalités</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
-            <span className="gradient-text">Tout ce dont vous avez besoin</span>
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+            <span className="text-foreground">Mes </span>
+            <span className="gradient-text">Services</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Des outils puissants pour créer des visuels professionnels sans compétences en design.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis lacus nunc, posuere in justo vulputate, bibendum sodales
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <Card 
-              key={feature.title}
-              className="group bg-card/50 border-border/40 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
-              style={{ animationDelay: `${index * 0.1}s` }}
+        {/* Services Cards - Large showcase cards */}
+        <div className="grid md:grid-cols-3 gap-8 mb-24">
+          {services.map((service, index) => (
+            <div
+              key={service.title}
+              className="group service-card relative rounded-3xl bg-card/60 border border-border/40 overflow-hidden cursor-pointer"
+              style={{ animationDelay: `${index * 0.15}s` }}
             >
-              <CardContent className="p-6 relative">
+              {/* Image */}
+              <div className="relative h-64 overflow-hidden">
+                <img 
+                  src={service.image} 
+                  alt={service.title}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 relative">
+                <h3 className="font-display text-2xl font-bold mb-2 text-foreground">
+                  {service.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {service.description}
+                </p>
+              </div>
+
+              {/* Arrow button */}
+              <div className="absolute bottom-6 right-6">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
+                  <ArrowUpRight className="w-5 h-5 text-primary-foreground" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination dots */}
+        <div className="flex justify-center gap-3 mb-24">
+          <div className="w-3 h-3 rounded-full bg-primary" />
+          <div className="w-3 h-3 rounded-full bg-muted" />
+          <div className="w-3 h-3 rounded-full bg-muted" />
+        </div>
+
+        {/* Features Grid */}
+        <div id="features" className="pt-12">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Fonctionnalités</span>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              <span className="gradient-text">Tout ce dont vous avez besoin</span>
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
+              <div 
+                key={feature.title}
+                className="group p-6 rounded-2xl bg-card/40 border border-border/40 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
                 {/* Icon */}
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="w-7 h-7 text-white" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4 shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform duration-300">
+                  <feature.icon className="w-7 h-7 text-primary-foreground" />
                 </div>
 
                 {/* Content */}
-                <h3 className="font-display text-xl font-semibold mb-2 text-foreground">
+                <h3 className="font-display text-lg font-semibold mb-2 text-foreground">
                   {feature.title}
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {feature.description}
                 </p>
-
-                {/* Hover glow effect */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
