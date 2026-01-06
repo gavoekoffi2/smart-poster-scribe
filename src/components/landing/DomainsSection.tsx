@@ -1,58 +1,63 @@
-import { Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Sparkles } from "lucide-react";
+import { Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Sparkles, ArrowUpRight } from "lucide-react";
 
 const domains = [
   {
     icon: Church,
     name: "Église",
     description: "Affiches de culte, concerts gospel, retraites spirituelles",
-    color: "from-amber-400 to-orange-500"
+    image: "/reference-templates/church/church-flyer-french.jpg"
   },
   {
     icon: UtensilsCrossed,
     name: "Restaurant",
     description: "Menus, promotions, événements culinaires",
-    color: "from-red-400 to-rose-500"
+    image: "/reference-templates/restaurant/favours-kitchen.jpg"
   },
   {
     icon: GraduationCap,
     name: "Formation",
     description: "Webinaires, certifications, cours en ligne",
-    color: "from-blue-400 to-indigo-500"
+    image: "/reference-templates/formation/formation-1.jpg"
   },
   {
     icon: Store,
     name: "E-commerce",
     description: "Promotions, soldes, nouveaux produits",
-    color: "from-emerald-400 to-teal-500"
+    image: "/reference-templates/ecommerce/mega-sales-event.jpg"
   },
   {
     icon: Calendar,
     name: "Événement",
     description: "Concerts, festivals, conférences",
-    color: "from-purple-400 to-violet-500"
+    image: "/reference-templates/event/concert-gospel-cct.jpg"
   },
   {
     icon: Briefcase,
     name: "Service",
     description: "Offres professionnelles, portfolios",
-    color: "from-cyan-400 to-blue-500"
+    image: "/reference-templates/service/smart-design-flyer.jpg"
   }
 ];
 
 export function DomainsSection() {
   return (
-    <section id="domains" className="py-24 px-4 relative bg-gradient-to-b from-transparent via-primary/5 to-transparent">
-      <div className="container mx-auto max-w-7xl">
+    <section id="domains" className="py-24 px-4 relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+      <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/10 rounded-full blur-[150px] -translate-y-1/2" />
+      <div className="absolute top-1/2 right-0 w-80 h-80 bg-accent/10 rounded-full blur-[120px] -translate-y-1/2" />
+      
+      <div className="container mx-auto max-w-7xl relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">Domaines</span>
           </div>
-          <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             <span className="gradient-text">Adapté à votre secteur</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Des templates et styles optimisés pour chaque domaine d'activité.
           </p>
         </div>
@@ -62,27 +67,43 @@ export function DomainsSection() {
           {domains.map((domain, index) => (
             <div
               key={domain.name}
-              className="group relative p-8 rounded-3xl bg-card/40 border border-border/40 hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 overflow-hidden"
+              className="group service-card relative rounded-3xl bg-card/40 border border-border/40 overflow-hidden cursor-pointer"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              {/* Background gradient on hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${domain.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+              {/* Image */}
+              <div className="relative h-48 overflow-hidden">
+                <img 
+                  src={domain.image} 
+                  alt={domain.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+                
+                {/* Icon badge */}
+                <div className="absolute top-4 left-4 w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+                  <domain.icon className="w-6 h-6 text-primary-foreground" />
+                </div>
+              </div>
               
-              {/* Icon */}
-              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${domain.color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <domain.icon className="w-8 h-8 text-white" />
+              {/* Content */}
+              <div className="p-6 relative">
+                <h3 className="font-display text-2xl font-bold mb-2 text-foreground">
+                  {domain.name}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {domain.description}
+                </p>
               </div>
 
-              {/* Content */}
-              <h3 className="font-display text-2xl font-bold mb-3 text-foreground">
-                {domain.name}
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                {domain.description}
-              </p>
+              {/* Hover arrow */}
+              <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 text-primary" />
+                </div>
+              </div>
 
-              {/* Decorative element */}
-              <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br ${domain.color} opacity-10 blur-3xl group-hover:opacity-20 transition-opacity duration-500`} />
+              {/* Decorative glow */}
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 rounded-full bg-primary/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </div>
           ))}
         </div>
