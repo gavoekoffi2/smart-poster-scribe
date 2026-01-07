@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
+import AdminUploadPage from "./pages/AdminUploadPage";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ const App = () => (
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/app" element={<AppPage />} />
+        <Route path="/admin/upload" element={<AdminUploadPage />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>
