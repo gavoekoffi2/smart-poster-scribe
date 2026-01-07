@@ -2,6 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { Scene3D } from "@/components/landing/Scene3D";
 import { Navbar } from "@/components/landing/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
+import { CaseStudiesSection } from "@/components/landing/CaseStudiesSection";
+import { ProcessSection } from "@/components/landing/ProcessSection";
+import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { DomainsSection } from "@/components/landing/DomainsSection";
 import { CTASection } from "@/components/landing/CTASection";
@@ -11,11 +15,11 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate("/app");
+    navigate("/auth");
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-hidden animated-gradient">
       {/* 3D Background - Interactive */}
       <Scene3D />
       
@@ -26,6 +30,18 @@ export default function LandingPage() {
         
         {/* Hero Section */}
         <HeroSection onGetStarted={handleGetStarted} />
+        
+        {/* Testimonials Section */}
+        <TestimonialsSection />
+        
+        {/* Case Studies Section */}
+        <CaseStudiesSection />
+        
+        {/* Process Section */}
+        <ProcessSection />
+        
+        {/* About Section */}
+        <AboutSection />
         
         {/* Features/Services Section */}
         <FeaturesSection />
