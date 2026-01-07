@@ -235,40 +235,44 @@ function CameraController() {
 
 export function Scene3D() {
   return (
-    <div className="absolute inset-0 -z-10">
-      <Canvas camera={{ position: [0, 0, 12], fov: 55 }}>
-        <ambientLight intensity={0.2} />
-        <directionalLight position={[10, 10, 5]} intensity={1.5} color="#f97316" />
-        <pointLight position={[-10, -10, -10]} intensity={0.8} color="#fb923c" />
-        <pointLight position={[5, 5, 5]} intensity={0.5} color="#ffffff" />
+    <div className="fixed inset-0 -z-10 pointer-events-none">
+      <Canvas camera={{ position: [0, 0, 15], fov: 50 }}>
+        <ambientLight intensity={0.15} />
+        <directionalLight position={[10, 10, 5]} intensity={1.2} color="#f97316" />
+        <pointLight position={[-10, -10, -10]} intensity={0.6} color="#fb923c" />
+        <pointLight position={[5, 5, 5]} intensity={0.4} color="#ffffff" />
         
         <Stars 
-          radius={100} 
-          depth={60} 
-          count={4000} 
-          factor={5} 
-          saturation={0.3} 
+          radius={120} 
+          depth={80} 
+          count={3000} 
+          factor={4} 
+          saturation={0.2} 
           fade 
-          speed={0.8} 
+          speed={0.5} 
         />
         
-        {/* Main interactive elements */}
-        <InteractiveSphere position={[-5, 2, -3]} color="#f97316" size={1.2} />
-        <InteractiveSphere position={[5, -1, -4]} color="#fb923c" size={0.9} />
-        <InteractiveSphere position={[0, 4, -6]} color="#ea580c" size={1.5} />
+        {/* Main interactive elements - positioned more spread out */}
+        <InteractiveSphere position={[-8, 4, -8]} color="#f97316" size={1.5} />
+        <InteractiveSphere position={[8, -3, -10]} color="#fb923c" size={1.2} />
+        <InteractiveSphere position={[0, 6, -12]} color="#ea580c" size={2} />
+        <InteractiveSphere position={[-6, -4, -6]} color="#f97316" size={0.8} />
         
         {/* Glowing rings */}
-        <GlowingRing position={[-4, -2, -5]} color="#f97316" size={2} />
-        <GlowingRing position={[6, 3, -7]} color="#fb923c" size={1.5} />
+        <GlowingRing position={[-5, -3, -8]} color="#f97316" size={2.5} />
+        <GlowingRing position={[7, 4, -10]} color="#fb923c" size={2} />
+        <GlowingRing position={[0, -5, -6]} color="#ea580c" size={1.5} />
         
         {/* Floating cubes */}
-        <FloatingCube position={[3, -2, -3]} size={1.2} />
-        <FloatingCube position={[-6, 1, -6]} size={0.8} />
-        <FloatingCube position={[0, -4, -4]} size={1} />
+        <FloatingCube position={[5, -1, -5]} size={1.5} />
+        <FloatingCube position={[-7, 2, -8]} size={1} />
+        <FloatingCube position={[2, -6, -7]} size={1.2} />
+        <FloatingCube position={[-3, 5, -9]} size={0.8} />
         
-        {/* Organic blobs */}
-        <OrganicBlob position={[-8, 0, -10]} color="#f97316" />
-        <OrganicBlob position={[8, -2, -12]} color="#ea580c" />
+        {/* Organic blobs - background */}
+        <OrganicBlob position={[-12, 0, -15]} color="#f97316" />
+        <OrganicBlob position={[12, -4, -18]} color="#ea580c" />
+        <OrganicBlob position={[0, 8, -20]} color="#fb923c" />
         
         {/* Particle system */}
         <ParticleField />
