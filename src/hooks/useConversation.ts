@@ -221,18 +221,35 @@ function formatMissingInfo(missingInfo: string[]): string {
   return `${translated.join(", ")} et ${last}`;
 }
 
-export function useConversation() {
+interface CloneTemplateData {
+  id: string;
+  imageUrl: string;
+  domain: string;
+  description: string | null;
+}
+
+export function useConversation(cloneTemplate?: CloneTemplateData) {
+  const getInitialMessage = () => {
+    if (cloneTemplate) {
+      return `Vous avez choisi de cloner un template du domaine "${cloneTemplate.domain}". Décrivez le contenu de votre affiche (textes, dates, contact, etc.) et je créerai un visuel similaire avec vos informations.`;
+    }
+    return INITIAL_MESSAGE;
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "initial",
       role: "assistant",
-      content: INITIAL_MESSAGE,
+      content: getInitialMessage(),
       timestamp: new Date(),
+      image: cloneTemplate?.imageUrl,
     },
   ]);
 
   const [conversationState, setConversationState] = useState<ConversationState>({
     step: "greeting",
+    domain: cloneTemplate?.domain as Domain | undefined,
+    referenceImage: cloneTemplate?.imageUrl,
   });
 
   const conversationStateRef = useRef<ConversationState>(conversationState);
@@ -242,7 +259,7 @@ export function useConversation() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [suggestedDomain, setSuggestedDomain] = useState<string | null>(null);
+  const [suggestedDomain, setSuggestedDomain] = useState<string | null>(cloneTemplate?.domain || null);
   const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["greeting"]);
 
   // Mettre à jour les étapes visitées quand on change d'étape
@@ -2015,5 +2032,6 @@ export function useConversation() {
     resetConversation,
     goBackToStep,
     goForwardToStep,
+    isCloneMode: !!cloneTemplate,
   };
 }
