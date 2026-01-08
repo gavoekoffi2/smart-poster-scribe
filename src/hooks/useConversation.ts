@@ -728,44 +728,16 @@ export function useConversation() {
 
           // If domain detected, skip domain selection
           if (isValidDomain) {
-            const missingInfo = analysis.missingInfo || [];
-            
-            // NOUVEAU: Si très peu d'infos manquantes, aller directement à l'étape référence
-            // pour minimiser les questions
-            if (missingInfo.length === 0) {
-              // Toutes les infos sont là - aller directement à reference
-              setConversationState((prev) => ({
-                ...prev,
-                step: "reference",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: [],
-              }));
-              response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
-            } else if (missingInfo.length <= 3) {
-              // GROUPER toutes les questions manquantes en une seule demande
-              setConversationState((prev) => ({
-                ...prev,
-                step: "details",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: analysis.missingInfo,
-              }));
-              const missingText = formatMissingInfo(missingInfo);
-              response += `Si vous les avez, pouvez-vous me donner ${missingText} ? (Sinon, répondez simplement "continuer")`;
-            } else {
-              // Trop d'infos manquantes - demander les plus importantes (3 max)
-              const priorityMissing = missingInfo.slice(0, 3);
-              setConversationState((prev) => ({
-                ...prev,
-                step: "details",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: priorityMissing,
-              }));
-              const missingText = formatMissingInfo(priorityMissing);
-              response += `Si vous les avez, pouvez-vous me donner ${missingText} ? (Sinon, répondez "continuer")`;
-            }
+            // SIMPLIFICATION: Aller TOUJOURS directement à reference
+            // L'IA a déjà extrait tout ce dont on a besoin, pas de questions supplémentaires
+            setConversationState((prev) => ({
+              ...prev,
+              step: "reference",
+              domain: detectedDomain,
+              extractedInfo: analysis.extractedInfo,
+              missingInfo: [],
+            }));
+            response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
           } else {
             // Domain not detected, ask user to select
             setConversationState((prev) => ({
