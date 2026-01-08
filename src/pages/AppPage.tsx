@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
@@ -14,9 +14,18 @@ import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
 import { toast } from "sonner";
+
+interface CloneTemplateState {
+  cloneTemplate?: {
+    id: string;
+    imageUrl: string;
+    domain: string;
+    description: string | null;
+  };
+}
 
 const fireConfetti = () => {
   const count = 200;
@@ -64,6 +73,10 @@ const fireConfetti = () => {
 
 export default function AppPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as CloneTemplateState | null;
+  const cloneTemplate = locationState?.cloneTemplate;
+  
   const { user, isAuthenticated, signOut } = useAuth();
   const {
     messages,
@@ -102,7 +115,8 @@ export default function AppPage() {
     resetConversation,
     goBackToStep,
     goForwardToStep,
-  } = useConversation();
+    isCloneMode,
+  } = useConversation(cloneTemplate);
 
   const { history, saveToHistory, clearHistory, isAuthenticated: historyAuth } = useHistory();
 
@@ -205,8 +219,17 @@ export default function AppPage() {
                 Graphiste GPT
               </h1>
               <p className="text-[10px] text-muted-foreground flex items-center gap-1 leading-tight">
-                <Sparkles className="w-2.5 h-2.5 text-primary" />
-                Assistant design premium
+                {isCloneMode ? (
+                  <>
+                    <Copy className="w-2.5 h-2.5 text-accent" />
+                    Mode clonage
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-2.5 h-2.5 text-primary" />
+                    Assistant design premium
+                  </>
+                )}
               </p>
             </div>
           </Link>

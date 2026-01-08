@@ -4,6 +4,8 @@ import { Navbar } from "@/components/landing/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { CaseStudiesSection } from "@/components/landing/CaseStudiesSection";
+import { ShowcaseSection } from "@/components/landing/ShowcaseSection";
+import { TemplatesMarketplace } from "@/components/landing/TemplatesMarketplace";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
@@ -33,6 +35,12 @@ export default function LandingPage() {
         
         {/* Testimonials Section */}
         <TestimonialsSection />
+        
+        {/* Showcase - Community Creations */}
+        <ShowcaseSection />
+        
+        {/* Templates Marketplace */}
+        <TemplatesMarketplace />
         
         {/* Case Studies Section */}
         <CaseStudiesSection />

@@ -22,7 +22,8 @@ export function Navbar({ onGetStarted }: NavbarProps) {
 
   const navLinks = [
     { href: "#", label: "Accueil", active: true },
-    { href: "#about", label: "À propos" },
+    { href: "#showcase", label: "Réalisations" },
+    { href: "#templates", label: "Templates" },
     { href: "#services", label: "Services" },
     { href: "#features", label: "Fonctionnalités" },
     { href: "#contact", label: "Contact" },
