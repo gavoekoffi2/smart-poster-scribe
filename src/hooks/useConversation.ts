@@ -228,10 +228,23 @@ interface CloneTemplateData {
   description: string | null;
 }
 
+interface TemplateQuestion {
+  id: string;
+  question: string;
+  type: "text" | "multiline";
+  placeholder: string;
+  required: boolean;
+}
+
 export function useConversation(cloneTemplate?: CloneTemplateData) {
+  const [isCloneMode] = useState(!!cloneTemplate);
+  const [templateQuestions, setTemplateQuestions] = useState<TemplateQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [templateAnswers, setTemplateAnswers] = useState<Record<string, string>>({});
+  
   const getInitialMessage = () => {
     if (cloneTemplate) {
-      return `Vous avez choisi de cloner un template du domaine "${cloneTemplate.domain}". Décrivez le contenu de votre affiche (textes, dates, contact, etc.) et je créerai un visuel similaire avec vos informations.`;
+      return "J'analyse cette affiche pour comprendre les informations à personnaliser...";
     }
     return INITIAL_MESSAGE;
   };
@@ -247,7 +260,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   ]);
 
   const [conversationState, setConversationState] = useState<ConversationState>({
-    step: "greeting",
+    step: cloneTemplate ? "analyzing_template" : "greeting",
     domain: cloneTemplate?.domain as Domain | undefined,
     referenceImage: cloneTemplate?.imageUrl,
   });
@@ -274,6 +287,98 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       return [...prev, currentStep];
     });
   }, [conversationState.step]);
+
+  // Analyser le template au démarrage en mode clone
+  useEffect(() => {
+    if (isCloneMode && cloneTemplate && conversationState.step === "analyzing_template") {
+      const analyzeTemplate = async () => {
+        setIsProcessing(true);
+        try {
+          // Convertir l'image locale en base64 si nécessaire
+          let imageToAnalyze = cloneTemplate.imageUrl;
+          if (cloneTemplate.imageUrl.startsWith('/')) {
+            try {
+              const res = await fetch(cloneTemplate.imageUrl);
+              if (res.ok) {
+                const blob = await res.blob();
+                imageToAnalyze = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(String(reader.result));
+                  reader.onerror = () => reject(new Error("Impossible de lire l'image"));
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (e) {
+              console.warn("Erreur conversion base64:", e);
+            }
+          }
+
+          const { data, error } = await supabase.functions.invoke("analyze-template", {
+            body: { 
+              imageUrl: imageToAnalyze, 
+              domain: cloneTemplate.domain,
+              existingDescription: cloneTemplate.description
+            },
+          });
+
+          if (error || !data?.success) {
+            console.error("Template analysis error:", error);
+            // Fallback: demander juste les infos de base
+            setTemplateQuestions([
+              { id: "title", question: "Quel est le titre ou thème de votre affiche ?", type: "text", placeholder: "Ex: Grande Veillée de Prière", required: true },
+              { id: "details", question: "Quelles autres informations voulez-vous afficher ?", type: "multiline", placeholder: "Dates, lieu, contact, prix...", required: false }
+            ]);
+          } else {
+            setTemplateQuestions(data.analysis.requiredQuestions || []);
+            
+            // Stocker la description du style pour la génération
+            if (data.analysis.templateDescription || data.analysis.suggestedPrompt) {
+              setConversationState(prev => ({
+                ...prev,
+                referenceDescription: `${data.analysis.templateDescription || ''}. ${data.analysis.suggestedPrompt || ''}`
+              }));
+            }
+          }
+
+          setIsProcessing(false);
+          setConversationState(prev => ({ ...prev, step: "template_questions" }));
+          
+          // Poser la première question
+          const questions = data?.analysis?.requiredQuestions || [
+            { id: "title", question: "Quel est le titre ou thème de votre affiche ?", type: "text", placeholder: "Ex: Grande Veillée de Prière", required: true }
+          ];
+          
+          if (questions.length > 0) {
+            setMessages(prev => prev.filter(m => m.id !== "initial"));
+            setMessages(prev => [...prev, {
+              id: "template-intro",
+              role: "assistant",
+              content: `J'ai analysé cette affiche. Pour créer votre version personnalisée, répondez à quelques questions :\n\n${questions[0].question}`,
+              timestamp: new Date(),
+              image: cloneTemplate.imageUrl
+            }]);
+          }
+        } catch (err) {
+          console.error("Error analyzing template:", err);
+          setIsProcessing(false);
+          // Fallback
+          setTemplateQuestions([
+            { id: "title", question: "Quel est le titre de votre affiche ?", type: "text", placeholder: "Titre principal", required: true }
+          ]);
+          setConversationState(prev => ({ ...prev, step: "template_questions" }));
+          setMessages(prev => [...prev.filter(m => m.id !== "initial"), {
+            id: "template-intro",
+            role: "assistant", 
+            content: "Pour personnaliser cette affiche, quel titre voulez-vous utiliser ?",
+            timestamp: new Date(),
+            image: cloneTemplate.imageUrl
+          }]);
+        }
+      };
+
+      analyzeTemplate();
+    }
+  }, [isCloneMode, cloneTemplate, conversationState.step]);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, image?: string) => {
     const newMessage: ChatMessage = {
@@ -700,6 +805,48 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       // Handle modification requests when in complete state
       if (step === "complete") {
         handleModificationRequest(content);
+        return;
+      }
+
+      // Handle template questions in clone mode
+      if (step === "template_questions") {
+        // Sauvegarder la réponse
+        const currentQuestion = templateQuestions[currentQuestionIndex];
+        if (currentQuestion) {
+          const newAnswers = { ...templateAnswers, [currentQuestion.id]: content };
+          setTemplateAnswers(newAnswers);
+          
+          // Passer à la question suivante ou finaliser
+          if (currentQuestionIndex < templateQuestions.length - 1) {
+            const nextIndex = currentQuestionIndex + 1;
+            setCurrentQuestionIndex(nextIndex);
+            const nextQuestion = templateQuestions[nextIndex];
+            addMessage("assistant", nextQuestion.question);
+          } else {
+            // Toutes les questions ont été répondues, construire les infos et passer aux couleurs
+            const extractedInfo: ExtractedInfo = {};
+            
+            // Mapper les réponses aux champs extractedInfo
+            if (newAnswers.title) extractedInfo.title = newAnswers.title;
+            if (newAnswers.date || newAnswers.dates) extractedInfo.dates = newAnswers.date || newAnswers.dates;
+            if (newAnswers.time) extractedInfo.dates = `${extractedInfo.dates || ''} ${newAnswers.time}`.trim();
+            if (newAnswers.location || newAnswers.lieu) extractedInfo.location = newAnswers.location || newAnswers.lieu;
+            if (newAnswers.contact) extractedInfo.contact = newAnswers.contact;
+            if (newAnswers.price || newAnswers.prix) extractedInfo.prices = newAnswers.price || newAnswers.prix;
+            if (newAnswers.speaker || newAnswers.orateur) extractedInfo.speakers = newAnswers.speaker || newAnswers.orateur;
+            if (newAnswers.details) extractedInfo.additionalDetails = newAnswers.details;
+            if (newAnswers.organizer || newAnswers.organisateur) extractedInfo.organizer = newAnswers.organizer || newAnswers.organisateur;
+            
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
+              extractedInfo: { ...prev.extractedInfo, ...extractedInfo },
+              description: Object.values(newAnswers).join(". "),
+            }));
+            
+            addMessage("assistant", "Parfait ! Choisissez maintenant une palette de couleurs pour votre affiche :");
+          }
+        }
         return;
       }
 

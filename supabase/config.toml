@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.analyze-request]
 verify_jwt = false
+
+[functions.analyze-template]
+verify_jwt = false
