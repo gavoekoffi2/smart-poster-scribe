@@ -264,7 +264,9 @@ export interface ConversationState {
     | "content_image" 
     | "generating" 
     | "complete" 
-    | "modifying";
+    | "modifying"
+    | "analyzing_template" // Analyse d'un template à cloner
+    | "template_questions"; // Questions personnalisées basées sur le template
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
