@@ -61,11 +61,11 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Phone className="w-4 h-4 text-primary" />
-                <span>+33 1 23 45 67 89</span>
+                <span>+228 93708178</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span>Paris, France</span>
+                <span>Lomé, quartier Hédranawoé à côté de la radio Zéphyr-Togo</span>
               </div>
             </div>
           </div>
