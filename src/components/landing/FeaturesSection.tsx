@@ -5,19 +5,19 @@ const services = [
     icon: Palette,
     title: "UI/UX Design",
     description: "Interfaces modernes et intuitives pour vos applications web et mobile.",
-    image: "/reference-templates/service/smart-design-flyer.jpg"
+    image: "/reference-templates/service/designer-professionnel.jpg"
   },
   {
     icon: Layers,
     title: "Web Design",
     description: "Sites web professionnels qui convertissent vos visiteurs en clients.",
-    image: "/reference-templates/event/african-praise.jpg"
+    image: "/reference-templates/event/worship-xperience.jpg"
   },
   {
     icon: Image,
     title: "Landing Page",
     description: "Pages d'atterrissage optimisées pour maximiser vos conversions.",
-    image: "/reference-templates/event/concert-gospel-cct.jpg"
+    image: "/reference-templates/event/praise-worship-concert.jpg"
   }
 ];
 

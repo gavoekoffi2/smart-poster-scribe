@@ -6,19 +6,19 @@ const caseStudies = [
     category: "Consulting",
     title: "Stratégie et Planification",
     subtitle: "Construction d'Idées",
-    image: "/reference-templates/event/concert-gospel-cct.jpg"
+    image: "/reference-templates/formation/webinaire-power-bi.jpg"
   },
   {
     category: "Consulting",
     title: "Finance d'Entreprise pour",
     subtitle: "les Marchés d'aide",
-    image: "/reference-templates/formation/certification-rh.jpg"
+    image: "/reference-templates/formation/certified-hr-manager.jpg"
   },
   {
     category: "Consulting",
     title: "Consulting pour les",
     subtitle: "Organisations Business",
-    image: "/reference-templates/service/smart-design-flyer.jpg"
+    image: "/reference-templates/service/boost-social-media.jpg"
   }
 ];
 
