@@ -2,8 +2,8 @@ import { TrendingUp } from "lucide-react";
 import aboutTeamImage from "@/assets/about-team-african.jpg";
 
 const skills = [
-  { name: "Business Strategy", percentage: 65 },
-  { name: "Technology Consulting", percentage: 90 }
+  { name: "Gain de temps Utilisateurs", percentage: 95 },
+  { name: "Satisfaction Graphistes Partenaires", percentage: 90 }
 ];
 
 export function AboutSection() {
@@ -19,15 +19,14 @@ export function AboutSection() {
           {/* Left - Content */}
           <div>
             <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
-              <span className="text-foreground">Rejoignez la Communauté pour en savoir plus</span>
-              <br />
-              <span className="text-foreground">À propos de notre </span>
-              <span className="gradient-text">Entreprise</span>
+              <span className="text-foreground">Une plateforme qui </span>
+              <span className="gradient-text">profite à tous</span>
             </h2>
             
             <p className="text-muted-foreground mb-8 leading-relaxed">
-              Continuellement, nous générons des communautés 2.0 et des produits axés sur le client. 
-              Synergiquement, nous fabriquons des produits stratégiques alors que les effets de levier.
+              Graphiste GPT réinvente la création graphique. Les utilisateurs obtiennent des affiches professionnelles sans attendre. 
+              Les graphistes se concentrent sur ce qu'ils font de mieux : la créativité. L'IA se charge du travail répétitif. 
+              Chaque template utilisé génère des royalties pour son créateur.
             </p>
             
             {/* Progress bars */}

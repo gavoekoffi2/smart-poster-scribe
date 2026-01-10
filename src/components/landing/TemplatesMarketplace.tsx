@@ -117,7 +117,7 @@ export function TemplatesMarketplace() {
             <span className="gradient-text">Professionnels</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Choisissez un modèle et personnalisez-le avec vos informations. Notre IA s'occupe du reste !
+            Des designs créés par nos graphistes partenaires. Choisissez, personnalisez, et l'IA génère votre affiche. Chaque utilisation rémunère le designer.
           </p>
         </div>
 

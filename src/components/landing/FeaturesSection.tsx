@@ -2,21 +2,21 @@ import { Sparkles, Palette, Zap, Image, MessageSquare, Download, Layers, Clock, 
 
 const services = [
   {
-    icon: Palette,
-    title: "UI/UX Design",
-    description: "Interfaces modernes et intuitives pour vos applications web et mobile.",
+    icon: Sparkles,
+    title: "Pour les Utilisateurs",
+    description: "Créez vos affiches en quelques clics grâce à l'IA. Uploadez une référence ou choisissez un template, l'IA fait le reste.",
     image: "/reference-templates/service/designer-professionnel.jpg"
   },
   {
-    icon: Layers,
-    title: "Web Design",
-    description: "Sites web professionnels qui convertissent vos visiteurs en clients.",
+    icon: Palette,
+    title: "Pour les Graphistes",
+    description: "Soumettez vos designs et gagnez des royalties à chaque utilisation. Concentrez-vous sur la créativité, l'IA automatise le reste.",
     image: "/reference-templates/event/worship-xperience.jpg"
   },
   {
-    icon: Image,
-    title: "Landing Page",
-    description: "Pages d'atterrissage optimisées pour maximiser vos conversions.",
+    icon: Layers,
+    title: "Marketplace de Templates",
+    description: "Des designs professionnels pour tous les secteurs : église, restaurant, événement, formation, e-commerce et plus encore.",
     image: "/reference-templates/event/praise-worship-concert.jpg"
   }
 ];
@@ -78,11 +78,11 @@ export function FeaturesSection() {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-foreground">Mes </span>
-            <span className="gradient-text">Services</span>
+            <span className="text-foreground">Pour Vous et Pour les </span>
+            <span className="gradient-text">Graphistes</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis lacus nunc, posuere in justo vulputate, bibendum sodales
+            Une plateforme où les utilisateurs créent des affiches en secondes, et les graphistes monétisent leur créativité.
           </p>
         </div>
 

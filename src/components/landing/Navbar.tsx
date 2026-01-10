@@ -50,7 +50,7 @@ export function Navbar({ onGetStarted }: NavbarProps) {
               <h1 className="font-display text-xl font-bold text-foreground leading-tight">
                 Graphiste <span className="gradient-text">GPT</span>
               </h1>
-              <p className="text-xs text-muted-foreground leading-tight">IA Design Premium</p>
+              <p className="text-xs text-muted-foreground leading-tight">Graphistes + IA</p>
             </div>
           </Link>
 
