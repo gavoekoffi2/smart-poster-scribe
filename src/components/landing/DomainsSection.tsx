@@ -29,13 +29,13 @@ const domains = [
     icon: Calendar,
     name: "Événement",
     description: "Concerts, festivals, conférences",
-    image: "/reference-templates/event/concert-gospel-cct.jpg"
+    image: "/reference-templates/event/mega-all-night.jpg"
   },
   {
     icon: Briefcase,
     name: "Service",
     description: "Offres professionnelles, portfolios",
-    image: "/reference-templates/service/smart-design-flyer.jpg"
+    image: "/reference-templates/service/ozark-graphics-design.jpg"
   }
 ];
 
