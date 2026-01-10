@@ -1,10 +1,10 @@
-import { Quote } from "lucide-react";
+import { Quote, Sparkles } from "lucide-react";
+import ceoPortrait from "@/assets/ceo-portrait.png";
 
 const testimonial = {
-  quote: "Nous aidons nos clients à renouveler leur fonction commerciale pour créer des organisations de marque remarquables.",
-  author: "Philip Antrophy",
-  role: "SPD & Founder",
-  image: "/reference-templates/service/designer-professionnel.jpg"
+  quote: "Graphiste IA révolutionne la création visuelle en Afrique. En quelques secondes, nos utilisateurs génèrent des affiches professionnelles qui auraient pris des heures à concevoir. C'est la démocratisation du design graphique : chaque entrepreneur, chaque église, chaque restaurant peut désormais avoir des visuels de qualité internationale sans compétences techniques.",
+  author: "Emmanuel Kokou",
+  role: "CEO & Fondateur, Graphiste IA",
 };
 
 export function TestimonialsSection() {
@@ -18,10 +18,15 @@ export function TestimonialsSection() {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Content */}
           <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">Témoignage du Fondateur</span>
+            </div>
+            
             <h2 className="font-display text-4xl md:text-5xl font-bold mb-8">
-              <span className="text-foreground">Ce que dit notre CEO, À propos</span>
+              <span className="text-foreground">La Vision Derrière</span>
               <br />
-              <span className="gradient-text">des Clients Graphiste</span>
+              <span className="gradient-text">Graphiste IA</span>
             </h2>
             
             <div className="relative mb-8">
@@ -40,24 +45,66 @@ export function TestimonialsSection() {
             </div>
             
             <button className="px-6 py-3 rounded-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300">
-              Clients Review
+              Découvrir notre mission
             </button>
           </div>
           
-          {/* Right Content - Testimonial image */}
-          <div className="relative">
-            {/* Quote mark background */}
-            <div className="absolute -top-8 -left-8 w-24 h-24 bg-primary rounded-2xl flex items-center justify-center z-10">
-              <Quote className="w-12 h-12 text-primary-foreground" />
+          {/* Right Content - CEO Portrait with 3D Animation */}
+          <div className="relative flex justify-center">
+            {/* Animated rings around portrait */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {/* Outer ring - slowest */}
+              <div className="absolute w-80 h-80 rounded-full border-2 border-primary/20 animate-spin-slow" 
+                   style={{ animationDuration: '20s' }} />
+              
+              {/* Middle ring */}
+              <div className="absolute w-72 h-72 rounded-full border border-primary/30 animate-spin-slow" 
+                   style={{ animationDuration: '15s', animationDirection: 'reverse' }} />
+              
+              {/* Inner ring - fastest */}
+              <div className="absolute w-64 h-64 rounded-full border-2 border-primary/40 animate-spin-slow" 
+                   style={{ animationDuration: '10s' }} />
             </div>
             
-            <div className="relative rounded-[40px] overflow-hidden">
-              <img 
-                src={testimonial.image}
-                alt="Client satisfait"
-                className="w-full h-[400px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+            {/* Floating particles */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute w-3 h-3 bg-primary rounded-full animate-float-particle" 
+                   style={{ top: '10%', left: '20%', animationDelay: '0s' }} />
+              <div className="absolute w-2 h-2 bg-primary/70 rounded-full animate-float-particle" 
+                   style={{ top: '80%', left: '15%', animationDelay: '1s' }} />
+              <div className="absolute w-4 h-4 bg-primary/50 rounded-full animate-float-particle" 
+                   style={{ top: '20%', right: '10%', animationDelay: '2s' }} />
+              <div className="absolute w-2 h-2 bg-primary rounded-full animate-float-particle" 
+                   style={{ bottom: '15%', right: '20%', animationDelay: '0.5s' }} />
+              <div className="absolute w-3 h-3 bg-primary/60 rounded-full animate-float-particle" 
+                   style={{ top: '50%', left: '5%', animationDelay: '1.5s' }} />
+            </div>
+            
+            {/* Quote mark background */}
+            <div className="absolute -top-4 -left-4 w-16 h-16 bg-primary rounded-full flex items-center justify-center z-20 shadow-lg shadow-primary/30 animate-pulse-glow">
+              <Quote className="w-8 h-8 text-primary-foreground" />
+            </div>
+            
+            {/* CEO Portrait - Circular with glow effect */}
+            <div className="relative z-10">
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/50 to-primary/20 blur-xl transform scale-110 animate-pulse-glow" />
+              
+              {/* Portrait container */}
+              <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-primary/30 shadow-2xl shadow-primary/20 animate-float-portrait">
+                <img 
+                  src={ceoPortrait}
+                  alt="Emmanuel Kokou - CEO Graphiste IA"
+                  className="w-full h-full object-cover object-top"
+                />
+                {/* Subtle overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
+              </div>
+            </div>
+            
+            {/* Decorative elements */}
+            <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-secondary rounded-full flex items-center justify-center z-20 animate-bounce-slow">
+              <Sparkles className="w-6 h-6 text-secondary-foreground" />
             </div>
           </div>
         </div>
