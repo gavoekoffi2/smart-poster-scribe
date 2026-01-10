@@ -23,6 +23,8 @@ export type Database = {
           domain: string | null
           id: string
           image_url: string
+          is_free_plan: boolean | null
+          is_showcase: boolean | null
           logo_positions: string[] | null
           logo_urls: string[] | null
           prompt: string
@@ -38,6 +40,8 @@ export type Database = {
           domain?: string | null
           id?: string
           image_url: string
+          is_free_plan?: boolean | null
+          is_showcase?: boolean | null
           logo_positions?: string[] | null
           logo_urls?: string[] | null
           prompt: string
@@ -53,6 +57,8 @@ export type Database = {
           domain?: string | null
           id?: string
           image_url?: string
+          is_free_plan?: boolean | null
+          is_showcase?: boolean | null
           logo_positions?: string[] | null
           logo_urls?: string[] | null
           prompt?: string
