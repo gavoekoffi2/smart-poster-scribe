@@ -2,7 +2,7 @@ import { Quote, Sparkles } from "lucide-react";
 import ceoPortrait from "@/assets/ceo-portrait.png";
 
 const testimonial = {
-  quote: "Graphiste IA révolutionne la création visuelle en Afrique. En quelques secondes, nos utilisateurs génèrent des affiches professionnelles qui auraient pris des heures à concevoir. C'est la démocratisation du design graphique : chaque entrepreneur, chaque église, chaque restaurant peut désormais avoir des visuels de qualité internationale sans compétences techniques.",
+  quote: "Les graphistes créent, l'IA automatise. Sur Graphiste IA, les designers soumettent leurs créations et perçoivent des royalties à chaque utilisation. Les clients génèrent des visuels pro en quelques clics. Tout le monde gagne : du temps, de l'argent, et de la qualité.",
   author: "Emmanuel Kokou",
   role: "CEO & Fondateur, Graphiste IA",
 };
