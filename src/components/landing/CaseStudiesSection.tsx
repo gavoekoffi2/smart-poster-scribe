@@ -12,7 +12,7 @@ const caseStudies = [
     category: "Consulting",
     title: "Finance d'Entreprise pour",
     subtitle: "les Marchés d'aide",
-    image: "/reference-templates/formation/formation-1.jpg"
+    image: "/reference-templates/formation/certification-rh.jpg"
   },
   {
     category: "Consulting",
