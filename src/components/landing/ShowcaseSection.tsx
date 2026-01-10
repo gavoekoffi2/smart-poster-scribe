@@ -68,8 +68,35 @@ export function ShowcaseSection() {
     );
   }
 
+  // Show section with title but empty content when no images
   if (images.length === 0) {
-    return null;
+    return (
+      <section id="showcase" className="py-24 px-4 relative overflow-hidden">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/5 to-transparent" />
+        <div className="absolute top-1/3 left-0 w-80 h-80 bg-primary/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/3 right-0 w-96 h-96 bg-accent/10 rounded-full blur-[120px]" />
+
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Vitrine</span>
+            </div>
+            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+              <span className="text-foreground">Créés avec </span>
+              <span className="gradient-text">Graphiste GPT</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+              Des affiches professionnelles générées en quelques secondes. Les visuels créés par nos utilisateurs apparaîtront ici.
+            </p>
+            <p className="text-sm text-muted-foreground/60 italic">
+              Soyez le premier à créer une affiche et elle apparaîtra ici ! ✨
+            </p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
