@@ -3,7 +3,7 @@ import ceoPortrait from "@/assets/ceo-portrait.png";
 
 const testimonial = {
   quote: "Les graphistes créent, l'IA automatise. Sur Graphiste IA, les designers soumettent leurs créations et perçoivent des royalties à chaque utilisation. Les clients génèrent des visuels pro en quelques clics. Tout le monde gagne : du temps, de l'argent, et de la qualité.",
-  author: "Emmanuel Kokou",
+  author: "GAVOE Koffi Claude",
   role: "CEO & Fondateur, Graphiste IA",
 };
 
