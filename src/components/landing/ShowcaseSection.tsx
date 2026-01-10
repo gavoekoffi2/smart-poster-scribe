@@ -24,6 +24,8 @@ export function ShowcaseSection() {
       const { data, error } = await supabase
         .from("generated_images")
         .select("id, image_url, prompt, domain, created_at")
+        .eq("is_free_plan", true)
+        .eq("is_showcase", true)
         .order("created_at", { ascending: false })
         .limit(12);
 
