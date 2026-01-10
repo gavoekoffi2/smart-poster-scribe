@@ -1,36 +1,58 @@
 import { Sparkles, Mail, Phone, MapPin, Github, Twitter, Linkedin, Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
-
 export function Footer() {
   const footerLinks = {
-    product: [
-      { label: "Fonctionnalités", href: "#features" },
-      { label: "Tarifs", href: "#pricing" },
-      { label: "Templates", href: "#templates" },
-      { label: "API", href: "#api" },
-    ],
-    company: [
-      { label: "À propos", href: "#about" },
-      { label: "Blog", href: "#blog" },
-      { label: "Carrières", href: "#careers" },
-      { label: "Contact", href: "#contact" },
-    ],
-    legal: [
-      { label: "Confidentialité", href: "#privacy" },
-      { label: "CGU", href: "#terms" },
-      { label: "Cookies", href: "#cookies" },
-    ],
+    product: [{
+      label: "Fonctionnalités",
+      href: "#features"
+    }, {
+      label: "Tarifs",
+      href: "#pricing"
+    }, {
+      label: "Templates",
+      href: "#templates"
+    }, {
+      label: "API",
+      href: "#api"
+    }],
+    company: [{
+      label: "À propos",
+      href: "#about"
+    }, {
+      label: "Blog",
+      href: "#blog"
+    }, {
+      label: "Carrières",
+      href: "#careers"
+    }, {
+      label: "Contact",
+      href: "#contact"
+    }],
+    legal: [{
+      label: "Confidentialité",
+      href: "#privacy"
+    }, {
+      label: "CGU",
+      href: "#terms"
+    }, {
+      label: "Cookies",
+      href: "#cookies"
+    }]
   };
-
-  const socialLinks = [
-    { icon: Twitter, href: "#" },
-    { icon: Linkedin, href: "#" },
-    { icon: Instagram, href: "#" },
-    { icon: Github, href: "#" },
-  ];
-
-  return (
-    <footer className="relative border-t border-border/30 bg-card/30 overflow-hidden">
+  const socialLinks = [{
+    icon: Twitter,
+    href: "#"
+  }, {
+    icon: Linkedin,
+    href: "#"
+  }, {
+    icon: Instagram,
+    href: "#"
+  }, {
+    icon: Github,
+    href: "#"
+  }];
+  return <footer className="relative border-t border-border/30 bg-card/30 overflow-hidden">
       {/* Background effects */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[150px]" />
       
@@ -57,7 +79,7 @@ export function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Mail className="w-4 h-4 text-primary" />
-                <span>contact@graphistegpt.com</span>
+                <span>contact@graphistegpt.pro</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <Phone className="w-4 h-4 text-primary" />
@@ -74,13 +96,11 @@ export function Footer() {
           <div>
             <h4 className="font-display font-semibold text-foreground mb-4">Produit</h4>
             <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.label}>
+              {footerLinks.product.map(link => <li key={link.label}>
                   <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
                   </a>
-                </li>
-              ))}
+                </li>)}
             </ul>
           </div>
 
@@ -88,13 +108,11 @@ export function Footer() {
           <div>
             <h4 className="font-display font-semibold text-foreground mb-4">Entreprise</h4>
             <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
+              {footerLinks.company.map(link => <li key={link.label}>
                   <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
                   </a>
-                </li>
-              ))}
+                </li>)}
             </ul>
           </div>
 
@@ -102,13 +120,11 @@ export function Footer() {
           <div>
             <h4 className="font-display font-semibold text-foreground mb-4">Légal</h4>
             <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
-                <li key={link.label}>
+              {footerLinks.legal.map(link => <li key={link.label}>
                   <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
                   </a>
-                </li>
-              ))}
+                </li>)}
             </ul>
           </div>
         </div>
@@ -121,18 +137,11 @@ export function Footer() {
           
           {/* Social links */}
           <div className="flex items-center gap-4">
-            {socialLinks.map((social, index) => (
-              <a 
-                key={index}
-                href={social.href}
-                className="w-10 h-10 rounded-full bg-secondary hover:bg-primary/20 border border-border/40 hover:border-primary/40 flex items-center justify-center transition-all duration-300"
-              >
+            {socialLinks.map((social, index) => <a key={index} href={social.href} className="w-10 h-10 rounded-full bg-secondary hover:bg-primary/20 border border-border/40 hover:border-primary/40 flex items-center justify-center transition-all duration-300">
                 <social.icon className="w-4 h-4 text-muted-foreground" />
-              </a>
-            ))}
+              </a>)}
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 }
