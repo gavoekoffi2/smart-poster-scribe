@@ -5,35 +5,27 @@ const steps = [
   {
     number: "1",
     icon: Lightbulb,
-    title: "Idée Generate",
-    description: "Décrivez votre projet et laissez notre IA générer des concepts créatifs."
+    title: "Décrivez votre projet",
+    description: "Expliquez ce que vous voulez : événement, promotion, concert, formation..."
   },
   {
     number: "2",
     icon: Layers,
-    title: "System Design",
-    description: "Notre système crée automatiquement des designs professionnels adaptés."
+    title: "Choisissez un template",
+    description: "Sélectionnez parmi nos designs créés par des graphistes pros ou uploadez une référence."
   },
   {
     number: "3",
     icon: HeadphonesIcon,
-    title: "24/7 Support",
-    description: "Une assistance continue pour tous vos besoins de création graphique."
+    title: "L'IA génère votre affiche",
+    description: "Notre IA s'inspire du style choisi pour créer votre visuel personnalisé."
   },
   {
     number: "4",
     icon: TrendingUp,
-    title: "Sales Generate",
-    description: "Des visuels qui convertissent et génèrent plus de ventes pour vous."
+    title: "Téléchargez et partagez",
+    description: "Récupérez votre affiche HD prête à l'impression ou au partage sur les réseaux."
   }
-];
-
-const brands = [
-  "TECHNOLOGY",
-  "travel WORLD",
-  "CONNECT",
-  "ZETRA Z",
-  "TECHNOLOGY"
 ];
 
 export function ProcessSection() {
@@ -77,39 +69,24 @@ export function ProcessSection() {
           {/* Right - Content */}
           <div className="lg:pl-8">
             <h2 className="font-display text-4xl md:text-5xl font-bold mb-6">
-              <span className="text-foreground">La Méthode la Plus Rapide pour Atteindre le</span>{" "}
-              <span className="gradient-text">Technology Consulting</span>
+              <span className="text-foreground">Comment ça </span>
+              <span className="gradient-text">marche ?</span>
             </h2>
             
             <h3 className="text-xl font-semibold text-foreground mb-4">
-              Pourquoi Choisir <span className="gradient-text">Graphiste GPT</span> ? Découvrez qui nous sommes
+              La puissance des <span className="gradient-text">graphistes</span> + l'efficacité de <span className="gradient-text">l'IA</span>
             </h3>
             
             <p className="text-muted-foreground mb-8 leading-relaxed">
-              Nous créons une valeur de marque mondiale avant de traiter les données de manière transparente. 
-              Collaborativement, nous initions une expertise stratégique après des modèles fonctionnalisés. 
-              Synergiquement, nous optimisons le front-end et la convergence alors que la ressource apprend.
+              Graphiste GPT combine la créativité des designers professionnels avec la puissance de l'IA. 
+              Les graphistes créent les templates et perçoivent des royalties à chaque utilisation. 
+              L'IA automatise la personnalisation. Résultat : des visuels de qualité en quelques secondes.
             </p>
             
             <Button className="glow-orange bg-gradient-to-r from-primary to-accent rounded-full px-8 py-6 text-lg group">
-              Plus d'infos
+              Créer mon affiche
               <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
             </Button>
-          </div>
-        </div>
-        
-        {/* Brands row */}
-        <div className="mt-20 pt-12 border-t border-border/30">
-          <p className="text-center text-muted-foreground mb-8">Plus de 5K+ Marques travaillent avec Graphiste GPT</p>
-          <div className="flex flex-wrap justify-center items-center gap-12">
-            {brands.map((brand, i) => (
-              <div 
-                key={i}
-                className="text-2xl font-display font-bold text-muted-foreground/50 hover:text-primary transition-colors duration-300"
-              >
-                {brand}
-              </div>
-            ))}
           </div>
         </div>
       </div>

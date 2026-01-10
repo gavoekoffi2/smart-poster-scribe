@@ -68,11 +68,11 @@ export function Footer() {
                 <h3 className="font-display text-xl font-bold text-foreground">
                   Graphiste <span className="gradient-text">GPT</span>
                 </h3>
-                <p className="text-xs text-muted-foreground">IA Design Premium</p>
+                <p className="text-xs text-muted-foreground">Graphistes + IA = Visuels Pro</p>
               </div>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-sm">
-              Transformez vos idées en visuels professionnels grâce à l'intelligence artificielle. Design sans limites.
+              La plateforme où les graphistes créent des templates et gagnent des royalties. L'IA génère vos affiches personnalisées en quelques secondes.
             </p>
             
             {/* Contact info */}

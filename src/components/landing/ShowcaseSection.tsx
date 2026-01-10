@@ -84,14 +84,14 @@ export function ShowcaseSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Réalisations</span>
+            <span className="text-sm font-medium text-primary">Vitrine</span>
           </div>
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-foreground">Créés par notre </span>
-            <span className="gradient-text">Communauté</span>
+            <span className="text-foreground">Créés avec </span>
+            <span className="gradient-text">Graphiste GPT</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Découvrez les visuels créés par nos utilisateurs. Laissez-vous inspirer par leur créativité !
+            Des affiches professionnelles générées en quelques secondes. Ces visuels ont été créés par nos utilisateurs grâce à l'IA.
           </p>
         </div>
 

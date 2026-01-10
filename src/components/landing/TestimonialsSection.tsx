@@ -2,9 +2,9 @@ import { Quote, Sparkles } from "lucide-react";
 import ceoPortrait from "@/assets/ceo-portrait.png";
 
 const testimonial = {
-  quote: "Les graphistes créent, l'IA automatise. Sur Graphiste IA, les designers soumettent leurs créations et perçoivent des royalties à chaque utilisation. Les clients génèrent des visuels pro en quelques clics. Tout le monde gagne : du temps, de l'argent, et de la qualité.",
+  quote: "Les graphistes créent, l'IA automatise. Sur Graphiste GPT, les designers se concentrent sur la créativité et soumettent leurs meilleures créations. L'IA personnalise ces designs pour les clients. Les graphistes perçoivent des royalties, les clients gagnent du temps. Tout le monde y gagne.",
   author: "GAVOE Koffi Claude",
-  role: "CEO & Fondateur, Graphiste IA",
+  role: "CEO & Fondateur, Graphiste GPT",
 };
 
 export function TestimonialsSection() {
@@ -92,9 +92,9 @@ export function TestimonialsSection() {
               
               {/* Portrait container */}
               <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-primary/30 shadow-2xl shadow-primary/20 animate-float-portrait">
-                <img 
+              <img 
                   src={ceoPortrait}
-                  alt="Emmanuel Kokou - CEO Graphiste IA"
+                  alt="GAVOE Koffi Claude - CEO Graphiste GPT"
                   className="w-full h-full object-cover object-top"
                 />
                 {/* Subtle overlay gradient */}

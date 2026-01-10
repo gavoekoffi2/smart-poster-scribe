@@ -33,25 +33,25 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
 
             {/* Main Title */}
             <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] animate-fade-up" style={{ animationDelay: "0.1s" }}>
-              <span className="text-foreground">Votre</span>{" "}
-              <span className="gradient-text">Business</span>
+              <span className="text-foreground">Créez des</span>{" "}
+              <span className="gradient-text">affiches pro</span>
               <br />
-              <span className="gradient-text">Success</span>{" "}
-              <span className="text-foreground">avec l'IA</span>
+              <span className="text-foreground">en</span>{" "}
+              <span className="gradient-text">quelques secondes</span>
             </h1>
 
             {/* Description */}
             <p className="text-lg text-muted-foreground mb-8 max-w-lg animate-fade-up" style={{ animationDelay: "0.15s" }}>
-              Graphiste GPT transforme vos idées en visuels professionnels instantanément. 
-              Notre assistant IA crée des designs de haute qualité pour votre entreprise.
+              Uploadez une affiche de référence ou choisissez parmi nos templates créés par des graphistes pros. 
+              L'IA s'inspire de leur design pour générer votre affiche personnalisée.
             </p>
 
             {/* Key points - like reference */}
             <div className="space-y-3 mb-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
               {[
-                "Création de visuels professionnels en quelques secondes",
-                "Templates adaptés à chaque secteur d'activité",
-                "Export haute définition prêt à l'impression"
+                "Affiches générées en quelques secondes",
+                "Templates pro créés par des graphistes experts",
+                "Les designers gagnent des royalties à chaque utilisation"
               ].map((point, i) => (
                 <div key={i} className="flex items-center gap-3 text-left">
                   <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
@@ -83,10 +83,10 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             {/* Stats row - like reference */}
             <div className="grid grid-cols-4 gap-6 pt-8 border-t border-border/30 animate-fade-up" style={{ animationDelay: "0.4s" }}>
               {[
-                { value: "1,139", label: "Projets Créés", suffix: "" },
-                { value: "19", label: "Années Expérience", suffix: "+" },
-                { value: "32", label: "Expert Members", suffix: "+" },
-                { value: "1,139", label: "Taux Satisfaction", suffix: "+" },
+                { value: "5K+", label: "Visuels Créés", suffix: "" },
+                { value: "50+", label: "Graphistes Partenaires", suffix: "" },
+                { value: "10+", label: "Domaines Couverts", suffix: "" },
+                { value: "98%", label: "Satisfaction Client", suffix: "" },
               ].map((stat, i) => (
                 <div key={i} className="text-center lg:text-left">
                   <div className="flex items-baseline justify-center lg:justify-start gap-1">
