@@ -1,4 +1,5 @@
 import { TrendingUp } from "lucide-react";
+import aboutTeamImage from "@/assets/about-team.jpg";
 
 const skills = [
   { name: "Business Strategy", percentage: 65 },
@@ -55,7 +56,7 @@ export function AboutSection() {
             
             <div className="relative rounded-[40px] overflow-hidden">
               <img 
-                src="/reference-templates/formation/formation-2.jpg"
+                src={aboutTeamImage}
                 alt="Notre équipe au travail"
                 className="w-full h-[400px] object-cover"
               />
