@@ -3,13 +3,11 @@ import { Scene3D } from "@/components/landing/Scene3D";
 import { Navbar } from "@/components/landing/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
-import { CaseStudiesSection } from "@/components/landing/CaseStudiesSection";
 import { ShowcaseSection } from "@/components/landing/ShowcaseSection";
 import { TemplatesMarketplace } from "@/components/landing/TemplatesMarketplace";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { DomainsSection } from "@/components/landing/DomainsSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { Footer } from "@/components/landing/Footer";
 
@@ -36,14 +34,11 @@ export default function LandingPage() {
         {/* Testimonials Section */}
         <TestimonialsSection />
         
-        {/* Showcase - Community Creations */}
-        <ShowcaseSection />
-        
-        {/* Templates Marketplace */}
+        {/* Templates Marketplace - Unique section for templates */}
         <TemplatesMarketplace />
         
-        {/* Case Studies Section */}
-        <CaseStudiesSection />
+        {/* Showcase - Community Creations (only shows when there are real user images) */}
+        <ShowcaseSection />
         
         {/* Process Section */}
         <ProcessSection />
@@ -53,9 +48,6 @@ export default function LandingPage() {
         
         {/* Features/Services Section */}
         <FeaturesSection />
-        
-        {/* Domains Section */}
-        <DomainsSection />
         
         {/* CTA Section */}
         <CTASection onGetStarted={handleGetStarted} />

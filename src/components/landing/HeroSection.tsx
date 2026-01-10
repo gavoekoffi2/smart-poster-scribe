@@ -9,34 +9,33 @@ interface HeroSectionProps {
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
   return (
-    <section className="relative min-h-screen flex items-center px-4 pt-24 pb-12 overflow-hidden">
+    <section className="relative min-h-screen flex items-center px-4 pt-16 pb-8 overflow-hidden">
       {/* Organic background shapes */}
-      <div className="absolute top-20 right-[20%] w-[500px] h-[500px] rounded-full bg-primary/20 blur-[150px] animate-pulse-glow" />
-      <div className="absolute bottom-20 left-[10%] w-[400px] h-[400px] rounded-full bg-accent/15 blur-[120px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
+      <div className="absolute top-10 right-[20%] w-[500px] h-[500px] rounded-full bg-primary/20 blur-[150px] animate-pulse-glow" />
+      <div className="absolute bottom-10 left-[10%] w-[400px] h-[400px] rounded-full bg-accent/15 blur-[120px] animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
       
       {/* Decorative shapes - like reference */}
-      <div className="absolute top-32 left-8 w-16 h-16 border-2 border-primary/30 rounded-lg rotate-12 animate-float opacity-40" />
-      <div className="absolute bottom-40 right-12 w-12 h-12 bg-primary/20 rounded-full animate-float opacity-60" style={{ animationDelay: "0.5s" }} />
-      <div className="absolute top-1/2 left-4 flex flex-col gap-2">
+      <div className="absolute top-24 left-8 w-16 h-16 border-2 border-primary/30 rounded-lg rotate-12 animate-float opacity-40" />
+      <div className="absolute bottom-32 right-12 w-12 h-12 bg-primary/20 rounded-full animate-float opacity-60" style={{ animationDelay: "0.5s" }} />
+      <div className="absolute top-1/3 left-4 flex flex-col gap-2">
         <div className="w-3 h-3 border border-primary/50 rotate-45" />
         <div className="w-3 h-3 border border-primary/50 rotate-45" />
       </div>
       
       <div className="container mx-auto relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-6 items-start">
           {/* Left Content */}
-          <div className="text-center lg:text-left order-2 lg:order-1">
+          <div className="text-left order-2 lg:order-1 pt-4 lg:pt-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-8 animate-fade-up">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6 animate-fade-up">
               <span className="text-sm font-medium text-primary">👋 Bienvenue !</span>
             </div>
 
             {/* Main Title */}
-            <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] animate-fade-up" style={{ animationDelay: "0.1s" }}>
-              <span className="text-foreground">Créez des</span>{" "}
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-5 leading-[1.1] animate-fade-up" style={{ animationDelay: "0.1s" }}>
+              <span className="text-foreground">Créez des </span>
               <span className="gradient-text">affiches pro</span>
-              <br />
-              <span className="text-foreground">en</span>{" "}
+              <span className="text-foreground"> en </span>
               <span className="gradient-text">quelques secondes</span>
             </h1>
 
@@ -47,21 +46,21 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             </p>
 
             {/* Key points - like reference */}
-            <div className="space-y-3 mb-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+            <div className="space-y-2 mb-6 animate-fade-up" style={{ animationDelay: "0.2s" }}>
               {[
                 "Affiches générées en quelques secondes",
                 "Templates pro créés par des graphistes experts",
                 "Les designers gagnent des royalties à chaque utilisation"
               ].map((point, i) => (
-                <div key={i} className="flex items-center gap-3 text-left">
-                  <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                  <span className="text-muted-foreground">{point}</span>
+                <div key={i} className="flex items-center gap-3">
+                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">{point}</span>
                 </div>
               ))}
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12 animate-fade-up" style={{ animationDelay: "0.3s" }}>
+            <div className="flex flex-col sm:flex-row gap-3 justify-start mb-8 animate-fade-up" style={{ animationDelay: "0.3s" }}>
               <Button 
                 size="lg" 
                 onClick={onGetStarted}
@@ -81,29 +80,26 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             </div>
 
             {/* Stats row - like reference */}
-            <div className="grid grid-cols-4 gap-6 pt-8 border-t border-border/30 animate-fade-up" style={{ animationDelay: "0.4s" }}>
+            <div className="grid grid-cols-4 gap-4 pt-6 border-t border-border/30 animate-fade-up" style={{ animationDelay: "0.4s" }}>
               {[
-                { value: "5K+", label: "Visuels Créés", suffix: "" },
-                { value: "50+", label: "Graphistes Partenaires", suffix: "" },
-                { value: "10+", label: "Domaines Couverts", suffix: "" },
-                { value: "98%", label: "Satisfaction Client", suffix: "" },
+                { value: "5K+", label: "Visuels Créés" },
+                { value: "50+", label: "Graphistes" },
+                { value: "10+", label: "Domaines" },
+                { value: "98%", label: "Satisfaction" },
               ].map((stat, i) => (
-                <div key={i} className="text-center lg:text-left">
-                  <div className="flex items-baseline justify-center lg:justify-start gap-1">
-                    <span className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</span>
-                    <span className="text-primary font-bold">{stat.suffix}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                <div key={i} className="text-left">
+                  <span className="text-xl md:text-2xl font-bold text-foreground">{stat.value}</span>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Right Content - Hero Image */}
-          <div className="relative order-1 lg:order-2 flex justify-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
+          <div className="relative order-1 lg:order-2 flex justify-center animate-fade-up -mt-4 lg:mt-0" style={{ animationDelay: "0.2s" }}>
             {/* Orange blob background - like reference */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="w-[350px] h-[400px] md:w-[450px] md:h-[500px] relative">
+              <div className="w-[280px] h-[320px] md:w-[380px] md:h-[420px] relative">
                 {/* Main organic orange shape */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-primary rounded-[60%_40%_30%_70%/60%_30%_70%_40%] animate-morph opacity-90" />
                 <div className="absolute inset-4 bg-gradient-to-tl from-accent via-primary to-accent rounded-[40%_60%_70%_30%/40%_70%_30%_60%] animate-morph opacity-80" style={{ animationDelay: "1s" }} />
@@ -111,11 +107,11 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             </div>
             
             {/* Main hero image - African designer with robot */}
-            <div className="relative z-10 w-full max-w-[500px] aspect-[4/3]">
+            <div className="relative z-10 w-full max-w-[420px] aspect-[4/3]">
               <img 
                 src={heroImage} 
                 alt="Graphiste africain assisté par un robot IA" 
-                className="w-full h-full object-cover rounded-3xl shadow-2xl shadow-primary/20"
+                className="w-full h-full object-cover rounded-2xl shadow-2xl shadow-primary/20"
               />
               
               {/* Floating stats cards */}
