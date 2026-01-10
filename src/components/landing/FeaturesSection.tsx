@@ -11,7 +11,7 @@ const services = [
     icon: Layers,
     title: "Web Design",
     description: "Sites web professionnels qui convertissent vos visiteurs en clients.",
-    image: "/reference-templates/formation/formation-1.jpg"
+    image: "/reference-templates/event/african-praise.jpg"
   },
   {
     icon: Image,
