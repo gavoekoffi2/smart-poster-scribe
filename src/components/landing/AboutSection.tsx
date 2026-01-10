@@ -1,5 +1,5 @@
 import { TrendingUp } from "lucide-react";
-import aboutTeamImage from "@/assets/about-team.jpg";
+import aboutTeamImage from "@/assets/about-team-african.jpg";
 
 const skills = [
   { name: "Business Strategy", percentage: 65 },
