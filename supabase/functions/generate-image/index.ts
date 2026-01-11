@@ -7,9 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const KIE_API_BASE = "https://api.kie.ai/api/v1/jobs";
 
-// Détecte les formats d'entrée image supportés
+interface KieCreateTaskResponse {
+  code: number;
+  msg: string;
+  data?: {
+    taskId: string;
+  };
+}
+
+interface KieRecordInfoResponse {
+  code: number;
+  msg: string;
+  data?: {
+    taskId: string;
+    model: string;
+    state: "waiting" | "success" | "fail";
+    param: string;
+    resultJson?: string;
+    failCode?: string;
+    failMsg?: string;
+    costTime?: number;
+    completeTime?: number;
+    createTime: number;
+  };
+}
+
+interface KieResultJson {
+  resultUrls?: string[];
+  resultObject?: Record<string, unknown>;
+}
+
 function isHttpUrl(str: string): boolean {
   return str.startsWith("http://") || str.startsWith("https://");
 }
@@ -29,32 +58,121 @@ function resolveUrlLike(input: string, origin?: string): string {
   throw new Error("Entrée URL invalide");
 }
 
-// Convertit une URL en base64 data URL
-async function urlToBase64(url: string): Promise<string> {
-  console.log("Converting URL to base64:", url);
-  const response = await fetch(url);
+async function downloadAndUploadImage(
+  supabase: any,
+  imageUrl: string,
+  prefix: string
+): Promise<string> {
+  console.log(`Downloading image from URL for ${prefix}:`, imageUrl);
+  
+  const response = await fetch(imageUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status}`);
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-  const contentType = response.headers.get("content-type") || "image/jpeg";
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().startsWith("image/")) {
+    throw new Error(`URL ne retourne pas une image (content-type=${contentType || "unknown"})`);
+  }
+
   const arrayBuffer = await response.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-  return `data:${contentType};base64,${base64}`;
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  let extension = 'jpg';
+  if (contentType.includes('png')) extension = 'png';
+  else if (contentType.includes('webp')) extension = 'webp';
+  
+  const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+  
+  const { error } = await supabase.storage
+    .from('temp-images')
+    .upload(fileName, bytes, {
+      contentType: contentType,
+      upsert: false,
+    });
+  
+  if (error) {
+    console.error(`Storage upload error for ${prefix}:`, error);
+    throw new Error(`Erreur upload ${prefix}: ${error.message}`);
+  }
+  
+  const { data: urlData } = supabase.storage
+    .from('temp-images')
+    .getPublicUrl(fileName);
+  
+  console.log(`${prefix} uploaded successfully from URL:`, urlData.publicUrl);
+  return urlData.publicUrl;
 }
 
-// Prépare une image pour l'API (convertit en base64 si nécessaire)
-async function prepareImageForApi(
+async function uploadBase64ToStorage(
+  supabase: any,
+  base64Data: string,
+  prefix: string
+): Promise<string> {
+  console.log(`Uploading ${prefix} image to storage...`);
+  
+  const matches = base64Data.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
+  if (!matches) {
+    throw new Error(`Format d'image invalide pour ${prefix}. Formats acceptés: jpeg, png, webp`);
+  }
+  
+  const mimeType = matches[1].toLowerCase();
+  const base64Content = matches[2];
+  
+  const binaryString = atob(base64Content);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  const extension = mimeType === 'jpeg' || mimeType === 'jpg' ? 'jpg' : mimeType;
+  const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+  
+  const { error } = await supabase.storage
+    .from('temp-images')
+    .upload(fileName, bytes, {
+      contentType: `image/${mimeType}`,
+      upsert: false,
+    });
+  
+  if (error) {
+    console.error(`Storage upload error for ${prefix}:`, error);
+    throw new Error(`Erreur upload ${prefix}: ${error.message}`);
+  }
+  
+  const { data: urlData } = supabase.storage
+    .from('temp-images')
+    .getPublicUrl(fileName);
+  
+  console.log(`${prefix} uploaded successfully:`, urlData.publicUrl);
+  return urlData.publicUrl;
+}
+
+async function processImage(
+  supabase: any,
   imageData: string,
+  prefix: string,
   origin?: string
 ): Promise<string> {
-  if (imageData.startsWith("data:image/")) {
-    return imageData;
-  }
   if (isUrlLike(imageData)) {
-    const resolvedUrl = isHttpUrl(imageData) ? imageData : resolveUrlLike(imageData, origin);
-    return await urlToBase64(resolvedUrl);
+    const resolved = resolveUrlLike(imageData, origin);
+    return await downloadAndUploadImage(supabase, resolved, prefix);
   }
-  throw new Error("Format d'image non supporté");
+  return await uploadBase64ToStorage(supabase, imageData, prefix);
+}
+
+async function cleanupTempImages(supabase: any, filePaths: string[]) {
+  for (const path of filePaths) {
+    try {
+      const fileName = path.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('temp-images').remove([fileName]);
+        console.log(`Cleaned up temp image: ${fileName}`);
+      }
+    } catch (e) {
+      console.warn(`Failed to cleanup temp image: ${path}`, e);
+    }
+  }
 }
 
 function buildProfessionalPrompt({
@@ -73,7 +191,7 @@ function buildProfessionalPrompt({
   const instructions: string[] = [];
 
   instructions.push(
-    "You are an elite graphic designer. Create a PRINT-READY advertising poster with agency-level polish."
+    "You are an elite graphic designer. Produce a PRINT-READY advertising poster with agency-level polish."
   );
   instructions.push(
     "The poster must look professionally art-directed: clean grid, deliberate spacing, strong hierarchy, premium finishing."
@@ -88,18 +206,18 @@ function buildProfessionalPrompt({
 
   instructions.push("");
   instructions.push("TEXT RULES:");
-  instructions.push("- ONLY print text that appears in USER PROVIDED CONTENT below.");
+  instructions.push("- ONLY print text that appears in USER PROVIDED CONTENT.");
   instructions.push("- Do NOT invent phone numbers, addresses, prices, dates, or any extra information.");
 
   if (hasReferenceImage) {
     instructions.push("");
-    instructions.push("=== REFERENCE IMAGE DESIGN ===");
+    instructions.push("=== REFERENCE IMAGE DESIGN REPLICATION ===");
     instructions.push("The FIRST image is the DESIGN REFERENCE. Replicate its design with MAXIMUM FIDELITY:");
-    instructions.push("1. LAYOUT: Copy the EXACT grid system, margins, and spacing.");
-    instructions.push("2. TYPOGRAPHY: Match font styles, sizes, and hierarchy.");
-    instructions.push("3. COLORS: Replicate the color scheme exactly.");
-    instructions.push("4. GRAPHICS: Copy decorative elements, shapes, and effects.");
-    instructions.push("5. ATMOSPHERE: Reproduce the mood and visual energy.");
+    instructions.push("1. LAYOUT: Copy the EXACT grid system, margins, content zones, and spacing.");
+    instructions.push("2. TYPOGRAPHY: Match font styles, sizes, weights, and hierarchy.");
+    instructions.push("3. COLORS: Replicate the color scheme, gradients, and overlays exactly.");
+    instructions.push("4. GRAPHICS: Copy decorative shapes, lines, frames, patterns, and effects.");
+    instructions.push("5. ATMOSPHERE: Reproduce the mood, lighting, and visual energy.");
     instructions.push("");
     instructions.push("CRITICAL: Generate NEW, DIFFERENT people/characters - NEVER copy faces from reference!");
     instructions.push("CRITICAL: Do NOT copy any text, phone numbers, or contact info from the reference!");
@@ -107,7 +225,7 @@ function buildProfessionalPrompt({
 
   if (hasLogoImage) {
     instructions.push("");
-    instructions.push("LOGO: A logo is provided. Integrate it prominently without distortion.");
+    instructions.push("LOGO: Integrate the provided logo prominently without distortion.");
   }
 
   if (hasContentImage) {
@@ -123,11 +241,118 @@ function buildProfessionalPrompt({
   return instructions.join("\n");
 }
 
-// ============ INPUT VALIDATION CONSTANTS ============
+async function createTask(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+  aspectRatio: string,
+  resolution: string,
+  outputFormat: string
+): Promise<string> {
+  console.log("Creating task with Kie AI...");
+  console.log("Image inputs count:", imageInputs.length);
+
+  const response = await fetch(`${KIE_API_BASE}/createTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "nano-banana-pro",
+      input: {
+        prompt: prompt,
+        image_input: imageInputs,
+        aspect_ratio: aspectRatio,
+        resolution: resolution,
+        output_format: outputFormat,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Create task error:", response.status, errorText);
+    
+    if (response.status === 401) {
+      throw new Error("Clé API Kie AI invalide ou expirée");
+    }
+    if (response.status === 402) {
+      throw new Error("Solde insuffisant sur le compte Kie AI");
+    }
+    if (response.status === 429) {
+      throw new Error("Limite de requêtes atteinte. Réessayez plus tard.");
+    }
+    
+    throw new Error(`Erreur création tâche: ${response.status}`);
+  }
+
+  const data = (await response.json()) as KieCreateTaskResponse;
+  console.log("Create task response:", JSON.stringify(data));
+
+  if (data.code !== 200 || !data.data?.taskId) {
+    throw new Error(`Erreur API Kie: ${data.msg || "Pas de taskId retourné"}`);
+  }
+
+  return data.data.taskId;
+}
+
+async function pollForResult(
+  apiKey: string,
+  taskId: string,
+  maxAttempts: number = 90,
+  intervalMs: number = 3000
+): Promise<string> {
+  console.log(`Polling for result, taskId: ${taskId}`);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Poll attempt ${attempt + 1}/${maxAttempts}`);
+
+    const response = await fetch(
+      `${KIE_API_BASE}/recordInfo?taskId=${taskId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Poll error:", response.status);
+      throw new Error(`Erreur récupération statut: ${response.status}`);
+    }
+
+    const data = (await response.json()) as KieRecordInfoResponse;
+    console.log(`Poll response state: ${data.data?.state}`);
+
+    if (data.data?.state === "success" && data.data.resultJson) {
+      const result = JSON.parse(data.data.resultJson) as KieResultJson;
+      if (result.resultUrls && result.resultUrls.length > 0) {
+        console.log("Generation successful, URL:", result.resultUrls[0]);
+        return result.resultUrls[0];
+      }
+      throw new Error("Pas d'URL dans le résultat");
+    }
+
+    if (data.data?.state === "fail") {
+      throw new Error(
+        `Génération échouée: ${data.data.failMsg || data.data.failCode || "Erreur inconnue"}`
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error("Délai d'attente dépassé pour la génération");
+}
+
 const MAX_PROMPT_LENGTH = 5000;
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_LOGO_COUNT = 5;
 const ALLOWED_ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
+const ALLOWED_RESOLUTIONS = ['1K', '2K', '4K'];
+const ALLOWED_OUTPUT_FORMATS = ['png', 'jpg', 'webp'];
 
 function validateBase64Size(base64: string, maxMB: number, fieldName: string): void {
   if (typeof base64 !== 'string') {
@@ -147,9 +372,9 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY non configurée");
+    const KIE_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+    if (!KIE_API_KEY) {
+      throw new Error("KIE_AI_API_KEY non configurée");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -169,11 +394,13 @@ serve(async (req) => {
       logoPositions,
       contentImage,
       aspectRatio = "3:4",
+      resolution = "2K",
+      outputFormat = "png",
     } = body;
 
     let referenceImage = rawReferenceImage as string | undefined;
 
-    // ============ INPUT VALIDATION ============
+    // Validation
     if (!prompt || typeof prompt !== 'string') {
       throw new Error("Le prompt est requis");
     }
@@ -183,6 +410,14 @@ serve(async (req) => {
 
     if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
       throw new Error(`Format invalide. Formats acceptés: ${ALLOWED_ASPECT_RATIOS.join(', ')}`);
+    }
+
+    if (!ALLOWED_RESOLUTIONS.includes(resolution)) {
+      throw new Error(`Résolution invalide. Résolutions acceptées: ${ALLOWED_RESOLUTIONS.join(', ')}`);
+    }
+
+    if (!ALLOWED_OUTPUT_FORMATS.includes(outputFormat)) {
+      throw new Error(`Format de sortie invalide. Formats acceptés: ${ALLOWED_OUTPUT_FORMATS.join(', ')}`);
     }
 
     if (referenceImage && !isUrlLike(referenceImage)) {
@@ -212,7 +447,6 @@ serve(async (req) => {
     console.log("- Has reference image:", !!referenceImage);
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Has content image:", !!contentImage);
-    console.log("- Aspect ratio:", aspectRatio);
 
     const originHeader = req.headers.get("origin") || undefined;
     const refererHeader = req.headers.get("referer") || undefined;
@@ -222,71 +456,53 @@ serve(async (req) => {
         ? new URL(refererHeader).origin
         : undefined;
 
-    // Auto-pick a template if no images provided
+    // Auto-pick template if no images
     if (!referenceImage && !contentImage && (!logoImages || logoImages.length === 0)) {
-      console.log("No user images provided. Selecting a fallback style template...");
+      console.log("No user images. Selecting fallback template...");
       try {
-        const { data: tplCandidates, error: tplError } = await supabase
+        const { data: tplCandidates } = await supabase
           .from("reference_templates")
-          .select("image_url, domain, design_category")
+          .select("image_url, domain")
           .order("created_at", { ascending: false })
           .limit(40);
 
-        if (!tplError && tplCandidates && tplCandidates.length > 0) {
+        if (tplCandidates && tplCandidates.length > 0) {
           const picked = tplCandidates[Math.floor(Math.random() * tplCandidates.length)];
           referenceImage = picked.image_url;
-          console.log(`Picked fallback template: ${picked.domain}/${picked.design_category}`);
+          console.log(`Picked fallback template: ${picked.domain}`);
         }
       } catch (e) {
-        console.warn("Error selecting fallback template:", e);
+        console.warn("Error selecting fallback:", e);
       }
     }
 
-    // Build messages content array for Lovable AI
-    const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
-
-    // Prepare images for the API
-    const imagePromises: Promise<void>[] = [];
+    const imageInputs: string[] = [];
+    const tempFilePaths: string[] = [];
 
     if (referenceImage) {
-      imagePromises.push(
-        prepareImageForApi(referenceImage, requestOrigin).then((base64) => {
-          messageContent.push({
-            type: "image_url",
-            image_url: { url: base64 }
-          });
-        })
-      );
+      const refUrl = await processImage(supabase, referenceImage, "reference", requestOrigin);
+      imageInputs.push(refUrl);
+      tempFilePaths.push(refUrl);
     }
 
     if (logoImages && Array.isArray(logoImages)) {
-      for (const logo of logoImages) {
-        imagePromises.push(
-          prepareImageForApi(logo, requestOrigin).then((base64) => {
-            messageContent.push({
-              type: "image_url",
-              image_url: { url: base64 }
-            });
-          })
-        );
+      for (let i = 0; i < logoImages.length; i++) {
+        try {
+          const logoUrl = await processImage(supabase, logoImages[i], `logo_${i}`, requestOrigin);
+          imageInputs.push(logoUrl);
+          tempFilePaths.push(logoUrl);
+        } catch (e) {
+          console.error(`Error processing logo ${i}:`, e);
+        }
       }
     }
 
     if (contentImage) {
-      imagePromises.push(
-        prepareImageForApi(contentImage, requestOrigin).then((base64) => {
-          messageContent.push({
-            type: "image_url",
-            image_url: { url: base64 }
-          });
-        })
-      );
+      const contentUrl = await processImage(supabase, contentImage, "content", requestOrigin);
+      imageInputs.push(contentUrl);
+      tempFilePaths.push(contentUrl);
     }
 
-    // Wait for all images to be processed
-    await Promise.all(imagePromises);
-
-    // Build the professional prompt
     const logoPositionText = logoPositions?.length > 0 
       ? `LOGOS PLACEMENT: ${logoPositions.map((pos: string, i: number) => `Logo ${i+1} at ${pos}`).join(", ")}.`
       : "";
@@ -299,106 +515,28 @@ serve(async (req) => {
       aspectRatio,
     });
 
-    // Add the text prompt at the beginning
-    messageContent.unshift({
-      type: "text",
-      text: professionalPrompt
-    });
+    console.log("Professional prompt built, length:", professionalPrompt.length);
 
-    console.log("Calling Lovable AI for image generation...");
-    console.log("Message content items:", messageContent.length);
+    const taskId = await createTask(
+      KIE_API_KEY,
+      professionalPrompt,
+      imageInputs,
+      aspectRatio,
+      resolution,
+      outputFormat
+    );
 
-    // Call Lovable AI
-    const response = await fetch(LOVABLE_AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: messageContent
-          }
-        ],
-        modalities: ["image", "text"]
-      }),
-    });
+    const resultUrl = await pollForResult(KIE_API_KEY, taskId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Lovable AI error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        throw new Error("Limite de requêtes atteinte. Réessayez plus tard.");
-      }
-      if (response.status === 402) {
-        throw new Error("Crédits insuffisants. Veuillez recharger votre compte.");
-      }
-      
-      throw new Error(`Erreur génération: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Lovable AI response received");
-
-    // Extract the generated image
-    const generatedImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!generatedImage) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
-      throw new Error("Aucune image générée dans la réponse");
-    }
-
-    console.log("Image generated successfully");
-
-    // Upload the generated image to Supabase Storage for persistence
-    let finalImageUrl = generatedImage;
-    
-    if (generatedImage.startsWith("data:image/")) {
-      try {
-        const matches = generatedImage.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i);
-        if (matches) {
-          const mimeType = matches[1].toLowerCase();
-          const base64Content = matches[2];
-          const binaryString = atob(base64Content);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          
-          const extension = mimeType === 'jpeg' || mimeType === 'jpg' ? 'jpg' : mimeType;
-          const fileName = `generated_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('generated-images')
-            .upload(fileName, bytes, {
-              contentType: `image/${mimeType}`,
-              upsert: false,
-            });
-          
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage
-              .from('generated-images')
-              .getPublicUrl(fileName);
-            finalImageUrl = urlData.publicUrl;
-            console.log("Image uploaded to storage:", finalImageUrl);
-          } else {
-            console.warn("Storage upload failed, using base64:", uploadError);
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to upload to storage, using base64:", e);
-      }
+    if (tempFilePaths.length > 0) {
+      await cleanupTempImages(supabase, tempFilePaths);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        imageUrl: finalImageUrl,
-        taskId: crypto.randomUUID(),
+        imageUrl: resultUrl,
+        taskId: taskId,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
