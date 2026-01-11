@@ -213,19 +213,23 @@ function buildProfessionalPrompt({
 
   // ====== RÈGLE SUR LE DESIGN DU TEMPLATE ======
   if (hasReferenceImage) {
-    instructions.push("=== RÉFÉRENCE DESIGN: RÉPLICATION FIDÈLE ===");
-    instructions.push("L'image de RÉFÉRENCE (première image) définit le STYLE VISUEL à reproduire:");
+    instructions.push("=== RÈGLE CRITIQUE: RÉPLICATION EXACTE DU DESIGN DE RÉFÉRENCE ===");
+    instructions.push("⚠️ L'image de RÉFÉRENCE (première image) est le MODÈLE MAÎTRE à reproduire FIDÈLEMENT.");
     instructions.push("");
-    instructions.push("COPIER EXACTEMENT:");
-    instructions.push("1. MISE EN PAGE: Grille, marges, zones de contenu, espacements");
-    instructions.push("2. TYPOGRAPHIE: Styles de police, tailles, graisses, hiérarchie");
-    instructions.push("3. PALETTE COULEURS: Schéma colorimétrique, dégradés, superpositions");
-    instructions.push("4. ÉLÉMENTS GRAPHIQUES: Formes décoratives, lignes, cadres, motifs, effets");
-    instructions.push("5. AMBIANCE: Mood, éclairage, énergie visuelle");
+    instructions.push("COPIER EXACTEMENT ET RIGOUREUSEMENT:");
+    instructions.push("1. MISE EN PAGE IDENTIQUE: Respecter la grille, les zones, les marges, les espacements exacts");
+    instructions.push("2. TYPOGRAPHIE IDENTIQUE: Mêmes styles de police, tailles, graisses, positionnement du texte");
+    instructions.push("3. PALETTE COULEURS IDENTIQUE: Même schéma colorimétrique, dégradés, tons, superpositions");
+    instructions.push("4. ÉLÉMENTS GRAPHIQUES IDENTIQUES: Mêmes formes décoratives, lignes, cadres, motifs, effets visuels");
+    instructions.push("5. AMBIANCE IDENTIQUE: Même mood, éclairage, énergie visuelle, atmosphère générale");
+    instructions.push("6. STRUCTURE IDENTIQUE: Même organisation des éléments, même hiérarchie visuelle");
+    instructions.push("");
+    instructions.push("L'AFFICHE FINALE DOIT RESSEMBLER AU TEMPLATE comme si c'était la même famille de design.");
+    instructions.push("Le spectateur doit reconnaître immédiatement le style du template dans l'affiche finale.");
     instructions.push("");
     instructions.push("NE JAMAIS COPIER DU TEMPLATE:");
-    instructions.push("- Les textes, prix, numéros de téléphone");
-    instructions.push("- Les visages/personnages (générer de NOUVEAUX personnages africains)");
+    instructions.push("- Les textes, prix, numéros de téléphone, dates (utiliser UNIQUEMENT les données utilisateur)");
+    instructions.push("- Les visages/personnages existants (générer de NOUVEAUX personnages africains)");
     instructions.push("- Les logos d'autres entreprises");
     instructions.push("");
   }
@@ -249,7 +253,14 @@ function buildProfessionalPrompt({
   instructions.push("");
 
   if (hasLogoImage) {
-    instructions.push("LOGO CLIENT: Intégrer le logo fourni de manière visible sans déformation.");
+    instructions.push("=== RÈGLE CRITIQUE: LOGO CLIENT ===");
+    instructions.push("⚠️ OBLIGATION ABSOLUE: Le logo fourni par le client DOIT être reproduit À L'IDENTIQUE.");
+    instructions.push("- UTILISER l'image exacte du logo fourni, sans aucune modification");
+    instructions.push("- NE JAMAIS créer, dessiner ou inventer un nouveau logo");
+    instructions.push("- NE JAMAIS modifier les couleurs, formes ou texte du logo original");
+    instructions.push("- Positionner le logo de manière visible et professionnelle");
+    instructions.push("- Conserver les proportions exactes du logo (pas d'étirement/compression)");
+    instructions.push("- Le logo doit être net, lisible et bien intégré au design");
     instructions.push("");
   }
 
