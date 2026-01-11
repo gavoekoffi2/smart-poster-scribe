@@ -68,73 +68,89 @@ serve(async (req) => {
       imageContent = { type: "image_url", image_url: { url: imageUrl } };
     }
 
-    const systemPrompt = `Tu es un expert graphiste qui analyse des affiches/flyers pour comprendre leur structure et les informations qu'elles contiennent.
+    const systemPrompt = `Tu es un expert graphiste spécialisé dans l'analyse d'affiches publicitaires africaines.
 
-OBJECTIF: Analyser l'affiche fournie pour:
-1. Identifier TOUS les éléments textuels/visuels présents
-2. Déterminer quelles informations l'utilisateur devra fournir pour créer une affiche similaire avec SES propres données
+OBJECTIF PRINCIPAL: Analyser l'affiche pour:
+1. Identifier PRÉCISÉMENT chaque zone de texte et son contenu actuel
+2. Comprendre la STRUCTURE du design (où se trouve chaque élément)
+3. Générer des questions pour que l'utilisateur fournisse SES propres données
 
-ANALYSE VISUELLE - Cherche:
-- Un titre principal ou slogan
-- Des dates (jour, mois, année)
-- Des horaires/heures
-- Un lieu/adresse
-- Des contacts (téléphone, WhatsApp, email, réseaux sociaux)
-- Des prix/tarifs
-- Des orateurs/artistes/personnes mises en avant
-- Un menu ou liste de plats (pour restaurant)
-- Des produits affichés
-- Un logo d'entreprise/organisation
+ANALYSE DÉTAILLÉE - Pour chaque élément trouvé, note:
+- SA POSITION sur l'affiche (haut, centre, bas, gauche, droite)
+- SA TAILLE relative (grand titre, texte moyen, petit texte)
+- SON RÔLE (titre principal, sous-titre, date, contact, etc.)
 
-RÈGLE IMPORTANTE:
-- Ne demande QUE les informations VISIBLES sur l'affiche originale
-- Si l'affiche n'a pas de prix → NE demande PAS de prix
-- Si l'affiche n'a pas de contact → NE demande PAS de contact
-- Si l'affiche n'a pas de lieu → NE demande PAS de lieu
-- Concentre-toi sur ce qui est PRÉSENT pour le remplacer
+ÉLÉMENTS À CHERCHER:
+- Titre principal / Thème (généralement le plus grand texte)
+- Sous-titre ou slogan
+- Date(s) complète(s): jour, mois, année
+- Heure(s) / Horaire(s)
+- Lieu / Adresse (peut inclure ville, pays)
+- Contact: téléphone, WhatsApp, email
+- Réseaux sociaux: Facebook, Instagram, etc.
+- Prix / Tarifs / Entrée
+- Nom(s) d'orateur(s) / artiste(s) / invité(s) avec leurs titres
+- Menu ou liste de plats/produits
+- Logo(s) d'organisation
+- Sponsors ou partenaires
+
+RÈGLES CRITIQUES:
+1. DEMANDE TOUT ce qui est présent sur l'affiche - l'utilisateur DOIT fournir chaque info
+2. Si le template a 5 zones de texte, génère 5 questions minimum
+3. Chaque élément visible = une question pour le remplacer
+4. La description du template doit inclure la POSITION de chaque élément
 
 FORMAT DE RÉPONSE (JSON strict):
 {
   "detectedElements": {
     "hasTitle": true/false,
+    "hasSubtitle": true/false,
     "hasDate": true/false,
     "hasTime": true/false,
     "hasLocation": true/false,
     "hasContact": true/false,
     "hasPrice": true/false,
     "hasSpeaker": true/false,
+    "hasGuests": true/false,
     "hasMenu": true/false,
     "hasProducts": true/false,
-    "hasLogo": true/false
+    "hasLogo": true/false,
+    "hasSocialMedia": true/false
   },
   "requiredQuestions": [
     {
-      "id": "title",
-      "question": "Quel est le titre ou thème de votre affiche ?",
-      "type": "text",
-      "placeholder": "Ex: Grande Veillée de Prière",
-      "required": true
+      "id": "identifiant_unique",
+      "question": "Question claire et précise",
+      "type": "text" | "multiline",
+      "placeholder": "Exemple de réponse attendue",
+      "required": true/false
     }
-    // Ajoute SEULEMENT les questions pour les éléments DÉTECTÉS sur l'affiche
   ],
-  "templateDescription": "Description courte du style et layout de l'affiche",
-  "suggestedPrompt": "Instructions pour reproduire ce style de design"
+  "templateDescription": "Description DÉTAILLÉE du layout: positions, tailles, couleurs dominantes",
+  "suggestedPrompt": "Instructions précises pour reproduire CE design avec le contenu utilisateur",
+  "layoutGuide": {
+    "titlePosition": "Position du titre (ex: centre-haut)",
+    "datePosition": "Position de la date",
+    "contactPosition": "Position du contact (ex: bas de l'affiche)",
+    "visualPosition": "Position de la photo/visuel principal"
+  }
 }
 
-QUESTIONS TYPES selon les éléments détectés:
-- hasTitle → demander le titre/thème
-- hasDate → demander la date de l'événement
-- hasTime → demander l'heure
-- hasLocation → demander le lieu/adresse
-- hasContact → demander les contacts (téléphone, email, etc.)
-- hasPrice → demander les prix/tarifs
-- hasSpeaker → demander le nom de l'orateur/artiste et son titre
-- hasMenu → demander les plats/boissons du menu
-- hasProducts → demander les noms/descriptions des produits
-- hasLogo → demander si l'utilisateur a un logo à inclure
+TYPES DE QUESTIONS par élément:
+- hasTitle → "Quel est le titre principal de votre affiche ?"
+- hasSubtitle → "Avez-vous un sous-titre ou slogan ?"
+- hasDate → "Quelle est la date de l'événement ? (format: jour mois année)"
+- hasTime → "À quelle heure commence l'événement ?"
+- hasLocation → "Où se déroule l'événement ? (adresse complète)"
+- hasContact → "Quels sont vos contacts ? (téléphone, WhatsApp, email)"
+- hasPrice → "Quels sont les tarifs/prix d'entrée ?"
+- hasSpeaker → "Qui est l'orateur/artiste principal ? (nom et titre)"
+- hasGuests → "Y a-t-il des invités ? (noms et titres)"
+- hasMenu → "Décrivez votre menu complet (plats, prix)"
+- hasLogo → "Avez-vous un logo à intégrer ?"
+- hasSocialMedia → "Quels sont vos réseaux sociaux ?"
 
-IMPORTANT: La question sur le titre est TOUJOURS obligatoire (required: true).
-Les autres questions sont required: false sauf si vraiment essentielles.`;
+IMPORTANT: Sois EXHAUSTIF. Chaque texte visible = une question.`;
 
     const userMessage = existingDescription 
       ? `Analyse cette affiche. Contexte: domaine "${domain}". Description existante: "${existingDescription}"`

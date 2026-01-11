@@ -190,53 +190,87 @@ function buildProfessionalPrompt({
 }): string {
   const instructions: string[] = [];
 
-  instructions.push(
-    "You are an elite graphic designer. Produce a PRINT-READY advertising poster with agency-level polish."
-  );
-  instructions.push(
-    "The poster must look professionally art-directed: clean grid, deliberate spacing, strong hierarchy, premium finishing."
-  );
+  // ====== RÔLE ET OBJECTIF PRINCIPAL ======
+  instructions.push("=== RÔLE ===");
+  instructions.push("Tu es un graphiste d'élite spécialisé dans la création d'affiches publicitaires professionnelles pour l'Afrique francophone.");
   instructions.push("");
 
-  instructions.push("OUTPUT SPECS:");
-  instructions.push(`- Aspect ratio: ${aspectRatio}`);
-  instructions.push("- High resolution, crisp details, no artifacts");
-  instructions.push("- Perfect typography: consistent alignment, kerning, and hierarchy");
-  instructions.push("- No watermarks, no mockups, no frames");
-
+  // ====== RÈGLE ABSOLUE SUR LE CONTENU ======
+  instructions.push("=== RÈGLE CRITIQUE: RESPECT INTÉGRAL DU CONTENU UTILISATEUR ===");
+  instructions.push("⚠️ OBLIGATION ABSOLUE: CHAQUE information fournie par l'utilisateur DOIT apparaître sur l'affiche finale.");
+  instructions.push("- Titre/Thème: DOIT être affiché en grand et lisible");
+  instructions.push("- Dates/Horaires: DOIVENT être clairement visibles");
+  instructions.push("- Lieu/Adresse: DOIT apparaître intégralement");
+  instructions.push("- Contact (téléphone, WhatsApp, email): DOIT être présent et lisible");
+  instructions.push("- Prix/Tarifs: DOIVENT être affichés si fournis");
+  instructions.push("- Noms d'orateurs/artistes: DOIVENT apparaître avec leurs titres");
+  instructions.push("- Menu/Produits: DOIT être complet si fourni");
   instructions.push("");
-  instructions.push("TEXT RULES:");
-  instructions.push("- ONLY print text that appears in USER PROVIDED CONTENT.");
-  instructions.push("- Do NOT invent phone numbers, addresses, prices, dates, or any extra information.");
+  instructions.push("❌ INTERDIT: Omettre, tronquer ou résumer le contenu utilisateur");
+  instructions.push("❌ INTERDIT: Inventer des informations non fournies (numéros, prix, dates)");
+  instructions.push("❌ INTERDIT: Copier le texte/données du template de référence");
+  instructions.push("");
 
+  // ====== RÈGLE SUR LE DESIGN DU TEMPLATE ======
   if (hasReferenceImage) {
+    instructions.push("=== RÉFÉRENCE DESIGN: RÉPLICATION FIDÈLE ===");
+    instructions.push("L'image de RÉFÉRENCE (première image) définit le STYLE VISUEL à reproduire:");
     instructions.push("");
-    instructions.push("=== REFERENCE IMAGE DESIGN REPLICATION ===");
-    instructions.push("The FIRST image is the DESIGN REFERENCE. Replicate its design with MAXIMUM FIDELITY:");
-    instructions.push("1. LAYOUT: Copy the EXACT grid system, margins, content zones, and spacing.");
-    instructions.push("2. TYPOGRAPHY: Match font styles, sizes, weights, and hierarchy.");
-    instructions.push("3. COLORS: Replicate the color scheme, gradients, and overlays exactly.");
-    instructions.push("4. GRAPHICS: Copy decorative shapes, lines, frames, patterns, and effects.");
-    instructions.push("5. ATMOSPHERE: Reproduce the mood, lighting, and visual energy.");
+    instructions.push("COPIER EXACTEMENT:");
+    instructions.push("1. MISE EN PAGE: Grille, marges, zones de contenu, espacements");
+    instructions.push("2. TYPOGRAPHIE: Styles de police, tailles, graisses, hiérarchie");
+    instructions.push("3. PALETTE COULEURS: Schéma colorimétrique, dégradés, superpositions");
+    instructions.push("4. ÉLÉMENTS GRAPHIQUES: Formes décoratives, lignes, cadres, motifs, effets");
+    instructions.push("5. AMBIANCE: Mood, éclairage, énergie visuelle");
     instructions.push("");
-    instructions.push("CRITICAL: Generate NEW, DIFFERENT people/characters - NEVER copy faces from reference!");
-    instructions.push("CRITICAL: Do NOT copy any text, phone numbers, or contact info from the reference!");
+    instructions.push("NE JAMAIS COPIER DU TEMPLATE:");
+    instructions.push("- Les textes, prix, numéros de téléphone");
+    instructions.push("- Les visages/personnages (générer de NOUVEAUX personnages africains)");
+    instructions.push("- Les logos d'autres entreprises");
+    instructions.push("");
   }
 
+  // ====== SPÉCIFICATIONS TECHNIQUES ======
+  instructions.push("=== SPÉCIFICATIONS TECHNIQUES ===");
+  instructions.push(`- Format: ${aspectRatio}`);
+  instructions.push("- Résolution: Haute qualité, détails nets, sans artefacts");
+  instructions.push("- Typographie: Alignement parfait, kerning cohérent, hiérarchie claire");
+  instructions.push("- Pas de filigrane, pas de mockup, pas de cadre");
+  instructions.push("");
+
+  // ====== HIÉRARCHIE VISUELLE ======
+  instructions.push("=== HIÉRARCHIE VISUELLE OBLIGATOIRE ===");
+  instructions.push("1. TITRE: Le plus grand et visible (zone supérieure ou centrale)");
+  instructions.push("2. DATE/HEURE: Visible immédiatement après le titre");
+  instructions.push("3. LIEU: Clairement positionné");
+  instructions.push("4. VISUELS: Photo/personnage intégré harmonieusement");
+  instructions.push("5. INFORMATIONS: Contact, prix, détails en zone dédiée (souvent bas de l'affiche)");
+  instructions.push("6. LOGO: Positionné selon les instructions (par défaut: coin inférieur)");
+  instructions.push("");
+
   if (hasLogoImage) {
+    instructions.push("LOGO CLIENT: Intégrer le logo fourni de manière visible sans déformation.");
     instructions.push("");
-    instructions.push("LOGO: Integrate the provided logo prominently without distortion.");
   }
 
   if (hasContentImage) {
+    instructions.push("PHOTO/VISUEL PRINCIPAL: Utiliser l'image de contenu comme élément visuel central.");
     instructions.push("");
-    instructions.push("MAIN VISUAL: Integrate the provided content image as the PRIMARY visual element.");
   }
 
+  // ====== QUALITÉ AFRICAINE ======
+  instructions.push("=== STYLE AFRICAIN ===");
+  instructions.push("- Personnages: Personnes africaines authentiques avec traits réalistes");
+  instructions.push("- Couleurs: Vibrantes et chaleureuses, adaptées au contexte africain");
+  instructions.push("- Texte: Français ou langue locale selon le contexte");
   instructions.push("");
-  instructions.push("=== USER PROMPT ===");
+
+  // ====== CONTENU UTILISATEUR ======
+  instructions.push("=== CONTENU UTILISATEUR À AFFICHER INTÉGRALEMENT ===");
   instructions.push(userPrompt);
-  instructions.push("=== END USER PROMPT ===");
+  instructions.push("=== FIN CONTENU UTILISATEUR ===");
+  instructions.push("");
+  instructions.push("RAPPEL FINAL: Chaque élément ci-dessus DOIT apparaître sur l'affiche. Vérifie avant de finaliser.");
 
   return instructions.join("\n");
 }
