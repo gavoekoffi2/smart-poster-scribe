@@ -276,6 +276,28 @@ function buildProfessionalPrompt({
   instructions.push("- Texte: Français ou langue locale selon le contexte");
   instructions.push("");
 
+  // ====== RÈGLES DE DESIGN PROFESSIONNEL (TOUJOURS APPLIQUÉES) ======
+  instructions.push("=== DESIGN PROFESSIONNEL OBLIGATOIRE ===");
+  instructions.push("⚠️ L'affiche DOIT avoir un design professionnel de haute qualité, JAMAIS basique ou amateur.");
+  instructions.push("");
+  instructions.push("ÉLÉMENTS DESIGN OBLIGATOIRES:");
+  instructions.push("1. COMPOSITION: Utiliser la règle des tiers, créer une hiérarchie visuelle claire");
+  instructions.push("2. TYPOGRAPHIE: Combiner 2-3 polices maximum avec contraste (titre display, texte lisible)");
+  instructions.push("3. COULEURS: Palette harmonieuse avec couleur dominante, secondaire et accent");
+  instructions.push("4. ÉLÉMENTS GRAPHIQUES: Ajouter formes décoratives, lignes, cadres, effets (dégradés, ombres, reflets)");
+  instructions.push("5. TEXTURES & EFFETS: Dégradés subtils, superpositions, jeux de lumière");
+  instructions.push("6. ESPACEMENT: Marges cohérentes, respiration visuelle, pas de surcharge");
+  instructions.push("7. FINITION: Qualité imprimerie, haute résolution, alignements parfaits");
+  instructions.push("");
+  instructions.push("STYLES INSPIRANTS:");
+  instructions.push("- Affiches de concert/festivals modernes avec effets lumineux");
+  instructions.push("- Designs église africains avec éléments dorés et atmosphère majestueuse");
+  instructions.push("- Publicités professionnelles avec mise en page dynamique");
+  instructions.push("- Flyers événementiels avec photos intégrées et typographie impactante");
+  instructions.push("");
+  instructions.push("❌ INTERDIT: Designs plats/basiques, texte sur fond uni, absence de décoration graphique");
+  instructions.push("");
+
   // ====== CONTENU UTILISATEUR ======
   instructions.push("=== CONTENU UTILISATEUR À AFFICHER INTÉGRALEMENT ===");
   instructions.push(userPrompt);
@@ -501,23 +523,129 @@ serve(async (req) => {
         ? new URL(refererHeader).origin
         : undefined;
 
-    // Auto-pick template if no images
-    if (!referenceImage && !contentImage && (!logoImages || logoImages.length === 0)) {
-      console.log("No user images. Selecting fallback template...");
+    // ====== SÉLECTION INTELLIGENTE DE TEMPLATE SI AUCUNE IMAGE FOURNIE ======
+    // Cette logique garantit qu'on utilise TOUJOURS un template de référence pour le design
+    if (!referenceImage) {
+      console.log("No reference image provided. Selecting best matching template...");
       try {
-        const { data: tplCandidates } = await supabase
-          .from("reference_templates")
-          .select("image_url, domain")
-          .order("created_at", { ascending: false })
-          .limit(40);
-
-        if (tplCandidates && tplCandidates.length > 0) {
-          const picked = tplCandidates[Math.floor(Math.random() * tplCandidates.length)];
+        // Analyser le prompt pour détecter le domaine et les mots-clés
+        const promptLower = prompt.toLowerCase();
+        
+        // Mapping domaine -> mots-clés associés
+        const domainKeywords: Record<string, string[]> = {
+          church: ["église", "culte", "prière", "louange", "adoration", "pasteur", "évêque", "prophète", "jeûne", "veillée", "crusade", "convention", "revival", "worship", "gospel"],
+          event: ["événement", "concert", "soirée", "fête", "célébration", "show", "spectacle", "gala", "festival", "cérémonie", "inauguration"],
+          formation: ["formation", "séminaire", "atelier", "workshop", "cours", "coaching", "masterclass", "webinaire", "conférence", "certification"],
+          restaurant: ["restaurant", "menu", "cuisine", "chef", "manger", "plat", "repas", "déjeuner", "dîner", "buffet", "traiteur", "food"],
+          fashion: ["mode", "fashion", "collection", "vêtement", "style", "couture", "défilé", "boutique", "prêt-à-porter"],
+          music: ["musique", "music", "album", "single", "artiste", "chanteur", "chanteuse", "rap", "afrobeat", "concert"],
+          sport: ["sport", "football", "basket", "match", "tournoi", "compétition", "athlète", "équipe", "marathon"],
+          technology: ["technologie", "tech", "digital", "numérique", "application", "startup", "innovation", "hackathon"],
+          health: ["santé", "health", "médical", "hôpital", "clinique", "consultation", "bien-être", "fitness", "pharmacie"],
+          realestate: ["immobilier", "appartement", "maison", "terrain", "location", "vente", "agence"],
+          ecommerce: ["vente", "promo", "soldes", "offre", "produit", "boutique", "shop", "achat", "livraison"],
+          service: ["service", "professionnel", "design", "graphique", "marketing", "agence", "entreprise"],
+          education: ["école", "université", "étudiant", "inscription", "académie", "formation", "diplôme"],
+        };
+        
+        // Calculer un score pour chaque domaine
+        const domainScores: Record<string, number> = {};
+        for (const [domain, keywords] of Object.entries(domainKeywords)) {
+          let score = 0;
+          for (const keyword of keywords) {
+            if (promptLower.includes(keyword)) {
+              score += keyword.length > 5 ? 3 : 2; // Mots plus longs = plus de poids
+            }
+          }
+          if (score > 0) {
+            domainScores[domain] = score;
+          }
+        }
+        
+        // Trouver le meilleur domaine correspondant
+        let bestDomain: string | null = null;
+        let bestScore = 0;
+        for (const [domain, score] of Object.entries(domainScores)) {
+          if (score > bestScore) {
+            bestScore = score;
+            bestDomain = domain;
+          }
+        }
+        
+        console.log("Domain scores:", domainScores);
+        console.log("Best matching domain:", bestDomain, "with score:", bestScore);
+        
+        // Récupérer les templates du domaine correspondant
+        let tplCandidates: any[] = [];
+        
+        if (bestDomain) {
+          const { data: domainTemplates } = await supabase
+            .from("reference_templates")
+            .select("image_url, domain, description, tags")
+            .eq("domain", bestDomain)
+            .limit(20);
+          
+          if (domainTemplates && domainTemplates.length > 0) {
+            tplCandidates = domainTemplates;
+            console.log(`Found ${tplCandidates.length} templates for domain: ${bestDomain}`);
+          }
+        }
+        
+        // Si pas de templates pour le domaine exact, chercher des domaines similaires
+        if (tplCandidates.length === 0) {
+          // Domaines de fallback par ordre de polyvalence (event et church sont très polyvalents)
+          const fallbackOrder = ["event", "church", "formation", "service", "ecommerce"];
+          
+          for (const fallbackDomain of fallbackOrder) {
+            const { data: fallbackTemplates } = await supabase
+              .from("reference_templates")
+              .select("image_url, domain, description, tags")
+              .eq("domain", fallbackDomain)
+              .limit(15);
+            
+            if (fallbackTemplates && fallbackTemplates.length > 0) {
+              tplCandidates = [...tplCandidates, ...fallbackTemplates];
+            }
+          }
+          
+          console.log(`Fallback: gathered ${tplCandidates.length} templates from similar domains`);
+        }
+        
+        // Sélectionner le meilleur template basé sur les mots-clés du prompt
+        if (tplCandidates.length > 0) {
+          // Scorer chaque template selon sa pertinence
+          const scoredTemplates = tplCandidates.map(t => {
+            let score = 0;
+            const desc = (t.description || "").toLowerCase();
+            const tags = (t.tags || []).map((tag: string) => tag.toLowerCase()).join(" ");
+            const allText = desc + " " + tags;
+            
+            // Bonus si le template est du meilleur domaine
+            if (t.domain === bestDomain) score += 10;
+            
+            // Bonus pour match de mots-clés
+            const promptWords = promptLower.split(/\s+/).filter(w => w.length > 4);
+            for (const word of promptWords) {
+              if (allText.includes(word)) score += 2;
+            }
+            
+            // Bonus pour templates avec descriptions (mieux documentés = meilleure qualité)
+            if (t.description && t.description.length > 20) score += 3;
+            
+            return { template: t, score };
+          });
+          
+          // Trier par score et prendre un des meilleurs (avec légère randomisation)
+          scoredTemplates.sort((a, b) => b.score - a.score);
+          const topN = Math.min(5, scoredTemplates.length);
+          const topTemplates = scoredTemplates.slice(0, topN);
+          const picked = topTemplates[Math.floor(Math.random() * topTemplates.length)].template;
+          
           referenceImage = picked.image_url;
-          console.log(`Picked fallback template: ${picked.domain}`);
+          console.log(`Selected template from domain "${picked.domain}" with highest relevance`);
         }
       } catch (e) {
-        console.warn("Error selecting fallback:", e);
+        console.warn("Error selecting intelligent fallback:", e);
       }
     }
 
