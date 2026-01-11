@@ -107,92 +107,135 @@ function buildPrompt(state: ConversationState) {
   const lines: string[] = [];
 
   // =============================
-  // IMPORTANT PROMPT STRUCTURE
-  // - STYLE GUIDE: design-only. NEVER copy its text/data to the final poster.
-  // - USER PROVIDED CONTENT: ONLY source of facts and printable text.
+  // STRUCTURE CLAIRE ET IMPÉRATIVE
+  // 1. CONTENU OBLIGATOIRE: Tout ce qui DOIT apparaître
+  // 2. STYLE: Design du template à suivre (sans copier son texte)
   // =============================
 
-  lines.push(`LANGUE: Tous les textes de l'affiche doivent être en ${language}`);
+  lines.push(`LANGUE: ${language.toUpperCase()}`);
   lines.push("");
 
-  // -------- STYLE GUIDE (design-only) --------
+  // ====== SECTION 1: CONTENU OBLIGATOIRE À AFFICHER ======
+  lines.push("╔══════════════════════════════════════════════════════════════╗");
+  lines.push("║  CONTENU OBLIGATOIRE - TOUT DOIT APPARAÎTRE SUR L'AFFICHE    ║");
+  lines.push("╚══════════════════════════════════════════════════════════════╝");
+  lines.push("");
+
+  // Collecter tous les éléments de contenu avec leurs labels
+  const contentElements: { label: string; value: string; priority: number }[] = [];
+
+  // Titre - priorité maximale
+  if (extractedInfo?.title) {
+    contentElements.push({ label: "TITRE PRINCIPAL", value: String(extractedInfo.title), priority: 1 });
+  }
+
+  // Dates et horaires
+  if (extractedInfo?.dates) {
+    contentElements.push({ label: "DATE(S) ET HEURE(S)", value: String(extractedInfo.dates), priority: 2 });
+  }
+
+  // Lieu
+  if (extractedInfo?.location) {
+    contentElements.push({ label: "LIEU / ADRESSE", value: String(extractedInfo.location), priority: 3 });
+  }
+
+  // Orateur principal
+  if (mainSpeaker?.name) {
+    contentElements.push({ label: "ORATEUR PRINCIPAL", value: mainSpeaker.name, priority: 4 });
+  }
+
+  // Invités
+  if (guests?.length) {
+    const guestList = guests.map(g => g.name).filter(Boolean).join(", ");
+    if (guestList) {
+      contentElements.push({ label: "INVITÉ(S)", value: guestList, priority: 5 });
+    }
+  }
+
+  // Prix/Tarifs
+  if (extractedInfo?.prices) {
+    contentElements.push({ label: "PRIX / TARIFS", value: String(extractedInfo.prices), priority: 6 });
+  }
+
+  // Contact
+  if (extractedInfo?.contact) {
+    contentElements.push({ label: "CONTACT", value: String(extractedInfo.contact), priority: 7 });
+  }
+
+  // Organisateur
+  if (extractedInfo?.organizer) {
+    contentElements.push({ label: "ORGANISATEUR", value: String(extractedInfo.organizer), priority: 8 });
+  }
+
+  // Menu restaurant
+  if (restaurantInfo?.hasMenu && restaurantInfo.menuContent) {
+    contentElements.push({ label: "MENU COMPLET", value: String(restaurantInfo.menuContent), priority: 4 });
+  }
+
+  // Produits
+  if (productDisplay?.hasCharacter && productDisplay.characterInteraction) {
+    contentElements.push({ label: "MISE EN SCÈNE PRODUIT", value: String(productDisplay.characterInteraction), priority: 4 });
+  }
+
+  // Trier par priorité et afficher
+  contentElements.sort((a, b) => a.priority - b.priority);
+  
+  if (contentElements.length > 0) {
+    contentElements.forEach((el, index) => {
+      lines.push(`${index + 1}. ${el.label}:`);
+      lines.push(`   → "${el.value}"`);
+      lines.push("");
+    });
+  }
+
+  // Description libre de l'utilisateur
+  if (description) {
+    const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
+    if (cleanDesc) {
+      lines.push("DEMANDE ADDITIONNELLE:");
+      lines.push(`→ ${cleanDesc}`);
+      lines.push("");
+    }
+  }
+
+  lines.push("────────────────────────────────────────────────────────────────");
+  lines.push("⚠️ VÉRIFICATION: Chaque élément numéroté ci-dessus DOIT être présent sur l'affiche finale.");
+  lines.push("────────────────────────────────────────────────────────────────");
+  lines.push("");
+
+  // ====== SECTION 2: DIRECTIVES DE STYLE (DESIGN UNIQUEMENT) ======
   if (referenceDescription || (colorPalette?.length ?? 0) > 0 || domain || customDomain) {
-    lines.push("=== STYLE GUIDE (DESIGN ONLY — NE JAMAIS COPIER DE TEXTE / CHIFFRES / CONTACTS DE CETTE SECTION) ===");
+    lines.push("╔══════════════════════════════════════════════════════════════╗");
+    lines.push("║  STYLE VISUEL - DESIGN DU TEMPLATE (PAS SON TEXTE)           ║");
+    lines.push("╚══════════════════════════════════════════════════════════════╝");
+    lines.push("");
 
     const domainLabel = domain === "other" && customDomain ? customDomain : domain;
     if (domainLabel) {
-      lines.push(`DOMAINE / TYPE VISÉ: ${domainLabel}`);
+      lines.push(`Domaine: ${domainLabel}`);
     }
 
     if (referenceDescription) {
-      const styleText = referenceDescription.replace(/\n/g, " ").slice(0, 1200);
-      lines.push(`STYLE & LAYOUT À RESPECTER: ${styleText}`);
-      lines.push(
-        "RAPPEL: Tout exemple (prix, numéros, réseaux sociaux, noms) présent dans la description de style est un EXEMPLE et ne doit PAS apparaître sur l'affiche finale."
-      );
+      lines.push("Style à reproduire:");
+      lines.push(referenceDescription.replace(/\n/g, " ").slice(0, 800));
+      lines.push("");
+      lines.push("⚠️ NE PAS copier: textes, numéros, prix, contacts du template.");
     }
 
     if (colorPalette?.length) {
       const colorDescriptions = colorPalette.slice(0, 6).map(hexToColorName);
       const uniqueColors = [...new Set(colorDescriptions)];
-      lines.push(`PALETTE (indicative): tons ${uniqueColors.join(", ")}`);
+      lines.push(`Palette indicative: ${uniqueColors.join(", ")}`);
     }
-
-    lines.push("=== END STYLE GUIDE ===");
+    
     lines.push("");
   }
 
-  // -------- USER PROVIDED CONTENT (ONLY printable facts/text) --------
-  lines.push("=== USER PROVIDED CONTENT (SEULE SOURCE DES INFOS & TEXTES À IMPRIMER) ===");
-
-  if (extractedInfo) {
-    if (extractedInfo.title) lines.push(`TITRE: ${String(extractedInfo.title).slice(0, 140)}`);
-    if (extractedInfo.dates) lines.push(`DATES: ${String(extractedInfo.dates).slice(0, 220)}`);
-    if (extractedInfo.location) lines.push(`LIEU: ${String(extractedInfo.location).slice(0, 220)}`);
-    if (extractedInfo.organizer) lines.push(`ORGANISATEUR: ${String(extractedInfo.organizer).slice(0, 220)}`);
-    if (extractedInfo.prices) lines.push(`PRIX/TARIFS: ${String(extractedInfo.prices).slice(0, 220)}`);
-    if (extractedInfo.contact) lines.push(`CONTACT: ${String(extractedInfo.contact).slice(0, 220)}`);
+  // ====== SECTION 3: PERSONNAGES ======
+  if (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter) {
+    lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
+    lines.push("");
   }
-
-  // Speakers / guests
-  if (mainSpeaker?.name) {
-    lines.push(`ORATEUR PRINCIPAL (nom): ${String(mainSpeaker.name).slice(0, 140)}`);
-  }
-  if (guests?.length) {
-    const guestNames = guests.map((g) => g.name).filter(Boolean).slice(0, 6).join(", ");
-    if (guestNames) lines.push(`INVITÉS (noms): ${guestNames}`);
-  }
-
-  // Product display
-  if (productDisplay?.hasCharacter && productDisplay.characterInteraction) {
-    lines.push(`PERSONNAGE (interaction produit): ${String(productDisplay.characterInteraction).slice(0, 240)}`);
-    lines.push("PERSONNAGES: personnes africaines avec traits authentiques");
-  }
-
-  // Restaurant
-  if (restaurantInfo) {
-    if (restaurantInfo.hasMenu && restaurantInfo.menuContent) {
-      lines.push(`MENU (texte fourni): ${String(restaurantInfo.menuContent).slice(0, 900)}`);
-    }
-    if (!restaurantInfo.hasMenu) {
-      lines.push("RESTAURANT: affiche promotionnelle sans menu détaillé");
-    }
-  }
-
-  // Freeform user request (cleaned)
-  if (description) {
-    const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
-    if (cleanDesc) {
-      lines.push(`DEMANDE UTILISATEUR (texte libre): ${cleanDesc.slice(0, 900)}`);
-    }
-  }
-
-  // If user asked for characters via content image need
-  if (needsContentImage && !mainSpeaker && (!guests || guests.length === 0) && !productDisplay?.hasCharacter) {
-    lines.push("PERSONNAGES: inclure des personnes africaines avec traits authentiques");
-  }
-
-  lines.push("=== END USER PROVIDED CONTENT ===");
 
   return lines.join("\n").trim();
 }
