@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin, AppRole } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,6 +24,10 @@ import {
   Shield,
   Calendar,
   TrendingUp,
+  Upload,
+  Settings,
+  Crown,
+  UserCog,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,11 +53,15 @@ interface RecentUser {
   created_at: string;
 }
 
+type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles';
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoading: authLoading, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { userRole, isLoading: roleLoading, hasPermission, getRoleLabel, isSuperAdmin, isAdmin } = useAdmin();
+  
+  const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
   const [stats, setStats] = useState<DashboardStats>({
     totalImages: 0,
     totalUsers: 0,
@@ -64,48 +73,28 @@ export default function AdminDashboard() {
   const [recentImages, setRecentImages] = useState<RecentImage[]>([]);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
 
-  // Check if user is admin
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .single();
-
-      if (error || !data) {
-        setIsAdmin(false);
-        toast.error("Accès refusé - Vous n'êtes pas administrateur");
-        navigate("/");
-      } else {
-        setIsAdmin(true);
-        fetchDashboardData();
-      }
-      setLoading(false);
-    };
-
-    if (!authLoading) {
+    if (!authLoading && !roleLoading) {
       if (!user) {
         navigate("/auth", { state: { redirectTo: "/admin/dashboard" } });
-      } else {
-        checkAdmin();
+        return;
       }
+      
+      if (!userRole || !hasPermission('view_dashboard')) {
+        toast.error("Accès refusé - Vous n'avez pas les permissions nécessaires");
+        navigate("/");
+        return;
+      }
+      
+      fetchDashboardData();
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, roleLoading, userRole, navigate, hasPermission]);
 
   const fetchDashboardData = async () => {
     try {
-      // Get current month start
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-      // Fetch all stats in parallel
       const [
         imagesResult,
         imagesMonthResult,
@@ -148,7 +137,7 @@ export default function AdminDashboard() {
     navigate("/");
   };
 
-  if (authLoading || loading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -156,56 +145,74 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAdmin) {
+  if (!userRole || !hasPermission('view_dashboard')) {
     return null;
   }
+
+  const getRoleIcon = () => {
+    if (isSuperAdmin) return <Crown className="w-4 h-4 text-yellow-500" />;
+    if (isAdmin) return <Shield className="w-4 h-4 text-primary" />;
+    return <UserCog className="w-4 h-4 text-muted-foreground" />;
+  };
+
+  const navItems = [
+    { id: 'dashboard' as const, label: "Vue d'ensemble", icon: LayoutDashboard, permission: 'view_dashboard' },
+    { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates' },
+    { id: 'images' as const, label: "Affiches", icon: Palette, permission: 'view_dashboard' },
+    { id: 'users' as const, label: "Utilisateurs", icon: Users, permission: 'manage_users' },
+    { id: 'designers' as const, label: "Graphistes", icon: Palette, permission: 'manage_designers' },
+    { id: 'roles' as const, label: "Rôles", icon: Shield, permission: 'manage_admins' },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6">
+      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 flex flex-col">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <Shield className="w-5 h-5 text-primary-foreground" />
+            {getRoleIcon()}
           </div>
           <div>
             <h1 className="font-display font-bold text-foreground">Admin</h1>
-            <p className="text-xs text-muted-foreground">Tableau de bord</p>
+            <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
           </div>
         </div>
 
-        <nav className="space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 bg-primary/10 text-primary"
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Vue d'ensemble
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-          >
-            <Image className="w-4 h-4" />
-            Affiches
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-          >
-            <Users className="w-4 h-4" />
-            Utilisateurs
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-          >
-            <Palette className="w-4 h-4" />
-            Graphistes
-          </Button>
+        <nav className="space-y-2 flex-1">
+          {navItems.map(item => {
+            if (!hasPermission(item.permission)) return null;
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className={`w-full justify-start gap-3 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => {
+                  if (item.id === 'templates') {
+                    navigate("/admin/templates");
+                  } else {
+                    setActiveSection(item.id);
+                  }
+                }}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </Button>
+            );
+          })}
         </nav>
 
-        <div className="absolute bottom-6 left-6 right-6">
+        <div className="space-y-2 pt-4 border-t border-border">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+            onClick={() => navigate("/")}
+          >
+            <ChevronRight className="w-4 h-4" />
+            Retour au site
+          </Button>
           <Button
             variant="outline"
             className="w-full justify-start gap-3"
@@ -288,6 +295,32 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Actions */}
+        {hasPermission('manage_templates') && (
+          <Card className="bg-card/60 border-border/40 mb-8">
+            <CardHeader>
+              <CardTitle className="text-lg font-medium text-foreground">
+                Actions rapides
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+              <Button 
+                onClick={() => navigate("/admin/templates")}
+                className="bg-gradient-to-r from-primary to-accent"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Ajouter un template
+              </Button>
+              {hasPermission('manage_settings') && (
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Paramètres
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
