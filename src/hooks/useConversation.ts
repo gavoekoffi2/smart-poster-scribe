@@ -502,6 +502,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         }
 
         // Envoyer les images avec le prompt
+        // Détecter le mode clone: si on a une image de référence ET qu'on est parti du cloneTemplate
+        const isCloneModeActive = isCloneMode && !!referenceImageToSend;
+        
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
@@ -510,6 +513,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
+            isCloneMode: isCloneModeActive,
           },
         });
 
@@ -866,28 +870,57 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             const nextQuestion = templateQuestions[nextIndex];
             addMessage("assistant", nextQuestion.question);
           } else {
-            // Toutes les questions ont été répondues, construire les infos et passer aux couleurs
+            // Toutes les questions ont été répondues
+            // En mode CLONE: passer DIRECTEMENT à la génération (pas de couleurs, logo, etc.)
+            // La référence est déjà le template cloné
             const extractedInfo: ExtractedInfo = {};
             
             // Mapper les réponses aux champs extractedInfo
             if (newAnswers.title) extractedInfo.title = newAnswers.title;
+            if (newAnswers.subtitle) extractedInfo.additionalDetails = (extractedInfo.additionalDetails || '') + ' ' + newAnswers.subtitle;
             if (newAnswers.date || newAnswers.dates) extractedInfo.dates = newAnswers.date || newAnswers.dates;
-            if (newAnswers.time) extractedInfo.dates = `${extractedInfo.dates || ''} ${newAnswers.time}`.trim();
+            if (newAnswers.time) {
+              extractedInfo.dates = `${extractedInfo.dates || ''} à ${newAnswers.time}`.trim();
+            }
             if (newAnswers.location || newAnswers.lieu) extractedInfo.location = newAnswers.location || newAnswers.lieu;
             if (newAnswers.contact) extractedInfo.contact = newAnswers.contact;
-            if (newAnswers.price || newAnswers.prix) extractedInfo.prices = newAnswers.price || newAnswers.prix;
-            if (newAnswers.speaker || newAnswers.orateur) extractedInfo.speakers = newAnswers.speaker || newAnswers.orateur;
+            if (newAnswers.price || newAnswers.prix || newAnswers.tarif) {
+              extractedInfo.prices = newAnswers.price || newAnswers.prix || newAnswers.tarif;
+            }
+            if (newAnswers.speaker || newAnswers.orateur || newAnswers.artiste) {
+              extractedInfo.speakers = newAnswers.speaker || newAnswers.orateur || newAnswers.artiste;
+            }
+            if (newAnswers.guests || newAnswers.invites) {
+              extractedInfo.speakers = `${extractedInfo.speakers || ''}, ${newAnswers.guests || newAnswers.invites}`.trim();
+            }
             if (newAnswers.details) extractedInfo.additionalDetails = newAnswers.details;
-            if (newAnswers.organizer || newAnswers.organisateur) extractedInfo.organizer = newAnswers.organizer || newAnswers.organisateur;
+            if (newAnswers.organizer || newAnswers.organisateur) {
+              extractedInfo.organizer = newAnswers.organizer || newAnswers.organisateur;
+            }
+            if (newAnswers.social || newAnswers.reseaux) {
+              extractedInfo.contact = `${extractedInfo.contact || ''} | ${newAnswers.social || newAnswers.reseaux}`.trim();
+            }
             
-            setConversationState(prev => ({
-              ...prev,
-              step: "colors",
-              extractedInfo: { ...prev.extractedInfo, ...extractedInfo },
-              description: Object.values(newAnswers).join(". "),
-            }));
+            // Construire une description complète à partir des réponses
+            const fullDescription = Object.entries(newAnswers)
+              .filter(([_, value]) => value && value.trim())
+              .map(([key, value]) => `${key}: ${value}`)
+              .join(" | ");
             
-            addMessage("assistant", "Parfait ! Choisissez maintenant une palette de couleurs pour votre affiche :");
+            // MODE CLONE: Générer directement avec le template cloné comme référence
+            const nextState: ConversationState = {
+              ...conversationStateRef.current,
+              step: "generating",
+              extractedInfo: { ...conversationStateRef.current.extractedInfo, ...extractedInfo },
+              description: fullDescription,
+              // referenceImage est déjà défini avec le template cloné
+            };
+            
+            setConversationState(nextState);
+            addMessage("assistant", "Parfait ! Je génère votre affiche en respectant exactement le design du template sélectionné...");
+            
+            // Lancer la génération
+            generatePoster(nextState);
           }
         }
         return;
