@@ -30,7 +30,6 @@ export function useImageGeneration() {
           outputFormat: params.outputFormat,
           referenceImage: params.referenceImageUrl,
           contentImage: params.contentImageUrl,
-          ...(params as Record<string, unknown>),
         },
       });
 
