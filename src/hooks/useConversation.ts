@@ -907,20 +907,17 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               .map(([key, value]) => `${key}: ${value}`)
               .join(" | ");
             
-            // MODE CLONE: Générer directement avec le template cloné comme référence
-            const nextState: ConversationState = {
-              ...conversationStateRef.current,
-              step: "generating",
+            // MODE CLONE: Ajouter l'étape couleurs avant de générer
+            // L'utilisateur doit pouvoir personnaliser ses couleurs
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
               extractedInfo: { ...conversationStateRef.current.extractedInfo, ...extractedInfo },
               description: fullDescription,
               // referenceImage est déjà défini avec le template cloné
-            };
+            }));
             
-            setConversationState(nextState);
-            addMessage("assistant", "Parfait ! Je génère votre affiche en respectant exactement le design du template sélectionné...");
-            
-            // Lancer la génération
-            generatePoster(nextState);
+            addMessage("assistant", "Parfait ! Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
           }
         }
         return;
