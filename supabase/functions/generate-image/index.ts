@@ -181,129 +181,152 @@ function buildProfessionalPrompt({
   hasContentImage,
   hasLogoImage,
   aspectRatio,
+  isCloneMode = false,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
   hasContentImage: boolean;
   hasLogoImage: boolean;
   aspectRatio: string;
+  isCloneMode?: boolean;
 }): string {
   const instructions: string[] = [];
 
   // ====== RÔLE ET OBJECTIF PRINCIPAL ======
   instructions.push("=== RÔLE ===");
-  instructions.push("Tu es un graphiste d'élite spécialisé dans la création d'affiches publicitaires professionnelles pour l'Afrique francophone.");
+  if (isCloneMode) {
+    instructions.push("Tu es un graphiste d'élite spécialisé dans le CLONAGE EXACT d'affiches publicitaires. Ton travail: reproduire FIDÈLEMENT le design du template en remplaçant UNIQUEMENT le contenu textuel.");
+  } else {
+    instructions.push("Tu es un graphiste d'élite spécialisé dans la création d'affiches publicitaires professionnelles pour l'Afrique francophone.");
+  }
   instructions.push("");
 
-  // ====== RÈGLE ABSOLUE SUR LE CONTENU ======
-  instructions.push("=== RÈGLE CRITIQUE: RESPECT INTÉGRAL DU CONTENU UTILISATEUR ===");
-  instructions.push("⚠️ OBLIGATION ABSOLUE: CHAQUE information fournie par l'utilisateur DOIT apparaître sur l'affiche finale.");
-  instructions.push("- Titre/Thème: DOIT être affiché en grand et lisible");
-  instructions.push("- Dates/Horaires: DOIVENT être clairement visibles");
-  instructions.push("- Lieu/Adresse: DOIT apparaître intégralement");
-  instructions.push("- Contact (téléphone, WhatsApp, email): DOIT être présent et lisible");
-  instructions.push("- Prix/Tarifs: DOIVENT être affichés si fournis");
-  instructions.push("- Noms d'orateurs/artistes: DOIVENT apparaître avec leurs titres");
-  instructions.push("- Menu/Produits: DOIT être complet si fourni");
-  instructions.push("");
-  instructions.push("❌ INTERDIT: Omettre, tronquer ou résumer le contenu utilisateur");
-  instructions.push("❌ INTERDIT: Inventer des informations non fournies (numéros, prix, dates)");
-  instructions.push("❌ INTERDIT: Copier le texte/données du template de référence");
-  instructions.push("");
-
-  // ====== RÈGLE SUR LE DESIGN DU TEMPLATE ======
-  if (hasReferenceImage) {
-    instructions.push("=== RÈGLE CRITIQUE: RÉPLICATION EXACTE DU DESIGN DE RÉFÉRENCE ===");
-    instructions.push("⚠️ L'image de RÉFÉRENCE (première image) est le MODÈLE MAÎTRE à reproduire FIDÈLEMENT.");
+  // ====== RÈGLE ABSOLUE: MODE CLONE ======
+  if (isCloneMode && hasReferenceImage) {
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  🎯 MODE CLONAGE ACTIF - RÉPLICATION PIXEL-PERFECT DU DESIGN          ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
     instructions.push("");
-    instructions.push("COPIER EXACTEMENT ET RIGOUREUSEMENT:");
-    instructions.push("1. MISE EN PAGE IDENTIQUE: Respecter la grille, les zones, les marges, les espacements exacts");
-    instructions.push("2. TYPOGRAPHIE IDENTIQUE: Mêmes styles de police, tailles, graisses, positionnement du texte");
-    instructions.push("3. PALETTE COULEURS IDENTIQUE: Même schéma colorimétrique, dégradés, tons, superpositions");
-    instructions.push("4. ÉLÉMENTS GRAPHIQUES IDENTIQUES: Mêmes formes décoratives, lignes, cadres, motifs, effets visuels");
-    instructions.push("5. AMBIANCE IDENTIQUE: Même mood, éclairage, énergie visuelle, atmosphère générale");
-    instructions.push("6. STRUCTURE IDENTIQUE: Même organisation des éléments, même hiérarchie visuelle");
+    instructions.push("⚠️ RÈGLE ABSOLUE: Cette affiche est un CLONE. Tu dois reproduire EXACTEMENT le design du template.");
     instructions.push("");
-    instructions.push("L'AFFICHE FINALE DOIT RESSEMBLER AU TEMPLATE comme si c'était la même famille de design.");
-    instructions.push("Le spectateur doit reconnaître immédiatement le style du template dans l'affiche finale.");
+    instructions.push("CE QUE TU DOIS REPRODUIRE À L'IDENTIQUE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("1. MISE EN PAGE IDENTIQUE PIXEL PAR PIXEL:");
+    instructions.push("   - Même disposition exacte des éléments");
+    instructions.push("   - Mêmes marges, espacements, alignements");
+    instructions.push("   - Même grille de composition");
+    instructions.push("");
+    instructions.push("2. TYPOGRAPHIE IDENTIQUE:");
+    instructions.push("   - Même style de police (ou très similaire)");
+    instructions.push("   - Mêmes tailles relatives (titre grand, détails petits)");
+    instructions.push("   - Mêmes positions du texte");
+    instructions.push("   - Mêmes effets (ombres, contours, dégradés sur texte)");
+    instructions.push("");
+    instructions.push("3. PALETTE COULEURS IDENTIQUE:");
+    instructions.push("   - Exactement les mêmes couleurs");
+    instructions.push("   - Mêmes dégradés");
+    instructions.push("   - Mêmes zones colorées");
+    instructions.push("");
+    instructions.push("4. ÉLÉMENTS GRAPHIQUES IDENTIQUES:");
+    instructions.push("   - Mêmes formes décoratives (cercles, lignes, cadres)");
+    instructions.push("   - Mêmes motifs et textures");
+    instructions.push("   - Mêmes effets lumineux (flares, halos, reflets)");
+    instructions.push("   - Même fond (dégradé, image, couleur unie)");
+    instructions.push("");
+    instructions.push("5. STRUCTURE IDENTIQUE:");
+    instructions.push("   - Si le template a un personnage à gauche → personnage à gauche");
+    instructions.push("   - Si le template a un bandeau en bas → bandeau en bas");
+    instructions.push("   - Si le template a un cadre doré → cadre doré");
+    instructions.push("");
+    instructions.push("CE QUE TU REMPLACES:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("- UNIQUEMENT les textes avec le contenu utilisateur fourni ci-dessous");
+    instructions.push("- Les visages/personnages: générer de NOUVEAUX personnages africains");
+    instructions.push("- Le logo si l'utilisateur en fournit un");
+    instructions.push("");
+    instructions.push("CE QUE TU NE FAIS JAMAIS:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("❌ INVENTER du contenu non fourni (pas de numéros, dates, prix inventés)");
+    instructions.push("❌ MODIFIER le design (pas de nouvelles couleurs, nouvelles formes)");
+    instructions.push("❌ SIMPLIFIER le design (garder TOUS les éléments décoratifs)");
+    instructions.push("❌ GARDER les textes du template original");
+    instructions.push("❌ LAISSER des zones vides si l'utilisateur n'a pas fourni l'info");
+    instructions.push("");
+    instructions.push("L'AFFICHE FINALE DOIT ÊTRE INDISCERNABLE DU TEMPLATE");
+    instructions.push("(seul le contenu textuel change, le design reste IDENTIQUE)");
+    instructions.push("");
+  } else if (hasReferenceImage) {
+    // Mode normal avec référence (pas un clone strict)
+    instructions.push("=== RÈGLE: INSPIRATION DU DESIGN DE RÉFÉRENCE ===");
+    instructions.push("⚠️ L'image de RÉFÉRENCE est le MODÈLE à reproduire fidèlement.");
+    instructions.push("");
+    instructions.push("REPRODUIRE:");
+    instructions.push("1. MISE EN PAGE: Respecter la grille, zones, marges, espacements");
+    instructions.push("2. TYPOGRAPHIE: Mêmes styles de police, tailles, positionnement");
+    instructions.push("3. PALETTE COULEURS: Même schéma colorimétrique, dégradés, tons");
+    instructions.push("4. ÉLÉMENTS GRAPHIQUES: Mêmes formes décoratives, lignes, cadres, effets");
+    instructions.push("5. AMBIANCE: Même mood, éclairage, atmosphère générale");
     instructions.push("");
     instructions.push("NE JAMAIS COPIER DU TEMPLATE:");
-    instructions.push("- Les textes, prix, numéros de téléphone, dates (utiliser UNIQUEMENT les données utilisateur)");
-    instructions.push("- Les visages/personnages existants (générer de NOUVEAUX personnages africains)");
-    instructions.push("- Les logos d'autres entreprises");
+    instructions.push("- Les textes, prix, numéros, dates (utiliser UNIQUEMENT données utilisateur)");
+    instructions.push("- Les visages/personnages (générer de NOUVEAUX personnages africains)");
     instructions.push("");
   }
+
+  // ====== RÈGLE SUR LE CONTENU UTILISATEUR ======
+  instructions.push("=== CONTENU OBLIGATOIRE À AFFICHER ===");
+  instructions.push("⚠️ CHAQUE information fournie par l'utilisateur DOIT apparaître:");
+  instructions.push("- Titre → affiché en grand et lisible");
+  instructions.push("- Dates/Horaires → clairement visibles");
+  instructions.push("- Lieu/Adresse → intégralement présent");
+  instructions.push("- Contact → présent et lisible");
+  instructions.push("- Prix → affichés si fournis");
+  instructions.push("- Orateurs/Artistes → avec leurs titres");
+  instructions.push("");
+  instructions.push("❌ INTERDIT: Omettre, tronquer, résumer le contenu utilisateur");
+  instructions.push("❌ INTERDIT: Inventer des informations non fournies");
+  instructions.push("");
 
   // ====== SPÉCIFICATIONS TECHNIQUES ======
   instructions.push("=== SPÉCIFICATIONS TECHNIQUES ===");
   instructions.push(`- Format: ${aspectRatio}`);
-  instructions.push("- Résolution: Haute qualité, détails nets, sans artefacts");
-  instructions.push("- Typographie: Alignement parfait, kerning cohérent, hiérarchie claire");
-  instructions.push("- Pas de filigrane, pas de mockup, pas de cadre");
-  instructions.push("");
-
-  // ====== HIÉRARCHIE VISUELLE ======
-  instructions.push("=== HIÉRARCHIE VISUELLE OBLIGATOIRE ===");
-  instructions.push("1. TITRE: Le plus grand et visible (zone supérieure ou centrale)");
-  instructions.push("2. DATE/HEURE: Visible immédiatement après le titre");
-  instructions.push("3. LIEU: Clairement positionné");
-  instructions.push("4. VISUELS: Photo/personnage intégré harmonieusement");
-  instructions.push("5. INFORMATIONS: Contact, prix, détails en zone dédiée (souvent bas de l'affiche)");
-  instructions.push("6. LOGO: Positionné selon les instructions (par défaut: coin inférieur)");
+  instructions.push("- Résolution: Haute qualité, détails nets");
+  instructions.push("- Typographie: Alignement parfait, hiérarchie claire");
+  instructions.push("- Pas de filigrane, mockup, ou cadre");
   instructions.push("");
 
   if (hasLogoImage) {
-    instructions.push("=== RÈGLE CRITIQUE: LOGO CLIENT ===");
-    instructions.push("⚠️ OBLIGATION ABSOLUE: Le logo fourni par le client DOIT être reproduit À L'IDENTIQUE.");
-    instructions.push("- UTILISER l'image exacte du logo fourni, sans aucune modification");
-    instructions.push("- NE JAMAIS créer, dessiner ou inventer un nouveau logo");
-    instructions.push("- NE JAMAIS modifier les couleurs, formes ou texte du logo original");
-    instructions.push("- Positionner le logo de manière visible et professionnelle");
-    instructions.push("- Conserver les proportions exactes du logo (pas d'étirement/compression)");
-    instructions.push("- Le logo doit être net, lisible et bien intégré au design");
+    instructions.push("=== LOGO CLIENT ===");
+    instructions.push("⚠️ Reproduire le logo À L'IDENTIQUE, sans modification.");
     instructions.push("");
   }
 
   if (hasContentImage) {
-    instructions.push("PHOTO/VISUEL PRINCIPAL: Utiliser l'image de contenu comme élément visuel central.");
+    instructions.push("PHOTO PRINCIPALE: Utiliser l'image de contenu fournie comme visuel central.");
     instructions.push("");
   }
 
   // ====== QUALITÉ AFRICAINE ======
-  instructions.push("=== STYLE AFRICAIN ===");
-  instructions.push("- Personnages: Personnes africaines authentiques avec traits réalistes");
-  instructions.push("- Couleurs: Vibrantes et chaleureuses, adaptées au contexte africain");
-  instructions.push("- Texte: Français ou langue locale selon le contexte");
-  instructions.push("");
-
-  // ====== RÈGLES DE DESIGN PROFESSIONNEL (TOUJOURS APPLIQUÉES) ======
-  instructions.push("=== DESIGN PROFESSIONNEL OBLIGATOIRE ===");
-  instructions.push("⚠️ L'affiche DOIT avoir un design professionnel de haute qualité, JAMAIS basique ou amateur.");
-  instructions.push("");
-  instructions.push("ÉLÉMENTS DESIGN OBLIGATOIRES:");
-  instructions.push("1. COMPOSITION: Utiliser la règle des tiers, créer une hiérarchie visuelle claire");
-  instructions.push("2. TYPOGRAPHIE: Combiner 2-3 polices maximum avec contraste (titre display, texte lisible)");
-  instructions.push("3. COULEURS: Palette harmonieuse avec couleur dominante, secondaire et accent");
-  instructions.push("4. ÉLÉMENTS GRAPHIQUES: Ajouter formes décoratives, lignes, cadres, effets (dégradés, ombres, reflets)");
-  instructions.push("5. TEXTURES & EFFETS: Dégradés subtils, superpositions, jeux de lumière");
-  instructions.push("6. ESPACEMENT: Marges cohérentes, respiration visuelle, pas de surcharge");
-  instructions.push("7. FINITION: Qualité imprimerie, haute résolution, alignements parfaits");
-  instructions.push("");
-  instructions.push("STYLES INSPIRANTS:");
-  instructions.push("- Affiches de concert/festivals modernes avec effets lumineux");
-  instructions.push("- Designs église africains avec éléments dorés et atmosphère majestueuse");
-  instructions.push("- Publicités professionnelles avec mise en page dynamique");
-  instructions.push("- Flyers événementiels avec photos intégrées et typographie impactante");
-  instructions.push("");
-  instructions.push("❌ INTERDIT: Designs plats/basiques, texte sur fond uni, absence de décoration graphique");
+  instructions.push("=== STYLE ===");
+  instructions.push("- Personnages: Africains authentiques avec traits réalistes");
+  instructions.push("- Couleurs: Vibrantes et chaleureuses");
+  instructions.push("- Texte: Français");
   instructions.push("");
 
   // ====== CONTENU UTILISATEUR ======
-  instructions.push("=== CONTENU UTILISATEUR À AFFICHER INTÉGRALEMENT ===");
-  instructions.push(userPrompt);
-  instructions.push("=== FIN CONTENU UTILISATEUR ===");
+  instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+  instructions.push("║  CONTENU UTILISATEUR À AFFICHER (REMPLACER LE TEXTE DU TEMPLATE)      ║");
+  instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
   instructions.push("");
-  instructions.push("RAPPEL FINAL: Chaque élément ci-dessus DOIT apparaître sur l'affiche. Vérifie avant de finaliser.");
+  instructions.push(userPrompt);
+  instructions.push("");
+  instructions.push("═══════════════════════════════════════════════════════════════════════");
+  instructions.push("");
+  if (isCloneMode) {
+    instructions.push("🎯 RAPPEL CLONAGE: Design IDENTIQUE au template, seul le texte change avec le contenu ci-dessus.");
+  } else {
+    instructions.push("RAPPEL: Chaque élément ci-dessus DOIT apparaître sur l'affiche.");
+  }
 
   return instructions.join("\n");
 }
@@ -816,12 +839,16 @@ serve(async (req) => {
       ? `LOGOS PLACEMENT: ${logoPositions.map((pos: string, i: number) => `Logo ${i+1} at ${pos}`).join(", ")}.`
       : "";
     
+    // Détecter si c'est un mode clone (passé dans le body de la requête)
+    const isCloneMode = body.isCloneMode === true;
+    
     const professionalPrompt = buildProfessionalPrompt({
       userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : ""),
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
       hasLogoImage: logoImages && logoImages.length > 0,
       aspectRatio,
+      isCloneMode,
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
