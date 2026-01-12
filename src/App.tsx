@@ -5,6 +5,7 @@ import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/app" element={<AppPage />} />
         <Route path="/admin/upload" element={<AdminUploadPage />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>

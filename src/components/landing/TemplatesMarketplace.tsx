@@ -71,7 +71,7 @@ function TiltTemplateCard({
       >
         {/* Image */}
         <img 
-          src={template.image_url} 
+          src={getTemplateImageUrl(template.image_url)} 
           alt={template.description || template.design_category} 
           className="w-full h-full object-cover transition-transform duration-700"
           style={{
@@ -144,6 +144,19 @@ interface ReferenceTemplate {
   image_url: string;
   description: string | null;
   tags: string[] | null;
+}
+
+// Helper to get the correct image URL (handle relative paths)
+function getTemplateImageUrl(imageUrl: string): string {
+  // If already a full URL, return as-is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  // For relative paths starting with /, serve from public folder
+  if (imageUrl.startsWith('/')) {
+    return imageUrl;
+  }
+  return `/${imageUrl}`;
 }
 const domainConfig = [{
   id: "all",
@@ -331,7 +344,7 @@ export function TemplatesMarketplace() {
             <div className="flex flex-col md:flex-row">
               {/* Image */}
               <div className="md:w-1/2">
-                <img src={selectedTemplate.image_url} alt={selectedTemplate.description || "Template"} className="w-full h-full object-cover" />
+                <img src={getTemplateImageUrl(selectedTemplate.image_url)} alt={selectedTemplate.description || "Template"} className="w-full h-full object-cover" />
               </div>
 
               {/* Details */}
