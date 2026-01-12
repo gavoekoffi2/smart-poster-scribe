@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          related_image_id: string | null
+          resolution_used: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_image_id?: string | null
+          resolution_used?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_image_id?: string | null
+          resolution_used?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_related_image_id_fkey"
+            columns: ["related_image_id"]
+            isOneToOne: false
+            referencedRelation: "generated_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_categories: {
         Row: {
           created_at: string
@@ -134,6 +175,56 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_transactions: {
+        Row: {
+          amount_fcfa: number
+          amount_usd: number
+          created_at: string
+          id: string
+          metadata: Json | null
+          moneroo_payment_id: string | null
+          payment_method: string | null
+          plan_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_fcfa: number
+          amount_usd: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          moneroo_payment_id?: string | null
+          payment_method?: string | null
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_fcfa?: number
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          moneroo_payment_id?: string | null
+          payment_method?: string | null
+          plan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -232,6 +323,54 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          credits_per_month: number
+          description: string | null
+          features: Json
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          max_resolution: string
+          name: string
+          price_fcfa: number
+          price_usd: number
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          credits_per_month?: number
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          max_resolution?: string
+          name: string
+          price_fcfa?: number
+          price_usd?: number
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          credits_per_month?: number
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          max_resolution?: string
+          name?: string
+          price_fcfa?: number
+          price_usd?: number
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       template_earnings: {
         Row: {
           amount: number
@@ -288,11 +427,87 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          current_period_end: string
+          current_period_start: string
+          free_generations_used: number
+          id: string
+          moneroo_subscription_id: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining?: number
+          current_period_end?: string
+          current_period_start?: string
+          free_generations_used?: number
+          id?: string
+          moneroo_subscription_id?: string | null
+          plan_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          current_period_end?: string
+          current_period_start?: string
+          free_generations_used?: number
+          id?: string
+          moneroo_subscription_id?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_and_debit_credits: {
+        Args: { p_image_id?: string; p_resolution: string; p_user_id: string }
+        Returns: Json
+      }
+      get_or_create_user_subscription: {
+        Args: { p_user_id: string }
+        Returns: {
+          created_at: string
+          credits_remaining: number
+          current_period_end: string
+          current_period_start: string
+          free_generations_used: number
+          id: string
+          moneroo_subscription_id: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_role_level: { Args: { _user_id: string }; Returns: number }
       has_any_role: {
         Args: {
