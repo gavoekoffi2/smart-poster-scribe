@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
+import { FormatSelect } from "@/components/chat/FormatSelect";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
 import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
@@ -113,6 +114,8 @@ export default function AppPage() {
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
+    handleFormatSelect,
+    handleSkipFormat,
     resetConversation,
     goBackToStep,
     goForwardToStep,
@@ -193,6 +196,7 @@ export default function AppPage() {
   const showProductCharacterSkip = step === "product_character_check";
   const showStylePreferencesSkip = step === "style_preferences";
   const showDomainQuestionImages = step === "domain_question_images";
+  const showFormatSelect = step === "format";
 
   const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
 
@@ -358,6 +362,25 @@ export default function AppPage() {
                   onConfirm={() => handleColorsConfirm(selectedColors)}
                   disabled={isProcessing}
                 />
+              </div>
+            )}
+
+            {showFormatSelect && (
+              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                <FormatSelect
+                  onSelect={handleFormatSelect}
+                  disabled={isProcessing}
+                />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSkipFormat} 
+                  disabled={isProcessing} 
+                  className="mt-2 hover:bg-muted/50"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Utiliser le format par défaut
+                </Button>
               </div>
             )}
 

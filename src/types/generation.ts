@@ -1,6 +1,21 @@
-export type AspectRatio = "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" | "9:16" | "16:9" | "21:9";
+export type AspectRatio = "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" | "9:16" | "16:9" | "21:9" | "4:1" | "3:1" | "1:3";
 export type Resolution = "1K" | "2K" | "4K";
 export type OutputFormat = "png" | "jpg";
+
+// Usage type - determines resolution tier
+export type UsageType = "social" | "print" | "custom";
+
+// Format preset for social media and print
+export interface FormatPreset {
+  id: string;
+  name: string;
+  aspectRatio: string;
+  width: number;
+  height: number;
+  platform: string;
+  icon: string;
+  usage: UsageType;
+}
 
 export type Domain = 
   | "church" 
@@ -52,6 +67,8 @@ export interface GenerationParams {
   referenceDescription?: string;
   colorPalette?: string[];
   contentImageUrl?: string;
+  formatPreset?: FormatPreset;
+  usageType?: UsageType;
 }
 
 export interface GeneratedImage {
@@ -62,6 +79,8 @@ export interface GeneratedImage {
   resolution: Resolution;
   domain?: Domain;
   createdAt: Date;
+  formatPreset?: FormatPreset;
+  usageType?: UsageType;
 }
 
 export interface GenerationResult {
@@ -258,6 +277,7 @@ export interface ConversationState {
     | "domain_question_images" // Collecte d'images suite à une question
     | "domain_question_text" // Collecte de texte suite à une question
     | "reference" 
+    | "format"  // Nouvelle étape: sélection du format
     | "colors" 
     | "logo" 
     | "logo_position" 
@@ -301,4 +321,7 @@ export interface ConversationState {
   domainQuestionState?: DomainQuestionState;
   // Nouveau: Informations spécifiques au domaine collectées
   domainSpecificInfo?: DomainSpecificInfo;
+  // Format de sortie sélectionné
+  formatPreset?: FormatPreset;
+  usageType?: UsageType;
 }
