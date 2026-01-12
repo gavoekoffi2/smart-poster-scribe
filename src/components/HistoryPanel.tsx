@@ -1,5 +1,5 @@
 import { GeneratedImage } from "@/types/generation";
-import { Clock, Trash2 } from "lucide-react";
+import { Clock, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ interface HistoryPanelProps {
   currentImage: GeneratedImage | null;
   onSelect: (image: GeneratedImage) => void;
   onClear: () => void;
+  onEdit?: (image: GeneratedImage) => void;
 }
 
 export function HistoryPanel({
@@ -15,6 +16,7 @@ export function HistoryPanel({
   currentImage,
   onSelect,
   onClear,
+  onEdit,
 }: HistoryPanelProps) {
   if (history.length === 0) {
     return (
@@ -59,34 +61,52 @@ export function HistoryPanel({
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {history.map((image) => (
-          <button
+          <div
             key={image.id}
-            onClick={() => onSelect(image)}
             className={cn(
-              "w-full flex gap-3 p-2 rounded-lg border transition-all duration-200 text-left",
+              "w-full flex gap-3 p-2 rounded-lg border transition-all duration-200",
               currentImage?.id === image.id
                 ? "border-primary bg-primary/10"
                 : "border-border/30 bg-card/20 hover:border-border/50 hover:bg-card/40"
             )}
           >
-            <img
-              src={image.imageUrl}
-              alt=""
-              className="w-16 h-16 rounded object-cover flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-foreground line-clamp-2">
-                {image.prompt}
-              </p>
-              <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground">
-                <span>{image.aspectRatio}</span>
-                <span>{image.resolution}</span>
+            <button
+              onClick={() => onSelect(image)}
+              className="flex gap-3 flex-1 text-left"
+            >
+              <img
+                src={image.imageUrl}
+                alt=""
+                className="w-16 h-16 rounded object-cover flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-foreground line-clamp-2">
+                  {image.prompt}
+                </p>
+                <div className="flex gap-2 mt-1 text-[10px] text-muted-foreground">
+                  <span>{image.aspectRatio}</span>
+                  <span>{image.resolution}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground/70 mt-1">
+                  {new Date(image.createdAt).toLocaleString("fr-FR")}
+                </p>
               </div>
-              <p className="text-[10px] text-muted-foreground/70 mt-1">
-                {new Date(image.createdAt).toLocaleString("fr-FR")}
-              </p>
-            </div>
-          </button>
+            </button>
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(image);
+                }}
+                className="h-8 w-8 flex-shrink-0 hover:bg-primary/10 hover:text-primary"
+                title="Éditer cette image"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
         ))}
       </div>
     </div>

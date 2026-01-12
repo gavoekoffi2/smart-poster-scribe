@@ -12,9 +12,10 @@ import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
+import { VisualEditor } from "@/components/editor/VisualEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
 import { toast } from "sonner";
 
@@ -127,6 +128,8 @@ export default function AppPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistoryImage, setSelectedHistoryImage] = useState<GeneratedImage | null>(null);
   const [prevGeneratedImage, setPrevGeneratedImage] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingImage, setEditingImage] = useState<string | null>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -199,6 +202,30 @@ export default function AppPage() {
   const handleReset = () => {
     resetConversation();
     setSelectedHistoryImage(null);
+  };
+
+  // Handle opening the visual editor
+  const handleOpenEditor = (imageUrl: string) => {
+    setEditingImage(imageUrl);
+    setShowEditor(true);
+  };
+
+  // Handle saving edited image
+  const handleSaveEditedImage = (editedImageUrl: string) => {
+    // Replace the current displayed image with the edited one
+    if (selectedHistoryImage) {
+      setSelectedHistoryImage({
+        ...selectedHistoryImage,
+        imageUrl: editedImageUrl
+      });
+    }
+    setShowEditor(false);
+    setEditingImage(null);
+  };
+
+  // Handle edit from history
+  const handleEditFromHistory = (image: GeneratedImage) => {
+    handleOpenEditor(image.imageUrl);
   };
 
   const handleSignOut = async () => {
@@ -509,6 +536,7 @@ export default function AppPage() {
               currentImage={selectedHistoryImage}
               onSelect={handleHistorySelect}
               onClear={clearHistory}
+              onEdit={handleEditFromHistory}
             />
           </div>
         )}
@@ -557,16 +585,38 @@ export default function AppPage() {
           </div>
 
           {displayImage && (
-            <Button 
-              onClick={handleDownload} 
-              className="mt-4 w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Télécharger l'affiche
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => handleOpenEditor(displayImage)} 
+                className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Éditer
+              </Button>
+              <Button 
+                onClick={handleDownload} 
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger
+              </Button>
+            </div>
           )}
         </div>
       </main>
+
+      {/* Visual Editor Modal */}
+      {showEditor && editingImage && (
+        <VisualEditor
+          imageUrl={editingImage}
+          onClose={() => {
+            setShowEditor(false);
+            setEditingImage(null);
+          }}
+          onSave={handleSaveEditedImage}
+        />
+      )}
     </div>
   );
 }
