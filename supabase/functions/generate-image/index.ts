@@ -539,26 +539,94 @@ serve(async (req) => {
     }
 
     // Helper pour convertir les chemins relatifs en URLs absolues
-    // Les templates sont stockés dans le dossier public/ de l'app, donc on utilise l'origin du client
+    // PRIORITÉ: Storage Supabase d'abord (plus fiable), puis app origin en fallback
     const resolveTemplateUrl = (imageUrl: string): string => {
       if (isHttpUrl(imageUrl)) {
         return imageUrl;
       }
-      // Les templates sont dans public/reference-templates/
-      // On doit utiliser l'origin de l'app cliente pour y accéder
+      // Les templates peuvent être dans le storage Supabase ou dans public/ de l'app
       if (imageUrl.startsWith('/reference-templates/') || imageUrl.startsWith('/')) {
-        if (requestOrigin) {
-          const fullUrl = `${requestOrigin}${imageUrl}`;
-          console.log(`Resolved template path "${imageUrl}" to: ${fullUrl}`);
-          return fullUrl;
-        }
-        // Fallback: essayer le storage Supabase (au cas où les images y sont migrées)
         const storagePath = imageUrl.replace('/reference-templates/', '').replace(/^\//, '');
+        // Toujours essayer le storage Supabase en priorité (plus fiable que preview URL)
         const storageUrl = `${supabaseUrl}/storage/v1/object/public/reference-templates/${storagePath}`;
-        console.log(`No origin available, trying storage URL: ${storageUrl}`);
+        console.log(`Resolved template path "${imageUrl}" to storage URL: ${storageUrl}`);
         return storageUrl;
       }
       return imageUrl;
+    };
+
+    // Helper pour télécharger une image avec fallback sur l'app origin
+    const downloadImageWithFallback = async (
+      primaryUrl: string,
+      templatePath: string,
+      prefix: string
+    ): Promise<string> => {
+      // Essayer l'URL primaire (storage)
+      try {
+        console.log(`Trying primary URL: ${primaryUrl}`);
+        const response = await fetch(primaryUrl);
+        if (response.ok) {
+          const contentType = response.headers.get("content-type") || "";
+          if (contentType.toLowerCase().startsWith("image/")) {
+            return await uploadFetchedImage(response, contentType, prefix);
+          }
+        }
+      } catch (e) {
+        console.log(`Primary URL failed: ${e}`);
+      }
+
+      // Fallback sur l'app origin
+      if (requestOrigin && templatePath) {
+        const fallbackUrl = `${requestOrigin}/reference-templates/${templatePath}`;
+        console.log(`Trying fallback URL: ${fallbackUrl}`);
+        try {
+          const response = await fetch(fallbackUrl);
+          if (response.ok) {
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.toLowerCase().startsWith("image/")) {
+              return await uploadFetchedImage(response, contentType, prefix);
+            }
+          }
+        } catch (e) {
+          console.log(`Fallback URL also failed: ${e}`);
+        }
+      }
+
+      throw new Error(`Impossible de télécharger l'image template. Vérifiez que les templates sont bien migrés vers le storage.`);
+    };
+
+    // Helper pour upload une image fetchée
+    const uploadFetchedImage = async (
+      response: Response,
+      contentType: string,
+      prefix: string
+    ): Promise<string> => {
+      const arrayBuffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      
+      let extension = 'jpg';
+      if (contentType.includes('png')) extension = 'png';
+      else if (contentType.includes('webp')) extension = 'webp';
+      
+      const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+      
+      const { error } = await supabase.storage
+        .from('temp-images')
+        .upload(fileName, bytes, {
+          contentType: contentType,
+          upsert: false,
+        });
+      
+      if (error) {
+        throw new Error(`Erreur upload: ${error.message}`);
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from('temp-images')
+        .getPublicUrl(fileName);
+      
+      console.log(`Image uploaded successfully: ${urlData.publicUrl}`);
+      return urlData.publicUrl;
     };
 
     // ====== SÉLECTION INTELLIGENTE DE TEMPLATE SI AUCUNE IMAGE FOURNIE ======
@@ -691,10 +759,39 @@ serve(async (req) => {
     const imageInputs: string[] = [];
     const tempFilePaths: string[] = [];
 
+    // Variable pour suivre le chemin original du template (pour fallback)
+    let templateOriginalPath: string | null = null;
+
     if (referenceImage) {
-      const refUrl = await processImage(supabase, referenceImage, "reference", requestOrigin);
-      imageInputs.push(refUrl);
-      tempFilePaths.push(refUrl);
+      // Vérifier si c'est un template (chemin relatif transformé en URL storage)
+      const isTemplateFromDb = referenceImage.includes('/storage/v1/object/public/reference-templates/');
+      
+      if (isTemplateFromDb) {
+        // Extraire le chemin du template pour le fallback
+        const match = referenceImage.match(/reference-templates\/(.+)$/);
+        if (match) {
+          templateOriginalPath = match[1];
+        }
+        
+        try {
+          // Utiliser le helper avec fallback
+          const refUrl = await downloadImageWithFallback(
+            referenceImage,
+            templateOriginalPath || "",
+            "reference"
+          );
+          imageInputs.push(refUrl);
+          tempFilePaths.push(refUrl);
+        } catch (e) {
+          console.error("Failed to download template with fallback:", e);
+          // Continuer sans image de référence si échec
+        }
+      } else {
+        // Image non-template: traitement normal
+        const refUrl = await processImage(supabase, referenceImage, "reference", requestOrigin);
+        imageInputs.push(refUrl);
+        tempFilePaths.push(refUrl);
+      }
     }
 
     if (logoImages && Array.isArray(logoImages)) {
