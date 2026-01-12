@@ -13,6 +13,8 @@ import {
   ProductDisplay,
   RestaurantInfo,
   DomainQuestionState,
+  FormatPreset,
+  UsageType,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -505,15 +507,24 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // Détecter le mode clone: si on a une image de référence ET qu'on est parti du cloneTemplate
         const isCloneModeActive = isCloneMode && !!referenceImageToSend;
         
+        // Déterminer le format et la résolution
+        const formatPreset = state.formatPreset;
+        const aspectRatio = formatPreset?.aspectRatio || "3:4";
+        const resolution: Resolution = state.usageType === "print" ? "4K" : "2K";
+        
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
-            aspectRatio: "3:4" as AspectRatio,
+            aspectRatio,
+            resolution,
             referenceImage: referenceImageToSend,
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
             isCloneMode: isCloneModeActive,
+            formatWidth: formatPreset?.width,
+            formatHeight: formatPreset?.height,
+            usageType: state.usageType || "social",
           },
         });
 
@@ -2029,30 +2040,83 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     (imageDataUrl: string) => {
       addMessage("user", "Image de contenu envoyée", imageDataUrl);
 
+      setConversationState((prev) => ({
+        ...prev,
+        step: "format",
+        contentImage: imageDataUrl,
+        needsContentImage: false,
+      }));
+
+      setTimeout(() => {
+        addMessage("assistant", "Choisissez le format de votre affiche. Sélectionnez un format pour réseaux sociaux (résolution web) ou pour impression (haute résolution).");
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleSkipContentImage = useCallback(() => {
+    addMessage("user", "Générer l'image automatiquement");
+
+    setConversationState((prev) => ({
+      ...prev,
+      step: "format",
+      needsContentImage: true,
+    }));
+
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Choisissez le format de votre affiche. Sélectionnez un format pour réseaux sociaux (résolution web) ou pour impression (haute résolution)."
+      );
+    }, 250);
+  }, [addMessage]);
+
+  // Handle format selection
+  const handleFormatSelect = useCallback(
+    (format: FormatPreset) => {
+      addMessage("user", `Format : ${format.name} (${format.width}×${format.height})`);
+      
       const nextState: ConversationState = {
         ...conversationStateRef.current,
         step: "generating",
-        contentImage: imageDataUrl,
-        needsContentImage: false,
+        formatPreset: format,
+        usageType: format.usage,
       };
 
       setConversationState(nextState);
 
+      const resolutionLabel = format.usage === "print" ? "haute résolution (4K)" : "résolution web (1K-2K)";
       setTimeout(() => {
-        addMessage("assistant", "Parfait ! Génération de votre affiche en cours...");
+        addMessage(
+          "assistant",
+          `Génération de votre affiche en ${resolutionLabel}...`
+        );
         generatePoster(nextState);
       }, 250);
     },
     [addMessage, generatePoster]
   );
 
-  const handleSkipContentImage = useCallback(() => {
-    addMessage("user", "Générer l'image automatiquement");
+  const handleSkipFormat = useCallback(() => {
+    addMessage("user", "Utiliser le format par défaut");
+    
+    // Default to social format (3:4 aspect ratio, 2K)
+    const defaultFormat: FormatPreset = {
+      id: "default",
+      name: "Format par défaut",
+      aspectRatio: "3:4",
+      width: 1080,
+      height: 1440,
+      platform: "Standard",
+      icon: "image",
+      usage: "social",
+    };
 
     const nextState: ConversationState = {
       ...conversationStateRef.current,
       step: "generating",
-      needsContentImage: true,
+      formatPreset: defaultFormat,
+      usageType: "social",
     };
 
     setConversationState(nextState);
@@ -2060,7 +2124,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     setTimeout(() => {
       addMessage(
         "assistant",
-        "Génération de votre affiche en cours (avec des personnages africains si nécessaire)..."
+        "Génération de votre affiche en format standard (3:4)..."
       );
       generatePoster(nextState);
     }, 250);
@@ -2249,6 +2313,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
+    handleFormatSelect,
+    handleSkipFormat,
     resetConversation,
     goBackToStep,
     goForwardToStep,
