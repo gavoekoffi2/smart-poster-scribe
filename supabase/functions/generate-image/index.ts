@@ -511,7 +511,7 @@ serve(async (req) => {
 
     console.log("Request validated:");
     console.log("- Prompt length:", prompt.length);
-    console.log("- Has reference image:", !!referenceImage);
+    console.log("- Has reference image (raw):", !!rawReferenceImage);
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Has content image:", !!contentImage);
 
@@ -522,6 +522,44 @@ serve(async (req) => {
       : refererHeader
         ? new URL(refererHeader).origin
         : undefined;
+    
+    console.log("Request origin:", requestOrigin);
+
+    // Convertir les chemins relatifs de templates en URLs absolues
+    // Cette conversion doit se faire APRÈS avoir extrait requestOrigin
+    if (referenceImage && referenceImage.startsWith('/reference-templates/')) {
+      if (requestOrigin) {
+        referenceImage = `${requestOrigin}${referenceImage}`;
+      } else {
+        // Fallback vers le storage Supabase
+        const storagePath = referenceImage.replace('/reference-templates/', '');
+        referenceImage = `${supabaseUrl}/storage/v1/object/public/reference-templates/${storagePath}`;
+      }
+      console.log("Converted user reference template path to URL:", referenceImage);
+    }
+
+    // Helper pour convertir les chemins relatifs en URLs absolues
+    // Les templates sont stockés dans le dossier public/ de l'app, donc on utilise l'origin du client
+    const resolveTemplateUrl = (imageUrl: string): string => {
+      if (isHttpUrl(imageUrl)) {
+        return imageUrl;
+      }
+      // Les templates sont dans public/reference-templates/
+      // On doit utiliser l'origin de l'app cliente pour y accéder
+      if (imageUrl.startsWith('/reference-templates/') || imageUrl.startsWith('/')) {
+        if (requestOrigin) {
+          const fullUrl = `${requestOrigin}${imageUrl}`;
+          console.log(`Resolved template path "${imageUrl}" to: ${fullUrl}`);
+          return fullUrl;
+        }
+        // Fallback: essayer le storage Supabase (au cas où les images y sont migrées)
+        const storagePath = imageUrl.replace('/reference-templates/', '').replace(/^\//, '');
+        const storageUrl = `${supabaseUrl}/storage/v1/object/public/reference-templates/${storagePath}`;
+        console.log(`No origin available, trying storage URL: ${storageUrl}`);
+        return storageUrl;
+      }
+      return imageUrl;
+    };
 
     // ====== SÉLECTION INTELLIGENTE DE TEMPLATE SI AUCUNE IMAGE FOURNIE ======
     // Cette logique garantit qu'on utilise TOUJOURS un template de référence pour le design
@@ -641,8 +679,9 @@ serve(async (req) => {
           const topTemplates = scoredTemplates.slice(0, topN);
           const picked = topTemplates[Math.floor(Math.random() * topTemplates.length)].template;
           
-          referenceImage = picked.image_url;
-          console.log(`Selected template from domain "${picked.domain}" with highest relevance`);
+          // Convertir le chemin relatif en URL absolue
+          referenceImage = resolveTemplateUrl(picked.image_url);
+          console.log(`Selected template from domain "${picked.domain}" with URL: ${referenceImage}`);
         }
       } catch (e) {
         console.warn("Error selecting intelligent fallback:", e);
