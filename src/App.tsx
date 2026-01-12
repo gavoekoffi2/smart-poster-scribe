@@ -7,6 +7,11 @@ import AppPage from "./pages/AppPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemplates from "./pages/AdminTemplates";
+import AdminDesigners from "./pages/AdminDesigners";
+import DesignerRegistration from "./pages/DesignerRegistration";
+import DesignerDashboard from "./pages/DesignerDashboard";
+import DesignerUpload from "./pages/DesignerUpload";
+import DesignerProfile from "./pages/DesignerProfile";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +26,12 @@ const App = () => (
         <Route path="/admin/upload" element={<AdminUploadPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/templates" element={<AdminTemplates />} />
+        <Route path="/admin/designers" element={<AdminDesigners />} />
+        <Route path="/designer/register" element={<DesignerRegistration />} />
+        <Route path="/designer/dashboard" element={<DesignerDashboard />} />
+        <Route path="/designer/upload" element={<DesignerUpload />} />
+        <Route path="/designer/profile" element={<DesignerProfile />} />
+        <Route path="/designer/:designerId" element={<DesignerProfile />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>

@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      design_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       generated_images: {
         Row: {
           aspect_ratio: string
@@ -139,30 +166,50 @@ export type Database = {
           created_at: string
           description: string | null
           design_category: string
+          designer_id: string | null
           domain: string
+          earnings: number | null
           id: string
           image_url: string
+          is_active: boolean | null
           tags: string[] | null
+          usage_count: number | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           design_category: string
+          designer_id?: string | null
           domain: string
+          earnings?: number | null
           id?: string
           image_url: string
+          is_active?: boolean | null
           tags?: string[] | null
+          usage_count?: number | null
         }
         Update: {
           created_at?: string
           description?: string | null
           design_category?: string
+          designer_id?: string | null
           domain?: string
+          earnings?: number | null
           id?: string
           image_url?: string
+          is_active?: boolean | null
           tags?: string[] | null
+          usage_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reference_templates_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -184,6 +231,38 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      template_earnings: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          template_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          template_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_earnings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reference_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
