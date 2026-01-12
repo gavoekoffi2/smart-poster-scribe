@@ -5,19 +5,19 @@ import { Button } from "@/components/ui/button";
 
 const plans = [
   {
-    name: "Gratuit",
+    name: "Essai gratuit",
     price: "0",
     currency: "FCFA",
-    period: "/mois",
-    description: "Parfait pour découvrir la plateforme",
+    period: "",
+    description: "Testez la plateforme avec 5 crédits offerts",
     icon: Zap,
     features: [
-      "5 affiches par mois",
+      "5 crédits offerts (bonus unique)",
       "Résolution 1K uniquement",
       "Filigrane inclus",
       "Accès aux templates de base",
     ],
-    cta: "Commencer gratuitement",
+    cta: "Tester gratuitement",
     popular: false,
     gradient: "from-muted to-muted/50",
   },
