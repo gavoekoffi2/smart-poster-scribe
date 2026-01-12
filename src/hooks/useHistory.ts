@@ -17,6 +17,11 @@ interface SaveImageParams {
   colorPalette?: string[];
 }
 
+interface UpdateImageParams {
+  id: string;
+  imageUrl: string;
+}
+
 export function useHistory() {
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -187,6 +192,81 @@ export function useHistory() {
     }
   }, []);
 
+  // Upload edited image to Supabase Storage and update the record
+  const updateEditedImage = useCallback(async (params: UpdateImageParams): Promise<GeneratedImage | null> => {
+    try {
+      // Convert base64 to blob if it's a data URL
+      let imageBlob: Blob;
+      if (params.imageUrl.startsWith('data:')) {
+        const response = await fetch(params.imageUrl);
+        imageBlob = await response.blob();
+      } else {
+        return null;
+      }
+
+      // Generate unique filename
+      const fileName = `edited-${params.id}-${Date.now()}.png`;
+      const filePath = user ? `${user.id}/${fileName}` : `anonymous/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('temp-images')
+        .upload(filePath, imageBlob, {
+          contentType: 'image/png',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error("Error uploading edited image:", uploadError);
+        toast.error("Erreur lors de l'upload de l'image éditée");
+        return null;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('temp-images')
+        .getPublicUrl(filePath);
+
+      const newImageUrl = publicUrlData.publicUrl;
+
+      // Update the record in the database
+      const { data, error } = await supabase
+        .from("generated_images")
+        .update({ image_url: newImageUrl })
+        .eq("id", params.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating image record:", error);
+        toast.error("Erreur lors de la mise à jour de l'historique");
+        return null;
+      }
+
+      const updatedImage: GeneratedImage = {
+        id: data.id,
+        imageUrl: data.image_url,
+        prompt: data.prompt,
+        aspectRatio: data.aspect_ratio as AspectRatio,
+        resolution: data.resolution as Resolution,
+        domain: data.domain as Domain | undefined,
+        createdAt: new Date(data.created_at),
+      };
+
+      // Update local history state
+      setHistory((prev) => 
+        prev.map((img) => img.id === params.id ? updatedImage : img)
+      );
+
+      toast.success("Image éditée sauvegardée dans l'historique");
+      return updatedImage;
+    } catch (err) {
+      console.error("Error updating edited image:", err);
+      toast.error("Erreur lors de la sauvegarde de l'image éditée");
+      return null;
+    }
+  }, [user]);
+
   return {
     history,
     isLoading,
@@ -195,6 +275,7 @@ export function useHistory() {
     saveToHistory,
     clearHistory,
     deleteFromHistory,
+    updateEditedImage,
     refreshHistory: fetchHistory,
   };
 }

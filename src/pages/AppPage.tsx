@@ -119,7 +119,7 @@ export default function AppPage() {
     isCloneMode,
   } = useConversation(cloneTemplate);
 
-  const { history, saveToHistory, clearHistory, isAuthenticated: historyAuth } = useHistory();
+  const { history, saveToHistory, clearHistory, updateEditedImage, isAuthenticated: historyAuth } = useHistory();
 
   const [inputValue, setInputValue] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -129,6 +129,7 @@ export default function AppPage() {
   const [selectedHistoryImage, setSelectedHistoryImage] = useState<GeneratedImage | null>(null);
   const [prevGeneratedImage, setPrevGeneratedImage] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
 
   // Auto-scroll to bottom on new messages
@@ -205,27 +206,44 @@ export default function AppPage() {
   };
 
   // Handle opening the visual editor
-  const handleOpenEditor = (imageUrl: string) => {
+  const handleOpenEditor = (imageUrl: string, imageId?: string) => {
     setEditingImage(imageUrl);
+    setEditingImageId(imageId || null);
     setShowEditor(true);
   };
 
-  // Handle saving edited image
-  const handleSaveEditedImage = (editedImageUrl: string) => {
-    // Replace the current displayed image with the edited one
-    if (selectedHistoryImage) {
+  // Handle saving edited image with persistence
+  const handleSaveEditedImage = async (editedImageUrl: string) => {
+    // If editing an existing history image, update it in Supabase
+    if (editingImageId) {
+      const updatedImage = await updateEditedImage({
+        id: editingImageId,
+        imageUrl: editedImageUrl
+      });
+      
+      if (updatedImage) {
+        // Update the selected image if it was the one being edited
+        if (selectedHistoryImage?.id === editingImageId) {
+          setSelectedHistoryImage(updatedImage);
+        }
+      }
+    } else if (selectedHistoryImage) {
+      // Fallback for images without ID
       setSelectedHistoryImage({
         ...selectedHistoryImage,
         imageUrl: editedImageUrl
       });
     }
+    
     setShowEditor(false);
     setEditingImage(null);
+    setEditingImageId(null);
   };
 
   // Handle edit from history
   const handleEditFromHistory = (image: GeneratedImage) => {
-    handleOpenEditor(image.imageUrl);
+    setSelectedHistoryImage(image);
+    handleOpenEditor(image.imageUrl, image.id);
   };
 
   const handleSignOut = async () => {
@@ -588,7 +606,7 @@ export default function AppPage() {
             <div className="mt-4 flex gap-2">
               <Button 
                 variant="outline"
-                onClick={() => handleOpenEditor(displayImage)} 
+                onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
                 className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
               >
                 <Pencil className="w-4 h-4 mr-2" />
