@@ -4,6 +4,7 @@ import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { CreditBalance } from "@/components/credits/CreditBalance";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
@@ -283,6 +284,9 @@ export default function AppPage() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <CreditBalance compact onUpgrade={() => navigate("/pricing")} />
+            )}
             <Button 
               variant="ghost" 
               size="sm" 
