@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,29 +14,61 @@ import { z } from "zod";
 const emailSchema = z.string().email("Email invalide");
 const passwordSchema = z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères");
 
+interface LocationState {
+  redirectTo?: string;
+  pendingClone?: boolean;
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
 
+  const handleSuccessfulAuth = () => {
+    // Check if there's a pending clone template
+    const pendingTemplate = sessionStorage.getItem('pendingCloneTemplate');
+    
+    if (pendingTemplate) {
+      try {
+        const template = JSON.parse(pendingTemplate);
+        sessionStorage.removeItem('pendingCloneTemplate');
+        navigate("/app", {
+          state: {
+            cloneTemplate: template
+          }
+        });
+        return;
+      } catch (e) {
+        console.error("Error parsing pending template:", e);
+      }
+    }
+    
+    // Default redirect
+    const redirectTo = locationState?.redirectTo || "/app";
+    navigate(redirectTo);
+  };
+
   useEffect(() => {
     // Check if user is already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/app");
+        handleSuccessfulAuth();
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate("/app");
+        handleSuccessfulAuth();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, locationState]);
 
   const validateInputs = (isSignUp: boolean) => {
     try {
@@ -85,7 +117,7 @@ export default function AuthPage() {
 
       if (data.user) {
         toast.success("Compte créé avec succès ! Bienvenue !");
-        navigate("/app");
+        handleSuccessfulAuth();
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors de l'inscription");
@@ -116,7 +148,7 @@ export default function AuthPage() {
 
       if (data.user) {
         toast.success("Connexion réussie !");
-        navigate("/app");
+        handleSuccessfulAuth();
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors de la connexion");

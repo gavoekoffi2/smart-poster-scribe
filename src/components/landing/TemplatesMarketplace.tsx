@@ -82,8 +82,29 @@ export function TemplatesMarketplace() {
       setLoading(false);
     }
   };
-  const handleCloneTemplate = (template: ReferenceTemplate) => {
-    // Navigate to app with template info in state
+  const handleCloneTemplate = async (template: ReferenceTemplate) => {
+    // Check if user is authenticated
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // Store the template to clone after login
+      sessionStorage.setItem('pendingCloneTemplate', JSON.stringify({
+        id: template.id,
+        imageUrl: template.image_url,
+        domain: template.domain,
+        description: template.description
+      }));
+      // Redirect to auth page
+      navigate("/auth", { 
+        state: { 
+          redirectTo: "/app",
+          pendingClone: true 
+        } 
+      });
+      return;
+    }
+    
+    // User is authenticated, proceed to clone
     navigate("/app", {
       state: {
         cloneTemplate: {
@@ -94,6 +115,11 @@ export function TemplatesMarketplace() {
         }
       }
     });
+  };
+
+  const handleQuickClone = async (e: React.MouseEvent, template: ReferenceTemplate) => {
+    e.stopPropagation(); // Prevent modal from opening
+    await handleCloneTemplate(template);
   };
   const getDomainLabel = (domainId: string) => {
     const domain = domainConfig.find(d => d.id === domainId);
@@ -167,7 +193,13 @@ export function TemplatesMarketplace() {
                 </div>
 
                 {/* Clone button on hover */}
-                
+                <button
+                  onClick={(e) => handleQuickClone(e, template)}
+                  className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 backdrop-blur-sm text-primary-foreground text-xs font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-primary hover:scale-105 shadow-lg"
+                >
+                  <Copy className="w-3 h-3" />
+                  Cloner
+                </button>
 
                 {/* Decorative glow */}
                 <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
