@@ -1,8 +1,142 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowUpRight, Copy, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart, Filter } from "lucide-react";
+import { Sparkles, ArrowUpRight, Copy, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+
+// 3D Tilt Template Card Component
+function TiltTemplateCard({ 
+  template, 
+  index, 
+  onSelect, 
+  onClone, 
+  getDomainLabel 
+}: { 
+  template: ReferenceTemplate; 
+  index: number; 
+  onSelect: () => void; 
+  onClone: (e: React.MouseEvent) => void;
+  getDomainLabel: (id: string) => string;
+}) {
+  const [rotateX, setRotateX] = useState(0);
+  const [rotateY, setRotateY] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+    
+    // Calculate rotation (max 12 degrees)
+    const rotateYValue = (mouseX / (rect.width / 2)) * 12;
+    const rotateXValue = -(mouseY / (rect.height / 2)) * 12;
+    
+    setRotateX(rotateXValue);
+    setRotateY(rotateYValue);
+  };
+
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => {
+    setRotateX(0);
+    setRotateY(0);
+    setIsHovered(false);
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      className="group relative cursor-pointer aspect-[3/4]"
+      style={{ 
+        perspective: "1000px",
+        animationDelay: `${index * 0.05}s` 
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onSelect}
+    >
+      <div
+        className="w-full h-full rounded-2xl overflow-hidden bg-card/40 border border-border/40 transition-all duration-300"
+        style={{
+          transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isHovered ? 1.02 : 1})`,
+          transformStyle: "preserve-3d",
+          borderColor: isHovered ? "hsl(var(--primary) / 0.4)" : undefined,
+        }}
+      >
+        {/* Image */}
+        <img 
+          src={template.image_url} 
+          alt={template.description || template.design_category} 
+          className="w-full h-full object-cover transition-transform duration-700"
+          style={{
+            transform: isHovered ? "scale(1.1) translateZ(10px)" : "scale(1)",
+          }}
+          loading="lazy" 
+        />
+
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+
+        {/* Shine effect */}
+        <div 
+          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+          style={{
+            background: `linear-gradient(
+              ${135 + rotateY * 3}deg,
+              transparent 30%,
+              rgba(255, 255, 255, 0.15) 50%,
+              transparent 70%
+            )`,
+            opacity: isHovered ? 1 : 0,
+          }}
+        />
+
+        {/* Content */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300"
+          style={{
+            transform: isHovered ? "translateZ(30px) translateY(-4px)" : "translateZ(0)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-xs text-primary font-medium">
+              {getDomainLabel(template.domain)}
+            </span>
+          </div>
+          <p className="text-sm text-foreground font-medium capitalize">
+            {template.design_category.replace(/-/g, " ")}
+          </p>
+        </div>
+
+        {/* Clone button on hover */}
+        <button
+          onClick={onClone}
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 backdrop-blur-sm text-primary-foreground text-xs font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-primary hover:scale-105 shadow-lg"
+          style={{
+            transform: isHovered ? "translateZ(40px) translateY(0)" : "translateZ(0) translateY(8px)",
+          }}
+        >
+          <Copy className="w-3 h-3" />
+          Cloner
+        </button>
+
+        {/* Decorative glow */}
+        <div 
+          className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-primary/20 blur-3xl transition-opacity duration-500"
+          style={{ opacity: isHovered ? 1 : 0 }}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface ReferenceTemplate {
   id: string;
   domain: string;
@@ -170,40 +304,16 @@ export function TemplatesMarketplace() {
           </div> : templates.length === 0 ? <div className="text-center py-12">
             <p className="text-muted-foreground">Aucun template trouvé pour ce domaine.</p>
           </div> : <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {templates.map((template, index) => <div key={template.id} className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-[3/4] bg-card/40 border border-border/40 hover:border-primary/40 transition-all duration-300" style={{
-          animationDelay: `${index * 0.05}s`
-        }} onClick={() => setSelectedTemplate(template)}>
-                {/* Image */}
-                <img src={template.image_url} alt={template.description || template.design_category} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
-
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-
-                {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="text-xs text-primary font-medium">
-                      {getDomainLabel(template.domain)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground font-medium capitalize">
-                    {template.design_category.replace(/-/g, " ")}
-                  </p>
-                </div>
-
-                {/* Clone button on hover */}
-                <button
-                  onClick={(e) => handleQuickClone(e, template)}
-                  className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 backdrop-blur-sm text-primary-foreground text-xs font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-primary hover:scale-105 shadow-lg"
-                >
-                  <Copy className="w-3 h-3" />
-                  Cloner
-                </button>
-
-                {/* Decorative glow */}
-                <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </div>)}
+            {templates.map((template, index) => (
+              <TiltTemplateCard
+                key={template.id}
+                template={template}
+                index={index}
+                onSelect={() => setSelectedTemplate(template)}
+                onClone={(e) => handleQuickClone(e, template)}
+                getDomainLabel={getDomainLabel}
+              />
+            ))}
           </div>}
 
         {/* CTA */}
