@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.analyze-template]
 verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = false
+
+[functions.moneroo-webhook]
+verify_jwt = false
