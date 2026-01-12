@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminTemplates from "./pages/AdminTemplates";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => (
         <Route path="/app" element={<AppPage />} />
         <Route path="/admin/upload" element={<AdminUploadPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/templates" element={<AdminTemplates />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>
