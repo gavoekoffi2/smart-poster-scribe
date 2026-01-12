@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
+import PricingPage from "./pages/PricingPage";
+import AccountPage from "./pages/AccountPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemplates from "./pages/AdminTemplates";
@@ -23,6 +25,8 @@ const App = () => (
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/app" element={<AppPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/account" element={<AccountPage />} />
         <Route path="/admin/upload" element={<AdminUploadPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/templates" element={<AdminTemplates />} />
