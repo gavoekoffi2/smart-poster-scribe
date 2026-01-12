@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowUpRight, Copy, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart } from "lucide-react";
+import { Sparkles, ArrowUpRight, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -115,7 +115,7 @@ function TiltTemplateCard({
           </p>
         </div>
 
-        {/* Clone button on hover */}
+        {/* Inspire button on hover */}
         <button
           onClick={onClone}
           className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 backdrop-blur-sm text-primary-foreground text-xs font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-primary hover:scale-105 shadow-lg"
@@ -123,8 +123,8 @@ function TiltTemplateCard({
             transform: isHovered ? "translateZ(40px) translateY(0)" : "translateZ(0) translateY(8px)",
           }}
         >
-          <Copy className="w-3 h-3" />
-          Cloner
+          <Sparkles className="w-3 h-3" />
+          S'inspirer
         </button>
 
         {/* Decorative glow */}
@@ -371,8 +371,8 @@ export function TemplatesMarketplace() {
 
                 <div className="space-y-3">
                   <Button onClick={() => handleCloneTemplate(selectedTemplate)} className="w-full glow-orange bg-gradient-to-r from-primary to-accent rounded-full py-6">
-                    <Copy className="w-4 h-4 mr-2" />
-                    Cloner ce design
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    S'inspirer de ce design
                   </Button>
                   <Button variant="outline" onClick={() => setSelectedTemplate(null)} className="w-full rounded-full">
                     Fermer

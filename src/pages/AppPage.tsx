@@ -306,15 +306,27 @@ export default function AppPage() {
               <span className="hidden sm:inline">Nouveau</span>
             </Button>
             {isAuthenticated ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleSignOut}
-                className="hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Déconnexion</span>
-              </Button>
+              <>
+                <Link to="/account">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Mon compte</span>
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSignOut}
+                  className="hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Déconnexion</span>
+                </Button>
+              </>
             ) : (
               <Link to="/auth">
                 <Button 
