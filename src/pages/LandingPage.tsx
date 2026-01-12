@@ -8,6 +8,8 @@ import { TemplatesMarketplace } from "@/components/landing/TemplatesMarketplace"
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
+import { PricingSection } from "@/components/landing/PricingSection";
+import { ContactSection } from "@/components/landing/ContactSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { Footer } from "@/components/landing/Footer";
 
@@ -34,10 +36,10 @@ export default function LandingPage() {
         {/* Testimonials Section */}
         <TestimonialsSection />
         
-        {/* Templates Marketplace - Unique section for templates */}
+        {/* Templates Marketplace */}
         <TemplatesMarketplace />
         
-        {/* Showcase - Community Creations (only shows when there are real user images) */}
+        {/* Showcase - Community Creations */}
         <ShowcaseSection />
         
         {/* Process Section */}
@@ -48,6 +50,12 @@ export default function LandingPage() {
         
         {/* Features/Services Section */}
         <FeaturesSection />
+        
+        {/* Pricing Section */}
+        <PricingSection />
+        
+        {/* Contact Section */}
+        <ContactSection />
         
         {/* CTA Section */}
         <CTASection onGetStarted={handleGetStarted} />

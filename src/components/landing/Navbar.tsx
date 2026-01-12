@@ -24,8 +24,8 @@ export function Navbar({ onGetStarted }: NavbarProps) {
     { href: "#", label: "Accueil", active: true },
     { href: "#showcase", label: "Réalisations" },
     { href: "#templates", label: "Templates" },
-    { href: "#services", label: "Services" },
-    { href: "#features", label: "Fonctionnalités" },
+    { href: "#features", label: "Services" },
+    { href: "#pricing", label: "Tarifs" },
     { href: "#contact", label: "Contact" },
   ];
 
