@@ -3,13 +3,23 @@ import { GenerationParams, GeneratedImage, GenerationResult } from "@/types/gene
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface CreditError {
+  error: string;
+  message: string;
+  remaining?: number;
+  needed?: number;
+  is_free?: boolean;
+}
+
 export function useImageGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentImage, setCurrentImage] = useState<GeneratedImage | null>(null);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
+  const [creditError, setCreditError] = useState<CreditError | null>(null);
 
   const generateImage = useCallback(async (params: GenerationParams) => {
     setIsGenerating(true);
+    setCreditError(null);
 
     try {
       const { data, error } = await supabase.functions.invoke<GenerationResult>("generate-image", {
@@ -18,12 +28,46 @@ export function useImageGeneration() {
           aspectRatio: params.aspectRatio,
           resolution: params.resolution,
           outputFormat: params.outputFormat,
+          referenceImage: params.referenceImageUrl,
+          contentImage: params.contentImageUrl,
+          ...(params as Record<string, unknown>),
         },
       });
 
       if (error) {
         console.error("Function invocation error:", error);
+        
+        // Vérifier si c'est une erreur de crédits (402) ou d'authentification (401)
+        if (error.message?.includes("402") || error.message?.includes("Payment Required")) {
+          const errorData = data as unknown as CreditError;
+          setCreditError(errorData || { error: "INSUFFICIENT_CREDITS", message: "Crédits insuffisants" });
+          toast.error(errorData?.message || "Crédits insuffisants pour cette génération");
+          return null;
+        }
+        
+        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+          setCreditError({ error: "AUTHENTICATION_REQUIRED", message: "Veuillez vous connecter" });
+          toast.error("Veuillez vous connecter pour générer des images");
+          return null;
+        }
+        
         toast.error("Erreur lors de la génération de l'image");
+        return null;
+      }
+
+      // Vérifier si la réponse contient une erreur de crédits
+      if (data && !data.success) {
+        const errorData = data as unknown as CreditError;
+        if (errorData.error === "INSUFFICIENT_CREDITS" || 
+            errorData.error === "FREE_LIMIT_REACHED" ||
+            errorData.error === "RESOLUTION_NOT_ALLOWED" ||
+            errorData.error === "AUTHENTICATION_REQUIRED") {
+          setCreditError(errorData);
+          toast.error(errorData.message);
+          return null;
+        }
+        
+        toast.error(data.error || "La génération a échoué");
         return null;
       }
 
@@ -65,12 +109,19 @@ export function useImageGeneration() {
     setCurrentImage(null);
   }, []);
 
+  const clearCreditError = useCallback(() => {
+    setCreditError(null);
+  }, []);
+
   return {
     isGenerating,
     currentImage,
     history,
+    creditError,
     generateImage,
     selectFromHistory,
     clearHistory,
+    clearCreditError,
   };
 }
+

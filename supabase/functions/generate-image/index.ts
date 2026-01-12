@@ -469,12 +469,34 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Variables Supabase non configurées");
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ===== AUTHENTIFICATION UTILISATEUR =====
+    let userId: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      // Créer un client avec le token de l'utilisateur pour vérifier son identité
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      });
+      
+      const { data: { user }, error: authError } = await userSupabase.auth.getUser();
+      
+      if (!authError && user) {
+        userId = user.id;
+        console.log("Authenticated user:", userId);
+      } else {
+        console.log("Auth error or no user:", authError?.message);
+      }
+    }
 
     const body = await req.json();
     const {
@@ -547,6 +569,65 @@ serve(async (req) => {
         : undefined;
     
     console.log("Request origin:", requestOrigin);
+
+    // ===== VÉRIFICATION DES CRÉDITS =====
+    let creditCheckResult: any = null;
+    
+    if (userId) {
+      console.log("Checking credits for user:", userId, "resolution:", resolution);
+      
+      const { data: creditCheck, error: creditError } = await supabase.rpc(
+        "check_and_debit_credits",
+        {
+          p_user_id: userId,
+          p_resolution: resolution,
+          p_image_id: null,
+        }
+      );
+      
+      if (creditError) {
+        console.error("Credit check error:", creditError);
+        throw new Error("Erreur lors de la vérification des crédits");
+      }
+      
+      console.log("Credit check result:", JSON.stringify(creditCheck));
+      creditCheckResult = creditCheck;
+      
+      if (!creditCheck.success) {
+        // Retourner une erreur 402 (Payment Required) avec les détails
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: creditCheck.error,
+            message: creditCheck.message,
+            remaining: creditCheck.remaining,
+            needed: creditCheck.needed,
+            is_free: creditCheck.is_free,
+          }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      console.log(`Credits debited successfully. Remaining: ${creditCheck.remaining}, Add watermark: ${creditCheck.add_watermark}`);
+    } else {
+      // Utilisateur non authentifié - bloquer la génération
+      console.log("Unauthenticated request - blocking generation");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "AUTHENTICATION_REQUIRED",
+          message: "Veuillez vous connecter pour générer des images",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    // ===== FIN VÉRIFICATION DES CRÉDITS =====
 
     // Convertir les chemins relatifs de templates en URLs absolues
     // Cette conversion doit se faire APRÈS avoir extrait requestOrigin
