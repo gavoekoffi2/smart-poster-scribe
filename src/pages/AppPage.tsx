@@ -621,69 +621,64 @@ export default function AppPage() {
           </div>
         )}
 
-        {/* Preview Panel */}
-        <div className={`lg:w-96 glass-panel gradient-border p-4 flex flex-col ${!displayImage && step !== "generating" ? "hidden lg:flex" : ""}`} style={{ animation: 'scale-in 0.4s ease-out' }}>
-          <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            APERÇU EN DIRECT
-          </h2>
-          
-          <div className="flex-1 flex items-center justify-center min-h-[240px] lg:min-h-[320px] rounded-xl bg-background/40 border border-border/20 overflow-hidden relative">
-            {displayImage ? (
-              <img
-                src={displayImage}
-                alt="Affiche générée"
-                className="max-w-full max-h-full object-contain animate-scale-in"
-              />
-            ) : isProcessing && step === "generating" ? (
-              <div className="text-center space-y-6">
-                <div className="relative mx-auto w-24 h-24">
-                  <DesignerAvatar size="xl" isWorking={true} />
+        {/* Preview Panel - Only shown when image is generated or during generation */}
+        {(displayImage || (isProcessing && step === "generating")) && (
+          <div className="lg:w-96 glass-panel gradient-border p-4 flex flex-col animate-in slide-in-from-right-5 duration-300" style={{ animation: 'scale-in 0.4s ease-out' }}>
+            <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              {displayImage ? "VOTRE CRÉATION" : "GÉNÉRATION EN COURS"}
+            </h2>
+            
+            <div className="flex-1 flex items-center justify-center min-h-[240px] lg:min-h-[320px] rounded-xl bg-background/40 border border-border/20 overflow-hidden relative">
+              {displayImage ? (
+                <img
+                  src={displayImage}
+                  alt="Affiche générée"
+                  className="max-w-full max-h-full object-contain animate-scale-in"
+                />
+              ) : (
+                <div className="text-center space-y-6">
+                  <div className="relative mx-auto w-24 h-24">
+                    <DesignerAvatar size="xl" isWorking={true} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">Création en cours...</p>
+                    <p className="text-xs text-muted-foreground">Notre graphiste travaille sur votre affiche</p>
+                  </div>
+                  <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mx-auto">
+                    <div 
+                      className="h-full bg-gradient-to-r from-brand-orange to-brand-blue rounded-full"
+                      style={{
+                        animation: "shimmer 1.5s infinite",
+                        backgroundSize: "200% 100%"
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">Création en cours...</p>
-                  <p className="text-xs text-muted-foreground">Notre graphiste travaille sur votre affiche</p>
-                </div>
-                <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mx-auto">
-                  <div 
-                    className="h-full bg-gradient-to-r from-brand-orange to-brand-blue rounded-full"
-                    style={{
-                      animation: "shimmer 1.5s infinite",
-                      backgroundSize: "200% 100%"
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground p-8 space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-brand-orange/20 to-brand-blue/20 flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-sm">Votre création apparaîtra ici</p>
+              )}
+            </div>
+
+            {displayImage && (
+              <div className="mt-4 flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
+                  className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Éditer
+                </Button>
+                <Button 
+                  onClick={handleDownload} 
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger
+                </Button>
               </div>
             )}
           </div>
-
-          {displayImage && (
-            <div className="mt-4 flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
-                className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                Éditer
-              </Button>
-              <Button 
-                onClick={handleDownload} 
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger
-              </Button>
-            </div>
-          )}
-        </div>
+        )}
       </main>
 
       {/* Visual Editor Modal */}

@@ -1,23 +1,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Monitor, 
   Smartphone, 
   Printer, 
   Settings2,
-  Facebook,
-  Instagram,
-  Youtube,
-  Linkedin,
-  MessageCircle,
-  Twitter,
-  Image,
-  Check
+  Check,
+  Sparkles
 } from "lucide-react";
 import { FormatPreset, UsageType } from "@/types/generation";
 
@@ -70,239 +71,269 @@ const PRINT_PRESETS: FormatPreset[] = [
   { id: "print-square", name: "Carré HD", aspectRatio: "1:1", width: 3000, height: 3000, platform: "Impression", icon: "print", usage: "print" },
 ];
 
-const getPlatformIcon = (icon: string) => {
-  switch (icon) {
-    case "facebook": return <Facebook className="w-4 h-4" />;
-    case "instagram": return <Instagram className="w-4 h-4" />;
-    case "youtube": return <Youtube className="w-4 h-4" />;
-    case "linkedin": return <Linkedin className="w-4 h-4" />;
-    case "whatsapp": return <MessageCircle className="w-4 h-4" />;
-    case "twitter": return <Twitter className="w-4 h-4" />;
-    case "tiktok": return <Smartphone className="w-4 h-4" />;
-    case "print": return <Printer className="w-4 h-4" />;
-    default: return <Image className="w-4 h-4" />;
-  }
-};
+const ALL_PRESETS = [...SOCIAL_PRESETS, ...PRINT_PRESETS];
+
+// Grouper les presets par plateforme
+const groupedPresets = [...SOCIAL_PRESETS, ...PRINT_PRESETS].reduce((acc, preset) => {
+  const platform = preset.platform;
+  if (!acc[platform]) acc[platform] = [];
+  acc[platform].push(preset);
+  return acc;
+}, {} as Record<string, FormatPreset[]>);
+
+type Resolution = "1K" | "2K" | "4K";
+
+const RESOLUTIONS: { value: Resolution; label: string; description: string }[] = [
+  { value: "1K", label: "1K - Économique", description: "1 crédit" },
+  { value: "2K", label: "2K - Standard", description: "2 crédits" },
+  { value: "4K", label: "4K - Haute qualité", description: "4 crédits" },
+];
 
 export function FormatSelect({ onSelect, disabled }: FormatSelectProps) {
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [usageType, setUsageType] = useState<UsageType | "custom">("social");
+  const [selectedFormat, setSelectedFormat] = useState<string>("");
+  const [resolution, setResolution] = useState<Resolution>("2K");
   const [customWidth, setCustomWidth] = useState<string>("1080");
   const [customHeight, setCustomHeight] = useState<string>("1080");
-  const [activeTab, setActiveTab] = useState<UsageType>("social");
 
-  const handlePresetSelect = (preset: FormatPreset) => {
-    setSelectedFormat(preset.id);
-    onSelect(preset);
+  const handleUsageChange = (value: UsageType | "custom") => {
+    setUsageType(value);
+    setSelectedFormat("");
+    
+    // Auto-set resolution based on usage type
+    if (value === "print") {
+      setResolution("4K");
+    } else if (value === "social") {
+      setResolution("2K");
+    }
   };
 
-  const handleCustomConfirm = () => {
-    const width = parseInt(customWidth) || 1080;
-    const height = parseInt(customHeight) || 1080;
-    
-    // Déterminer le ratio
-    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-    const divisor = gcd(width, height);
-    const ratioW = width / divisor;
-    const ratioH = height / divisor;
-    
-    // Simplifier le ratio pour l'API
-    let aspectRatio: string;
-    const ratio = width / height;
-    if (Math.abs(ratio - 1) < 0.1) aspectRatio = "1:1";
-    else if (Math.abs(ratio - 4/3) < 0.1) aspectRatio = "4:3";
-    else if (Math.abs(ratio - 3/4) < 0.1) aspectRatio = "3:4";
-    else if (Math.abs(ratio - 16/9) < 0.1) aspectRatio = "16:9";
-    else if (Math.abs(ratio - 9/16) < 0.1) aspectRatio = "9:16";
-    else aspectRatio = `${ratioW}:${ratioH}`;
-    
-    // Déterminer l'usage basé sur la résolution
-    const usage: UsageType = width >= 2400 || height >= 2400 ? "print" : "social";
-    
-    const customPreset: FormatPreset = {
-      id: "custom",
-      name: `Personnalisé (${width}×${height})`,
-      aspectRatio,
-      width,
-      height,
-      platform: "Personnalisé",
-      icon: "custom",
-      usage,
-    };
-    
-    setSelectedFormat("custom");
-    onSelect(customPreset);
+  const handleFormatChange = (formatId: string) => {
+    setSelectedFormat(formatId);
   };
 
-  // Grouper les presets sociaux par plateforme
-  const groupedSocialPresets = SOCIAL_PRESETS.reduce((acc, preset) => {
-    const platform = preset.platform;
-    if (!acc[platform]) acc[platform] = [];
-    acc[platform].push(preset);
-    return acc;
-  }, {} as Record<string, FormatPreset[]>);
+  const handleConfirm = () => {
+    if (usageType === "custom") {
+      const width = parseInt(customWidth) || 1080;
+      const height = parseInt(customHeight) || 1080;
+      
+      // Déterminer le ratio
+      const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+      const divisor = gcd(width, height);
+      const ratioW = width / divisor;
+      const ratioH = height / divisor;
+      
+      let aspectRatio: string;
+      const ratio = width / height;
+      if (Math.abs(ratio - 1) < 0.1) aspectRatio = "1:1";
+      else if (Math.abs(ratio - 4/3) < 0.1) aspectRatio = "4:3";
+      else if (Math.abs(ratio - 3/4) < 0.1) aspectRatio = "3:4";
+      else if (Math.abs(ratio - 16/9) < 0.1) aspectRatio = "16:9";
+      else if (Math.abs(ratio - 9/16) < 0.1) aspectRatio = "9:16";
+      else aspectRatio = `${ratioW}:${ratioH}`;
+      
+      const customPreset: FormatPreset = {
+        id: "custom",
+        name: `Personnalisé (${width}×${height})`,
+        aspectRatio,
+        width,
+        height,
+        platform: "Personnalisé",
+        icon: "custom",
+        usage: resolution === "4K" ? "print" : "social",
+        resolution,
+      };
+      
+      onSelect(customPreset);
+    } else {
+      const preset = ALL_PRESETS.find(p => p.id === selectedFormat);
+      if (preset) {
+        onSelect({ ...preset, resolution });
+      }
+    }
+  };
+
+  const getFilteredFormats = () => {
+    if (usageType === "social") {
+      return groupedPresets;
+    } else if (usageType === "print") {
+      return { "Impression": PRINT_PRESETS };
+    }
+    return {};
+  };
+
+  const filteredFormats = getFilteredFormats();
+  const canConfirm = usageType === "custom" || selectedFormat;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="space-y-4 p-4 rounded-xl bg-card/50 border border-border/40 backdrop-blur-sm animate-fade-in">
+      <div className="flex items-center gap-2 mb-2">
         <Monitor className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Choisissez le format</h3>
+        <h3 className="font-semibold text-foreground">Format de l'affiche</h3>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as UsageType)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="social" className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4" />
-            <span className="hidden sm:inline">Réseaux sociaux</span>
-            <span className="sm:hidden">Social</span>
-          </TabsTrigger>
-          <TabsTrigger value="print" className="flex items-center gap-2">
-            <Printer className="w-4 h-4" />
-            <span>Impression</span>
-          </TabsTrigger>
-          <TabsTrigger value="custom" className="flex items-center gap-2">
-            <Settings2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Personnalisé</span>
-            <span className="sm:hidden">Custom</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Type d'utilisation */}
+      <div className="space-y-2">
+        <Label className="text-sm text-muted-foreground">Type d'utilisation</Label>
+        <Select value={usageType} onValueChange={handleUsageChange} disabled={disabled}>
+          <SelectTrigger className="w-full bg-background/60 border-border/50 hover:border-primary/50 transition-colors">
+            <SelectValue placeholder="Choisir le type" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border/50 backdrop-blur-xl z-50">
+            <SelectItem value="social" className="cursor-pointer hover:bg-primary/10">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-primary" />
+                <span>Réseaux sociaux</span>
+                <Badge variant="outline" className="ml-2 text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
+                  1K-2K
+                </Badge>
+              </div>
+            </SelectItem>
+            <SelectItem value="print" className="cursor-pointer hover:bg-primary/10">
+              <div className="flex items-center gap-2">
+                <Printer className="w-4 h-4 text-amber-500" />
+                <span>Impression</span>
+                <Badge variant="outline" className="ml-2 text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30">
+                  4K
+                </Badge>
+              </div>
+            </SelectItem>
+            <SelectItem value="custom" className="cursor-pointer hover:bg-primary/10">
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-muted-foreground" />
+                <span>Personnalisé</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Réseaux sociaux */}
-        <TabsContent value="social" className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-              Résolution 1K-2K
-            </Badge>
-            <span>Optimisé pour le web</span>
-          </div>
-          
-          {Object.entries(groupedSocialPresets).map(([platform, presets]) => (
-            <div key={platform} className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                {getPlatformIcon(presets[0].icon)}
-                {platform}
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {presets.map((preset) => (
-                  <Card
-                    key={preset.id}
-                    className={`p-3 cursor-pointer transition-all hover:border-primary/50 ${
-                      selectedFormat === preset.id 
-                        ? "border-primary bg-primary/5 ring-1 ring-primary" 
-                        : "border-border/50"
-                    } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
-                    onClick={() => handlePresetSelect(preset)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">{preset.name}</span>
+      {/* Format spécifique (si pas custom) */}
+      {usageType !== "custom" && (
+        <div className="space-y-2">
+          <Label className="text-sm text-muted-foreground">Format</Label>
+          <Select value={selectedFormat} onValueChange={handleFormatChange} disabled={disabled}>
+            <SelectTrigger className="w-full bg-background/60 border-border/50 hover:border-primary/50 transition-colors">
+              <SelectValue placeholder="Choisir le format" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border/50 backdrop-blur-xl z-50 max-h-[300px]">
+              {Object.entries(filteredFormats).map(([platform, presets]) => (
+                <SelectGroup key={platform}>
+                  <SelectLabel className="text-xs font-semibold text-muted-foreground px-2 py-1.5">
+                    {platform}
+                  </SelectLabel>
+                  {presets.map((preset) => (
+                    <SelectItem 
+                      key={preset.id} 
+                      value={preset.id}
+                      className="cursor-pointer hover:bg-primary/10"
+                    >
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span>{preset.name}</span>
                         <span className="text-xs text-muted-foreground">
                           {preset.width}×{preset.height}
                         </span>
                       </div>
-                      {selectedFormat === preset.id && (
-                        <Check className="w-4 h-4 text-primary" />
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
-        </TabsContent>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-        {/* Impression */}
-        <TabsContent value="print" className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
-              Résolution 4K
-            </Badge>
-            <span>Haute qualité pour impression</span>
+      {/* Dimensions personnalisées */}
+      {usageType === "custom" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-width" className="text-xs text-muted-foreground">Largeur (px)</Label>
+            <Input
+              id="custom-width"
+              type="number"
+              min="512"
+              max="4096"
+              value={customWidth}
+              onChange={(e) => setCustomWidth(e.target.value)}
+              disabled={disabled}
+              placeholder="1080"
+              className="bg-background/60 border-border/50"
+            />
           </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {PRINT_PRESETS.map((preset) => (
-              <Card
-                key={preset.id}
-                className={`p-3 cursor-pointer transition-all hover:border-primary/50 ${
-                  selectedFormat === preset.id 
-                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
-                    : "border-border/50"
-                } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
-                onClick={() => handlePresetSelect(preset)}
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-height" className="text-xs text-muted-foreground">Hauteur (px)</Label>
+            <Input
+              id="custom-height"
+              type="number"
+              min="512"
+              max="4096"
+              value={customHeight}
+              onChange={(e) => setCustomHeight(e.target.value)}
+              disabled={disabled}
+              placeholder="1080"
+              className="bg-background/60 border-border/50"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Résolution */}
+      <div className="space-y-2">
+        <Label className="text-sm text-muted-foreground">Résolution</Label>
+        <Select value={resolution} onValueChange={(v) => setResolution(v as Resolution)} disabled={disabled}>
+          <SelectTrigger className="w-full bg-background/60 border-border/50 hover:border-primary/50 transition-colors">
+            <SelectValue placeholder="Choisir la résolution" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border/50 backdrop-blur-xl z-50">
+            {RESOLUTIONS.map((res) => (
+              <SelectItem 
+                key={res.value} 
+                value={res.value}
+                className="cursor-pointer hover:bg-primary/10"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{preset.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {preset.width}×{preset.height}
-                    </span>
-                  </div>
-                  {selectedFormat === preset.id && (
-                    <Check className="w-4 h-4 text-primary" />
-                  )}
+                <div className="flex items-center justify-between w-full gap-4">
+                  <span>{res.label}</span>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] ${
+                      res.value === "1K" 
+                        ? "bg-green-500/10 text-green-500 border-green-500/30"
+                        : res.value === "2K"
+                        ? "bg-blue-500/10 text-blue-500 border-blue-500/30"
+                        : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                    }`}
+                  >
+                    {res.description}
+                  </Badge>
                 </div>
-              </Card>
+              </SelectItem>
             ))}
-          </div>
-          
-          <p className="text-xs text-muted-foreground mt-2">
-            ⚠️ Les formats d'impression consomment plus de crédits en raison de leur haute résolution.
-          </p>
-        </TabsContent>
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Personnalisé */}
-        <TabsContent value="custom" className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="custom-width">Largeur (px)</Label>
-              <Input
-                id="custom-width"
-                type="number"
-                min="512"
-                max="4096"
-                value={customWidth}
-                onChange={(e) => setCustomWidth(e.target.value)}
-                disabled={disabled}
-                placeholder="1080"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="custom-height">Hauteur (px)</Label>
-              <Input
-                id="custom-height"
-                type="number"
-                min="512"
-                max="4096"
-                value={customHeight}
-                onChange={(e) => setCustomHeight(e.target.value)}
-                disabled={disabled}
-                placeholder="1080"
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {parseInt(customWidth) >= 2400 || parseInt(customHeight) >= 2400 ? (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
-                Qualité impression (4K)
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-                Qualité web (1K-2K)
-              </Badge>
-            )}
-          </div>
-          
-          <Button 
-            onClick={handleCustomConfirm} 
-            disabled={disabled}
-            className="w-full"
-          >
-            <Check className="w-4 h-4 mr-2" />
-            Confirmer ce format
-          </Button>
-        </TabsContent>
-      </Tabs>
+      {/* Info sur la consommation */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground p-2 rounded-lg bg-muted/30">
+        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <span>
+          {resolution === "4K" 
+            ? "Haute qualité pour impression (4 crédits)"
+            : resolution === "2K"
+            ? "Qualité standard (2 crédits)"
+            : "Qualité économique (1 crédit)"
+          }
+        </span>
+      </div>
+
+      {/* Bouton de confirmation */}
+      <Button 
+        onClick={handleConfirm} 
+        disabled={disabled || !canConfirm}
+        className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-all"
+      >
+        <Check className="w-4 h-4 mr-2" />
+        Confirmer et générer
+      </Button>
     </div>
   );
 }
