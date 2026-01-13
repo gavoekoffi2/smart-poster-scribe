@@ -10,14 +10,12 @@ import {
   Undo, 
   Redo,
   Trash2, 
-  Palette,
   X,
   Save,
-  Layers,
   Move,
   ZoomIn,
   ZoomOut,
-  RotateCw
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -33,7 +31,8 @@ type Tool = "select" | "text" | "rectangle" | "circle" | "image";
 const COLORS = [
   "#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF",
   "#FFFF00", "#FF00FF", "#00FFFF", "#D4AF37", "#F97316",
-  "#8B5CF6", "#EC4899", "#10B981", "#3B82F6", "#EF4444"
+  "#8B5CF6", "#EC4899", "#10B981", "#3B82F6", "#EF4444",
+  "#1a1a2e", "#16213e", "#0f3460", "#533483", "#e94560"
 ];
 
 export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
@@ -41,71 +40,159 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>("select");
-  const [activeColor, setActiveColor] = useState("#000000");
+  const [activeColor, setActiveColor] = useState("#FFFFFF");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [zoom, setZoom] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isInitializedRef = useRef(false);
+
+  // Resolve image URL to handle different formats
+  const resolveImageUrl = useCallback((url: string): string => {
+    if (!url) return "";
+    
+    // If it's already a data URL, return as is
+    if (url.startsWith("data:")) return url;
+    
+    // If it's a blob URL, return as is
+    if (url.startsWith("blob:")) return url;
+    
+    // If it's an absolute URL, return as is
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    
+    // Handle relative paths
+    return url;
+  }, []);
+
+  // Load image with fallback for CORS issues
+  const loadImageWithFallback = useCallback(async (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const resolvedUrl = resolveImageUrl(url);
+      
+      // First try with crossOrigin
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
+        resolve(img);
+      };
+      
+      img.onerror = () => {
+        // Retry without crossOrigin for local/blob URLs
+        console.log("Retrying image load without CORS...");
+        const img2 = new Image();
+        img2.onload = () => resolve(img2);
+        img2.onerror = () => reject(new Error("Failed to load image"));
+        img2.src = resolvedUrl;
+      };
+      
+      img.src = resolvedUrl;
+    });
+  }, [resolveImageUrl]);
 
   // Initialize canvas with background image
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
-
+    if (!canvasRef.current || !containerRef.current || isInitializedRef.current) return;
+    
+    // Mark as initialized to prevent double initialization
+    isInitializedRef.current = true;
+    
     const container = containerRef.current;
-    const maxWidth = Math.min(container.clientWidth - 40, 800);
-    const maxHeight = Math.min(container.clientHeight - 100, 600);
+    
+    // Wait for container to have dimensions
+    const initCanvas = async () => {
+      try {
+        // Get container dimensions
+        const containerRect = container.getBoundingClientRect();
+        const maxWidth = Math.min(containerRect.width - 40, 1200);
+        const maxHeight = Math.min(containerRect.height - 40, 800);
+        
+        if (maxWidth <= 0 || maxHeight <= 0) {
+          // Container not ready yet, retry
+          setTimeout(initCanvas, 100);
+          return;
+        }
 
-    // Load image to get dimensions
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const aspectRatio = img.width / img.height;
-      let width = maxWidth;
-      let height = width / aspectRatio;
-      
-      if (height > maxHeight) {
-        height = maxHeight;
-        width = height * aspectRatio;
+        // Load the image first
+        const img = await loadImageWithFallback(imageUrl);
+        
+        const aspectRatio = img.width / img.height;
+        let width = maxWidth;
+        let height = width / aspectRatio;
+        
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * aspectRatio;
+        }
+        
+        // Ensure minimum size
+        width = Math.max(width, 400);
+        height = Math.max(height, 300);
+
+        setCanvasSize({ width, height });
+
+        // Create canvas
+        const canvas = new FabricCanvas(canvasRef.current!, {
+          width,
+          height,
+          backgroundColor: "#1a1a2e",
+          selection: true,
+          preserveObjectStacking: true,
+        });
+
+        // Load background image using the resolved URL
+        const resolvedUrl = resolveImageUrl(imageUrl);
+        
+        try {
+          const fabricImg = await FabricImage.fromURL(resolvedUrl, { crossOrigin: "anonymous" });
+          fabricImg.scaleToWidth(width);
+          fabricImg.scaleToHeight(height);
+          canvas.backgroundImage = fabricImg;
+          canvas.renderAll();
+        } catch (bgError) {
+          console.log("Retrying background without CORS...");
+          try {
+            // Try creating from the loaded HTML image element
+            const fabricImg = new FabricImage(img);
+            fabricImg.scaleToWidth(width);
+            fabricImg.scaleToHeight(height);
+            canvas.backgroundImage = fabricImg;
+            canvas.renderAll();
+          } catch (finalError) {
+            console.error("Failed to set background:", finalError);
+            toast.error("Impossible de charger l'image en arrière-plan");
+          }
+        }
+
+        setFabricCanvas(canvas);
+        setIsLoading(false);
+        
+        // Save initial state
+        const json = JSON.stringify(canvas.toJSON());
+        setHistory([json]);
+        setHistoryIndex(0);
+        
+      } catch (err) {
+        console.error("Error initializing editor:", err);
+        setLoadError("Impossible de charger l'image. Veuillez réessayer.");
+        setIsLoading(false);
       }
-
-      setCanvasSize({ width, height });
-
-      const canvas = new FabricCanvas(canvasRef.current!, {
-        width,
-        height,
-        backgroundColor: "#1a1a2e",
-        selection: true,
-        preserveObjectStacking: true,
-      });
-
-      // Load background image
-      FabricImage.fromURL(imageUrl, { crossOrigin: "anonymous" }).then((fabricImg) => {
-        fabricImg.scaleToWidth(width);
-        fabricImg.scaleToHeight(height);
-        canvas.backgroundImage = fabricImg;
-        canvas.renderAll();
-        setIsLoading(false);
-        saveToHistory(canvas);
-      }).catch((err) => {
-        console.error("Error loading image:", err);
-        toast.error("Erreur lors du chargement de l'image");
-        setIsLoading(false);
-      });
-
-      setFabricCanvas(canvas);
-
-      return () => {
-        canvas.dispose();
-      };
     };
-    img.onerror = () => {
-      toast.error("Impossible de charger l'image");
-      setIsLoading(false);
+    
+    initCanvas();
+    
+    return () => {
+      if (fabricCanvas) {
+        fabricCanvas.dispose();
+      }
     };
-    img.src = imageUrl;
-  }, [imageUrl]);
+  }, [imageUrl, loadImageWithFallback, resolveImageUrl]);
 
   // Save to history
   const saveToHistory = useCallback((canvas: FabricCanvas) => {
@@ -154,6 +241,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     fabricCanvas.renderAll();
     saveToHistory(fabricCanvas);
     setActiveTool("select");
+    toast.success("Texte ajouté - Double-cliquez pour éditer");
   };
 
   // Add rectangle
@@ -174,6 +262,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     fabricCanvas.renderAll();
     saveToHistory(fabricCanvas);
     setActiveTool("select");
+    toast.success("Rectangle ajouté");
   };
 
   // Add circle
@@ -191,6 +280,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     fabricCanvas.renderAll();
     saveToHistory(fabricCanvas);
     setActiveTool("select");
+    toast.success("Cercle ajouté");
   };
 
   // Handle logo upload
@@ -202,7 +292,10 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       FabricImage.fromURL(dataUrl).then((img) => {
-        img.scaleToWidth(100);
+        // Scale to reasonable size
+        const maxSize = Math.min(canvasSize.width, canvasSize.height) * 0.3;
+        const scale = Math.min(maxSize / img.width!, maxSize / img.height!);
+        img.scale(scale);
         img.set({
           left: 20,
           top: 20,
@@ -212,6 +305,9 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         fabricCanvas.renderAll();
         saveToHistory(fabricCanvas);
         setActiveTool("select");
+        toast.success("Image ajoutée");
+      }).catch(() => {
+        toast.error("Erreur lors du chargement de l'image");
       });
     };
     reader.readAsDataURL(file);
@@ -227,6 +323,9 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       fabricCanvas.discardActiveObject();
       fabricCanvas.renderAll();
       saveToHistory(fabricCanvas);
+      toast.success("Élément(s) supprimé(s)");
+    } else {
+      toast.info("Sélectionnez un élément à supprimer");
     }
   };
 
@@ -242,9 +341,34 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     setActiveColor(color);
   };
 
+  // Zoom controls
+  const handleZoomIn = () => {
+    if (!fabricCanvas) return;
+    const newZoom = Math.min(zoom * 1.2, 3);
+    fabricCanvas.setZoom(newZoom);
+    setZoom(newZoom);
+  };
+
+  const handleZoomOut = () => {
+    if (!fabricCanvas) return;
+    const newZoom = Math.max(zoom / 1.2, 0.5);
+    fabricCanvas.setZoom(newZoom);
+    setZoom(newZoom);
+  };
+
+  const handleResetZoom = () => {
+    if (!fabricCanvas) return;
+    fabricCanvas.setZoom(1);
+    setZoom(1);
+  };
+
   // Export canvas
   const handleSave = () => {
     if (!fabricCanvas) return;
+    
+    // Reset zoom for export
+    const currentZoom = fabricCanvas.getZoom();
+    fabricCanvas.setZoom(1);
     
     // Create high-resolution export
     const multiplier = 2;
@@ -254,6 +378,9 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       multiplier,
     });
     
+    // Restore zoom
+    fabricCanvas.setZoom(currentZoom);
+    
     onSave(dataUrl);
     toast.success("Image sauvegardée avec succès!");
   };
@@ -262,12 +389,19 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const handleDownload = () => {
     if (!fabricCanvas) return;
     
+    // Reset zoom for export
+    const currentZoom = fabricCanvas.getZoom();
+    fabricCanvas.setZoom(1);
+    
     const multiplier = 2;
     const dataUrl = fabricCanvas.toDataURL({
       format: "png",
       quality: 1,
       multiplier,
     });
+    
+    // Restore zoom
+    fabricCanvas.setZoom(currentZoom);
     
     const link = document.createElement("a");
     link.href = dataUrl;
@@ -286,6 +420,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         // Only delete if not editing text
         const activeObject = fabricCanvas?.getActiveObject();
         if (activeObject && !(activeObject instanceof IText && (activeObject as IText).isEditing)) {
+          e.preventDefault();
           deleteSelected();
         }
       }
@@ -318,29 +453,28 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     };
 
     fabricCanvas.on("object:modified", handleObjectModified);
-    fabricCanvas.on("object:added", handleObjectModified);
     
     return () => {
       fabricCanvas.off("object:modified", handleObjectModified);
-      fabricCanvas.off("object:added", handleObjectModified);
     };
   }, [fabricCanvas, saveToHistory]);
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col">
+    <div className="fixed inset-0 bg-background/98 backdrop-blur-md z-50 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/30 bg-card/50">
+      <div className="flex items-center justify-between p-3 border-b border-border/30 bg-card/80 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-display font-semibold gradient-text">
             Éditeur visuel
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleUndo}
               disabled={historyIndex <= 0}
-              className="hover:bg-muted/50"
+              className="h-8 w-8 p-0 hover:bg-muted/50"
+              title="Annuler (Ctrl+Z)"
             >
               <Undo className="w-4 h-4" />
             </Button>
@@ -349,9 +483,46 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               size="sm"
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
-              className="hover:bg-muted/50"
+              className="h-8 w-8 p-0 hover:bg-muted/50"
+              title="Rétablir (Ctrl+Y)"
             >
               <Redo className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleZoomOut}
+              disabled={zoom <= 0.5}
+              className="h-8 w-8 p-0 hover:bg-muted/50"
+              title="Zoom arrière"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground min-w-[3rem] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleZoomIn}
+              disabled={zoom >= 3}
+              className="h-8 w-8 p-0 hover:bg-muted/50"
+              title="Zoom avant"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetZoom}
+              className="h-8 w-8 p-0 hover:bg-muted/50"
+              title="Réinitialiser le zoom"
+            >
+              <RotateCcw className="w-3 h-3" />
             </Button>
           </div>
         </div>
@@ -361,7 +532,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant="outline"
             size="sm"
             onClick={handleDownload}
-            className="border-border/50"
+            className="border-border/50 hover:bg-accent/10"
           >
             <Download className="w-4 h-4 mr-2" />
             Télécharger
@@ -388,16 +559,19 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       {/* Main editor area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Toolbar */}
-        <div className="w-16 border-r border-border/30 bg-card/30 p-2 flex flex-col gap-2">
+        <div className="w-14 border-r border-border/30 bg-card/50 p-2 flex flex-col gap-1.5">
           <Button
             variant={activeTool === "select" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => setActiveTool("select")}
-            className="w-full"
-            title="Sélectionner"
+            className="w-10 h-10"
+            title="Sélectionner (V)"
           >
             <Move className="w-4 h-4" />
           </Button>
+          
+          <div className="h-px bg-border/30 my-1" />
+          
           <Button
             variant={activeTool === "text" ? "secondary" : "ghost"}
             size="icon"
@@ -405,8 +579,8 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("text");
               addText();
             }}
-            className="w-full"
-            title="Ajouter du texte"
+            className="w-10 h-10"
+            title="Ajouter du texte (T)"
           >
             <Type className="w-4 h-4" />
           </Button>
@@ -417,8 +591,8 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("rectangle");
               addRectangle();
             }}
-            className="w-full"
-            title="Ajouter un rectangle"
+            className="w-10 h-10"
+            title="Ajouter un rectangle (R)"
           >
             <Square className="w-4 h-4" />
           </Button>
@@ -429,8 +603,8 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("circle");
               addCircle();
             }}
-            className="w-full"
-            title="Ajouter un cercle"
+            className="w-10 h-10"
+            title="Ajouter un cercle (C)"
           >
             <CircleIcon className="w-4 h-4" />
           </Button>
@@ -438,8 +612,8 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant={activeTool === "image" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full"
-            title="Ajouter un logo/image"
+            className="w-10 h-10"
+            title="Ajouter une image/logo (I)"
           >
             <ImageIcon className="w-4 h-4" />
           </Button>
@@ -453,23 +627,25 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
           
           <div className="flex-1" />
           
+          {/* Color picker */}
           <div className="relative">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="w-full"
+              className="w-10 h-10"
               title="Couleurs"
             >
               <div 
-                className="w-6 h-6 rounded-full border-2 border-border"
+                className="w-6 h-6 rounded-full border-2 border-border shadow-inner"
                 style={{ backgroundColor: activeColor }}
               />
             </Button>
             
             {showColorPicker && (
-              <div className="absolute left-full ml-2 bottom-0 bg-card border border-border rounded-lg p-2 shadow-xl z-50">
-                <div className="grid grid-cols-5 gap-1">
+              <div className="absolute left-full ml-2 bottom-0 bg-card border border-border rounded-lg p-3 shadow-xl z-50 min-w-[180px]">
+                <p className="text-xs text-muted-foreground mb-2 font-medium">Palette de couleurs</p>
+                <div className="grid grid-cols-5 gap-1.5">
                   {COLORS.map((color) => (
                     <button
                       key={color}
@@ -478,10 +654,11 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
                         setShowColorPicker(false);
                       }}
                       className={cn(
-                        "w-8 h-8 rounded-md border-2 transition-all",
-                        activeColor === color ? "border-primary scale-110" : "border-transparent hover:scale-105"
+                        "w-7 h-7 rounded-md border-2 transition-all hover:scale-110",
+                        activeColor === color ? "border-primary ring-2 ring-primary/30" : "border-transparent hover:border-muted"
                       )}
                       style={{ backgroundColor: color }}
+                      title={color}
                     />
                   ))}
                 </div>
@@ -489,12 +666,14 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             )}
           </div>
           
+          <div className="h-px bg-border/30 my-1" />
+          
           <Button
             variant="ghost"
             size="icon"
             onClick={deleteSelected}
-            className="w-full hover:bg-destructive/10 hover:text-destructive"
-            title="Supprimer l'élément sélectionné"
+            className="w-10 h-10 hover:bg-destructive/10 hover:text-destructive"
+            title="Supprimer (Suppr)"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -503,15 +682,32 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         {/* Canvas area */}
         <div 
           ref={containerRef}
-          className="flex-1 flex items-center justify-center p-4 bg-background/50 overflow-auto"
+          className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-background/50 to-muted/20 overflow-auto"
         >
           {isLoading ? (
             <div className="text-center space-y-4">
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-muted-foreground">Chargement de l'éditeur...</p>
+              <p className="text-xs text-muted-foreground/60">Préparation de votre image...</p>
+            </div>
+          ) : loadError ? (
+            <div className="text-center space-y-4 max-w-md">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+                <X className="w-8 h-8 text-destructive" />
+              </div>
+              <p className="text-destructive font-medium">{loadError}</p>
+              <Button onClick={onClose} variant="outline">
+                Fermer l'éditeur
+              </Button>
             </div>
           ) : (
-            <div className="relative shadow-2xl rounded-lg overflow-hidden">
+            <div 
+              className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-border/20"
+              style={{ 
+                transform: `scale(${zoom})`,
+                transformOrigin: "center center"
+              }}
+            >
               <canvas ref={canvasRef} />
             </div>
           )}
@@ -519,15 +715,24 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       </div>
 
       {/* Footer tips */}
-      <div className="p-3 border-t border-border/30 bg-card/30 text-center text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-4">
-          <span>Double-cliquez sur le texte pour l'éditer</span>
+      <div className="p-2.5 border-t border-border/30 bg-card/50 text-center text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-3 flex-wrap justify-center">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Double-clic</kbd>
+            <span>éditer texte</span>
+          </span>
           <span>•</span>
-          <span>Suppr pour effacer</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Suppr</kbd>
+            <span>effacer</span>
+          </span>
           <span>•</span>
-          <span>Ctrl+Z pour annuler</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Ctrl+Z</kbd>
+            <span>annuler</span>
+          </span>
           <span>•</span>
-          <span>Glissez pour déplacer</span>
+          <span>Glissez pour déplacer/redimensionner</span>
         </span>
       </div>
     </div>
