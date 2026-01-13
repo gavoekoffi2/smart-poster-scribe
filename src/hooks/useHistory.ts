@@ -53,12 +53,12 @@ export function useHistory() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      // If user is logged in, only fetch their images
+      // If user is logged in, only fetch their images (not showcase)
       if (user) {
         query = query.eq("user_id", user.id);
       } else {
-        // For non-logged users, fetch images with null user_id
-        query = query.is("user_id", null);
+        // For non-logged users, fetch images with null user_id but exclude showcase images
+        query = query.is("user_id", null).eq("is_showcase", false);
       }
 
       const { data, error } = await query;
@@ -94,18 +94,31 @@ export function useHistory() {
   const saveToHistory = useCallback(async (params: SaveImageParams): Promise<GeneratedImage | null> => {
     try {
       // Determine if user is on free plan for auto-showcase
-      let isFreePlan = false;
+      let isFreePlan = true; // Default to free plan for new users
       let isShowcase = false;
       
       if (user) {
-        const { data: subscription } = await supabase
-          .from("user_subscriptions")
-          .select("plan:subscription_plans(slug)")
-          .eq("user_id", user.id)
-          .single();
+        try {
+          const { data: subscription, error: subError } = await supabase
+            .from("user_subscriptions")
+            .select("plan:subscription_plans(slug)")
+            .eq("user_id", user.id)
+            .single();
+          
+          if (!subError && subscription) {
+            isFreePlan = (subscription?.plan as any)?.slug === "free" || !(subscription?.plan as any)?.slug;
+          }
+        } catch (e) {
+          // If no subscription found, assume free plan
+          console.log("No subscription found, assuming free plan");
+        }
         
-        isFreePlan = (subscription?.plan as any)?.slug === "free";
-        isShowcase = isFreePlan; // Auto-publish to showcase if free plan
+        // Auto-publish to showcase if free plan
+        isShowcase = isFreePlan;
+      } else {
+        // Non-authenticated users are considered free, add to showcase
+        isFreePlan = true;
+        isShowcase = true;
       }
 
       const insertData: any = {
