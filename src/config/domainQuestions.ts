@@ -165,6 +165,14 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
     questions: []
   },
 
+  // Services entreprises - nouveau domaine
+  business_services: {
+    domain: "business_services",
+    label: "Services Entreprises",
+    templateRequirements: [],
+    questions: []
+  },
+
   // Ecommerce - une seule question sur les produits
   ecommerce: {
     domain: "ecommerce",

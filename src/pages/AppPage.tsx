@@ -4,6 +4,7 @@ import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
 import { ChatMessage } from "@/components/chat/ChatMessage";
@@ -12,6 +13,7 @@ import { ColorPalette } from "@/components/chat/ColorPalette";
 import { FormatSelect } from "@/components/chat/FormatSelect";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
 import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
+import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
@@ -89,6 +91,7 @@ export default function AppPage() {
   const locationState = location.state as CloneTemplateState | null;
   const cloneTemplate = locationState?.cloneTemplate;
   
+  const { profile } = useUserProfile();
   const { user, isAuthenticated, signOut } = useAuth();
   const {
     messages,
@@ -400,6 +403,7 @@ export default function AppPage() {
                   onColorsChange={setSelectedColors}
                   onConfirm={() => handleColorsConfirm(selectedColors)}
                   disabled={isProcessing}
+                  defaultPalette={profile?.default_color_palette}
                 />
               </div>
             )}
@@ -546,17 +550,18 @@ export default function AppPage() {
             )}
 
             {showLogoUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleLogoImage}
-                  disabled={isProcessing}
-                  label="Ajouter un logo"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipLogo} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {(conversationState.logos?.length || 0) > 0 ? "Continuer" : "Passer"}
-                </Button>
-              </div>
+              <DefaultLogoSelect
+                defaultLogoUrl={profile?.default_logo_url || null}
+                onUseDefault={() => {
+                  if (profile?.default_logo_url) {
+                    handleLogoImage(profile.default_logo_url);
+                  }
+                }}
+                onUploadNew={handleLogoImage}
+                onSkip={handleSkipLogo}
+                disabled={isProcessing}
+                hasLogos={(conversationState.logos?.length || 0) > 0}
+              />
             )}
 
             {showLogoPosition && (
