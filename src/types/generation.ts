@@ -15,6 +15,7 @@ export interface FormatPreset {
   platform: string;
   icon: string;
   usage: UsageType;
+  resolution?: Resolution;
 }
 
 export type Domain = 
