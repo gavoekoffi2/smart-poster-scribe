@@ -21,7 +21,7 @@ import { VisualEditor } from "@/components/editor/VisualEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
-import { GeneratedImage } from "@/types/generation";
+import { GeneratedImage, AspectRatio } from "@/types/generation";
 import { toast } from "sonner";
 
 interface CreditError {
@@ -167,13 +167,38 @@ export default function AppPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Fire confetti when image is generated
+  // Fire confetti and save to history when image is generated
   useEffect(() => {
     if (generatedImage && generatedImage !== prevGeneratedImage) {
       fireConfetti();
       setPrevGeneratedImage(generatedImage);
+      
+      // Save generated image to history automatically
+      const saveGeneratedImage = async () => {
+        try {
+          // Cast aspectRatio to AspectRatio type
+          const aspectRatio = (conversationState.formatPreset?.aspectRatio || "3:4") as AspectRatio;
+          
+          await saveToHistory({
+            imageUrl: generatedImage,
+            prompt: conversationState.description || "Affiche générée",
+            aspectRatio,
+            resolution: conversationState.formatPreset?.resolution || "1K",
+            domain: conversationState.domain,
+            referenceImageUrl: conversationState.referenceImage,
+            contentImageUrl: conversationState.contentImage,
+            logoUrls: conversationState.logos?.map(l => l.imageUrl),
+            logoPositions: conversationState.logos?.map(l => l.position),
+            colorPalette: conversationState.colorPalette,
+          });
+        } catch (err) {
+          console.error("Error saving to history:", err);
+        }
+      };
+      
+      saveGeneratedImage();
     }
-  }, [generatedImage, prevGeneratedImage]);
+  }, [generatedImage, prevGeneratedImage, saveToHistory, conversationState]);
 
   const handleSend = () => {
     if (inputValue.trim() && !isProcessing) {
