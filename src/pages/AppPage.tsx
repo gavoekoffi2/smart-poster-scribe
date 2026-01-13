@@ -5,6 +5,7 @@ import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { CreditBalance } from "@/components/credits/CreditBalance";
+import { UpgradeModal } from "@/components/credits/UpgradeModal";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
@@ -20,6 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
 import { GeneratedImage } from "@/types/generation";
 import { toast } from "sonner";
+
+interface CreditError {
+  error: string;
+  message: string;
+  remaining?: number;
+  needed?: number;
+  is_free?: boolean;
+}
 
 interface CloneTemplateState {
   cloneTemplate?: {
@@ -121,9 +130,23 @@ export default function AppPage() {
     goBackToStep,
     goForwardToStep,
     isCloneMode,
+    creditError,
+    clearCreditError,
   } = useConversation(cloneTemplate);
 
   const { history, saveToHistory, clearHistory, updateEditedImage, isAuthenticated: historyAuth } = useHistory();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Show upgrade modal when credit error occurs
+  useEffect(() => {
+    if (creditError && (
+      creditError.error === "FREE_LIMIT_REACHED" ||
+      creditError.error === "RESOLUTION_NOT_ALLOWED" ||
+      creditError.error === "INSUFFICIENT_CREDITS"
+    )) {
+      setShowUpgradeModal(true);
+    }
+  }, [creditError]);
 
   const [inputValue, setInputValue] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -674,6 +697,16 @@ export default function AppPage() {
           onSave={handleSaveEditedImage}
         />
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          clearCreditError();
+        }}
+        creditError={creditError}
+      />
     </div>
   );
 }
