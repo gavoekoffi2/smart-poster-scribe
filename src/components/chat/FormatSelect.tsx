@@ -92,7 +92,7 @@ const RESOLUTIONS: { value: Resolution; label: string; description: string }[] =
 export function FormatSelect({ onSelect, disabled }: FormatSelectProps) {
   const [usageType, setUsageType] = useState<UsageType | "custom">("social");
   const [selectedFormat, setSelectedFormat] = useState<string>("");
-  const [resolution, setResolution] = useState<Resolution>("2K");
+  const [resolution, setResolution] = useState<Resolution>("1K");
   const [customWidth, setCustomWidth] = useState<string>("1080");
   const [customHeight, setCustomHeight] = useState<string>("1080");
 
@@ -100,12 +100,8 @@ export function FormatSelect({ onSelect, disabled }: FormatSelectProps) {
     setUsageType(value);
     setSelectedFormat("");
     
-    // Auto-set resolution based on usage type
-    if (value === "print") {
-      setResolution("4K");
-    } else if (value === "social") {
-      setResolution("2K");
-    }
+    // Note: On garde la résolution choisie par l'utilisateur
+    // Les utilisateurs gratuits sont limités à 1K (le backend vérifie)
   };
 
   const handleFormatChange = (formatId: string) => {
