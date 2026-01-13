@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const predefinedPalettes = [
@@ -17,6 +17,7 @@ interface ColorPaletteProps {
   onColorsChange: (colors: string[]) => void;
   onConfirm: () => void;
   disabled?: boolean;
+  defaultPalette?: string[];
 }
 
 export function ColorPalette({
@@ -24,8 +25,17 @@ export function ColorPalette({
   onColorsChange,
   onConfirm,
   disabled,
+  defaultPalette,
 }: ColorPaletteProps) {
   const [customColor, setCustomColor] = useState("#00d4ff");
+  const hasDefaultPalette = defaultPalette && defaultPalette.length > 0;
+
+  // Auto-select default palette if provided and no colors selected yet
+  useEffect(() => {
+    if (hasDefaultPalette && selectedColors.length === 0) {
+      // Don't auto-select, let user choose
+    }
+  }, [hasDefaultPalette, selectedColors.length]);
 
   const addColor = (color: string) => {
     if (!selectedColors.includes(color) && selectedColors.length < 5) {
@@ -41,11 +51,49 @@ export function ColorPalette({
     onColorsChange(colors);
   };
 
+  const useDefaultPalette = () => {
+    if (defaultPalette) {
+      onColorsChange(defaultPalette);
+    }
+  };
+
   return (
     <div className="space-y-4 w-full max-w-md">
+      {/* Default palette from user preferences */}
+      {hasDefaultPalette && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-primary" />
+            Votre palette par défaut
+          </p>
+          <button
+            onClick={useDefaultPalette}
+            disabled={disabled}
+            className={cn(
+              "w-full p-3 rounded-xl border-2 border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all",
+              "flex items-center justify-between",
+              disabled && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            <div className="flex gap-2">
+              {defaultPalette!.map((color, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-lg border border-border/30 shadow-sm"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <span className="text-sm font-medium text-primary">Utiliser</span>
+          </button>
+        </div>
+      )}
+
       {/* Predefined palettes */}
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">Palettes suggérées</p>
+        <p className="text-xs text-muted-foreground">
+          {hasDefaultPalette ? "Ou choisir une autre palette" : "Palettes suggérées"}
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {predefinedPalettes.map((palette) => (
             <button
