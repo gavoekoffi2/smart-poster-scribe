@@ -490,13 +490,23 @@ serve(async (req) => {
         global: { headers: { Authorization: `Bearer ${token}` } }
       });
       
-      const { data: { user }, error: authError } = await userSupabase.auth.getUser();
+      // Utiliser getClaims pour valider le JWT (plus fiable que getUser)
+      const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token);
       
-      if (!authError && user) {
-        userId = user.id;
-        console.log("Authenticated user:", userId);
+      if (!claimsError && claimsData?.claims?.sub) {
+        userId = claimsData.claims.sub as string;
+        console.log("Authenticated user via claims:", userId);
       } else {
-        console.log("Auth error or no user:", authError?.message);
+        // Fallback vers getUser si getClaims échoue
+        console.log("getClaims failed, trying getUser:", claimsError?.message);
+        const { data: { user }, error: authError } = await userSupabase.auth.getUser();
+        
+        if (!authError && user) {
+          userId = user.id;
+          console.log("Authenticated user via getUser:", userId);
+        } else {
+          console.log("Auth error or no user:", authError?.message);
+        }
       }
     }
 

@@ -520,6 +520,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // Utiliser la résolution choisie par l'utilisateur, défaut à 1K (économique pour tous)
         const resolution: Resolution = formatPreset?.resolution || "1K";
         
+        // Rafraîchir la session avant l'appel pour éviter les tokens expirés
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.log("Session refresh warning:", refreshError.message);
+        }
+        
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
@@ -620,6 +626,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               console.warn("Impossible de convertir le template en base64, envoi de l'URL:", e);
             }
           }
+        }
+        
+        // Rafraîchir la session avant l'appel pour éviter les tokens expirés
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.log("Session refresh warning:", refreshError.message);
         }
 
         const { data, error } = await supabase.functions.invoke("generate-image", {

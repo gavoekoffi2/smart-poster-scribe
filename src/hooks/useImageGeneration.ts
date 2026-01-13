@@ -22,6 +22,12 @@ export function useImageGeneration() {
     setCreditError(null);
 
     try {
+      // Rafraîchir la session avant l'appel pour éviter les tokens expirés
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.log("Session refresh warning:", refreshError.message);
+      }
+      
       const { data, error } = await supabase.functions.invoke<GenerationResult>("generate-image", {
         body: {
           prompt: params.prompt,
