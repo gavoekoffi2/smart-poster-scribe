@@ -500,6 +500,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_grant_subscription: {
+        Args: {
+          p_admin_id: string
+          p_credits?: number
+          p_duration_months?: number
+          p_plan_slug: string
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
       check_and_debit_credits: {
         Args: { p_image_id?: string; p_resolution: string; p_user_id: string }
         Returns: Json
