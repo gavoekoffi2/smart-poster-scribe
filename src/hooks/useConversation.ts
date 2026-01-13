@@ -517,7 +517,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // Déterminer le format et la résolution
         const formatPreset = state.formatPreset;
         const aspectRatio = formatPreset?.aspectRatio || "3:4";
-        const resolution: Resolution = state.usageType === "print" ? "4K" : "2K";
+        // Utiliser la résolution choisie par l'utilisateur, défaut à 1K (économique pour tous)
+        const resolution: Resolution = formatPreset?.resolution || "1K";
         
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
