@@ -319,6 +319,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [suggestedDomain, setSuggestedDomain] = useState<string | null>(cloneTemplate?.domain || null);
   const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["greeting"]);
+  const [creditError, setCreditError] = useState<{
+    error: string;
+    message: string;
+    remaining?: number;
+    needed?: number;
+    is_free?: boolean;
+  } | null>(null);
 
   // Mettre à jour les étapes visitées quand on change d'étape
   useEffect(() => {
@@ -529,7 +536,23 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         });
 
         if (error || !data?.success) {
-          const msg = data?.error || error?.message || "Erreur inconnue";
+          const errorData = data as any;
+          
+          // Check for credit-related errors
+          if (errorData?.error === "FREE_LIMIT_REACHED" ||
+              errorData?.error === "RESOLUTION_NOT_ALLOWED" ||
+              errorData?.error === "INSUFFICIENT_CREDITS" ||
+              errorData?.error === "AUTHENTICATION_REQUIRED") {
+            setCreditError(errorData);
+            addMessage(
+              "assistant",
+              errorData.message || "Erreur de crédits. Veuillez vérifier votre abonnement."
+            );
+            setConversationState((prev) => ({ ...prev, step: "content_image" }));
+            return;
+          }
+          
+          const msg = errorData?.error || error?.message || "Erreur inconnue";
           addMessage(
             "assistant",
             `Désolé, la génération a échoué : ${msg}. Voulez-vous réessayer ?`
@@ -612,7 +635,23 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         removeLoadingMessage();
 
         if (error || !data?.success) {
-          const msg = data?.error || error?.message || "Erreur inconnue";
+          const errorData = data as any;
+          
+          // Check for credit-related errors
+          if (errorData?.error === "FREE_LIMIT_REACHED" ||
+              errorData?.error === "RESOLUTION_NOT_ALLOWED" ||
+              errorData?.error === "INSUFFICIENT_CREDITS" ||
+              errorData?.error === "AUTHENTICATION_REQUIRED") {
+            setCreditError(errorData);
+            addMessage(
+              "assistant",
+              errorData.message || "Erreur de crédits. Veuillez vérifier votre abonnement."
+            );
+            setConversationState((prev) => ({ ...prev, step: "complete" }));
+            return;
+          }
+          
+          const msg = errorData?.error || error?.message || "Erreur inconnue";
           addMessage(
             "assistant",
             `Désolé, la modification a échoué : ${msg}. Décrivez à nouveau ce que vous voulez changer.`
@@ -2279,6 +2318,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     }, 250);
   }, [addMessage, visitedSteps]);
 
+  const clearCreditError = useCallback(() => {
+    setCreditError(null);
+  }, []);
+
   return {
     messages,
     conversationState,
@@ -2286,6 +2329,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     generatedImage,
     suggestedDomain,
     visitedSteps,
+    creditError,
+    clearCreditError,
     handleUserMessage,
     handleDomainSelect,
     handleMainSpeakerPhoto,

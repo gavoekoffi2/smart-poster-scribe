@@ -93,6 +93,21 @@ export function useHistory() {
   // Save a new image to history
   const saveToHistory = useCallback(async (params: SaveImageParams): Promise<GeneratedImage | null> => {
     try {
+      // Determine if user is on free plan for auto-showcase
+      let isFreePlan = false;
+      let isShowcase = false;
+      
+      if (user) {
+        const { data: subscription } = await supabase
+          .from("user_subscriptions")
+          .select("plan:subscription_plans(slug)")
+          .eq("user_id", user.id)
+          .single();
+        
+        isFreePlan = (subscription?.plan as any)?.slug === "free";
+        isShowcase = isFreePlan; // Auto-publish to showcase if free plan
+      }
+
       const insertData: any = {
         image_url: params.imageUrl,
         prompt: params.prompt,
@@ -104,6 +119,8 @@ export function useHistory() {
         logo_urls: params.logoUrls || null,
         logo_positions: params.logoPositions || null,
         color_palette: params.colorPalette || null,
+        is_free_plan: isFreePlan,
+        is_showcase: isShowcase,
       };
 
       // Add user_id if user is logged in

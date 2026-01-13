@@ -194,82 +194,82 @@ function buildProfessionalPrompt({
 
   // ====== RÔLE ET OBJECTIF PRINCIPAL ======
   instructions.push("=== RÔLE ===");
-  if (isCloneMode) {
-    instructions.push("Tu es un graphiste d'élite spécialisé dans le CLONAGE EXACT d'affiches publicitaires. Ton travail: reproduire FIDÈLEMENT le design du template en remplaçant UNIQUEMENT le contenu textuel.");
+  if (isCloneMode || hasReferenceImage) {
+    instructions.push("Tu es un graphiste d'élite spécialisé dans la PERSONNALISATION FIDÈLE d'affiches publicitaires. Tu PERSONNALISES un design existant, tu ne crées pas de zéro.");
   } else {
     instructions.push("Tu es un graphiste d'élite spécialisé dans la création d'affiches publicitaires professionnelles pour l'Afrique francophone.");
   }
   instructions.push("");
 
-  // ====== RÈGLE ABSOLUE: MODE CLONE ======
-  if (isCloneMode && hasReferenceImage) {
+  // ====== RÈGLE FONDAMENTALE: PERSONNALISATION FIDÈLE ======
+  if (hasReferenceImage) {
     instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎯 MODE CLONAGE ACTIF - RÉPLICATION PIXEL-PERFECT DU DESIGN          ║");
+    instructions.push("║  🎯 PERSONNALISATION FIDÈLE D'UN DESIGN EXISTANT                      ║");
     instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
     instructions.push("");
-    instructions.push("⚠️ RÈGLE ABSOLUE: Cette affiche est un CLONE. Tu dois reproduire EXACTEMENT le design du template.");
+    instructions.push("⚠️ RÈGLE FONDAMENTALE: Tu PERSONNALISES le template de référence.");
+    instructions.push("   Tu ne crées pas, tu ADAPTES fidèlement.");
     instructions.push("");
-    instructions.push("CE QUE TU DOIS REPRODUIRE À L'IDENTIQUE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("1. MISE EN PAGE IDENTIQUE PIXEL PAR PIXEL:");
-    instructions.push("   - Même disposition exacte des éléments");
-    instructions.push("   - Mêmes marges, espacements, alignements");
-    instructions.push("   - Même grille de composition");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("CE QUE TU CONSERVES EXACTEMENT DU TEMPLATE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("1. MISE EN PAGE:");
+    instructions.push("   ✓ Disposition exacte des éléments (positions, zones, grille)");
+    instructions.push("   ✓ Marges, espacements, alignements identiques");
+    instructions.push("   ✓ Proportions et équilibre visuel");
     instructions.push("");
-    instructions.push("2. TYPOGRAPHIE IDENTIQUE:");
-    instructions.push("   - Même style de police (ou très similaire)");
-    instructions.push("   - Mêmes tailles relatives (titre grand, détails petits)");
-    instructions.push("   - Mêmes positions du texte");
-    instructions.push("   - Mêmes effets (ombres, contours, dégradés sur texte)");
+    instructions.push("2. TYPOGRAPHIE:");
+    instructions.push("   ✓ Style de police (ou très similaire)");
+    instructions.push("   ✓ Tailles relatives (titre grand, détails petits)");
+    instructions.push("   ✓ Effets sur texte (ombres, contours, dégradés)");
+    instructions.push("   ✓ Positions des zones de texte");
     instructions.push("");
-    instructions.push("3. PALETTE COULEURS IDENTIQUE:");
-    instructions.push("   - Exactement les mêmes couleurs");
-    instructions.push("   - Mêmes dégradés");
-    instructions.push("   - Mêmes zones colorées");
+    instructions.push("3. ÉLÉMENTS GRAPHIQUES:");
+    instructions.push("   ✓ Formes décoratives (cercles, lignes, cadres, motifs)");
+    instructions.push("   ✓ Effets lumineux (flares, halos, reflets)");
+    instructions.push("   ✓ Textures et dégradés de fond");
+    instructions.push("   ✓ Cadres et bordures");
     instructions.push("");
-    instructions.push("4. ÉLÉMENTS GRAPHIQUES IDENTIQUES:");
-    instructions.push("   - Mêmes formes décoratives (cercles, lignes, cadres)");
-    instructions.push("   - Mêmes motifs et textures");
-    instructions.push("   - Mêmes effets lumineux (flares, halos, reflets)");
-    instructions.push("   - Même fond (dégradé, image, couleur unie)");
+    instructions.push("4. STRUCTURE:");
+    instructions.push("   ✓ Si personnage à gauche → personnage à gauche");
+    instructions.push("   ✓ Si bandeau en bas → bandeau en bas");
+    instructions.push("   ✓ Si logo en haut → logo en haut");
     instructions.push("");
-    instructions.push("5. STRUCTURE IDENTIQUE:");
-    instructions.push("   - Si le template a un personnage à gauche → personnage à gauche");
-    instructions.push("   - Si le template a un bandeau en bas → bandeau en bas");
-    instructions.push("   - Si le template a un cadre doré → cadre doré");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("CE QUE TU REMPLACES AVEC LE CONTENU UTILISATEUR:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("1. TEXTES:");
+    instructions.push("   → Remplacer TOUS les textes du template par le contenu utilisateur");
+    instructions.push("   → Placer chaque texte dans la zone correspondante du template");
+    instructions.push("   → Utiliser UNIQUEMENT ce que l'utilisateur a fourni");
     instructions.push("");
-    instructions.push("CE QUE TU REMPLACES:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("- UNIQUEMENT les textes avec le contenu utilisateur fourni ci-dessous");
-    instructions.push("- Les visages/personnages: générer de NOUVEAUX personnages africains");
-    instructions.push("- Le logo si l'utilisateur en fournit un");
+    instructions.push("2. COULEURS (si palette fournie par l'utilisateur):");
+    instructions.push("   → Remplacer la couleur dominante par la couleur PRINCIPALE utilisateur");
+    instructions.push("   → Adapter les accents avec les couleurs SECONDAIRES");
+    instructions.push("   → Garder les proportions et contrastes du design original");
+    instructions.push("   → Appliquer les dégradés avec les nouvelles couleurs");
     instructions.push("");
-    instructions.push("CE QUE TU NE FAIS JAMAIS:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("❌ INVENTER du contenu non fourni (pas de numéros, dates, prix inventés)");
-    instructions.push("❌ MODIFIER le design (pas de nouvelles couleurs, nouvelles formes)");
-    instructions.push("❌ SIMPLIFIER le design (garder TOUS les éléments décoratifs)");
-    instructions.push("❌ GARDER les textes du template original");
-    instructions.push("❌ LAISSER des zones vides si l'utilisateur n'a pas fourni l'info");
+    instructions.push("3. PERSONNAGES:");
+    instructions.push("   → Générer de NOUVEAUX personnages africains authentiques");
+    instructions.push("   → Garder la même pose/position que dans le template");
+    instructions.push("   → Même cadrage et même zone d'espace");
     instructions.push("");
-    instructions.push("L'AFFICHE FINALE DOIT ÊTRE INDISCERNABLE DU TEMPLATE");
-    instructions.push("(seul le contenu textuel change, le design reste IDENTIQUE)");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("INTERDIT ABSOLUMENT:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("❌ INVENTER du contenu (pas de numéros, dates, prix, contacts inventés)");
+    instructions.push("❌ MODIFIER la structure du design (pas de nouvelles zones)");
+    instructions.push("❌ SIMPLIFIER ou ÉPURER le design (garder TOUS les éléments)");
+    instructions.push("❌ GARDER les textes originaux du template");
+    instructions.push("❌ OMETTRE des informations fournies par l'utilisateur");
+    instructions.push("❌ AJOUTER des éléments non présents dans le template");
     instructions.push("");
-  } else if (hasReferenceImage) {
-    // Mode normal avec référence (pas un clone strict)
-    instructions.push("=== RÈGLE: INSPIRATION DU DESIGN DE RÉFÉRENCE ===");
-    instructions.push("⚠️ L'image de RÉFÉRENCE est le MODÈLE à reproduire fidèlement.");
+    instructions.push("📋 SI L'UTILISATEUR N'A PAS FOURNI UNE INFO:");
+    instructions.push("   → SUPPRIMER la zone correspondante du template");
+    instructions.push("   → NE PAS inventer de contenu");
     instructions.push("");
-    instructions.push("REPRODUIRE:");
-    instructions.push("1. MISE EN PAGE: Respecter la grille, zones, marges, espacements");
-    instructions.push("2. TYPOGRAPHIE: Mêmes styles de police, tailles, positionnement");
-    instructions.push("3. PALETTE COULEURS: Même schéma colorimétrique, dégradés, tons");
-    instructions.push("4. ÉLÉMENTS GRAPHIQUES: Mêmes formes décoratives, lignes, cadres, effets");
-    instructions.push("5. AMBIANCE: Même mood, éclairage, atmosphère générale");
-    instructions.push("");
-    instructions.push("NE JAMAIS COPIER DU TEMPLATE:");
-    instructions.push("- Les textes, prix, numéros, dates (utiliser UNIQUEMENT données utilisateur)");
-    instructions.push("- Les visages/personnages (générer de NOUVEAUX personnages africains)");
+    instructions.push("🎯 OBJECTIF: L'affiche finale = Template + Personnalisations utilisateur");
+    instructions.push("   Le design DOIT être reconnaissable comme le même template.");
     instructions.push("");
   }
 
@@ -297,7 +297,8 @@ function buildProfessionalPrompt({
 
   if (hasLogoImage) {
     instructions.push("=== LOGO CLIENT ===");
-    instructions.push("⚠️ Reproduire le logo À L'IDENTIQUE, sans modification.");
+    instructions.push("⚠️ Reproduire le logo EXACTEMENT comme fourni, sans aucune modification.");
+    instructions.push("   Ne pas réinventer, recréer ou modifier le logo.");
     instructions.push("");
   }
 
@@ -309,7 +310,7 @@ function buildProfessionalPrompt({
   // ====== QUALITÉ AFRICAINE ======
   instructions.push("=== STYLE ===");
   instructions.push("- Personnages: Africains authentiques avec traits réalistes");
-  instructions.push("- Couleurs: Vibrantes et chaleureuses");
+  instructions.push("- Couleurs: Vibrantes et chaleureuses (ou selon palette utilisateur)");
   instructions.push("- Texte: Français");
   instructions.push("");
 
@@ -322,8 +323,9 @@ function buildProfessionalPrompt({
   instructions.push("");
   instructions.push("═══════════════════════════════════════════════════════════════════════");
   instructions.push("");
-  if (isCloneMode) {
-    instructions.push("🎯 RAPPEL CLONAGE: Design IDENTIQUE au template, seul le texte change avec le contenu ci-dessus.");
+  if (hasReferenceImage) {
+    instructions.push("🎯 RAPPEL: Design FIDÈLE au template + contenu/couleurs de l'utilisateur.");
+    instructions.push("   Personnalisation = même design, contenu différent.");
   } else {
     instructions.push("RAPPEL: Chaque élément ci-dessus DOIT apparaître sur l'affiche.");
   }
