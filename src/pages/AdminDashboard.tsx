@@ -53,7 +53,7 @@ interface RecentUser {
   created_at: string;
 }
 
-type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles';
+type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -158,6 +158,7 @@ export default function AdminDashboard() {
   const navItems = [
     { id: 'dashboard' as const, label: "Vue d'ensemble", icon: LayoutDashboard, permission: 'view_dashboard' },
     { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates' },
+    { id: 'subscriptions' as const, label: "Abonnements", icon: Crown, permission: 'manage_users' },
     { id: 'images' as const, label: "Affiches", icon: Palette, permission: 'view_dashboard' },
     { id: 'users' as const, label: "Utilisateurs", icon: Users, permission: 'manage_users' },
     { id: 'designers' as const, label: "Graphistes", icon: Palette, permission: 'manage_designers' },
@@ -192,6 +193,8 @@ export default function AdminDashboard() {
                 onClick={() => {
                   if (item.id === 'templates') {
                     navigate("/admin/templates");
+                  } else if (item.id === 'subscriptions') {
+                    navigate("/admin/subscriptions");
                   } else {
                     setActiveSection(item.id);
                   }

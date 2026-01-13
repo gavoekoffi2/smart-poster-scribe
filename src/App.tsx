@@ -10,6 +10,7 @@ import AdminUploadPage from "./pages/AdminUploadPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemplates from "./pages/AdminTemplates";
 import AdminDesigners from "./pages/AdminDesigners";
+import AdminSubscriptions from "./pages/AdminSubscriptions";
 import DesignerRegistration from "./pages/DesignerRegistration";
 import DesignerDashboard from "./pages/DesignerDashboard";
 import DesignerUpload from "./pages/DesignerUpload";
@@ -31,6 +32,7 @@ const App = () => (
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/templates" element={<AdminTemplates />} />
         <Route path="/admin/designers" element={<AdminDesigners />} />
+        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
         <Route path="/designer/register" element={<DesignerRegistration />} />
         <Route path="/designer/dashboard" element={<DesignerDashboard />} />
         <Route path="/designer/upload" element={<DesignerUpload />} />
