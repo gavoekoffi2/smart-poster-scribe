@@ -92,30 +92,100 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     return url;
   }, []);
 
-  // Load image with fallback for CORS issues
+  // Load image with multiple fallback strategies for CORS issues
   const loadImageWithFallback = useCallback(async (url: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const resolvedUrl = resolveImageUrl(url);
+    const resolvedUrl = resolveImageUrl(url);
+    
+    // Strategy 1: Try direct load with crossOrigin
+    const tryLoadWithCors = (): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("CORS failed"));
+        img.src = resolvedUrl;
+      });
+    };
+    
+    // Strategy 2: Try without crossOrigin
+    const tryLoadWithoutCors = (): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Direct load failed"));
+        img.src = resolvedUrl;
+      });
+    };
+    
+    // Strategy 3: Fetch and convert to blob URL (bypasses some CORS issues)
+    const tryFetchAsBlob = async (): Promise<HTMLImageElement> => {
+      const response = await fetch(resolvedUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error("Fetch failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       
-      // First try with crossOrigin
-      const img = new Image();
-      img.crossOrigin = "anonymous";
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          // Clean up blob URL after image is loaded
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          reject(new Error("Blob load failed"));
+        };
+        img.src = blobUrl;
+      });
+    };
+    
+    // Strategy 4: Fetch without CORS mode (for same-origin)
+    const tryFetchNoCors = async (): Promise<HTMLImageElement> => {
+      const response = await fetch(resolvedUrl);
+      if (!response.ok) throw new Error("No-cors fetch failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       
-      img.onload = () => {
-        resolve(img);
-      };
-      
-      img.onerror = () => {
-        // Retry without crossOrigin for local/blob URLs
-        console.log("Retrying image load without CORS...");
-        const img2 = new Image();
-        img2.onload = () => resolve(img2);
-        img2.onerror = () => reject(new Error("Failed to load image"));
-        img2.src = resolvedUrl;
-      };
-      
-      img.src = resolvedUrl;
-    });
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          reject(new Error("No-cors blob load failed"));
+        };
+        img.src = blobUrl;
+      });
+    };
+    
+    // Try all strategies in sequence with timeout
+    const strategies = [
+      { name: "CORS", fn: tryLoadWithCors },
+      { name: "Direct", fn: tryLoadWithoutCors },
+      { name: "Fetch Blob", fn: tryFetchAsBlob },
+      { name: "No-CORS Fetch", fn: tryFetchNoCors },
+    ];
+    
+    for (const strategy of strategies) {
+      try {
+        console.log(`Trying image load strategy: ${strategy.name}`);
+        const result = await Promise.race([
+          strategy.fn(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error(`${strategy.name} timeout`)), 5000)
+          ),
+        ]);
+        console.log(`Image loaded successfully with: ${strategy.name}`);
+        return result;
+      } catch (err) {
+        console.warn(`Strategy ${strategy.name} failed:`, err);
+        continue;
+      }
+    }
+    
+    throw new Error("All image loading strategies failed");
   }, [resolveImageUrl]);
 
   // Initialize canvas with background image
@@ -141,23 +211,25 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         const maxHeight = Math.min(containerRect.height - 40, 800);
         
         if (maxWidth <= 0 || maxHeight <= 0) {
-          // Container not ready yet, retry
-          setTimeout(initCanvas, 100);
+          // Container not ready yet, retry up to 20 times
+          if (currentAttempt < 20) {
+            setTimeout(initCanvas, 100);
+          } else {
+            setLoadError("Le conteneur n'a pas pu être initialisé");
+            setIsLoading(false);
+          }
           return;
         }
 
-        // Load the image first with timeout
-        const loadWithTimeout = Promise.race([
-          loadImageWithFallback(imageUrl),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout")), 15000)
-          )
-        ]);
-
-        const img = await loadWithTimeout;
+        console.log("Loading image for editor:", imageUrl);
+        
+        // Load the image with all fallback strategies
+        const img = await loadImageWithFallback(imageUrl);
         
         // Check if this attempt is still valid
         if (currentAttempt !== initAttemptRef.current) return;
+        
+        console.log("Image loaded, dimensions:", img.width, "x", img.height);
         
         const aspectRatio = img.width / img.height;
         let width = maxWidth;
@@ -183,16 +255,16 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
           preserveObjectStacking: true,
         });
 
-        // Try to set background from loaded image directly
+        // Set background from loaded image
         try {
           const fabricImg = new FabricImage(img);
           fabricImg.scaleToWidth(width);
           fabricImg.scaleToHeight(height);
           canvas.backgroundImage = fabricImg;
           canvas.renderAll();
+          console.log("Background image set successfully");
         } catch (bgError) {
           console.error("Failed to set background:", bgError);
-          // Continue without background - user can still edit
           toast.info("Image chargée sans arrière-plan - vous pouvez ajouter des éléments");
         }
 
@@ -204,11 +276,14 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         setHistory([json]);
         setHistoryIndex(0);
         
+        toast.success("Éditeur prêt !");
+        
       } catch (err) {
         console.error("Error initializing editor:", err);
         if (currentAttempt === initAttemptRef.current) {
-          setLoadError("Impossible de charger l'image. Veuillez réessayer.");
+          setLoadError("Impossible de charger l'image. L'URL est peut-être inaccessible ou expirée.");
           setIsLoading(false);
+          toast.error("Erreur de chargement de l'image");
         }
       }
     };
@@ -768,9 +843,26 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
                 <X className="w-8 h-8 text-destructive" />
               </div>
               <p className="text-destructive font-medium">{loadError}</p>
-              <Button onClick={onClose} variant="outline">
-                Fermer l'éditeur
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                Vérifiez votre connexion internet et réessayez.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button 
+                  onClick={() => {
+                    setLoadError(null);
+                    setIsLoading(true);
+                    initAttemptRef.current = 0;
+                  }}
+                  variant="default"
+                  size="sm"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Réessayer
+                </Button>
+                <Button onClick={onClose} variant="outline" size="sm">
+                  Fermer
+                </Button>
+              </div>
             </div>
           ) : (
             <div 
