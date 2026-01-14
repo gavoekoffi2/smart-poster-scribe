@@ -17,7 +17,9 @@ import {
   ZoomOut,
   RotateCcw,
   ChevronDown,
-  AlertCircle
+  AlertCircle,
+  ScanText,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -27,6 +29,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOCR, OCRTextBlock } from "@/hooks/useOCR";
+import { Progress } from "@/components/ui/progress";
 
 interface VisualEditorProps {
   imageUrl: string;
@@ -110,8 +114,12 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
+  const [imageScale, setImageScale] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
+
+  // OCR hook
+  const { isProcessing: isOCRProcessing, progress: ocrProgress, extractTextFromImage } = useOCR();
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -219,7 +227,11 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       width = Math.max(Math.floor(width), 400);
       height = Math.max(Math.floor(height), 300);
 
-      console.log("Canvas size:", width, "x", height);
+      // Calculate scale factor for OCR coordinate conversion
+      const scale = width / img.width;
+      setImageScale(scale);
+
+      console.log("Canvas size:", width, "x", height, "Scale:", scale);
       setCanvasSize({ width, height });
 
       // Create Fabric canvas
@@ -330,6 +342,57 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     setActiveTool("select");
     toast.success("Texte ajouté - Double-cliquez pour éditer");
   }, [getCanvas, canvasSize, activeColor, activeFont, saveToHistory]);
+
+  // Add OCR text block to canvas
+  const addOCRTextToCanvas = useCallback((block: OCRTextBlock) => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    // Scale coordinates to canvas size
+    const scaledX = block.x * imageScale;
+    const scaledY = block.y * imageScale;
+    const scaledFontSize = Math.max(12, (block.fontSize || 20) * imageScale);
+
+    const text = new IText(block.text, {
+      left: scaledX,
+      top: scaledY,
+      fontSize: scaledFontSize,
+      fill: activeColor,
+      fontFamily: activeFont.value,
+      fontWeight: "bold",
+      shadow: new Shadow({ color: "rgba(0,0,0,0.7)", blur: 3, offsetX: 1, offsetY: 1 }),
+    });
+
+    canvas.add(text);
+    return text;
+  }, [getCanvas, activeColor, activeFont, imageScale]);
+
+  // Run OCR and add detected text as editable layers
+  const handleOCR = useCallback(async () => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    toast.info("Analyse OCR en cours... Cela peut prendre quelques secondes.");
+
+    try {
+      const textBlocks = await extractTextFromImage(imageUrl);
+
+      if (textBlocks.length > 0) {
+        // Add each text block as an editable layer
+        textBlocks.forEach((block) => {
+          addOCRTextToCanvas(block);
+        });
+
+        canvas.renderAll();
+        saveToHistory();
+        setActiveTool("select");
+        toast.success(`${textBlocks.length} texte(s) détecté(s) et ajouté(s) comme calques éditables!`);
+      }
+    } catch (error) {
+      console.error("OCR Error:", error);
+      toast.error("Erreur lors de l'analyse OCR");
+    }
+  }, [getCanvas, imageUrl, extractTextFromImage, addOCRTextToCanvas, saveToHistory]);
 
   // Apply font to selected text
   const applyFontToSelected = useCallback((font: typeof FONTS[0]) => {
@@ -662,6 +725,17 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         </div>
       </div>
 
+      {/* OCR Progress bar */}
+      {isOCRProcessing && (
+        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm text-primary">Analyse OCR en cours... {ocrProgress}%</span>
+            <Progress value={ocrProgress} className="flex-1 h-2" />
+          </div>
+        </div>
+      )}
+
       {/* Main editor area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Toolbar */}
@@ -675,6 +749,24 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             title="Sélectionner (V)"
           >
             <Move className="w-4 h-4" />
+          </Button>
+
+          <div className="h-px bg-border/30 my-1" />
+
+          {/* OCR Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleOCR}
+            disabled={!isReady || isOCRProcessing}
+            className="w-12 h-10 bg-primary/10 hover:bg-primary/20 text-primary"
+            title="Scanner le texte (OCR)"
+          >
+            {isOCRProcessing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ScanText className="w-4 h-4" />
+            )}
           </Button>
 
           <div className="h-px bg-border/30 my-1" />
@@ -879,6 +971,11 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       {/* Footer tips */}
       <div className="p-2.5 border-t border-border/30 bg-card/50 text-center text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-3 flex-wrap justify-center">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-primary/20 text-primary rounded text-[10px]">OCR</kbd>
+            <span>scanner texte</span>
+          </span>
+          <span>•</span>
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Double-clic</kbd>
             <span>éditer texte</span>
