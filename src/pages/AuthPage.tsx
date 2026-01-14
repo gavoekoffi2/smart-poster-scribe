@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -25,10 +25,12 @@ export default function AuthPage() {
   const locationState = location.state as LocationState | null;
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [pendingEmailConfirmation, setPendingEmailConfirmation] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   
   // Track if auth was initiated by user action (not auto-redirect)
   const isUserInitiatedAuth = useRef(false);
@@ -89,6 +91,40 @@ export default function AuthPage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Cooldown timer for resend button
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleResendConfirmation = async () => {
+    if (!email || resendCooldown > 0) return;
+    
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth?confirmed=true`
+        }
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Email de confirmation renvoyé !");
+        setResendCooldown(60); // 60 seconds cooldown
+      }
+    } catch (error) {
+      toast.error("Erreur lors de l'envoi de l'email");
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const validateInputs = (isSignUp: boolean) => {
     try {
@@ -242,6 +278,31 @@ export default function AuthPage() {
                   Vérifiez aussi vos spams si vous ne le trouvez pas.
                 </p>
               </div>
+              
+              <Button 
+                variant="secondary"
+                className="w-full"
+                onClick={handleResendConfirmation}
+                disabled={isResending || resendCooldown > 0}
+              >
+                {isResending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : resendCooldown > 0 ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Renvoyer dans {resendCooldown}s
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Renvoyer l'email de confirmation
+                  </>
+                )}
+              </Button>
+              
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -250,6 +311,7 @@ export default function AuthPage() {
                   setEmail("");
                   setPassword("");
                   setFullName("");
+                  setResendCooldown(0);
                 }}
               >
                 Retour à la connexion
