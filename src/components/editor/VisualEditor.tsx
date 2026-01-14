@@ -16,7 +16,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  ChevronDown
+  ChevronDown,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -55,281 +56,264 @@ const FONTS = [
   { name: "Brush Script", value: "Brush Script MT, cursive" },
 ];
 
+// Simple image loader with timeout
+async function loadImage(src: string, timeout = 10000): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    const timer = setTimeout(() => {
+      reject(new Error("Image load timeout"));
+    }, timeout);
+    
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    
+    img.onerror = () => {
+      clearTimeout(timer);
+      // Try without CORS
+      const img2 = new Image();
+      img2.onload = () => resolve(img2);
+      img2.onerror = () => reject(new Error("Failed to load image"));
+      img2.src = src;
+    };
+    
+    img.src = src;
+  });
+}
+
+// Fetch image as blob and create object URL
+async function fetchImageAsBlob(url: string): Promise<string> {
+  const response = await fetch(url, { 
+    mode: 'cors',
+    credentials: 'omit'
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#FFFFFF");
   const [activeFont, setActiveFont] = useState(FONTS[0]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingState, setLoadingState] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState("");
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initAttemptRef = useRef(0);
-  const isInitializedRef = useRef(false);
+  const blobUrlRef = useRef<string | null>(null);
 
-  // Resolve image URL to handle different formats
-  const resolveImageUrl = useCallback((url: string): string => {
-    if (!url) return "";
-    
-    // If it's already a data URL, return as is
-    if (url.startsWith("data:")) return url;
-    
-    // If it's a blob URL, return as is
-    if (url.startsWith("blob:")) return url;
-    
-    // If it's an absolute URL, return as is
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    }
-    
-    // Handle relative paths
-    return url;
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
+    };
   }, []);
 
-  // Load image with multiple fallback strategies for CORS issues
-  const loadImageWithFallback = useCallback(async (url: string): Promise<HTMLImageElement> => {
-    const resolvedUrl = resolveImageUrl(url);
-    
-    // Strategy 1: Try direct load with crossOrigin
-    const tryLoadWithCors = (): Promise<HTMLImageElement> => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("CORS failed"));
-        img.src = resolvedUrl;
-      });
-    };
-    
-    // Strategy 2: Try without crossOrigin
-    const tryLoadWithoutCors = (): Promise<HTMLImageElement> => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Direct load failed"));
-        img.src = resolvedUrl;
-      });
-    };
-    
-    // Strategy 3: Fetch and convert to blob URL (bypasses some CORS issues)
-    const tryFetchAsBlob = async (): Promise<HTMLImageElement> => {
-      const response = await fetch(resolvedUrl, { mode: 'cors' });
-      if (!response.ok) throw new Error("Fetch failed");
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          // Clean up blob URL after image is loaded
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-          resolve(img);
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(blobUrl);
-          reject(new Error("Blob load failed"));
-        };
-        img.src = blobUrl;
-      });
-    };
-    
-    // Strategy 4: Fetch without CORS mode (for same-origin)
-    const tryFetchNoCors = async (): Promise<HTMLImageElement> => {
-      const response = await fetch(resolvedUrl);
-      if (!response.ok) throw new Error("No-cors fetch failed");
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-          resolve(img);
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(blobUrl);
-          reject(new Error("No-cors blob load failed"));
-        };
-        img.src = blobUrl;
-      });
-    };
-    
-    // Try all strategies in sequence with timeout
-    const strategies = [
-      { name: "CORS", fn: tryLoadWithCors },
-      { name: "Direct", fn: tryLoadWithoutCors },
-      { name: "Fetch Blob", fn: tryFetchAsBlob },
-      { name: "No-CORS Fetch", fn: tryFetchNoCors },
-    ];
-    
-    for (const strategy of strategies) {
-      try {
-        console.log(`Trying image load strategy: ${strategy.name}`);
-        const result = await Promise.race([
-          strategy.fn(),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error(`${strategy.name} timeout`)), 5000)
-          ),
-        ]);
-        console.log(`Image loaded successfully with: ${strategy.name}`);
-        return result;
-      } catch (err) {
-        console.warn(`Strategy ${strategy.name} failed:`, err);
-        continue;
-      }
+  // Initialize editor
+  const initializeEditor = useCallback(async () => {
+    if (!canvasRef.current || !containerRef.current) {
+      console.error("Canvas or container ref not available");
+      return;
     }
-    
-    throw new Error("All image loading strategies failed");
-  }, [resolveImageUrl]);
 
-  // Initialize canvas with background image
-  useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
-    
-    // Prevent multiple simultaneous init attempts
-    initAttemptRef.current += 1;
-    const currentAttempt = initAttemptRef.current;
-    
-    const container = containerRef.current;
-    let canvas: FabricCanvas | null = null;
-    
-    // Wait for container to have dimensions
-    const initCanvas = async () => {
+    // Dispose previous canvas if exists
+    if (fabricCanvasRef.current) {
+      fabricCanvasRef.current.dispose();
+      fabricCanvasRef.current = null;
+    }
+
+    // Clean up previous blob URL
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+
+    setLoadingState("loading");
+    setErrorMessage("");
+    setIsReady(false);
+
+    try {
+      console.log("Starting editor initialization with URL:", imageUrl);
+
+      // Get container dimensions
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const maxWidth = Math.max(rect.width - 40, 400);
+      const maxHeight = Math.max(rect.height - 40, 300);
+
+      console.log("Container dimensions:", maxWidth, "x", maxHeight);
+
+      // Load image - try multiple strategies
+      let img: HTMLImageElement | null = null;
+      let loadError: Error | null = null;
+
+      // Strategy 1: Direct load
       try {
-        // Check if this attempt is still valid
-        if (currentAttempt !== initAttemptRef.current) return;
-        
-        // Get container dimensions
-        const containerRect = container.getBoundingClientRect();
-        const maxWidth = Math.min(containerRect.width - 40, 1200);
-        const maxHeight = Math.min(containerRect.height - 40, 800);
-        
-        if (maxWidth <= 0 || maxHeight <= 0) {
-          // Container not ready yet, retry up to 20 times
-          if (currentAttempt < 20) {
-            setTimeout(initCanvas, 100);
-          } else {
-            setLoadError("Le conteneur n'a pas pu être initialisé");
-            setIsLoading(false);
-          }
-          return;
-        }
+        console.log("Trying direct image load...");
+        img = await loadImage(imageUrl, 8000);
+        console.log("Direct load successful");
+      } catch (e) {
+        console.warn("Direct load failed:", e);
+        loadError = e as Error;
+      }
 
-        console.log("Loading image for editor:", imageUrl);
-        
-        // Load the image with all fallback strategies
-        const img = await loadImageWithFallback(imageUrl);
-        
-        // Check if this attempt is still valid
-        if (currentAttempt !== initAttemptRef.current) return;
-        
-        console.log("Image loaded, dimensions:", img.width, "x", img.height);
-        
-        const aspectRatio = img.width / img.height;
-        let width = maxWidth;
-        let height = width / aspectRatio;
-        
-        if (height > maxHeight) {
-          height = maxHeight;
-          width = height * aspectRatio;
-        }
-        
-        // Ensure minimum size
-        width = Math.max(width, 400);
-        height = Math.max(height, 300);
-
-        setCanvasSize({ width, height });
-
-        // Create canvas
-        canvas = new FabricCanvas(canvasRef.current!, {
-          width,
-          height,
-          backgroundColor: "#1a1a2e",
-          selection: true,
-          preserveObjectStacking: true,
-        });
-
-        // Set background from loaded image
+      // Strategy 2: Fetch as blob (for CORS issues)
+      if (!img) {
         try {
-          const fabricImg = new FabricImage(img);
-          fabricImg.scaleToWidth(width);
-          fabricImg.scaleToHeight(height);
-          canvas.backgroundImage = fabricImg;
-          canvas.renderAll();
-          console.log("Background image set successfully");
-        } catch (bgError) {
-          console.error("Failed to set background:", bgError);
-          toast.info("Image chargée sans arrière-plan - vous pouvez ajouter des éléments");
+          console.log("Trying fetch as blob...");
+          const blobUrl = await fetchImageAsBlob(imageUrl);
+          blobUrlRef.current = blobUrl;
+          img = await loadImage(blobUrl, 8000);
+          console.log("Blob fetch successful");
+        } catch (e) {
+          console.warn("Blob fetch failed:", e);
+          loadError = e as Error;
         }
+      }
 
-        setFabricCanvas(canvas);
-        setIsLoading(false);
-        
-        // Save initial state
-        const json = JSON.stringify(canvas.toJSON());
-        setHistory([json]);
-        setHistoryIndex(0);
-        
-        toast.success("Éditeur prêt !");
-        
-      } catch (err) {
-        console.error("Error initializing editor:", err);
-        if (currentAttempt === initAttemptRef.current) {
-          setLoadError("Impossible de charger l'image. L'URL est peut-être inaccessible ou expirée.");
-          setIsLoading(false);
-          toast.error("Erreur de chargement de l'image");
+      // Strategy 3: If it's a data URL, use it directly
+      if (!img && imageUrl.startsWith("data:")) {
+        try {
+          console.log("Trying data URL load...");
+          img = await loadImage(imageUrl, 8000);
+          console.log("Data URL load successful");
+        } catch (e) {
+          console.warn("Data URL load failed:", e);
+          loadError = e as Error;
         }
       }
-    };
-    
-    initCanvas();
-    
-    return () => {
-      if (canvas) {
-        canvas.dispose();
+
+      if (!img) {
+        throw loadError || new Error("Could not load image");
       }
-    };
-  }, [imageUrl, loadImageWithFallback]);
+
+      console.log("Image loaded:", img.width, "x", img.height);
+
+      // Calculate canvas size
+      const aspectRatio = img.width / img.height;
+      let width = maxWidth;
+      let height = width / aspectRatio;
+
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspectRatio;
+      }
+
+      width = Math.max(Math.floor(width), 400);
+      height = Math.max(Math.floor(height), 300);
+
+      console.log("Canvas size:", width, "x", height);
+      setCanvasSize({ width, height });
+
+      // Create Fabric canvas
+      const canvas = new FabricCanvas(canvasRef.current, {
+        width,
+        height,
+        backgroundColor: "#1a1a2e",
+        selection: true,
+        preserveObjectStacking: true,
+      });
+
+      fabricCanvasRef.current = canvas;
+
+      // Set background image
+      const fabricImg = new FabricImage(img);
+      fabricImg.scaleToWidth(width);
+      fabricImg.scaleToHeight(height);
+      canvas.backgroundImage = fabricImg;
+      canvas.renderAll();
+
+      console.log("Canvas created and background set");
+
+      // Save initial state to history
+      const json = JSON.stringify(canvas.toJSON());
+      setHistory([json]);
+      setHistoryIndex(0);
+
+      setIsReady(true);
+      setLoadingState("ready");
+      toast.success("Éditeur prêt !");
+
+    } catch (error) {
+      console.error("Editor initialization error:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Erreur inconnue");
+      setLoadingState("error");
+      toast.error("Impossible de charger l'éditeur");
+    }
+  }, [imageUrl]);
+
+  // Run initialization when component mounts
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initializeEditor();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [initializeEditor]);
+
+  // Get current canvas
+  const getCanvas = useCallback(() => fabricCanvasRef.current, []);
 
   // Save to history
-  const saveToHistory = useCallback((canvas: FabricCanvas) => {
+  const saveToHistory = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
     const json = JSON.stringify(canvas.toJSON());
     setHistory(prev => {
       const newHistory = [...prev.slice(0, historyIndex + 1), json];
       setHistoryIndex(newHistory.length - 1);
       return newHistory;
     });
-  }, [historyIndex]);
+  }, [getCanvas, historyIndex]);
 
   // Undo
   const handleUndo = useCallback(() => {
-    if (!fabricCanvas || historyIndex <= 0) return;
+    const canvas = getCanvas();
+    if (!canvas || historyIndex <= 0) return;
+    
     const newIndex = historyIndex - 1;
-    fabricCanvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
-      fabricCanvas.renderAll();
+    canvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
+      canvas.renderAll();
       setHistoryIndex(newIndex);
     });
-  }, [fabricCanvas, history, historyIndex]);
+  }, [getCanvas, history, historyIndex]);
 
   // Redo
   const handleRedo = useCallback(() => {
-    if (!fabricCanvas || historyIndex >= history.length - 1) return;
+    const canvas = getCanvas();
+    if (!canvas || historyIndex >= history.length - 1) return;
+    
     const newIndex = historyIndex + 1;
-    fabricCanvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
-      fabricCanvas.renderAll();
+    canvas.loadFromJSON(JSON.parse(history[newIndex])).then(() => {
+      canvas.renderAll();
       setHistoryIndex(newIndex);
     });
-  }, [fabricCanvas, history, historyIndex]);
+  }, [getCanvas, history, historyIndex]);
 
   // Add text
-  const addText = () => {
-    if (!fabricCanvas) return;
+  const addText = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
     const text = new IText("Votre texte ici", {
       left: canvasSize.width / 2 - 80,
       top: canvasSize.height / 2 - 20,
@@ -339,29 +323,33 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       fontWeight: "bold",
       shadow: new Shadow({ color: "rgba(0,0,0,0.5)", blur: 4, offsetX: 2, offsetY: 2 }),
     });
-    fabricCanvas.add(text);
-    fabricCanvas.setActiveObject(text);
-    fabricCanvas.renderAll();
-    saveToHistory(fabricCanvas);
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    canvas.renderAll();
+    saveToHistory();
     setActiveTool("select");
     toast.success("Texte ajouté - Double-cliquez pour éditer");
-  };
+  }, [getCanvas, canvasSize, activeColor, activeFont, saveToHistory]);
 
   // Apply font to selected text
-  const applyFontToSelected = (font: typeof FONTS[0]) => {
-    if (!fabricCanvas) return;
-    const activeObject = fabricCanvas.getActiveObject();
+  const applyFontToSelected = useCallback((font: typeof FONTS[0]) => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
+    const activeObject = canvas.getActiveObject();
     if (activeObject && activeObject instanceof IText) {
       activeObject.set("fontFamily", font.value);
-      fabricCanvas.renderAll();
-      saveToHistory(fabricCanvas);
+      canvas.renderAll();
+      saveToHistory();
     }
     setActiveFont(font);
-  };
+  }, [getCanvas, saveToHistory]);
 
   // Add rectangle
-  const addRectangle = () => {
-    if (!fabricCanvas) return;
+  const addRectangle = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
     const rect = new Rect({
       left: canvasSize.width / 2 - 50,
       top: canvasSize.height / 2 - 50,
@@ -372,17 +360,19 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       rx: 8,
       ry: 8,
     });
-    fabricCanvas.add(rect);
-    fabricCanvas.setActiveObject(rect);
-    fabricCanvas.renderAll();
-    saveToHistory(fabricCanvas);
+    canvas.add(rect);
+    canvas.setActiveObject(rect);
+    canvas.renderAll();
+    saveToHistory();
     setActiveTool("select");
     toast.success("Rectangle ajouté");
-  };
+  }, [getCanvas, canvasSize, activeColor, saveToHistory]);
 
   // Add circle
-  const addCircle = () => {
-    if (!fabricCanvas) return;
+  const addCircle = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
     const circle = new Circle({
       left: canvasSize.width / 2 - 50,
       top: canvasSize.height / 2 - 50,
@@ -390,35 +380,32 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       fill: activeColor,
       opacity: 0.8,
     });
-    fabricCanvas.add(circle);
-    fabricCanvas.setActiveObject(circle);
-    fabricCanvas.renderAll();
-    saveToHistory(fabricCanvas);
+    canvas.add(circle);
+    canvas.setActiveObject(circle);
+    canvas.renderAll();
+    saveToHistory();
     setActiveTool("select");
     toast.success("Cercle ajouté");
-  };
+  }, [getCanvas, canvasSize, activeColor, saveToHistory]);
 
   // Handle logo upload
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!fabricCanvas || !e.target.files?.[0]) return;
-    
+  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const canvas = getCanvas();
+    if (!canvas || !e.target.files?.[0]) return;
+
     const file = e.target.files[0];
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       FabricImage.fromURL(dataUrl).then((img) => {
-        // Scale to reasonable size
         const maxSize = Math.min(canvasSize.width, canvasSize.height) * 0.3;
         const scale = Math.min(maxSize / img.width!, maxSize / img.height!);
         img.scale(scale);
-        img.set({
-          left: 20,
-          top: 20,
-        });
-        fabricCanvas.add(img);
-        fabricCanvas.setActiveObject(img);
-        fabricCanvas.renderAll();
-        saveToHistory(fabricCanvas);
+        img.set({ left: 20, top: 20 });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+        saveToHistory();
         setActiveTool("select");
         toast.success("Image ajoutée");
       }).catch(() => {
@@ -427,113 +414,116 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     };
     reader.readAsDataURL(file);
     e.target.value = "";
-  };
+  }, [getCanvas, canvasSize, saveToHistory]);
 
   // Delete selected object
-  const deleteSelected = () => {
-    if (!fabricCanvas) return;
-    const activeObjects = fabricCanvas.getActiveObjects();
+  const deleteSelected = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
+    const activeObjects = canvas.getActiveObjects();
     if (activeObjects.length > 0) {
-      activeObjects.forEach((obj) => fabricCanvas.remove(obj));
-      fabricCanvas.discardActiveObject();
-      fabricCanvas.renderAll();
-      saveToHistory(fabricCanvas);
+      activeObjects.forEach((obj) => canvas.remove(obj));
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      saveToHistory();
       toast.success("Élément(s) supprimé(s)");
     } else {
       toast.info("Sélectionnez un élément à supprimer");
     }
-  };
+  }, [getCanvas, saveToHistory]);
 
   // Apply color to selected object
-  const applyColorToSelected = (color: string) => {
-    if (!fabricCanvas) return;
-    const activeObject = fabricCanvas.getActiveObject();
+  const applyColorToSelected = useCallback((color: string) => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    
+    const activeObject = canvas.getActiveObject();
     if (activeObject) {
       activeObject.set("fill", color);
-      fabricCanvas.renderAll();
-      saveToHistory(fabricCanvas);
+      canvas.renderAll();
+      saveToHistory();
     }
     setActiveColor(color);
-  };
+  }, [getCanvas, saveToHistory]);
 
   // Zoom controls
-  const handleZoomIn = () => {
-    if (!fabricCanvas) return;
+  const handleZoomIn = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
     const newZoom = Math.min(zoom * 1.2, 3);
-    fabricCanvas.setZoom(newZoom);
+    canvas.setZoom(newZoom);
     setZoom(newZoom);
-  };
+  }, [getCanvas, zoom]);
 
-  const handleZoomOut = () => {
-    if (!fabricCanvas) return;
+  const handleZoomOut = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
     const newZoom = Math.max(zoom / 1.2, 0.5);
-    fabricCanvas.setZoom(newZoom);
+    canvas.setZoom(newZoom);
     setZoom(newZoom);
-  };
+  }, [getCanvas, zoom]);
 
-  const handleResetZoom = () => {
-    if (!fabricCanvas) return;
-    fabricCanvas.setZoom(1);
+  const handleResetZoom = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+    canvas.setZoom(1);
     setZoom(1);
-  };
+  }, [getCanvas]);
 
   // Export canvas
-  const handleSave = () => {
-    if (!fabricCanvas) return;
-    
-    // Reset zoom for export
-    const currentZoom = fabricCanvas.getZoom();
-    fabricCanvas.setZoom(1);
-    
-    // Create high-resolution export
-    const multiplier = 2;
-    const dataUrl = fabricCanvas.toDataURL({
+  const handleSave = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    const currentZoom = canvas.getZoom();
+    canvas.setZoom(1);
+
+    const dataUrl = canvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier,
+      multiplier: 2,
     });
-    
-    // Restore zoom
-    fabricCanvas.setZoom(currentZoom);
-    
+
+    canvas.setZoom(currentZoom);
     onSave(dataUrl);
     toast.success("Image sauvegardée avec succès!");
-  };
+  }, [getCanvas, onSave]);
 
   // Download canvas
-  const handleDownload = () => {
-    if (!fabricCanvas) return;
-    
-    // Reset zoom for export
-    const currentZoom = fabricCanvas.getZoom();
-    fabricCanvas.setZoom(1);
-    
-    const multiplier = 2;
-    const dataUrl = fabricCanvas.toDataURL({
+  const handleDownload = useCallback(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    const currentZoom = canvas.getZoom();
+    canvas.setZoom(1);
+
+    const dataUrl = canvas.toDataURL({
       format: "png",
       quality: 1,
-      multiplier,
+      multiplier: 2,
     });
-    
-    // Restore zoom
-    fabricCanvas.setZoom(currentZoom);
-    
+
+    canvas.setZoom(currentZoom);
+
     const link = document.createElement("a");
     link.href = dataUrl;
     link.download = `affiche-editee-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success("Image téléchargée!");
-  };
+  }, [getCanvas]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const canvas = getCanvas();
+      if (!canvas) return;
+
       if (e.key === "Delete" || e.key === "Backspace") {
-        // Only delete if not editing text
-        const activeObject = fabricCanvas?.getActiveObject();
+        const activeObject = canvas.getActiveObject();
         if (activeObject && !(activeObject instanceof IText && (activeObject as IText).isEditing)) {
           e.preventDefault();
           deleteSelected();
@@ -557,22 +547,20 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fabricCanvas, handleUndo, handleRedo]);
+  }, [getCanvas, deleteSelected, handleUndo, handleRedo]);
 
   // Save history on object modification
   useEffect(() => {
-    if (!fabricCanvas) return;
+    const canvas = getCanvas();
+    if (!canvas || !isReady) return;
 
-    const handleObjectModified = () => {
-      saveToHistory(fabricCanvas);
-    };
+    const handleObjectModified = () => saveToHistory();
+    canvas.on("object:modified", handleObjectModified);
 
-    fabricCanvas.on("object:modified", handleObjectModified);
-    
     return () => {
-      fabricCanvas.off("object:modified", handleObjectModified);
+      canvas.off("object:modified", handleObjectModified);
     };
-  }, [fabricCanvas, saveToHistory]);
+  }, [getCanvas, isReady, saveToHistory]);
 
   return (
     <div className="fixed inset-0 bg-background/98 backdrop-blur-md z-50 flex flex-col">
@@ -587,7 +575,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               variant="ghost"
               size="sm"
               onClick={handleUndo}
-              disabled={historyIndex <= 0}
+              disabled={historyIndex <= 0 || !isReady}
               className="h-8 w-8 p-0 hover:bg-muted/50"
               title="Annuler (Ctrl+Z)"
             >
@@ -597,21 +585,21 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               variant="ghost"
               size="sm"
               onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
+              disabled={historyIndex >= history.length - 1 || !isReady}
               className="h-8 w-8 p-0 hover:bg-muted/50"
               title="Rétablir (Ctrl+Y)"
             >
               <Redo className="w-4 h-4" />
             </Button>
           </div>
-          
+
           {/* Zoom controls */}
           <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleZoomOut}
-              disabled={zoom <= 0.5}
+              disabled={zoom <= 0.5 || !isReady}
               className="h-8 w-8 p-0 hover:bg-muted/50"
               title="Zoom arrière"
             >
@@ -624,7 +612,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               variant="ghost"
               size="sm"
               onClick={handleZoomIn}
-              disabled={zoom >= 3}
+              disabled={zoom >= 3 || !isReady}
               className="h-8 w-8 p-0 hover:bg-muted/50"
               title="Zoom avant"
             >
@@ -634,6 +622,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               variant="ghost"
               size="sm"
               onClick={handleResetZoom}
+              disabled={!isReady}
               className="h-8 w-8 p-0 hover:bg-muted/50"
               title="Réinitialiser le zoom"
             >
@@ -647,6 +636,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant="outline"
             size="sm"
             onClick={handleDownload}
+            disabled={!isReady}
             className="border-border/50 hover:bg-accent/10"
           >
             <Download className="w-4 h-4 mr-2" />
@@ -655,6 +645,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
           <Button
             size="sm"
             onClick={handleSave}
+            disabled={!isReady}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -679,14 +670,15 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant={activeTool === "select" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => setActiveTool("select")}
+            disabled={!isReady}
             className="w-12 h-10"
             title="Sélectionner (V)"
           >
             <Move className="w-4 h-4" />
           </Button>
-          
+
           <div className="h-px bg-border/30 my-1" />
-          
+
           <Button
             variant={activeTool === "text" ? "secondary" : "ghost"}
             size="icon"
@@ -694,6 +686,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("text");
               addText();
             }}
+            disabled={!isReady}
             className="w-12 h-10"
             title="Ajouter du texte (T)"
           >
@@ -706,6 +699,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("rectangle");
               addRectangle();
             }}
+            disabled={!isReady}
             className="w-12 h-10"
             title="Ajouter un rectangle (R)"
           >
@@ -718,6 +712,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("circle");
               addCircle();
             }}
+            disabled={!isReady}
             className="w-12 h-10"
             title="Ajouter un cercle (C)"
           >
@@ -727,6 +722,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant={activeTool === "image" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => fileInputRef.current?.click()}
+            disabled={!isReady}
             className="w-12 h-10"
             title="Ajouter une image/logo (I)"
           >
@@ -739,15 +735,16 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             onChange={handleLogoUpload}
             className="hidden"
           />
-          
+
           <div className="h-px bg-border/30 my-1" />
-          
+
           {/* Font picker */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={!isReady}
                 className="w-12 h-10 px-1 text-[10px]"
                 title="Police"
               >
@@ -771,24 +768,25 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           <div className="flex-1" />
-          
+
           {/* Color picker */}
           <div className="relative">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowColorPicker(!showColorPicker)}
+              disabled={!isReady}
               className="w-12 h-10"
               title="Couleurs"
             >
-              <div 
+              <div
                 className="w-6 h-6 rounded-full border-2 border-border shadow-inner"
                 style={{ backgroundColor: activeColor }}
               />
             </Button>
-            
+
             {showColorPicker && (
               <div className="absolute left-full ml-2 bottom-0 bg-card border border-border rounded-lg p-3 shadow-xl z-50 min-w-[180px]">
                 <p className="text-xs text-muted-foreground mb-2 font-medium">Palette de couleurs</p>
@@ -812,13 +810,14 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               </div>
             )}
           </div>
-          
+
           <div className="h-px bg-border/30 my-1" />
-          
+
           <Button
             variant="ghost"
             size="icon"
             onClick={deleteSelected}
+            disabled={!isReady}
             className="w-12 h-10 hover:bg-destructive/10 hover:text-destructive"
             title="Supprimer (Suppr)"
           >
@@ -827,32 +826,28 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         </div>
 
         {/* Canvas area */}
-        <div 
+        <div
           ref={containerRef}
           className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-background/50 to-muted/20 overflow-auto"
         >
-          {isLoading ? (
+          {loadingState === "loading" && (
             <div className="text-center space-y-4">
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-muted-foreground">Chargement de l'éditeur...</p>
               <p className="text-xs text-muted-foreground/60">Préparation de votre image...</p>
             </div>
-          ) : loadError ? (
+          )}
+
+          {loadingState === "error" && (
             <div className="text-center space-y-4 max-w-md">
               <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
-                <X className="w-8 h-8 text-destructive" />
+                <AlertCircle className="w-8 h-8 text-destructive" />
               </div>
-              <p className="text-destructive font-medium">{loadError}</p>
-              <p className="text-xs text-muted-foreground">
-                Vérifiez votre connexion internet et réessayez.
-              </p>
+              <p className="text-destructive font-medium">Impossible de charger l'image</p>
+              <p className="text-sm text-muted-foreground">{errorMessage}</p>
               <div className="flex gap-2 justify-center">
-                <Button 
-                  onClick={() => {
-                    setLoadError(null);
-                    setIsLoading(true);
-                    initAttemptRef.current = 0;
-                  }}
+                <Button
+                  onClick={initializeEditor}
                   variant="default"
                   size="sm"
                 >
@@ -864,17 +859,20 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
                 </Button>
               </div>
             </div>
-          ) : (
-            <div 
-              className="relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-border/20"
-              style={{ 
-                transform: `scale(${zoom})`,
-                transformOrigin: "center center"
-              }}
-            >
-              <canvas ref={canvasRef} />
-            </div>
           )}
+
+          <div
+            className={cn(
+              "relative shadow-2xl rounded-lg overflow-hidden ring-1 ring-border/20",
+              loadingState !== "ready" && "hidden"
+            )}
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: "center center"
+            }}
+          >
+            <canvas ref={canvasRef} />
+          </div>
         </div>
       </div>
 
