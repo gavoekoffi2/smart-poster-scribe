@@ -37,7 +37,7 @@ import { fr } from "date-fns/locale";
 export default function AccountPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signOut } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const { subscription, transactions, refreshSubscription } = useSubscription();
   const { 
     profile, 
@@ -73,12 +73,12 @@ export default function AccountPage() {
     }
   }, [searchParams, refreshSubscription]);
 
-  // Redirect if not logged in
+  // Redirect if not logged in (only after auth check is complete)
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       navigate("/auth?redirect=/account");
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Initialize form data from profile
   useEffect(() => {
@@ -92,6 +92,15 @@ export default function AccountPage() {
       setSelectedColors(profile.default_color_palette || []);
     }
   }, [profile]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;

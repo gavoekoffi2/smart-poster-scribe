@@ -1,5 +1,6 @@
-import { Sparkles, Mail, Phone, MapPin, Github, Twitter, Linkedin, Instagram } from "lucide-react";
+import { Mail, Phone, MapPin, Github, Twitter, Linkedin, Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
+import { LogoIcon } from "@/components/LogoIcon";
 export function Footer() {
   const footerLinks = {
     product: [{
@@ -61,8 +62,8 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-                <Sparkles className="w-6 h-6 text-primary-foreground" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
+                <LogoIcon size={40} />
               </div>
               <div>
                 <h3 className="font-display text-xl font-bold text-foreground">
