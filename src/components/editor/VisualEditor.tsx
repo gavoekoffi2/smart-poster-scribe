@@ -15,10 +15,17 @@ import {
   Move,
   ZoomIn,
   ZoomOut,
-  RotateCcw
+  RotateCcw,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface VisualEditorProps {
   imageUrl: string;
@@ -35,12 +42,26 @@ const COLORS = [
   "#1a1a2e", "#16213e", "#0f3460", "#533483", "#e94560"
 ];
 
+const FONTS = [
+  { name: "Sans-serif", value: "Inter, sans-serif" },
+  { name: "Serif", value: "Georgia, serif" },
+  { name: "Monospace", value: "monospace" },
+  { name: "Impact", value: "Impact, sans-serif" },
+  { name: "Comic Sans", value: "Comic Sans MS, cursive" },
+  { name: "Arial Black", value: "Arial Black, sans-serif" },
+  { name: "Verdana", value: "Verdana, sans-serif" },
+  { name: "Trebuchet", value: "Trebuchet MS, sans-serif" },
+  { name: "Courier", value: "Courier New, monospace" },
+  { name: "Brush Script", value: "Brush Script MT, cursive" },
+];
+
 export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#FFFFFF");
+  const [activeFont, setActiveFont] = useState(FONTS[0]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -49,6 +70,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initAttemptRef = useRef(0);
   const isInitializedRef = useRef(false);
 
   // Resolve image URL to handle different formats
@@ -98,16 +120,21 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
 
   // Initialize canvas with background image
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current || isInitializedRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
     
-    // Mark as initialized to prevent double initialization
-    isInitializedRef.current = true;
+    // Prevent multiple simultaneous init attempts
+    initAttemptRef.current += 1;
+    const currentAttempt = initAttemptRef.current;
     
     const container = containerRef.current;
+    let canvas: FabricCanvas | null = null;
     
     // Wait for container to have dimensions
     const initCanvas = async () => {
       try {
+        // Check if this attempt is still valid
+        if (currentAttempt !== initAttemptRef.current) return;
+        
         // Get container dimensions
         const containerRect = container.getBoundingClientRect();
         const maxWidth = Math.min(containerRect.width - 40, 1200);
@@ -119,8 +146,18 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
           return;
         }
 
-        // Load the image first
-        const img = await loadImageWithFallback(imageUrl);
+        // Load the image first with timeout
+        const loadWithTimeout = Promise.race([
+          loadImageWithFallback(imageUrl),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout")), 15000)
+          )
+        ]);
+
+        const img = await loadWithTimeout;
+        
+        // Check if this attempt is still valid
+        if (currentAttempt !== initAttemptRef.current) return;
         
         const aspectRatio = img.width / img.height;
         let width = maxWidth;
@@ -138,7 +175,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         setCanvasSize({ width, height });
 
         // Create canvas
-        const canvas = new FabricCanvas(canvasRef.current!, {
+        canvas = new FabricCanvas(canvasRef.current!, {
           width,
           height,
           backgroundColor: "#1a1a2e",
@@ -146,28 +183,17 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
           preserveObjectStacking: true,
         });
 
-        // Load background image using the resolved URL
-        const resolvedUrl = resolveImageUrl(imageUrl);
-        
+        // Try to set background from loaded image directly
         try {
-          const fabricImg = await FabricImage.fromURL(resolvedUrl, { crossOrigin: "anonymous" });
+          const fabricImg = new FabricImage(img);
           fabricImg.scaleToWidth(width);
           fabricImg.scaleToHeight(height);
           canvas.backgroundImage = fabricImg;
           canvas.renderAll();
         } catch (bgError) {
-          console.log("Retrying background without CORS...");
-          try {
-            // Try creating from the loaded HTML image element
-            const fabricImg = new FabricImage(img);
-            fabricImg.scaleToWidth(width);
-            fabricImg.scaleToHeight(height);
-            canvas.backgroundImage = fabricImg;
-            canvas.renderAll();
-          } catch (finalError) {
-            console.error("Failed to set background:", finalError);
-            toast.error("Impossible de charger l'image en arrière-plan");
-          }
+          console.error("Failed to set background:", bgError);
+          // Continue without background - user can still edit
+          toast.info("Image chargée sans arrière-plan - vous pouvez ajouter des éléments");
         }
 
         setFabricCanvas(canvas);
@@ -180,19 +206,21 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         
       } catch (err) {
         console.error("Error initializing editor:", err);
-        setLoadError("Impossible de charger l'image. Veuillez réessayer.");
-        setIsLoading(false);
+        if (currentAttempt === initAttemptRef.current) {
+          setLoadError("Impossible de charger l'image. Veuillez réessayer.");
+          setIsLoading(false);
+        }
       }
     };
     
     initCanvas();
     
     return () => {
-      if (fabricCanvas) {
-        fabricCanvas.dispose();
+      if (canvas) {
+        canvas.dispose();
       }
     };
-  }, [imageUrl, loadImageWithFallback, resolveImageUrl]);
+  }, [imageUrl, loadImageWithFallback]);
 
   // Save to history
   const saveToHistory = useCallback((canvas: FabricCanvas) => {
@@ -232,7 +260,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       top: canvasSize.height / 2 - 20,
       fontSize: 32,
       fill: activeColor,
-      fontFamily: "Inter, sans-serif",
+      fontFamily: activeFont.value,
       fontWeight: "bold",
       shadow: new Shadow({ color: "rgba(0,0,0,0.5)", blur: 4, offsetX: 2, offsetY: 2 }),
     });
@@ -242,6 +270,18 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     saveToHistory(fabricCanvas);
     setActiveTool("select");
     toast.success("Texte ajouté - Double-cliquez pour éditer");
+  };
+
+  // Apply font to selected text
+  const applyFontToSelected = (font: typeof FONTS[0]) => {
+    if (!fabricCanvas) return;
+    const activeObject = fabricCanvas.getActiveObject();
+    if (activeObject && activeObject instanceof IText) {
+      activeObject.set("fontFamily", font.value);
+      fabricCanvas.renderAll();
+      saveToHistory(fabricCanvas);
+    }
+    setActiveFont(font);
   };
 
   // Add rectangle
@@ -559,12 +599,12 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       {/* Main editor area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Toolbar */}
-        <div className="w-14 border-r border-border/30 bg-card/50 p-2 flex flex-col gap-1.5">
+        <div className="w-16 border-r border-border/30 bg-card/50 p-2 flex flex-col gap-1.5">
           <Button
             variant={activeTool === "select" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => setActiveTool("select")}
-            className="w-10 h-10"
+            className="w-12 h-10"
             title="Sélectionner (V)"
           >
             <Move className="w-4 h-4" />
@@ -579,7 +619,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("text");
               addText();
             }}
-            className="w-10 h-10"
+            className="w-12 h-10"
             title="Ajouter du texte (T)"
           >
             <Type className="w-4 h-4" />
@@ -591,7 +631,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("rectangle");
               addRectangle();
             }}
-            className="w-10 h-10"
+            className="w-12 h-10"
             title="Ajouter un rectangle (R)"
           >
             <Square className="w-4 h-4" />
@@ -603,7 +643,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               setActiveTool("circle");
               addCircle();
             }}
-            className="w-10 h-10"
+            className="w-12 h-10"
             title="Ajouter un cercle (C)"
           >
             <CircleIcon className="w-4 h-4" />
@@ -612,7 +652,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant={activeTool === "image" ? "secondary" : "ghost"}
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="w-10 h-10"
+            className="w-12 h-10"
             title="Ajouter une image/logo (I)"
           >
             <ImageIcon className="w-4 h-4" />
@@ -625,6 +665,38 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             className="hidden"
           />
           
+          <div className="h-px bg-border/30 my-1" />
+          
+          {/* Font picker */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-12 h-10 px-1 text-[10px]"
+                title="Police"
+              >
+                <span className="truncate">Aa</span>
+                <ChevronDown className="w-3 h-3 ml-0.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" className="w-48">
+              {FONTS.map((font) => (
+                <DropdownMenuItem
+                  key={font.value}
+                  onClick={() => applyFontToSelected(font)}
+                  className={cn(
+                    "cursor-pointer",
+                    activeFont.value === font.value && "bg-primary/10"
+                  )}
+                  style={{ fontFamily: font.value }}
+                >
+                  {font.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <div className="flex-1" />
           
           {/* Color picker */}
@@ -633,7 +705,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
               variant="ghost"
               size="icon"
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="w-10 h-10"
+              className="w-12 h-10"
               title="Couleurs"
             >
               <div 
@@ -672,7 +744,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
             variant="ghost"
             size="icon"
             onClick={deleteSelected}
-            className="w-10 h-10 hover:bg-destructive/10 hover:text-destructive"
+            className="w-12 h-10 hover:bg-destructive/10 hover:text-destructive"
             title="Supprimer (Suppr)"
           >
             <Trash2 className="w-4 h-4" />
