@@ -151,6 +151,32 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Onboarding banner for users who haven't completed it */}
+      {profile && !profile.onboarding_completed && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-primary to-accent text-primary-foreground py-3 px-4"
+        >
+          <div className="container mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                Personnalisez votre expérience avec vos informations par défaut
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate("/onboarding")}
+              className="text-xs"
+            >
+              Configurer maintenant
+            </Button>
+          </div>
+        </motion.div>
+      )}
+      
       {/* Cover Image */}
       <div className="relative h-48 md:h-64 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10">
         {profile?.cover_image_url && (
