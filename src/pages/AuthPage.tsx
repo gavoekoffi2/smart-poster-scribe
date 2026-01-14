@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft, CheckCircle, RefreshCw } from "lucide-react";
+import { Mail, Lock, User, Loader2, ArrowLeft, CheckCircle, RefreshCw } from "lucide-react";
+import { LogoIcon } from "@/components/LogoIcon";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -280,8 +281,8 @@ export default function AuthPage() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/30 rounded-xl blur-xl" />
-            <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-              <Sparkles className="w-7 h-7 text-primary-foreground" />
+            <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
+              <LogoIcon size={48} />
             </div>
           </div>
           <div>
