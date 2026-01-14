@@ -233,8 +233,12 @@ export type Database = {
           created_at: string
           default_color_palette: string[] | null
           default_logo_url: string | null
+          expectations: string | null
           full_name: string | null
+          how_heard_about_us: string | null
           id: string
+          industry: string | null
+          onboarding_completed: boolean | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -247,8 +251,12 @@ export type Database = {
           created_at?: string
           default_color_palette?: string[] | null
           default_logo_url?: string | null
+          expectations?: string | null
           full_name?: string | null
+          how_heard_about_us?: string | null
           id?: string
+          industry?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -261,8 +269,12 @@ export type Database = {
           created_at?: string
           default_color_palette?: string[] | null
           default_logo_url?: string | null
+          expectations?: string | null
           full_name?: string | null
+          how_heard_about_us?: string | null
           id?: string
+          industry?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string
           user_id?: string

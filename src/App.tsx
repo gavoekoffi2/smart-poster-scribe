@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
 import PricingPage from "./pages/PricingPage";
 import AccountPage from "./pages/AccountPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTemplates from "./pages/AdminTemplates";
@@ -26,6 +27,7 @@ const App = () => (
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/app" element={<AppPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/admin/upload" element={<AdminUploadPage />} />

@@ -36,7 +36,7 @@ export default function AuthPage() {
   const isUserInitiatedAuth = useRef(false);
   const hasCheckedSession = useRef(false);
 
-  const handleSuccessfulAuth = () => {
+  const handleSuccessfulAuth = async (isNewUser: boolean = false) => {
     // Only proceed if this was user-initiated or initial session check
     if (!isUserInitiatedAuth.current && hasCheckedSession.current) {
       return;
@@ -60,6 +60,27 @@ export default function AuthPage() {
       }
     }
     
+    // For new users, redirect to onboarding
+    if (isNewUser) {
+      navigate("/onboarding");
+      return;
+    }
+    
+    // For existing users, check if they completed onboarding
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("user_id", session.user.id)
+        .single();
+      
+      if (profile && !profile.onboarding_completed) {
+        navigate("/onboarding");
+        return;
+      }
+    }
+    
     // Default redirect
     const redirectTo = locationState?.redirectTo || "/app";
     navigate(redirectTo);
@@ -74,8 +95,19 @@ export default function AuthPage() {
       hasCheckedSession.current = true;
       
       if (session?.user) {
-        // User is already logged in, redirect
-        handleSuccessfulAuth();
+        // Check if this is a confirmed email redirect (new user)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isConfirmed = urlParams.get('confirmed') === 'true';
+        
+        if (isConfirmed) {
+          // New user who just confirmed email - go to onboarding
+          isUserInitiatedAuth.current = true;
+          toast.success("Email confirmé ! Bienvenue sur Graphiste GPT !");
+          handleSuccessfulAuth(true);
+        } else {
+          // Existing user already logged in
+          handleSuccessfulAuth(false);
+        }
       }
     };
     
@@ -85,7 +117,7 @@ export default function AuthPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Only handle SIGNED_IN events from user actions
       if (event === 'SIGNED_IN' && session?.user && isUserInitiatedAuth.current) {
-        handleSuccessfulAuth();
+        handleSuccessfulAuth(false);
       }
     });
 
@@ -180,9 +212,9 @@ export default function AuthPage() {
         setPendingEmailConfirmation(true);
         toast.success("Un email de confirmation a été envoyé. Vérifiez votre boîte mail !");
       } else if (data.user && data.session) {
-        // Auto-confirm enabled, proceed directly
+        // Auto-confirm enabled, proceed directly to onboarding for new users
         toast.success("Compte créé avec succès ! Bienvenue !");
-        handleSuccessfulAuth();
+        handleSuccessfulAuth(true); // true = new user
       }
     } catch (error) {
       isUserInitiatedAuth.current = false;

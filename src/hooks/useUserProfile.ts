@@ -14,6 +14,10 @@ export interface UserProfile {
   company_name: string | null;
   phone: string | null;
   website: string | null;
+  industry: string | null;
+  how_heard_about_us: string | null;
+  expectations: string | null;
+  onboarding_completed: boolean;
   created_at: string;
   updated_at: string;
 }
