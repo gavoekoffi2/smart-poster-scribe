@@ -104,49 +104,62 @@ function buildPrompt(state: ConversationState) {
     productDisplay,
     restaurantInfo,
     language = "français",
+    referenceImage,
   } = state;
 
   const lines: string[] = [];
 
-  // =============================
-  // STRUCTURE CLAIRE ET IMPÉRATIVE
-  // 1. CONTENU OBLIGATOIRE: Tout ce qui DOIT apparaître
-  // 2. STYLE: Design du template à suivre (sans copier son texte)
-  // =============================
-
   lines.push(`LANGUE: ${language.toUpperCase()}`);
   lines.push("");
 
-  // ====== SECTION 1: CONTENU OBLIGATOIRE À AFFICHER ======
+  // ====== SECTION 1: PALETTE COULEUR OBLIGATOIRE ======
+  if (colorPalette?.length) {
+    lines.push("╔══════════════════════════════════════════════════════════════╗");
+    lines.push("║  🎨 PALETTE COULEUR OBLIGATOIRE - CODES HEX EXACTS           ║");
+    lines.push("╚══════════════════════════════════════════════════════════════╝");
+    lines.push("");
+    lines.push("⚠️ UTILISER CES COULEURS EXACTES (remplacer les couleurs du template):");
+    colorPalette.slice(0, 6).forEach((hex, index) => {
+      const colorName = hexToColorName(hex);
+      if (index === 0) {
+        lines.push(`   COULEUR DOMINANTE: ${hex} (${colorName}) → fonds, grandes zones`);
+      } else if (index === 1) {
+        lines.push(`   COULEUR SECONDAIRE: ${hex} (${colorName}) → titres, accents`);
+      } else {
+        lines.push(`   COULEUR ${index + 1}: ${hex} (${colorName}) → détails, bordures`);
+      }
+    });
+    lines.push("");
+    lines.push("❌ NE PAS garder les couleurs originales du template");
+    lines.push("✓ REMPLACER toutes les couleurs par cette palette");
+    lines.push("");
+  }
+
+  // ====== SECTION 2: CONTENU CLIENT À AFFICHER ======
   lines.push("╔══════════════════════════════════════════════════════════════╗");
-  lines.push("║  CONTENU OBLIGATOIRE - TOUT DOIT APPARAÎTRE SUR L'AFFICHE    ║");
+  lines.push("║  📝 CONTENU CLIENT - SEULES INFOS À AFFICHER                 ║");
   lines.push("╚══════════════════════════════════════════════════════════════╝");
   lines.push("");
 
-  // Collecter tous les éléments de contenu avec leurs labels
+  // Collecter tous les éléments fournis par le client
   const contentElements: { label: string; value: string; priority: number }[] = [];
 
-  // Titre - priorité maximale
   if (extractedInfo?.title) {
     contentElements.push({ label: "TITRE PRINCIPAL", value: String(extractedInfo.title), priority: 1 });
   }
 
-  // Dates et horaires
   if (extractedInfo?.dates) {
     contentElements.push({ label: "DATE(S) ET HEURE(S)", value: String(extractedInfo.dates), priority: 2 });
   }
 
-  // Lieu
   if (extractedInfo?.location) {
     contentElements.push({ label: "LIEU / ADRESSE", value: String(extractedInfo.location), priority: 3 });
   }
 
-  // Orateur principal
   if (mainSpeaker?.name) {
     contentElements.push({ label: "ORATEUR PRINCIPAL", value: mainSpeaker.name, priority: 4 });
   }
 
-  // Invités
   if (guests?.length) {
     const guestList = guests.map(g => g.name).filter(Boolean).join(", ");
     if (guestList) {
@@ -154,32 +167,26 @@ function buildPrompt(state: ConversationState) {
     }
   }
 
-  // Prix/Tarifs
   if (extractedInfo?.prices) {
     contentElements.push({ label: "PRIX / TARIFS", value: String(extractedInfo.prices), priority: 6 });
   }
 
-  // Contact
   if (extractedInfo?.contact) {
     contentElements.push({ label: "CONTACT", value: String(extractedInfo.contact), priority: 7 });
   }
 
-  // Organisateur
   if (extractedInfo?.organizer) {
     contentElements.push({ label: "ORGANISATEUR", value: String(extractedInfo.organizer), priority: 8 });
   }
 
-  // Menu restaurant
   if (restaurantInfo?.hasMenu && restaurantInfo.menuContent) {
     contentElements.push({ label: "MENU COMPLET", value: String(restaurantInfo.menuContent), priority: 4 });
   }
 
-  // Produits
   if (productDisplay?.hasCharacter && productDisplay.characterInteraction) {
     contentElements.push({ label: "MISE EN SCÈNE PRODUIT", value: String(productDisplay.characterInteraction), priority: 4 });
   }
 
-  // Trier par priorité et afficher
   contentElements.sort((a, b) => a.priority - b.priority);
   
   if (contentElements.length > 0) {
@@ -190,7 +197,6 @@ function buildPrompt(state: ConversationState) {
     });
   }
 
-  // Description libre de l'utilisateur
   if (description) {
     const cleanDesc = description.replace(/#[0-9A-Fa-f]{6}/g, "").trim();
     if (cleanDesc) {
@@ -200,15 +206,41 @@ function buildPrompt(state: ConversationState) {
     }
   }
 
-  lines.push("────────────────────────────────────────────────────────────────");
-  lines.push("⚠️ VÉRIFICATION: Chaque élément numéroté ci-dessus DOIT être présent sur l'affiche finale.");
-  lines.push("────────────────────────────────────────────────────────────────");
-  lines.push("");
-
-  // ====== SECTION 2: DIRECTIVES DE STYLE (DESIGN UNIQUEMENT) ======
-  if (referenceDescription || (colorPalette?.length ?? 0) > 0 || domain || customDomain) {
+  // ====== SECTION 3: CE QUI DOIT ÊTRE SUPPRIMÉ ======
+  if (referenceImage || referenceDescription) {
     lines.push("╔══════════════════════════════════════════════════════════════╗");
-    lines.push("║  STYLE VISUEL - DESIGN DU TEMPLATE (PAS SON TEXTE)           ║");
+    lines.push("║  🧹 ÉLÉMENTS À SUPPRIMER DU TEMPLATE ORIGINAL                ║");
+    lines.push("╚══════════════════════════════════════════════════════════════╝");
+    lines.push("");
+    lines.push("⚠️ SUPPRIMER TOUS ces éléments du template s'ils ne sont pas ci-dessus:");
+    
+    if (!extractedInfo?.contact) {
+      lines.push("   ❌ Tous numéros de téléphone du template → SUPPRIMER");
+    }
+    if (!extractedInfo?.location) {
+      lines.push("   ❌ Toutes adresses/lieux du template → SUPPRIMER");
+    }
+    if (!extractedInfo?.dates) {
+      lines.push("   ❌ Toutes dates/horaires du template → SUPPRIMER");
+    }
+    if (!extractedInfo?.prices) {
+      lines.push("   ❌ Tous prix/tarifs du template → SUPPRIMER");
+    }
+    if (!mainSpeaker?.name && !guests?.length) {
+      lines.push("   ❌ Tous noms d'orateurs/artistes du template → SUPPRIMER");
+    }
+    lines.push("   ❌ Tous logos/marques du template original → SUPPRIMER");
+    lines.push("   ❌ Toutes icônes réseaux sociaux du template → SUPPRIMER");
+    lines.push("   ❌ Tout autre texte du template → SUPPRIMER");
+    lines.push("");
+    lines.push("🎯 L'affiche ne doit contenir QUE les informations listées ci-dessus.");
+    lines.push("");
+  }
+
+  // ====== SECTION 4: STYLE DU TEMPLATE ======
+  if (referenceDescription || domain || customDomain) {
+    lines.push("╔══════════════════════════════════════════════════════════════╗");
+    lines.push("║  🎨 STYLE VISUEL - DESIGN DU TEMPLATE (PAS SON CONTENU)      ║");
     lines.push("╚══════════════════════════════════════════════════════════════╝");
     lines.push("");
 
@@ -221,19 +253,12 @@ function buildPrompt(state: ConversationState) {
       lines.push("Style à reproduire:");
       lines.push(referenceDescription.replace(/\n/g, " ").slice(0, 800));
       lines.push("");
-      lines.push("⚠️ NE PAS copier: textes, numéros, prix, contacts du template.");
-    }
-
-    if (colorPalette?.length) {
-      const colorDescriptions = colorPalette.slice(0, 6).map(hexToColorName);
-      const uniqueColors = [...new Set(colorDescriptions)];
-      lines.push(`Palette indicative: ${uniqueColors.join(", ")}`);
     }
     
     lines.push("");
   }
 
-  // ====== SECTION 3: PERSONNAGES ======
+  // ====== SECTION 5: PERSONNAGES ======
   if (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter) {
     lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
     lines.push("");

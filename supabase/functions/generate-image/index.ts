@@ -235,56 +235,73 @@ function buildProfessionalPrompt({
     instructions.push("   ✓ Si bandeau en bas → bandeau en bas");
     instructions.push("   ✓ Si logo en haut → logo en haut");
     instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("CE QUE TU REMPLACES AVEC LE CONTENU UTILISATEUR:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("1. TEXTES:");
-    instructions.push("   → Remplacer TOUS les textes du template par le contenu utilisateur");
-    instructions.push("   → Placer chaque texte dans la zone correspondante du template");
-    instructions.push("   → Utiliser UNIQUEMENT ce que l'utilisateur a fourni");
+    
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  🎨 APPLICATION OBLIGATOIRE DE LA PALETTE COULEUR UTILISATEUR         ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
     instructions.push("");
-    instructions.push("2. COULEURS (si palette fournie par l'utilisateur):");
-    instructions.push("   → Remplacer la couleur dominante par la couleur PRINCIPALE utilisateur");
-    instructions.push("   → Adapter les accents avec les couleurs SECONDAIRES");
-    instructions.push("   → Garder les proportions et contrastes du design original");
-    instructions.push("   → Appliquer les dégradés avec les nouvelles couleurs");
+    instructions.push("⚠️ SI L'UTILISATEUR A FOURNI DES COULEURS (codes HEX), TU DOIS:");
+    instructions.push("   1. REMPLACER TOUTES les couleurs du template par celles fournies");
+    instructions.push("   2. Couleur #1 = couleur DOMINANTE (fonds, grandes zones)");
+    instructions.push("   3. Couleur #2 = couleur SECONDAIRE (accents, titres)");
+    instructions.push("   4. Couleurs #3+ = détails, bordures, éléments décoratifs");
+    instructions.push("   5. CONSERVER les contrastes et dégradés mais avec les NOUVELLES couleurs");
     instructions.push("");
-    instructions.push("3. PERSONNAGES:");
-    instructions.push("   → Générer de NOUVEAUX personnages africains authentiques");
-    instructions.push("   → Garder la même pose/position que dans le template");
-    instructions.push("   → Même cadrage et même zone d'espace");
+    instructions.push("❌ NE PAS garder les couleurs originales du template si palette fournie");
+    instructions.push("❌ NE PAS mélanger anciennes et nouvelles couleurs");
     instructions.push("");
+    
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  🧹 NETTOYAGE OBLIGATOIRE - SUPPRIMER TOUT CONTENU NON FOURNI         ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    instructions.push("");
+    instructions.push("⚠️ RÈGLE CRITIQUE - SUPPRESSION DES ÉLÉMENTS NON FOURNIS:");
+    instructions.push("");
+    instructions.push("POUR CHAQUE ÉLÉMENT DU TEMPLATE ORIGINAL:");
+    instructions.push("   → SI l'utilisateur a fourni un équivalent → REMPLACER par son contenu");
+    instructions.push("   → SI l'utilisateur N'A PAS fourni → SUPPRIMER complètement la zone");
+    instructions.push("");
+    instructions.push("ÉLÉMENTS À SUPPRIMER si non fournis par l'utilisateur:");
+    instructions.push("   ❌ Numéros de téléphone du template → SUPPRIMER si pas de contact fourni");
+    instructions.push("   ❌ Adresses/lieux du template → SUPPRIMER si pas de lieu fourni");
+    instructions.push("   ❌ Dates/horaires du template → SUPPRIMER si pas de dates fournies");
+    instructions.push("   ❌ Prix/tarifs du template → SUPPRIMER si pas de prix fournis");
+    instructions.push("   ❌ Noms d'orateurs/artistes du template → SUPPRIMER si pas fournis");
+    instructions.push("   ❌ Logos/marques du template → SUPPRIMER (sauf logo client fourni)");
+    instructions.push("   ❌ Icônes réseaux sociaux du template → SUPPRIMER si pas fournis");
+    instructions.push("   ❌ Tout texte additionnel du template → SUPPRIMER");
+    instructions.push("");
+    instructions.push("🎯 OBJECTIF: L'affiche ne doit contenir QUE les informations du client.");
+    instructions.push("   RIEN du contenu original du template ne doit rester visible.");
+    instructions.push("");
+    
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("INTERDIT ABSOLUMENT:");
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("❌ INVENTER du contenu (pas de numéros, dates, prix, contacts inventés)");
-    instructions.push("❌ MODIFIER la structure du design (pas de nouvelles zones)");
-    instructions.push("❌ SIMPLIFIER ou ÉPURER le design (garder TOUS les éléments)");
-    instructions.push("❌ GARDER les textes originaux du template");
-    instructions.push("❌ OMETTRE des informations fournies par l'utilisateur");
+    instructions.push("❌ GARDER les textes/contacts/infos originaux du template");
+    instructions.push("❌ LAISSER des numéros de téléphone qui ne sont pas ceux du client");
+    instructions.push("❌ CONSERVER des noms d'orateurs/artistes du template original");
+    instructions.push("❌ GARDER les anciennes couleurs si palette utilisateur fournie");
     instructions.push("❌ AJOUTER des éléments non présents dans le template");
     instructions.push("");
-    instructions.push("📋 SI L'UTILISATEUR N'A PAS FOURNI UNE INFO:");
-    instructions.push("   → SUPPRIMER la zone correspondante du template");
-    instructions.push("   → NE PAS inventer de contenu");
-    instructions.push("");
-    instructions.push("🎯 OBJECTIF: L'affiche finale = Template + Personnalisations utilisateur");
-    instructions.push("   Le design DOIT être reconnaissable comme le même template.");
+    instructions.push("🎯 OBJECTIF: Template redesigné + UNIQUEMENT le contenu utilisateur");
+    instructions.push("   L'affiche finale = Design du template + Infos du client SEULEMENT");
     instructions.push("");
   }
 
   // ====== RÈGLE SUR LE CONTENU UTILISATEUR ======
-  instructions.push("=== CONTENU OBLIGATOIRE À AFFICHER ===");
-  instructions.push("⚠️ CHAQUE information fournie par l'utilisateur DOIT apparaître:");
+  instructions.push("=== CONTENU À AFFICHER (ET RIEN D'AUTRE) ===");
+  instructions.push("⚠️ AFFICHER UNIQUEMENT ces informations fournies par l'utilisateur:");
   instructions.push("- Titre → affiché en grand et lisible");
-  instructions.push("- Dates/Horaires → clairement visibles");
-  instructions.push("- Lieu/Adresse → intégralement présent");
-  instructions.push("- Contact → présent et lisible");
-  instructions.push("- Prix → affichés si fournis");
-  instructions.push("- Orateurs/Artistes → avec leurs titres");
+  instructions.push("- Dates/Horaires → SI FOURNIS par l'utilisateur");
+  instructions.push("- Lieu/Adresse → SI FOURNI par l'utilisateur");
+  instructions.push("- Contact → SI FOURNI par l'utilisateur");
+  instructions.push("- Prix → SI FOURNIS par l'utilisateur");
+  instructions.push("- Orateurs/Artistes → SI FOURNIS par l'utilisateur");
   instructions.push("");
-  instructions.push("❌ INTERDIT: Omettre, tronquer, résumer le contenu utilisateur");
-  instructions.push("❌ INTERDIT: Inventer des informations non fournies");
+  instructions.push("❌ INTERDIT: Afficher des infos NON fournies par l'utilisateur");
+  instructions.push("❌ INTERDIT: Inventer ou conserver des infos du template original");
   instructions.push("");
 
   // ====== SPÉCIFICATIONS TECHNIQUES ======
@@ -310,13 +327,13 @@ function buildProfessionalPrompt({
   // ====== QUALITÉ AFRICAINE ======
   instructions.push("=== STYLE ===");
   instructions.push("- Personnages: Africains authentiques avec traits réalistes");
-  instructions.push("- Couleurs: Vibrantes et chaleureuses (ou selon palette utilisateur)");
+  instructions.push("- Couleurs: UTILISER LA PALETTE FOURNIE (ou vibrantes si non fournie)");
   instructions.push("- Texte: Français");
   instructions.push("");
 
   // ====== CONTENU UTILISATEUR ======
   instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-  instructions.push("║  CONTENU UTILISATEUR À AFFICHER (REMPLACER LE TEXTE DU TEMPLATE)      ║");
+  instructions.push("║  CONTENU CLIENT À AFFICHER (REMPLACER LE TEXTE DU TEMPLATE)           ║");
   instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
   instructions.push("");
   instructions.push(userPrompt);
@@ -324,10 +341,13 @@ function buildProfessionalPrompt({
   instructions.push("═══════════════════════════════════════════════════════════════════════");
   instructions.push("");
   if (hasReferenceImage) {
-    instructions.push("🎯 RAPPEL: Design FIDÈLE au template + contenu/couleurs de l'utilisateur.");
-    instructions.push("   Personnalisation = même design, contenu différent.");
+    instructions.push("🎯 RAPPEL FINAL:");
+    instructions.push("   1. Design FIDÈLE au template");
+    instructions.push("   2. Couleurs = PALETTE UTILISATEUR (si fournie)");
+    instructions.push("   3. Contenu = UNIQUEMENT ce que le client a fourni ci-dessus");
+    instructions.push("   4. SUPPRIMER tout élément du template non remplacé par le client");
   } else {
-    instructions.push("RAPPEL: Chaque élément ci-dessus DOIT apparaître sur l'affiche.");
+    instructions.push("RAPPEL: Afficher UNIQUEMENT les éléments listés ci-dessus.");
   }
 
   return instructions.join("\n");
