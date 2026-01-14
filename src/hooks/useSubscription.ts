@@ -46,6 +46,7 @@ export function useSubscription() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
 
   // Fetch all active plans
   const fetchPlans = useCallback(async () => {
@@ -190,22 +191,33 @@ export function useSubscription() {
     }
   }, []);
 
-  // Initial load
+  // Initial load - only once when user is available
   useEffect(() => {
+    if (hasFetchedInitial) return;
+    
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchPlans(), fetchSubscription(), fetchTransactions()]);
+      await fetchPlans();
+      
+      if (user) {
+        await Promise.all([fetchSubscription(), fetchTransactions()]);
+      }
+      
       setIsLoading(false);
+      setHasFetchedInitial(true);
     };
 
     loadData();
-  }, [fetchPlans, fetchSubscription, fetchTransactions]);
+  }, [user, hasFetchedInitial, fetchPlans, fetchSubscription, fetchTransactions]);
 
-  // Refresh subscription when user changes
+  // Reset when user changes (logout/login)
   useEffect(() => {
-    fetchSubscription();
-    fetchTransactions();
-  }, [user, fetchSubscription, fetchTransactions]);
+    if (!user) {
+      setSubscription(null);
+      setTransactions([]);
+      setHasFetchedInitial(false);
+    }
+  }, [user]);
 
   return {
     plans,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -28,8 +28,18 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [pendingEmailConfirmation, setPendingEmailConfirmation] = useState(false);
+  
+  // Track if auth was initiated by user action (not auto-redirect)
+  const isUserInitiatedAuth = useRef(false);
+  const hasCheckedSession = useRef(false);
 
   const handleSuccessfulAuth = () => {
+    // Only proceed if this was user-initiated or initial session check
+    if (!isUserInitiatedAuth.current && hasCheckedSession.current) {
+      return;
+    }
+    
     // Check if there's a pending clone template
     const pendingTemplate = sessionStorage.getItem('pendingCloneTemplate');
     
@@ -54,21 +64,31 @@ export default function AuthPage() {
   };
 
   useEffect(() => {
-    // Check if user is already logged in
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Only check session once on mount
+    if (hasCheckedSession.current) return;
+    
+    const checkInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      hasCheckedSession.current = true;
+      
       if (session?.user) {
+        // User is already logged in, redirect
         handleSuccessfulAuth();
       }
-    });
+    };
+    
+    checkInitialSession();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    // Listen for auth changes (login/signup events only)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only handle SIGNED_IN events from user actions
+      if (event === 'SIGNED_IN' && session?.user && isUserInitiatedAuth.current) {
         handleSuccessfulAuth();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, locationState]);
+  }, []);
 
   const validateInputs = (isSignUp: boolean) => {
     try {
@@ -92,8 +112,10 @@ export default function AuthPage() {
     if (!validateInputs(true)) return;
 
     setIsLoading(true);
+    isUserInitiatedAuth.current = true;
+    
     try {
-      const redirectUrl = `${window.location.origin}/app`;
+      const redirectUrl = `${window.location.origin}/auth?confirmed=true`;
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -107,6 +129,7 @@ export default function AuthPage() {
       });
 
       if (error) {
+        isUserInitiatedAuth.current = false;
         if (error.message.includes("already registered")) {
           toast.error("Cet email est déjà utilisé. Essayez de vous connecter.");
         } else {
@@ -115,11 +138,18 @@ export default function AuthPage() {
         return;
       }
 
-      if (data.user) {
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        setPendingEmailConfirmation(true);
+        toast.success("Un email de confirmation a été envoyé. Vérifiez votre boîte mail !");
+      } else if (data.user && data.session) {
+        // Auto-confirm enabled, proceed directly
         toast.success("Compte créé avec succès ! Bienvenue !");
         handleSuccessfulAuth();
       }
     } catch (error) {
+      isUserInitiatedAuth.current = false;
       toast.error("Une erreur est survenue lors de l'inscription");
     } finally {
       setIsLoading(false);
@@ -131,6 +161,8 @@ export default function AuthPage() {
     if (!validateInputs(false)) return;
 
     setIsLoading(true);
+    isUserInitiatedAuth.current = true;
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -138,8 +170,12 @@ export default function AuthPage() {
       });
 
       if (error) {
+        isUserInitiatedAuth.current = false;
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Email ou mot de passe incorrect");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Veuillez confirmer votre email avant de vous connecter");
+          setPendingEmailConfirmation(true);
         } else {
           toast.error(error.message);
         }
@@ -151,6 +187,7 @@ export default function AuthPage() {
         handleSuccessfulAuth();
       }
     } catch (error) {
+      isUserInitiatedAuth.current = false;
       toast.error("Une erreur est survenue lors de la connexion");
     } finally {
       setIsLoading(false);
@@ -187,139 +224,178 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <Card className="bg-card/60 backdrop-blur-xl border-border/40 shadow-2xl shadow-primary/5">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="font-display text-2xl">Bienvenue</CardTitle>
-            <CardDescription>
-              Connectez-vous ou créez un compte pour accéder à votre historique
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
-                  Connexion
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
-                  Inscription
-                </TabsTrigger>
-              </TabsList>
+        {pendingEmailConfirmation ? (
+          <Card className="bg-card/60 backdrop-blur-xl border-border/40 shadow-2xl shadow-primary/5">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4">
+                <CheckCircle className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <CardTitle className="font-display text-2xl">Vérifiez votre email</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Un email de confirmation a été envoyé à <strong className="text-foreground">{email}</strong>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                <p className="text-sm text-muted-foreground text-center">
+                  Cliquez sur le lien dans l'email pour activer votre compte.
+                  Vérifiez aussi vos spams si vous ne le trouvez pas.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setPendingEmailConfirmation(false);
+                  setEmail("");
+                  setPassword("");
+                  setFullName("");
+                }}
+              >
+                Retour à la connexion
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-card/60 backdrop-blur-xl border-border/40 shadow-2xl shadow-primary/5">
+            <CardHeader className="text-center pb-4">
+              <CardTitle className="font-display text-2xl">Bienvenue</CardTitle>
+              <CardDescription>
+                Connectez-vous ou créez un compte pour accéder à votre historique
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary">
+                  <TabsTrigger value="signin" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
+                    Connexion
+                  </TabsTrigger>
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground">
+                    Inscription
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="votre@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 bg-secondary border-border focus:border-primary"
-                        disabled={isLoading}
-                      />
+                <TabsContent value="signin">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="signin-email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10 bg-secondary border-border focus:border-primary"
+                          disabled={isLoading}
+                          autoComplete="email"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Mot de passe</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 bg-secondary border-border focus:border-primary"
-                        disabled={isLoading}
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Mot de passe</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="signin-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-10 bg-secondary border-border focus:border-primary"
+                          disabled={isLoading}
+                          autoComplete="current-password"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Connexion...
-                      </>
-                    ) : (
-                      "Se connecter"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                    <Button 
+                      type="submit" 
+                      className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connexion...
+                        </>
+                      ) : (
+                        "Se connecter"
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nom complet</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10 bg-secondary border-border focus:border-primary"
-                        disabled={isLoading}
-                      />
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Nom complet</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="pl-10 bg-secondary border-border focus:border-primary"
+                          disabled={isLoading}
+                          autoComplete="name"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="votre@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 bg-secondary border-border focus:border-primary"
-                        disabled={isLoading}
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10 bg-secondary border-border focus:border-primary"
+                          disabled={isLoading}
+                          autoComplete="email"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Mot de passe</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10 bg-secondary border-border focus:border-primary"
-                        disabled={isLoading}
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Mot de passe</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-10 bg-secondary border-border focus:border-primary"
+                          disabled={isLoading}
+                          autoComplete="new-password"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Création...
-                      </>
-                    ) : (
-                      "Créer un compte"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                    <Button 
+                      type="submit" 
+                      className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Création...
+                        </>
+                      ) : (
+                        "Créer un compte"
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
 
         <p className="text-center text-xs text-muted-foreground mt-6">
           En continuant, vous acceptez nos conditions d'utilisation.
