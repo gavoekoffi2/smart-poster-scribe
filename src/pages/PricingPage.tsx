@@ -15,13 +15,13 @@ export default function PricingPage() {
 
   const handleSubscribe = async (planSlug: string) => {
     if (planSlug === "enterprise") {
-      // Open email or contact form
-      window.location.href = "mailto:contact@graphiste-gpt.com?subject=Demande%20Plan%20Enterprise";
+      // Open email or contact form for enterprise plan
+      window.location.href = "mailto:contact@graphiste-gpt.com?subject=Demande%20Plan%20Entreprise";
       return;
     }
 
     if (planSlug === "free") {
-      // Just navigate to app
+      // Just navigate to app for free plan
       navigate("/app");
       return;
     }

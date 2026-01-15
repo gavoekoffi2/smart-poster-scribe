@@ -186,12 +186,12 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
             {isCurrentPlan ? (
               "Plan actuel"
             ) : isEnterprise ? (
-              "Nous contacter"
+              "Contactez-nous"
             ) : isFree ? (
               "Commencer gratuitement"
             ) : (
               <>
-                S'abonner
+                S'abonner maintenant
                 <Sparkles className="w-4 h-4 ml-2" />
               </>
             )}
