@@ -89,7 +89,7 @@ serve(async (req) => {
     }
 
     if (plan.slug === "enterprise") {
-      throw new Error("Veuillez nous contacter pour le plan Enterprise");
+      throw new Error("Veuillez nous contacter pour le plan Entreprise");
     }
 
     // Get user profile for name
