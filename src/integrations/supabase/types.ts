@@ -136,6 +136,41 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          image_id: string | null
+          rating: number
+          user_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          image_id?: string | null
+          rating: number
+          user_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          image_id?: string | null
+          rating?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_feedback_image_id_fkey"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "generated_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_designers: {
         Row: {
           bio: string | null

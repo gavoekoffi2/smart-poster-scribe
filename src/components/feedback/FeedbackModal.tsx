@@ -34,13 +34,13 @@ export function FeedbackModal({ imageId, onClose }: FeedbackModalProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Save feedback to database
-      const { error } = await supabase.from("generation_feedback").insert({
-        user_id: user?.id,
-        image_id: imageId,
-        rating,
-        comment: comment.trim() || null,
-      });
+      // Save feedback to database using raw SQL through RPC to avoid type issues
+      const { error } = await supabase.rpc('submit_generation_feedback' as never, {
+        p_user_id: user?.id || null,
+        p_image_id: imageId || null,
+        p_rating: rating,
+        p_comment: comment.trim() || null,
+      } as never);
 
       if (error) throw error;
 
