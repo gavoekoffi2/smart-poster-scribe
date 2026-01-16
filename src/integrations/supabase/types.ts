@@ -598,6 +598,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      submit_generation_feedback: {
+        Args: {
+          p_comment: string
+          p_image_id: string
+          p_rating: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

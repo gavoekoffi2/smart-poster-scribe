@@ -1,11 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useRef } from "react";
 import { Sparkles } from "lucide-react";
-
-interface MarqueeTemplate {
-  id: string;
-  image_url: string;
-  domain: string;
-}
 
 // Templates from public folder - organized by rows
 const MARQUEE_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {

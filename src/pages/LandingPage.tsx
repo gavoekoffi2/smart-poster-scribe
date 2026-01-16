@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { ShowcaseSection } from "@/components/landing/ShowcaseSection";
 import { TemplatesMarketplace } from "@/components/landing/TemplatesMarketplace";
+import { TemplatesMarquee } from "@/components/landing/TemplatesMarquee";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { AboutSection } from "@/components/landing/AboutSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
@@ -35,6 +36,9 @@ export default function LandingPage() {
         
         {/* Testimonials Section */}
         <TestimonialsSection />
+        
+        {/* Templates Marquee - Animated showcase */}
+        <TemplatesMarquee />
         
         {/* Templates Marketplace */}
         <TemplatesMarketplace />
