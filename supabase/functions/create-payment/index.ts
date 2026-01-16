@@ -32,18 +32,28 @@ interface MonerooPaymentResponse {
 }
 
 serve(async (req) => {
+  console.log("[create-payment] Request received:", req.method);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const MONEROO_SECRET_KEY = Deno.env.get("MONEROO_SECRET_KEY");
+    console.log("[create-payment] MONEROO_SECRET_KEY present:", !!MONEROO_SECRET_KEY);
+    
     if (!MONEROO_SECRET_KEY) {
+      console.error("[create-payment] MONEROO_SECRET_KEY not configured");
       throw new Error("MONEROO_SECRET_KEY non configurée");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    console.log("[create-payment] Supabase config present:", { 
+      url: !!supabaseUrl, 
+      serviceKey: !!supabaseServiceKey 
+    });
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Variables Supabase non configurées");
@@ -53,6 +63,8 @@ serve(async (req) => {
 
     // Get auth token from request
     const authHeader = req.headers.get("authorization");
+    console.log("[create-payment] Auth header present:", !!authHeader);
+    
     if (!authHeader) {
       throw new Error("Authentification requise");
     }
@@ -61,12 +73,19 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
+    console.log("[create-payment] User verification:", { 
+      userId: user?.id, 
+      email: user?.email,
+      error: authError?.message 
+    });
+    
     if (authError || !user) {
       throw new Error("Utilisateur non authentifié");
     }
 
     const body = await req.json();
     const { planSlug, returnUrl } = body;
+    console.log("[create-payment] Request body:", { planSlug, returnUrl });
 
     if (!planSlug) {
       throw new Error("Plan non spécifié");
@@ -80,8 +99,15 @@ serve(async (req) => {
       .eq("is_active", true)
       .single();
 
+    console.log("[create-payment] Plan lookup:", { 
+      planId: plan?.id, 
+      planName: plan?.name,
+      planSlug: plan?.slug,
+      error: planError?.message 
+    });
+
     if (planError || !plan) {
-      throw new Error("Plan introuvable");
+      throw new Error(`Plan introuvable: ${planSlug}`);
     }
 
     if (plan.slug === "free") {
@@ -105,6 +131,7 @@ serve(async (req) => {
     const lastName = nameParts.slice(1).join(" ") || "Graphiste GPT";
 
     // Create payment transaction record
+    console.log("[create-payment] Creating transaction record...");
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
       .insert({
@@ -118,9 +145,14 @@ serve(async (req) => {
       .select()
       .single();
 
+    console.log("[create-payment] Transaction created:", { 
+      transactionId: transaction?.id, 
+      error: txError?.message 
+    });
+
     if (txError || !transaction) {
-      console.error("Error creating transaction:", txError);
-      throw new Error("Erreur création transaction");
+      console.error("[create-payment] Error creating transaction:", txError);
+      throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
     }
 
     // Create Moneroo payment
