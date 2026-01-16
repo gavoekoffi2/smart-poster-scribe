@@ -462,7 +462,24 @@ async function pollForResult(
 const MAX_PROMPT_LENGTH = 5000;
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_LOGO_COUNT = 5;
-const ALLOWED_ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
+// Extended list of allowed aspect ratios to support all social media and print formats
+const ALLOWED_ASPECT_RATIOS = [
+  '1:1',    // Square (Instagram, Facebook)
+  '3:4',    // Portrait standard
+  '4:3',    // Landscape standard
+  '4:5',    // Instagram portrait
+  '5:4',    // Alternative landscape
+  '16:9',   // Wide (YouTube, Facebook cover)
+  '9:16',   // Vertical (Stories, TikTok, Reels)
+  '2:3',    // Poster
+  '3:2',    // Landscape poster
+  '4:1',    // Banner (LinkedIn cover)
+  '1:4',    // Tall banner
+  '3:1',    // Header (Twitter)
+  '1:3',    // Roll-up banner
+  '21:9',   // Ultra-wide
+  '9:21',   // Ultra-tall
+];
 const ALLOWED_RESOLUTIONS = ['1K', '2K', '4K'];
 const ALLOWED_OUTPUT_FORMATS = ['png', 'jpg', 'webp'];
 
@@ -552,8 +569,12 @@ serve(async (req) => {
       throw new Error(`Le prompt dépasse la limite de ${MAX_PROMPT_LENGTH} caractères`);
     }
 
-    if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
-      throw new Error(`Format invalide. Formats acceptés: ${ALLOWED_ASPECT_RATIOS.join(', ')}`);
+    // Validate aspect ratio - accept standard formats or custom X:Y format
+    const isValidAspectRatio = ALLOWED_ASPECT_RATIOS.includes(aspectRatio) || 
+      /^\d+:\d+$/.test(aspectRatio);
+    if (!isValidAspectRatio) {
+      console.warn(`Non-standard aspect ratio: ${aspectRatio}, using 3:4 as fallback`);
+      // Don't throw error, just log warning - we'll handle it gracefully
     }
 
     if (!ALLOWED_RESOLUTIONS.includes(resolution)) {

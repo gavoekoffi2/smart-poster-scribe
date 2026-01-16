@@ -410,6 +410,33 @@
   100% { background-position: 200% 0; }
 }
 
+/* Marquee animations */
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translateX(-33.333%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right linear infinite;
+}
+
 @keyframes fade-up {
   from { 
     opacity: 0;

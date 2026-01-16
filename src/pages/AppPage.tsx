@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import confetti from "canvas-confetti";
 import { useConversation } from "@/hooks/useConversation";
@@ -18,6 +18,7 @@ import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation"
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { VisualEditor } from "@/components/editor/VisualEditor";
+import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
@@ -161,6 +162,8 @@ export default function AppPage() {
   const [showEditor, setShowEditor] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -179,7 +182,7 @@ export default function AppPage() {
           // Cast aspectRatio to AspectRatio type
           const aspectRatio = (conversationState.formatPreset?.aspectRatio || "3:4") as AspectRatio;
           
-          await saveToHistory({
+          const savedImage = await saveToHistory({
             imageUrl: generatedImage,
             prompt: conversationState.description || "Affiche générée",
             aspectRatio,
@@ -191,6 +194,15 @@ export default function AppPage() {
             logoPositions: conversationState.logos?.map(l => l.position),
             colorPalette: conversationState.colorPalette,
           });
+          
+          // Show feedback modal after generation
+          if (savedImage?.id) {
+            setFeedbackImageId(savedImage.id);
+          }
+          // Small delay before showing feedback to let user appreciate the result
+          setTimeout(() => {
+            setShowFeedback(true);
+          }, 2500);
         } catch (err) {
           console.error("Error saving to history:", err);
         }
@@ -732,6 +744,17 @@ export default function AppPage() {
         }}
         creditError={creditError}
       />
+
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <FeedbackModal
+          imageId={feedbackImageId}
+          onClose={() => {
+            setShowFeedback(false);
+            setFeedbackImageId(undefined);
+          }}
+        />
+      )}
     </div>
   );
 }
