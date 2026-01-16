@@ -14,6 +14,8 @@ export default function PricingPage() {
   const { plans, subscription, isProcessingPayment, initializePayment } = useSubscription();
 
   const handleSubscribe = async (planSlug: string) => {
+    console.log("[Pricing] Subscribe clicked for plan:", planSlug);
+
     if (planSlug === "enterprise") {
       // Open email or contact form for enterprise plan
       window.location.href = "mailto:contact@graphiste-gpt.com?subject=Demande%20Plan%20Entreprise";
@@ -34,13 +36,28 @@ export default function PricingPage() {
     }
 
     try {
+      console.log("[Pricing] User authenticated, initializing payment...");
+      toast.loading("Préparation du paiement...", { id: "payment-init" });
+      
       const checkoutUrl = await initializePayment(planSlug);
+      
+      toast.dismiss("payment-init");
+      
       if (checkoutUrl) {
-        // Redirect to Moneroo checkout
-        window.location.href = checkoutUrl;
+        console.log("[Pricing] Redirecting to checkout:", checkoutUrl);
+        toast.success("Redirection vers le paiement...");
+        // Small delay to show the success message
+        setTimeout(() => {
+          window.location.href = checkoutUrl;
+        }, 500);
+      } else {
+        toast.error("Impossible d'obtenir le lien de paiement");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur lors du paiement");
+      toast.dismiss("payment-init");
+      console.error("[Pricing] Payment error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors du paiement";
+      toast.error(errorMessage);
     }
   };
 

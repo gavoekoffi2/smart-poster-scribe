@@ -124,8 +124,17 @@ export function useSubscription() {
     }
 
     setIsProcessingPayment(true);
+    console.log("[Payment] Initializing payment for plan:", planSlug);
 
     try {
+      // Get the current session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("Session expirée. Veuillez vous reconnecter.");
+      }
+
+      console.log("[Payment] Session valid, calling create-payment edge function...");
+
       const { data, error } = await supabase.functions.invoke("create-payment", {
         body: {
           planSlug,
@@ -133,15 +142,30 @@ export function useSubscription() {
         },
       });
 
+      console.log("[Payment] Edge function response:", { data, error });
+
       if (error) {
-        throw new Error(error.message);
+        console.error("[Payment] Edge function error:", error);
+        throw new Error(error.message || "Erreur de connexion au serveur de paiement");
       }
 
-      if (!data?.success || !data?.checkoutUrl) {
-        throw new Error(data?.error || "Erreur lors de l'initialisation du paiement");
+      if (!data) {
+        throw new Error("Aucune réponse du serveur de paiement");
       }
 
+      if (!data.success) {
+        throw new Error(data.error || "Erreur lors de l'initialisation du paiement");
+      }
+
+      if (!data.checkoutUrl) {
+        throw new Error("URL de paiement non reçue");
+      }
+
+      console.log("[Payment] Checkout URL received:", data.checkoutUrl);
       return data.checkoutUrl;
+    } catch (err) {
+      console.error("[Payment] Error:", err);
+      throw err;
     } finally {
       setIsProcessingPayment(false);
     }
