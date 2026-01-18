@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
+import { Check, Sparkles, Crown, Building2, Zap, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const plans = [
@@ -66,12 +66,16 @@ const plans = [
   },
 ];
 
+const WHATSAPP_NUMBER = "22893708178";
+
 export function PricingSection() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { initializePayment, isProcessingPayment } = useSubscription();
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubscribe = async (planSlug: string) => {
+  const handleSubscribe = (planSlug: string) => {
     console.log("[PricingSection] Subscribe clicked for plan:", planSlug);
 
     // Free plan - go to app
@@ -80,33 +84,70 @@ export function PricingSection() {
       return;
     }
 
-    // Paid plans - check auth first
-    if (!user) {
-      toast.info("Connectez-vous pour souscrire à un abonnement");
-      navigate("/auth?redirect=/pricing");
+    // Paid plans - show modal to collect WhatsApp
+    const plan = plans.find(p => p.slug === planSlug);
+    if (plan) {
+      setSelectedPlan(plan);
+      setShowModal(true);
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!selectedPlan) return;
+    
+    if (!whatsappNumber.trim()) {
+      toast.error("Veuillez entrer votre numéro WhatsApp");
       return;
     }
 
-    // Initialize payment directly
-    try {
-      toast.loading("Préparation du paiement...", { id: "payment-init" });
-      
-      const checkoutUrl = await initializePayment(planSlug);
-      
-      toast.dismiss("payment-init");
-      
-      if (checkoutUrl) {
-        toast.success("Redirection vers le paiement...");
-        window.location.href = checkoutUrl;
-      } else {
-        toast.error("Impossible d'obtenir le lien de paiement. Veuillez réessayer.");
-      }
-    } catch (error) {
-      toast.dismiss("payment-init");
-      console.error("[PricingSection] Payment error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Erreur lors du paiement";
-      toast.error(errorMessage);
+    // Clean the number (remove spaces, dashes, etc.)
+    const cleanNumber = whatsappNumber.replace(/[\s\-\(\)]/g, "");
+    
+    if (cleanNumber.length < 8) {
+      toast.error("Numéro WhatsApp invalide");
+      return;
     }
+
+    setIsSubmitting(true);
+
+    // Build the WhatsApp message
+    const message = `🎨 *NOUVELLE DEMANDE D'ABONNEMENT*
+
+📋 *Plan sélectionné:* ${selectedPlan.name}
+💰 *Prix:* ${selectedPlan.price} ${selectedPlan.currency}${selectedPlan.period}
+
+✨ *Caractéristiques:*
+${selectedPlan.features.map(f => `• ${f}`).join('\n')}
+
+📱 *Numéro WhatsApp du client:* ${cleanNumber}
+
+---
+Message envoyé depuis Graphiste GPT`;
+
+    // Encode for URL
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
+
+    // Open WhatsApp in new tab
+    window.open(whatsappUrl, "_blank");
+
+    // Show success message
+    toast.success(
+      "Votre demande a été envoyée ! Nous allons vous contacter sur WhatsApp pour finaliser votre abonnement.",
+      { duration: 6000 }
+    );
+
+    // Reset and close modal
+    setWhatsappNumber("");
+    setSelectedPlan(null);
+    setShowModal(false);
+    setIsSubmitting(false);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedPlan(null);
+    setWhatsappNumber("");
   };
 
   return (
@@ -204,14 +245,13 @@ export function PricingSection() {
                 {/* CTA */}
                 <Button
                   onClick={() => handleSubscribe(plan.slug)}
-                  disabled={isProcessingPayment}
                   className={`w-full py-6 rounded-full font-semibold ${
                     plan.popular
                       ? "bg-gradient-to-r from-primary to-accent text-primary-foreground glow-orange"
                       : "bg-muted hover:bg-muted/80 text-foreground"
                   }`}
                 >
-                  {isProcessingPayment ? "Chargement..." : plan.cta}
+                  {plan.cta}
                 </Button>
               </motion.div>
             );
@@ -233,6 +273,95 @@ export function PricingSection() {
           </p>
         </motion.div>
       </div>
+
+      {/* WhatsApp Modal */}
+      {showModal && selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closeModal}
+          />
+          
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="relative w-full max-w-md bg-card rounded-3xl p-8 shadow-2xl border border-border/50"
+          >
+            {/* Close button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">
+                Finaliser votre abonnement
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Entrez votre numéro WhatsApp pour recevoir le lien de paiement
+              </p>
+            </div>
+
+            {/* Selected plan summary */}
+            <div className="p-4 rounded-2xl bg-muted/50 border border-border/50 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-foreground">{selectedPlan.name}</span>
+                <span className="text-primary font-bold">
+                  {selectedPlan.price} {selectedPlan.currency}{selectedPlan.period}
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {selectedPlan.features.slice(0, 3).map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="w-3 h-3 text-primary flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* WhatsApp input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Votre numéro WhatsApp
+              </label>
+              <Input
+                type="tel"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                placeholder="+228 90 00 00 00"
+                className="bg-background/60 border-border/40 focus:border-primary/50"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Nous vous contacterons sur ce numéro pour finaliser votre paiement
+              </p>
+            </div>
+
+            {/* Submit button */}
+            <Button
+              onClick={handleSendWhatsApp}
+              disabled={isSubmitting}
+              className="w-full py-6 rounded-full bg-green-500 hover:bg-green-600 text-white font-semibold"
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Envoyer ma demande via WhatsApp
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              En cliquant, vous serez redirigé vers WhatsApp pour confirmer votre demande
+            </p>
+          </motion.div>
+        </div>
+      )}
     </section>
   );
 }
