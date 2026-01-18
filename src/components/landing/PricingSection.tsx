@@ -2,6 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { toast } from "sonner";
 
 const plans = [
   {
@@ -11,6 +14,7 @@ const plans = [
     period: "",
     description: "Testez la plateforme avec 5 crédits offerts",
     icon: Zap,
+    slug: "free",
     features: [
       "5 crédits offerts (bonus unique)",
       "Résolution 1K uniquement",
@@ -28,6 +32,7 @@ const plans = [
     period: "/mois",
     description: "Pour les professionnels et créateurs",
     icon: Crown,
+    slug: "pro",
     features: [
       "50 crédits par mois",
       "Toutes résolutions (1K, 2K, 4K)",
@@ -35,7 +40,7 @@ const plans = [
       "Accès à tous les templates",
       "Support prioritaire",
     ],
-    cta: "Passer à Pro",
+    cta: "S'abonner maintenant",
     popular: true,
     gradient: "from-primary to-accent",
   },
@@ -46,6 +51,7 @@ const plans = [
     period: "/mois",
     description: "Pour les équipes et agences",
     icon: Building2,
+    slug: "business",
     features: [
       "200 crédits par mois",
       "Toutes résolutions (1K, 2K, 4K)",
@@ -54,7 +60,7 @@ const plans = [
       "Support dédié 24/7",
       "API access",
     ],
-    cta: "Contacter l'équipe",
+    cta: "S'abonner maintenant",
     popular: false,
     gradient: "from-accent to-primary",
   },
@@ -62,6 +68,46 @@ const plans = [
 
 export function PricingSection() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { initializePayment, isProcessingPayment } = useSubscription();
+
+  const handleSubscribe = async (planSlug: string) => {
+    console.log("[PricingSection] Subscribe clicked for plan:", planSlug);
+
+    // Free plan - go to app
+    if (planSlug === "free") {
+      navigate("/app");
+      return;
+    }
+
+    // Paid plans - check auth first
+    if (!user) {
+      toast.info("Connectez-vous pour souscrire à un abonnement");
+      navigate("/auth?redirect=/pricing");
+      return;
+    }
+
+    // Initialize payment directly
+    try {
+      toast.loading("Préparation du paiement...", { id: "payment-init" });
+      
+      const checkoutUrl = await initializePayment(planSlug);
+      
+      toast.dismiss("payment-init");
+      
+      if (checkoutUrl) {
+        toast.success("Redirection vers le paiement...");
+        window.location.href = checkoutUrl;
+      } else {
+        toast.error("Impossible d'obtenir le lien de paiement. Veuillez réessayer.");
+      }
+    } catch (error) {
+      toast.dismiss("payment-init");
+      console.error("[PricingSection] Payment error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors du paiement";
+      toast.error(errorMessage);
+    }
+  };
 
   return (
     <section id="pricing" className="py-24 px-4 relative overflow-hidden">
@@ -157,14 +203,15 @@ export function PricingSection() {
 
                 {/* CTA */}
                 <Button
-                  onClick={() => navigate("/pricing")}
+                  onClick={() => handleSubscribe(plan.slug)}
+                  disabled={isProcessingPayment}
                   className={`w-full py-6 rounded-full font-semibold ${
                     plan.popular
                       ? "bg-gradient-to-r from-primary to-accent text-primary-foreground glow-orange"
                       : "bg-muted hover:bg-muted/80 text-foreground"
                   }`}
                 >
-                  {plan.cta}
+                  {isProcessingPayment ? "Chargement..." : plan.cta}
                 </Button>
               </motion.div>
             );
