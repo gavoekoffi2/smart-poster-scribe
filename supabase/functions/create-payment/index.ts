@@ -188,9 +188,15 @@ serve(async (req) => {
 
     const monerooData = await monerooResponse.json() as MonerooPaymentResponse;
     console.log("Moneroo response:", JSON.stringify(monerooData, null, 2));
+    console.log("Moneroo response status:", monerooResponse.status);
 
     if (!monerooResponse.ok || !monerooData.data?.checkout_url) {
-      console.error("Moneroo error:", monerooData);
+      console.error("Moneroo error details:", {
+        status: monerooResponse.status,
+        statusText: monerooResponse.statusText,
+        message: monerooData.message,
+        data: monerooData
+      });
       
       // Update transaction as failed
       await supabase
@@ -201,7 +207,17 @@ serve(async (req) => {
         })
         .eq("id", transaction.id);
 
-      throw new Error(monerooData.message || "Erreur initialisation paiement");
+      // Provide more helpful error messages
+      let errorMessage = "Erreur initialisation paiement";
+      if (monerooData.message?.includes("payment methods")) {
+        errorMessage = "Les méthodes de paiement ne sont pas encore activées. Veuillez contacter le support.";
+      } else if (monerooData.message?.includes("currency")) {
+        errorMessage = "La devise n'est pas encore configurée. Veuillez contacter le support.";
+      } else if (monerooData.message) {
+        errorMessage = monerooData.message;
+      }
+
+      throw new Error(errorMessage);
     }
 
     // Update transaction with Moneroo payment ID
