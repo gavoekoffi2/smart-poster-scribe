@@ -91,27 +91,41 @@ export function useUserProfile() {
   };
 
   const uploadImage = async (file: File, type: "avatar" | "cover" | "logo"): Promise<string | null> => {
-    if (!user) return null;
+    if (!user) {
+      toast.error("Vous devez être connecté pour télécharger une image");
+      return null;
+    }
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/${type}_${Date.now()}.${fileExt}`;
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Use flat structure for better compatibility with storage policies
+    const fileName = `${type}_${user.id}_${uniqueId}.${fileExt}`;
     const bucket = "temp-images";
 
     try {
-      const { error: uploadError } = await supabase.storage
+      console.log(`Uploading ${type} image:`, fileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, { 
+          cacheControl: "3600",
+          upsert: false // Don't overwrite, use unique names
+        });
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        toast.error("Erreur lors du téléchargement de l'image");
+        toast.error(`Erreur lors du téléchargement: ${uploadError.message}`);
         return null;
       }
+
+      console.log("Upload success:", uploadData);
 
       const { data: urlData } = supabase.storage
         .from(bucket)
         .getPublicUrl(fileName);
 
+      console.log("Public URL:", urlData.publicUrl);
+      toast.success("Image téléchargée avec succès");
       return urlData.publicUrl;
     } catch (err) {
       console.error("Unexpected upload error:", err);
