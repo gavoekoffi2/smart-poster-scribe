@@ -1,11 +1,11 @@
-import logoImage from "@/assets/logo-graphiste-gpt.png";
+import logoImage from "@/assets/logo-graphiste-gpt-icon.png";
 
 interface LogoIconProps {
   size?: number;
   className?: string;
 }
 
-export function LogoIcon({ size = 24, className = "" }: LogoIconProps) {
+export function LogoIcon({ size = 40, className = "" }: LogoIconProps) {
   return (
     <img 
       src={logoImage} 
@@ -13,7 +13,11 @@ export function LogoIcon({ size = 24, className = "" }: LogoIconProps) {
       width={size}
       height={size}
       className={`object-contain ${className}`}
-      style={{ width: size, height: size }}
+      style={{ 
+        width: size, 
+        height: size,
+        background: "transparent"
+      }}
     />
   );
 }
