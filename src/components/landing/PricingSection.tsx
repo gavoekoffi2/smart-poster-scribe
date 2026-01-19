@@ -78,9 +78,9 @@ export function PricingSection() {
   const handleSubscribe = (planSlug: string) => {
     console.log("[PricingSection] Subscribe clicked for plan:", planSlug);
 
-    // Free plan - go to app
+    // Free plan - go to auth page first
     if (planSlug === "free") {
-      navigate("/app");
+      navigate("/auth");
       return;
     }
 
