@@ -12,6 +12,83 @@ export interface OCRTextBlock {
   fontSize?: number;
 }
 
+// Helper to convert image URL to blob for OCR processing
+async function fetchImageAsBlob(url: string): Promise<Blob> {
+  // If it's already a data URL, convert directly
+  if (url.startsWith("data:")) {
+    const response = await fetch(url);
+    return response.blob();
+  }
+
+  // For regular URLs, try to fetch with CORS
+  try {
+    const response = await fetch(url, {
+      mode: "cors",
+      credentials: "omit",
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.blob();
+  } catch (error) {
+    console.warn("CORS fetch failed, trying no-cors proxy approach");
+    
+    // Create an image element and draw to canvas to bypass CORS
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Could not convert canvas to blob"));
+          }
+        }, "image/png");
+      };
+      
+      img.onerror = () => {
+        // Last resort: try loading without crossOrigin
+        const img2 = new Image();
+        img2.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img2.naturalWidth;
+            canvas.height = img2.naturalHeight;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              reject(new Error("Could not get canvas context"));
+              return;
+            }
+            ctx.drawImage(img2, 0, 0);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Could not convert canvas to blob"));
+              }
+            }, "image/png");
+          } catch (e) {
+            reject(new Error("Canvas tainted by cross-origin data"));
+          }
+        };
+        img2.onerror = () => reject(new Error("Failed to load image"));
+        img2.src = url;
+      };
+      
+      img.src = url;
+    });
+  }
+}
+
 export function useOCR() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -23,11 +100,25 @@ export function useOCR() {
     setTextBlocks([]);
 
     try {
-      console.log("Starting OCR process...");
+      console.log("Starting OCR process with URL:", imageUrl);
+
+      // First, fetch the image as a blob to avoid CORS issues with Tesseract
+      let imageBlob: Blob;
+      try {
+        imageBlob = await fetchImageAsBlob(imageUrl);
+        console.log("Image fetched as blob, size:", imageBlob.size);
+      } catch (fetchError) {
+        console.error("Failed to fetch image:", fetchError);
+        toast.error("Impossible de charger l'image pour l'OCR");
+        setIsProcessing(false);
+        return [];
+      }
 
       // Create worker with French and English languages
+      console.log("Creating Tesseract worker...");
       const worker = await createWorker("fra+eng", OEM.LSTM_ONLY, {
         logger: (m) => {
+          console.log("Tesseract progress:", m.status, m.progress);
           if (m.status === "recognizing text") {
             setProgress(Math.round(m.progress * 100));
           }
@@ -39,10 +130,10 @@ export function useOCR() {
         tessedit_pageseg_mode: PSM.AUTO,
       });
 
-      console.log("Worker created, processing image...");
+      console.log("Worker created, processing image blob...");
 
-      // Recognize text from image with blocks enabled
-      const result = await worker.recognize(imageUrl, {}, { blocks: true });
+      // Recognize text from image blob with blocks enabled
+      const result = await worker.recognize(imageBlob, {}, { blocks: true });
 
       console.log("OCR Result:", result);
 
@@ -87,9 +178,9 @@ export function useOCR() {
       setProgress(100);
 
       if (blocks.length > 0) {
-        toast.success(`${blocks.length} bloc(s) de texte détecté(s)`);
+        toast.success(`${blocks.length} bloc(s) de texte détecté(s) !`);
       } else {
-        toast.info("Aucun texte détecté sur l'image");
+        toast.info("Aucun texte détecté sur l'image. Essayez avec une image contenant du texte plus lisible.");
       }
 
       return blocks;
@@ -97,7 +188,7 @@ export function useOCR() {
       console.error("OCR Error:", error);
       setIsProcessing(false);
       setProgress(0);
-      toast.error("Erreur lors de la reconnaissance de texte");
+      toast.error("Erreur lors de la reconnaissance de texte. Veuillez réessayer.");
       return [];
     }
   }, []);
