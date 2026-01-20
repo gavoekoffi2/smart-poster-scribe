@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useOCR, OCRTextBlock } from "@/hooks/useOCR";
+import { useAITextExtraction, ExtractedTextBlock } from "@/hooks/useAITextExtraction";
 import { Progress } from "@/components/ui/progress";
 
 interface VisualEditorProps {
@@ -118,8 +118,8 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
 
-  // OCR hook
-  const { isProcessing: isOCRProcessing, progress: ocrProgress, extractTextFromImage } = useOCR();
+  // AI Text Extraction hook (replaces OCR)
+  const { isProcessing: isTextExtracting, progress: extractProgress, extractTextFromImage } = useAITextExtraction();
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -343,15 +343,15 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     toast.success("Texte ajouté - Double-cliquez pour éditer");
   }, [getCanvas, canvasSize, activeColor, activeFont, saveToHistory]);
 
-  // Add OCR text block to canvas
-  const addOCRTextToCanvas = useCallback((block: OCRTextBlock) => {
+  // Add extracted text block to canvas
+  const addExtractedTextToCanvas = useCallback((block: ExtractedTextBlock) => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    // Scale coordinates to canvas size
-    const scaledX = block.x * imageScale;
-    const scaledY = block.y * imageScale;
-    const scaledFontSize = Math.max(12, (block.fontSize || 20) * imageScale);
+    // Scale coordinates from percentage-based (0-1000 representing 0-100%) to canvas size
+    const scaledX = (block.x / 1000) * canvasSize.width;
+    const scaledY = (block.y / 1000) * canvasSize.height;
+    const scaledFontSize = Math.max(12, Math.min(72, (block.fontSize || 24) * imageScale));
 
     const text = new IText(block.text, {
       left: scaledX,
@@ -365,14 +365,14 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
 
     canvas.add(text);
     return text;
-  }, [getCanvas, activeColor, activeFont, imageScale]);
+  }, [getCanvas, canvasSize, activeColor, activeFont, imageScale]);
 
-  // Run OCR and add detected text as editable layers
-  const handleOCR = useCallback(async () => {
+  // Run AI text extraction and add detected text as editable layers
+  const handleTextExtraction = useCallback(async () => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    toast.info("Analyse OCR en cours... Cela peut prendre quelques secondes.");
+    toast.info("Extraction du texte en cours avec l'IA...");
 
     try {
       const textBlocks = await extractTextFromImage(imageUrl);
@@ -380,7 +380,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       if (textBlocks.length > 0) {
         // Add each text block as an editable layer
         textBlocks.forEach((block) => {
-          addOCRTextToCanvas(block);
+          addExtractedTextToCanvas(block);
         });
 
         canvas.renderAll();
@@ -389,11 +389,10 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         toast.success(`${textBlocks.length} texte(s) détecté(s) et ajouté(s) comme calques éditables!`);
       }
     } catch (error) {
-      console.error("OCR Error:", error);
-      toast.error("Erreur lors de l'analyse OCR");
+      console.error("Text Extraction Error:", error);
+      toast.error("Erreur lors de l'extraction du texte");
     }
-  }, [getCanvas, imageUrl, extractTextFromImage, addOCRTextToCanvas, saveToHistory]);
-
+  }, [getCanvas, imageUrl, extractTextFromImage, addExtractedTextToCanvas, saveToHistory]);
   // Apply font to selected text
   const applyFontToSelected = useCallback((font: typeof FONTS[0]) => {
     const canvas = getCanvas();
@@ -725,13 +724,13 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         </div>
       </div>
 
-      {/* OCR Progress bar */}
-      {isOCRProcessing && (
+      {/* Text Extraction Progress bar */}
+      {isTextExtracting && (
         <div className="px-4 py-2 bg-primary/10 border-b border-primary/20">
           <div className="flex items-center gap-3">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span className="text-sm text-primary">Analyse OCR en cours... {ocrProgress}%</span>
-            <Progress value={ocrProgress} className="flex-1 h-2" />
+            <span className="text-sm text-primary">Extraction du texte avec l'IA... {extractProgress}%</span>
+            <Progress value={extractProgress} className="flex-1 h-2" />
           </div>
         </div>
       )}
@@ -753,16 +752,16 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
 
           <div className="h-px bg-border/30 my-1" />
 
-          {/* OCR Button */}
+          {/* AI Text Extraction Button */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleOCR}
-            disabled={!isReady || isOCRProcessing}
+            onClick={handleTextExtraction}
+            disabled={!isReady || isTextExtracting}
             className="w-12 h-10 bg-primary/10 hover:bg-primary/20 text-primary"
-            title="Scanner le texte (OCR)"
+            title="Scanner le texte avec l'IA"
           >
-            {isOCRProcessing ? (
+            {isTextExtracting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <ScanText className="w-4 h-4" />
