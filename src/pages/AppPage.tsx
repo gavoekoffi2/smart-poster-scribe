@@ -195,14 +195,12 @@ export default function AppPage() {
             colorPalette: conversationState.colorPalette,
           });
           
-          // Show feedback modal after generation
+          // Set feedback image ID for later use
           if (savedImage?.id) {
             setFeedbackImageId(savedImage.id);
           }
-          // Small delay before showing feedback to let user appreciate the result
-          setTimeout(() => {
-            setShowFeedback(true);
-          }, 2500);
+          // Don't auto-show feedback immediately - let user appreciate the result first
+          // They can click the feedback button when ready
         } catch (err) {
           console.error("Error saving to history:", err);
         }
@@ -701,22 +699,37 @@ export default function AppPage() {
             </div>
 
             {displayImage && (
-              <div className="mt-4 flex gap-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
-                  className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Éditer
-                </Button>
-                <Button 
-                  onClick={handleDownload} 
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Télécharger
-                </Button>
+              <div className="mt-4 space-y-3">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
+                    className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Éditer
+                  </Button>
+                  <Button 
+                    onClick={handleDownload} 
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
+                  </Button>
+                </div>
+                
+                {/* Feedback button - let user decide when to give feedback */}
+                {feedbackImageId && !showFeedback && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFeedback(true)}
+                    className="w-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300"
+                  >
+                    <span className="mr-2">⭐</span>
+                    Donner mon avis sur cette création
+                  </Button>
+                )}
               </div>
             )}
           </div>
