@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Menu, X, Shield } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LogoIcon } from "@/components/LogoIcon";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 
 interface NavbarProps {
   onGetStarted: () => void;
@@ -12,6 +14,11 @@ interface NavbarProps {
 export function Navbar({ onGetStarted }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
+  const { hasPermission, isLoading: adminLoading } = useAdmin();
+
+  const canAccessAdmin = !authLoading && !adminLoading && user && hasPermission('view_dashboard');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,17 +82,38 @@ export function Navbar({ onGetStarted }: NavbarProps) {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-4">
-            <Link to="/auth">
-              <Button variant="ghost" className="hover:bg-primary/10 text-muted-foreground hover:text-foreground">
-                Se connecter
+            {canAccessAdmin && (
+              <Button 
+                variant="outline" 
+                className="border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => navigate("/admin/dashboard")}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Admin
               </Button>
-            </Link>
-            <Button 
-              onClick={onGetStarted} 
-              className="glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90"
-            >
-              Commencer
-            </Button>
+            )}
+            {user ? (
+              <Button 
+                onClick={() => navigate("/app")} 
+                className="glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90"
+              >
+                Créer une affiche
+              </Button>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" className="hover:bg-primary/10 text-muted-foreground hover:text-foreground">
+                    Se connecter
+                  </Button>
+                </Link>
+                <Button 
+                  onClick={onGetStarted} 
+                  className="glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                >
+                  Commencer
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -119,15 +147,36 @@ export function Navbar({ onGetStarted }: NavbarProps) {
                 </a>
               ))}
               <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-border/40">
-                <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full border-primary/30">Se connecter</Button>
-                </Link>
-                <Button 
-                  onClick={() => { onGetStarted(); setIsMobileMenuOpen(false); }} 
-                  className="w-full glow-orange bg-gradient-to-r from-primary to-accent"
-                >
-                  Commencer
-                </Button>
+                {canAccessAdmin && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-primary/30 text-primary"
+                    onClick={() => { navigate("/admin/dashboard"); setIsMobileMenuOpen(false); }}
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Dashboard Admin
+                  </Button>
+                )}
+                {user ? (
+                  <Button 
+                    onClick={() => { navigate("/app"); setIsMobileMenuOpen(false); }} 
+                    className="w-full glow-orange bg-gradient-to-r from-primary to-accent"
+                  >
+                    Créer une affiche
+                  </Button>
+                ) : (
+                  <>
+                    <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-primary/30">Se connecter</Button>
+                    </Link>
+                    <Button 
+                      onClick={() => { onGetStarted(); setIsMobileMenuOpen(false); }} 
+                      className="w-full glow-orange bg-gradient-to-r from-primary to-accent"
+                    >
+                      Commencer
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
