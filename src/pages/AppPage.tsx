@@ -18,7 +18,7 @@ import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation"
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { VisualEditor } from "@/components/editor/VisualEditor";
-import { FeedbackModal } from "@/components/feedback/FeedbackModal";
+import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
@@ -162,7 +162,6 @@ export default function AppPage() {
   const [showEditor, setShowEditor] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
 
   // Auto-scroll to bottom on new messages
@@ -404,248 +403,325 @@ export default function AppPage() {
         </div>
       </header>
 
-      {/* Main Chat Area */}
+      {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl overflow-hidden">
-        {/* Chat Panel */}
-        <div className="flex-1 flex flex-col glass-panel overflow-hidden animate-scale-in">
-          {/* Step Indicator */}
-          <StepIndicator currentStep={step} />
-          
-          {/* Messages */}
-          <div
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
-          >
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))}
+        {/* Main Panel - Chat + Preview below */}
+        <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+          {/* Chat Panel */}
+          <div className="flex flex-col glass-panel overflow-hidden animate-scale-in" style={{ minHeight: displayImage ? '40vh' : '70vh', maxHeight: displayImage ? '50vh' : '80vh' }}>
+            {/* Step Indicator */}
+            <StepIndicator currentStep={step} />
             
-            {/* Interactive elements based on step */}
-            {showDomainSelect && (
-              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <DomainSelect 
-                  onSelect={handleDomainSelect} 
-                  disabled={isProcessing}
-                  suggestedDomain={suggestedDomain}
-                />
-              </div>
-            )}
+            {/* Messages */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
+            >
+              {messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))}
+              
+              {/* Interactive elements based on step */}
+              {showDomainSelect && (
+                <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <DomainSelect 
+                    onSelect={handleDomainSelect} 
+                    disabled={isProcessing}
+                    suggestedDomain={suggestedDomain}
+                  />
+                </div>
+              )}
 
-            {showColorPalette && (
-              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <ColorPalette
-                  selectedColors={selectedColors}
-                  onColorsChange={setSelectedColors}
-                  onConfirm={() => handleColorsConfirm(selectedColors)}
-                  disabled={isProcessing}
-                  defaultPalette={profile?.default_color_palette}
-                />
-              </div>
-            )}
+              {showColorPalette && (
+                <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <ColorPalette
+                    selectedColors={selectedColors}
+                    onColorsChange={setSelectedColors}
+                    onConfirm={() => handleColorsConfirm(selectedColors)}
+                    disabled={isProcessing}
+                    defaultPalette={profile?.default_color_palette}
+                  />
+                </div>
+              )}
 
-            {showFormatSelect && (
-              <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <FormatSelect
-                  onSelect={handleFormatSelect}
-                  disabled={isProcessing}
-                />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleSkipFormat} 
-                  disabled={isProcessing} 
-                  className="mt-2 hover:bg-muted/50"
-                >
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Utiliser le format par défaut
-                </Button>
-              </div>
-            )}
+              {showFormatSelect && (
+                <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <FormatSelect
+                    onSelect={handleFormatSelect}
+                    disabled={isProcessing}
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleSkipFormat} 
+                    disabled={isProcessing} 
+                    className="mt-2 hover:bg-muted/50"
+                  >
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Utiliser le format par défaut
+                  </Button>
+                </div>
+              )}
 
-            <div ref={messagesEndRef} />
-          </div>
+              <div ref={messagesEndRef} />
+            </div>
 
-          {/* Input Area */}
-          <div className="border-t border-border/30 p-4 bg-card/30 backdrop-blur-sm">
-            {/* Navigation avant/arrière */}
-            <StepNavigation 
-              currentStep={step} 
-              onGoBack={goBackToStep}
-              onGoForward={goForwardToStep}
-              visitedSteps={visitedSteps}
-              disabled={isProcessing} 
-            />
-            
-            {showTextInput && (
-              <div className="flex gap-3">
-                <Input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
-                  onKeyPress={handleKeyPress}
-                  disabled={isProcessing}
-                  className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
-                />
-                <Button 
-                  onClick={handleSend} 
-                  disabled={!inputValue.trim() || isProcessing}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            {showProductCharacterSkip && (
-              <div className="flex flex-wrap gap-3 mt-2">
-                <Button variant="ghost" size="sm" onClick={handleSkipProductCharacter} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Non, pas de personnage
-                </Button>
-              </div>
-            )}
-
-            {showStylePreferencesSkip && (
-              <div className="flex flex-wrap gap-3 mt-2">
-                <Button variant="ghost" size="sm" onClick={handleSkipStylePreferences} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Continuer sans préférences
-                </Button>
-              </div>
-            )}
-
-            {showMainSpeakerPhotoUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleMainSpeakerPhoto}
-                  disabled={isProcessing}
-                  label="Envoyer photo de l'orateur"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipSpeakers} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Pas d'orateur
-                </Button>
-              </div>
-            )}
-
-            {showGuestPhotoUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleGuestPhoto}
-                  disabled={isProcessing}
-                  label="Envoyer photo d'invité"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipGuests} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {(conversationState.guests?.length || 0) > 0 ? "Continuer" : "Pas d'invité"}
-                </Button>
-              </div>
-            )}
-
-            {showBeveragesUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleBeveragePhoto}
-                  disabled={isProcessing}
-                  label="Envoyer photo de boisson"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipBeverages} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {(conversationState.currentBeverageImages?.length || 0) > 0 ? "Continuer" : "Pas de boissons"}
-                </Button>
-              </div>
-            )}
-
-            {showDishesUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleDishPhoto}
-                  disabled={isProcessing}
-                  label="Envoyer photo de plat"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipDishes} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {(conversationState.currentDishImages?.length || 0) > 0 ? "Continuer" : "Pas de plats"}
-                </Button>
-              </div>
-            )}
-
-            {showReferenceUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleReferenceImage}
-                  disabled={isProcessing}
-                  label="Envoyer image de référence"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipReference} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Passer
-                </Button>
-              </div>
-            )}
-
-            {showLogoUpload && (
-              <DefaultLogoSelect
-                defaultLogoUrl={profile?.default_logo_url || null}
-                onUseDefault={() => {
-                  if (profile?.default_logo_url) {
-                    handleLogoImage(profile.default_logo_url);
-                  }
-                }}
-                onUploadNew={handleLogoImage}
-                onSkip={handleSkipLogo}
-                disabled={isProcessing}
-                hasLogos={(conversationState.logos?.length || 0) > 0}
+            {/* Input Area */}
+            <div className="border-t border-border/30 p-4 bg-card/30 backdrop-blur-sm">
+              {/* Navigation avant/arrière */}
+              <StepNavigation 
+                currentStep={step} 
+                onGoBack={goBackToStep}
+                onGoForward={goForwardToStep}
+                visitedSteps={visitedSteps}
+                disabled={isProcessing} 
               />
-            )}
+              
+              {showTextInput && (
+                <div className="flex gap-3">
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
+                    onKeyPress={handleKeyPress}
+                    disabled={isProcessing}
+                    className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
+                  />
+                  <Button 
+                    onClick={handleSend} 
+                    disabled={!inputValue.trim() || isProcessing}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
 
-            {showLogoPosition && (
-              <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <LogoPositionSelect
-                  onSelect={handleLogoPosition}
+              {showProductCharacterSkip && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <Button variant="ghost" size="sm" onClick={handleSkipProductCharacter} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Non, pas de personnage
+                  </Button>
+                </div>
+              )}
+
+              {showStylePreferencesSkip && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <Button variant="ghost" size="sm" onClick={handleSkipStylePreferences} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Continuer sans préférences
+                  </Button>
+                </div>
+              )}
+
+              {showMainSpeakerPhotoUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleMainSpeakerPhoto}
+                    disabled={isProcessing}
+                    label="Envoyer photo de l'orateur"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipSpeakers} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Pas d'orateur
+                  </Button>
+                </div>
+              )}
+
+              {showGuestPhotoUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleGuestPhoto}
+                    disabled={isProcessing}
+                    label="Envoyer photo d'invité"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipGuests} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    {(conversationState.guests?.length || 0) > 0 ? "Continuer" : "Pas d'invité"}
+                  </Button>
+                </div>
+              )}
+
+              {showBeveragesUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleBeveragePhoto}
+                    disabled={isProcessing}
+                    label="Envoyer photo de boisson"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipBeverages} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    {(conversationState.currentBeverageImages?.length || 0) > 0 ? "Continuer" : "Pas de boissons"}
+                  </Button>
+                </div>
+              )}
+
+              {showDishesUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleDishPhoto}
+                    disabled={isProcessing}
+                    label="Envoyer photo de plat"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipDishes} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    {(conversationState.currentDishImages?.length || 0) > 0 ? "Continuer" : "Pas de plats"}
+                  </Button>
+                </div>
+              )}
+
+              {showReferenceUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleReferenceImage}
+                    disabled={isProcessing}
+                    label="Envoyer image de référence"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipReference} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Passer
+                  </Button>
+                </div>
+              )}
+
+              {showLogoUpload && (
+                <DefaultLogoSelect
+                  defaultLogoUrl={profile?.default_logo_url || null}
+                  onUseDefault={() => {
+                    if (profile?.default_logo_url) {
+                      handleLogoImage(profile.default_logo_url);
+                    }
+                  }}
+                  onUploadNew={handleLogoImage}
+                  onSkip={handleSkipLogo}
                   disabled={isProcessing}
+                  hasLogos={(conversationState.logos?.length || 0) > 0}
                 />
-              </div>
-            )}
+              )}
 
-            {showContentImageUpload && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleContentImage}
-                  disabled={isProcessing}
-                  label="Ajouter image de contenu"
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  Générer automatiquement
-                </Button>
-              </div>
-            )}
+              {showLogoPosition && (
+                <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <LogoPositionSelect
+                    onSelect={handleLogoPosition}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
 
-            {showDomainQuestionImages && (
-              <div className="flex flex-wrap gap-3">
-                <ImageUploadButton
-                  onImageSelect={handleDomainQuestionImage}
-                  disabled={isProcessing}
-                  label={conversationState.domainQuestionState?.pendingImageUpload?.label || "Envoyer une photo"}
-                />
-                <Button variant="ghost" size="sm" onClick={handleSkipDomainQuestionImages} disabled={isProcessing} className="hover:bg-muted/50">
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {(conversationState.domainQuestionState?.collectedImages?.[conversationState.domainQuestionState?.pendingImageUpload?.type || ""] || []).length > 0 
-                    ? "Continuer" 
-                    : "Passer"}
-                </Button>
-              </div>
-            )}
+              {showContentImageUpload && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleContentImage}
+                    disabled={isProcessing}
+                    label="Ajouter image de contenu"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Générer automatiquement
+                  </Button>
+                </div>
+              )}
 
-            {(step === "generating" || step === "modifying") && (
-              <div className="flex justify-center">
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  {step === "modifying" ? "Application des modifications..." : "Génération en cours..."}
-                </p>
-              </div>
-            )}
+              {showDomainQuestionImages && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleDomainQuestionImage}
+                    disabled={isProcessing}
+                    label={conversationState.domainQuestionState?.pendingImageUpload?.label || "Envoyer une photo"}
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipDomainQuestionImages} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    {(conversationState.domainQuestionState?.collectedImages?.[conversationState.domainQuestionState?.pendingImageUpload?.type || ""] || []).length > 0 
+                      ? "Continuer" 
+                      : "Passer"}
+                  </Button>
+                </div>
+              )}
+
+              {(step === "generating" || step === "modifying") && (
+                <div className="flex justify-center">
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    {step === "modifying" ? "Application des modifications..." : "Génération en cours..."}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Preview Panel - Below Chat */}
+          {(displayImage || (isProcessing && step === "generating")) && (
+            <div className="glass-panel gradient-border p-4 animate-in fade-in slide-in-from-bottom-5 duration-500">
+              <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                {displayImage ? "VOTRE CRÉATION" : "GÉNÉRATION EN COURS"}
+              </h2>
+              
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Image */}
+                <div className="flex-1 flex items-center justify-center min-h-[280px] lg:min-h-[400px] rounded-xl bg-background/40 border border-border/20 overflow-hidden relative">
+                  {displayImage ? (
+                    <img
+                      src={displayImage}
+                      alt="Affiche générée"
+                      className="max-w-full max-h-[400px] object-contain animate-scale-in"
+                    />
+                  ) : (
+                    <div className="text-center space-y-6">
+                      <div className="relative mx-auto w-24 h-24">
+                        <DesignerAvatar size="xl" isWorking={true} />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">Création en cours...</p>
+                        <p className="text-xs text-muted-foreground">Notre graphiste travaille sur votre affiche</p>
+                      </div>
+                      <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mx-auto">
+                        <div 
+                          className="h-full bg-gradient-to-r from-brand-orange to-brand-blue rounded-full"
+                          style={{
+                            animation: "shimmer 1.5s infinite",
+                            backgroundSize: "200% 100%"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions & Feedback */}
+                {displayImage && (
+                  <div className="lg:w-80 space-y-4">
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
+                        className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Éditer
+                      </Button>
+                      <Button 
+                        onClick={handleDownload} 
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Télécharger
+                      </Button>
+                    </div>
+                    
+                    {/* Inline Feedback Widget */}
+                    {feedbackImageId && (
+                      <InlineFeedbackWidget 
+                        imageId={feedbackImageId}
+                        onFeedbackSubmitted={() => setFeedbackImageId(undefined)}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* History Panel - Collapsible */}
@@ -658,80 +734,6 @@ export default function AppPage() {
               onClear={clearHistory}
               onEdit={handleEditFromHistory}
             />
-          </div>
-        )}
-
-        {/* Preview Panel - Only shown when image is generated or during generation */}
-        {(displayImage || (isProcessing && step === "generating")) && (
-          <div className="lg:w-96 glass-panel gradient-border p-4 flex flex-col animate-in slide-in-from-right-5 duration-300" style={{ animation: 'scale-in 0.4s ease-out' }}>
-            <h2 className="font-display text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              {displayImage ? "VOTRE CRÉATION" : "GÉNÉRATION EN COURS"}
-            </h2>
-            
-            <div className="flex-1 flex items-center justify-center min-h-[240px] lg:min-h-[320px] rounded-xl bg-background/40 border border-border/20 overflow-hidden relative">
-              {displayImage ? (
-                <img
-                  src={displayImage}
-                  alt="Affiche générée"
-                  className="max-w-full max-h-full object-contain animate-scale-in"
-                />
-              ) : (
-                <div className="text-center space-y-6">
-                  <div className="relative mx-auto w-24 h-24">
-                    <DesignerAvatar size="xl" isWorking={true} />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">Création en cours...</p>
-                    <p className="text-xs text-muted-foreground">Notre graphiste travaille sur votre affiche</p>
-                  </div>
-                  <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mx-auto">
-                    <div 
-                      className="h-full bg-gradient-to-r from-brand-orange to-brand-blue rounded-full"
-                      style={{
-                        animation: "shimmer 1.5s infinite",
-                        backgroundSize: "200% 100%"
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {displayImage && (
-              <div className="mt-4 space-y-3">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleOpenEditor(displayImage, selectedHistoryImage?.id)} 
-                    className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Éditer
-                  </Button>
-                  <Button 
-                    onClick={handleDownload} 
-                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Télécharger
-                  </Button>
-                </div>
-                
-                {/* Feedback button - let user decide when to give feedback */}
-                {feedbackImageId && !showFeedback && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFeedback(true)}
-                    className="w-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300"
-                  >
-                    <span className="mr-2">⭐</span>
-                    Donner mon avis sur cette création
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
         )}
       </main>
@@ -758,16 +760,6 @@ export default function AppPage() {
         creditError={creditError}
       />
 
-      {/* Feedback Modal */}
-      {showFeedback && (
-        <FeedbackModal
-          imageId={feedbackImageId}
-          onClose={() => {
-            setShowFeedback(false);
-            setFeedbackImageId(undefined);
-          }}
-        />
-      )}
     </div>
   );
 }
