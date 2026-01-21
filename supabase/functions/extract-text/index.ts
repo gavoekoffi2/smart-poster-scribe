@@ -60,27 +60,33 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Tu es un expert en extraction de texte depuis des images. 
-Analyse l'image et identifie TOUS les blocs de texte visibles.
+            content: `Tu es un expert en extraction de texte depuis des affiches et flyers. 
+Analyse l'image et identifie TOUS les blocs de texte visibles, des plus grands aux plus petits.
 
-Pour chaque bloc de texte trouvé, retourne:
-- Le texte exact
-- Sa position approximative en pourcentage (x, y depuis le coin supérieur gauche)
-- Sa largeur et hauteur approximatives en pourcentage
-- La taille de police estimée en pixels
+INSTRUCTIONS CRITIQUES:
+1. Pour chaque bloc de texte, estime sa position (x, y) en pourcentage de l'image (0-100)
+2. x=0 est le bord gauche, x=100 est le bord droit
+3. y=0 est le bord supérieur, y=100 est le bord inférieur
+4. La taille de police doit être estimée en pixels (généralement entre 14 et 120px pour les affiches)
 
-IMPORTANT: 
-- Retourne UNIQUEMENT un tableau JSON valide, sans aucun autre texte
-- Le format est: [{"text": "...", "x": 0-100, "y": 0-100, "width": 0-100, "height": 0-100, "fontSize": 12-200}]
-- Si aucun texte n'est trouvé, retourne []
-- Inclus TOUT le texte visible, même les petits textes`
+FORMAT DE RÉPONSE (JSON uniquement, pas de texte autour):
+[
+  {"text": "TITRE PRINCIPAL", "x": 10, "y": 5, "width": 80, "height": 10, "fontSize": 72},
+  {"text": "Sous-titre", "x": 15, "y": 18, "width": 70, "height": 5, "fontSize": 36}
+]
+
+RÈGLES:
+- Retourne UNIQUEMENT le tableau JSON, aucun autre texte
+- Si aucun texte trouvé, retourne []
+- Inclus TOUT le texte visible: titres, sous-titres, dates, lieux, contacts, etc.
+- Groupe les lignes connexes si elles forment un bloc logique`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Analyse cette image et extrais tous les blocs de texte avec leurs positions. Retourne UNIQUEMENT le tableau JSON, rien d'autre."
+                text: "Extrais tous les textes de cette affiche avec leurs positions. Retourne uniquement le JSON."
               },
               {
                 type: "image_url",
@@ -119,20 +125,25 @@ IMPORTANT:
     let textBlocks: TextBlock[] = [];
     try {
       const parsed = JSON.parse(content);
+      console.log("Parsed AI response:", JSON.stringify(parsed));
+      
       if (Array.isArray(parsed)) {
-        // Convert percentage positions to pixel approximations (assuming 1000x1000 canvas)
-        textBlocks = parsed.map((block: any, index: number) => ({
-          text: String(block.text || ""),
-          x: Math.round((Number(block.x) || 0) * 10), // Convert % to approx pixels (assuming 1000px width)
-          y: Math.round((Number(block.y) || 0) * 10),
-          width: Math.round((Number(block.width) || 10) * 10),
-          height: Math.round((Number(block.height) || 5) * 10),
+        // Keep positions as percentages (0-100) - the frontend will convert them
+        textBlocks = parsed.map((block: any) => ({
+          text: String(block.text || "").trim(),
+          // Store as percentage values (0-100)
+          x: Math.max(0, Math.min(100, Number(block.x) || 0)),
+          y: Math.max(0, Math.min(100, Number(block.y) || 0)),
+          width: Math.max(5, Math.min(100, Number(block.width) || 20)),
+          height: Math.max(2, Math.min(50, Number(block.height) || 5)),
           confidence: 95, // AI extraction is generally reliable
-          fontSize: Number(block.fontSize) || 24,
-        })).filter((block: TextBlock) => block.text.trim().length > 0);
+          fontSize: Math.max(12, Math.min(150, Number(block.fontSize) || 32)),
+        })).filter((block: TextBlock) => block.text.length > 0);
+        
+        console.log("Processed text blocks:", JSON.stringify(textBlocks));
       }
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
+      console.error("Failed to parse AI response:", content, parseError);
       // Return empty array if parsing fails
       textBlocks = [];
     }

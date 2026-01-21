@@ -348,24 +348,32 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    // Scale coordinates from percentage-based (0-1000 representing 0-100%) to canvas size
-    const scaledX = (block.x / 1000) * canvasSize.width;
-    const scaledY = (block.y / 1000) * canvasSize.height;
-    const scaledFontSize = Math.max(12, Math.min(72, (block.fontSize || 24) * imageScale));
+    // The AI returns positions as percentages (0-100)
+    // Convert percentage to canvas pixels
+    const scaledX = (block.x / 100) * canvasSize.width;
+    const scaledY = (block.y / 100) * canvasSize.height;
+    
+    // Scale font size based on canvas/image ratio
+    // The AI estimates font size for the original image, we need to scale it
+    const scaledFontSize = Math.max(14, Math.min(80, (block.fontSize || 32) * imageScale));
+
+    console.log(`Adding text block: "${block.text}" at (${scaledX}, ${scaledY}) fontSize: ${scaledFontSize}`);
 
     const text = new IText(block.text, {
       left: scaledX,
       top: scaledY,
       fontSize: scaledFontSize,
-      fill: activeColor,
+      fill: "#FFFFFF", // Default to white for visibility on most poster backgrounds
       fontFamily: activeFont.value,
       fontWeight: "bold",
-      shadow: new Shadow({ color: "rgba(0,0,0,0.7)", blur: 3, offsetX: 1, offsetY: 1 }),
+      shadow: new Shadow({ color: "rgba(0,0,0,0.8)", blur: 4, offsetX: 2, offsetY: 2 }),
+      stroke: "#000000",
+      strokeWidth: 0.5,
     });
 
     canvas.add(text);
     return text;
-  }, [getCanvas, canvasSize, activeColor, activeFont, imageScale]);
+  }, [getCanvas, canvasSize, activeFont, imageScale]);
 
   // Run AI text extraction and add detected text as editable layers
   const handleTextExtraction = useCallback(async () => {
