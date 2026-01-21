@@ -362,7 +362,30 @@ async function createTask(
   outputFormat: string
 ): Promise<string> {
   console.log("Creating task with Kie AI...");
+  console.log("Resolution requested:", resolution);
+  console.log("Aspect ratio:", aspectRatio);
   console.log("Image inputs count:", imageInputs.length);
+  console.log("Output format:", outputFormat);
+
+  // The Kie AI API expects resolution as "1K", "2K", or "4K"
+  // Ensure we're passing the correct format
+  const validResolution = ["1K", "2K", "4K"].includes(resolution) ? resolution : "2K";
+  
+  const requestBody = {
+    model: "nano-banana-pro",
+    input: {
+      prompt: prompt,
+      image_input: imageInputs,
+      aspect_ratio: aspectRatio,
+      resolution: validResolution,
+      output_format: outputFormat,
+    },
+  };
+  
+  console.log("Request body (without prompt):", JSON.stringify({
+    ...requestBody,
+    input: { ...requestBody.input, prompt: `[${prompt.length} chars]` }
+  }));
 
   const response = await fetch(`${KIE_API_BASE}/createTask`, {
     method: "POST",
@@ -370,16 +393,7 @@ async function createTask(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: "nano-banana-pro",
-      input: {
-        prompt: prompt,
-        image_input: imageInputs,
-        aspect_ratio: aspectRatio,
-        resolution: resolution,
-        output_format: outputFormat,
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -395,8 +409,11 @@ async function createTask(
     if (response.status === 429) {
       throw new Error("Limite de requêtes atteinte. Réessayez plus tard.");
     }
+    if (response.status === 400) {
+      throw new Error(`Paramètres invalides: ${errorText}`);
+    }
     
-    throw new Error(`Erreur création tâche: ${response.status}`);
+    throw new Error(`Erreur création tâche: ${response.status} - ${errorText}`);
   }
 
   const data = (await response.json()) as KieCreateTaskResponse;
@@ -406,19 +423,22 @@ async function createTask(
     throw new Error(`Erreur API Kie: ${data.msg || "Pas de taskId retourné"}`);
   }
 
+  console.log("Task created successfully:", data.data.taskId);
   return data.data.taskId;
 }
 
 async function pollForResult(
   apiKey: string,
   taskId: string,
-  maxAttempts: number = 90,
-  intervalMs: number = 3000
+  maxAttempts: number = 120, // Increased for 4K which takes longer (~22-30 seconds)
+  intervalMs: number = 2500  // Poll more frequently
 ): Promise<string> {
-  console.log(`Polling for result, taskId: ${taskId}`);
+  console.log(`Polling for result, taskId: ${taskId}, maxAttempts: ${maxAttempts}`);
+  const startTime = Date.now();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    console.log(`Poll attempt ${attempt + 1}/${maxAttempts}`);
+    const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+    console.log(`Poll attempt ${attempt + 1}/${maxAttempts} (elapsed: ${elapsedSec}s)`);
 
     const response = await fetch(
       `${KIE_API_BASE}/recordInfo?taskId=${taskId}`,
@@ -432,31 +452,39 @@ async function pollForResult(
 
     if (!response.ok) {
       console.error("Poll error:", response.status);
+      // Don't fail immediately on poll errors, retry
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        continue;
+      }
       throw new Error(`Erreur récupération statut: ${response.status}`);
     }
 
     const data = (await response.json()) as KieRecordInfoResponse;
-    console.log(`Poll response state: ${data.data?.state}`);
+    console.log(`Poll response state: ${data.data?.state}, costTime: ${data.data?.costTime}ms`);
 
     if (data.data?.state === "success" && data.data.resultJson) {
       const result = JSON.parse(data.data.resultJson) as KieResultJson;
       if (result.resultUrls && result.resultUrls.length > 0) {
-        console.log("Generation successful, URL:", result.resultUrls[0]);
+        const totalTime = Math.round((Date.now() - startTime) / 1000);
+        console.log(`Generation successful in ${totalTime}s, URL: ${result.resultUrls[0]}`);
         return result.resultUrls[0];
       }
       throw new Error("Pas d'URL dans le résultat");
     }
 
     if (data.data?.state === "fail") {
-      throw new Error(
-        `Génération échouée: ${data.data.failMsg || data.data.failCode || "Erreur inconnue"}`
-      );
+      const errorMsg = data.data.failMsg || data.data.failCode || "Erreur inconnue";
+      console.error(`Generation failed: ${errorMsg}`);
+      throw new Error(`Génération échouée: ${errorMsg}`);
     }
 
+    // Still waiting or processing
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
-  throw new Error("Délai d'attente dépassé pour la génération");
+  const totalTime = Math.round((Date.now() - startTime) / 1000);
+  throw new Error(`Délai d'attente dépassé après ${totalTime} secondes`);
 }
 
 const MAX_PROMPT_LENGTH = 5000;
