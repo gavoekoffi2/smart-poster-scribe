@@ -197,9 +197,116 @@ function buildProfessionalPrompt({
   if (isCloneMode || hasReferenceImage) {
     instructions.push("Tu es un graphiste d'élite spécialisé dans la PERSONNALISATION FIDÈLE d'affiches publicitaires. Tu PERSONNALISES un design existant, tu ne crées pas de zéro.");
   } else {
-    instructions.push("Tu es un graphiste d'élite spécialisé dans la création d'affiches publicitaires professionnelles pour l'Afrique francophone.");
+    instructions.push("Tu es un DIRECTEUR ARTISTIQUE et GRAPHISTE DE RENOMMÉE MONDIALE, expert en création d'affiches publicitaires EXCEPTIONNELLES pour l'Afrique francophone.");
+    instructions.push("Tu travailles pour les plus grandes marques et événements. Chaque création doit être SPECTACULAIRE et MÉMORABLE.");
   }
   instructions.push("");
+
+  // ====== MODE CRÉATION LIBRE - DESIGN PROFESSIONNEL AVANCÉ ======
+  if (!hasReferenceImage && !isCloneMode) {
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  🎨 CRÉATION LIBRE - NIVEAU DIRECTEUR ARTISTIQUE                      ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    instructions.push("");
+    
+    instructions.push("🌟 EXCELLENCE VISUELLE OBLIGATOIRE:");
+    instructions.push("Tu ne crées PAS une affiche basique. Tu crées une ŒUVRE PUBLICITAIRE digne");
+    instructions.push("d'une agence de communication internationale comme Publicis ou Ogilvy.");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("1. 🔤 TYPOGRAPHIE DE MAÎTRE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ TITRE PRINCIPAL: Police BOLD, DISPLAY, spectaculaire");
+    instructions.push("     - Effets 3D, ombres portées, reflets métalliques ou dorés");
+    instructions.push("     - Dégradés sophistiqués dans les lettres");
+    instructions.push("     - Contours lumineux (glow) ou effet néon si approprié");
+    instructions.push("     - Taille IMPOSANTE (occupe 20-35% de l'affiche)");
+    instructions.push("   ✓ SOUS-TITRES: Polices élégantes complémentaires");
+    instructions.push("     - Contraste de styles (sans-serif + script, bold + light)");
+    instructions.push("   ✓ DÉTAILS: Polices lisibles, tailles proportionnelles");
+    instructions.push("   ✓ JAMAIS de polices basiques comme Arial, Times, Calibri");
+    instructions.push("   ✓ Hiérarchie visuelle PARFAITE: œil guidé naturellement");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("2. 🎭 COMPOSITION DYNAMIQUE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ Utiliser la règle des tiers ou le nombre d'or");
+    instructions.push("   ✓ Points focaux clairement définis");
+    instructions.push("   ✓ Flux visuel qui guide le regard");
+    instructions.push("   ✓ Équilibre asymétrique dynamique (éviter la symétrie plate)");
+    instructions.push("   ✓ Espaces négatifs stratégiques pour respiration");
+    instructions.push("   ✓ Superposition de plans (avant-plan, milieu, arrière-plan)");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("3. 🌈 COULEURS ET AMBIANCE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ Palette harmonieuse et cohérente (max 3-4 couleurs principales)");
+    instructions.push("   ✓ Dégradés sophistiqués (pas de aplats plats)");
+    instructions.push("   ✓ Contrastes forts pour lisibilité et impact");
+    instructions.push("   ✓ Si palette utilisateur fournie: L'UTILISER OBLIGATOIREMENT");
+    instructions.push("   ✓ Sinon: Couleurs vibrantes, africaines, énergiques");
+    instructions.push("   ✓ Ambiance cohérente avec le sujet (festive, spirituelle, pro...)");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("4. ✨ EFFETS ET FINITIONS PREMIUM:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ Effets de lumière: rayons, halos, lens flares, bokeh");
+    instructions.push("   ✓ Particules flottantes (étoiles, confettis, poussière lumineuse)");
+    instructions.push("   ✓ Textures subtiles (grain, motifs africains stylisés)");
+    instructions.push("   ✓ Ombres réalistes et profondeur");
+    instructions.push("   ✓ Bordures ou cadres décoratifs si approprié");
+    instructions.push("   ✓ Éléments graphiques (formes géométriques, lignes dynamiques)");
+    instructions.push("   ✓ Effet de brillance ou métallique sur éléments clés");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("5. 👤 PERSONNAGES (si nécessaires):");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ Africains authentiques, traits réalistes et beaux");
+    instructions.push("   ✓ Expressions dynamiques et engageantes");
+    instructions.push("   ✓ Vêtements appropriés au contexte (tenue traditionnelle, moderne, pro)");
+    instructions.push("   ✓ Éclairage professionnel (studio quality)");
+    instructions.push("   ✓ Intégration harmonieuse avec le fond");
+    instructions.push("");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("6. 🎯 STYLES SELON LE CONTEXTE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ÉGLISE/SPIRITUEL:");
+    instructions.push("     - Tons dorés, violets profonds, bleus célestes");
+    instructions.push("     - Rayons de lumière divine, nuages, étoiles");
+    instructions.push("     - Typographie majestueuse avec effets dorés");
+    instructions.push("   CONCERT/ÉVÉNEMENT:");
+    instructions.push("     - Couleurs vives, néons, effets disco/lumière");
+    instructions.push("     - Énergie dynamique, mouvement");
+    instructions.push("     - Police bold, moderne, impactante");
+    instructions.push("   RESTAURANT/FOOD:");
+    instructions.push("     - Couleurs chaudes (orange, rouge, jaune)");
+    instructions.push("     - Photos de plats appétissants");
+    instructions.push("     - Style gourmand et invitant");
+    instructions.push("   FORMATION/PRO:");
+    instructions.push("     - Couleurs corporate (bleu, vert, gris)");
+    instructions.push("     - Design épuré mais sophistiqué");
+    instructions.push("     - Crédibilité et professionnalisme");
+    instructions.push("   E-COMMERCE/PROMO:");
+    instructions.push("     - Badges promo, prix barrés, pourcentages");
+    instructions.push("     - Couleurs qui attirent l'œil (rouge, jaune)");
+    instructions.push("     - Urgence et action");
+    instructions.push("");
+    
+    instructions.push("❌ INTERDIT EN MODE CRÉATION LIBRE:");
+    instructions.push("   - Designs plats, basiques, sans effets");
+    instructions.push("   - Texte simple sans style typographique");
+    instructions.push("   - Fonds unis sans texture ni profondeur");
+    instructions.push("   - Compositions ennuyeuses et prévisibles");
+    instructions.push("   - Manque de hiérarchie visuelle");
+    instructions.push("   - Couleurs ternes ou mal assorties");
+    instructions.push("");
+  }
 
   // ====== RÈGLE FONDAMENTALE: PERSONNALISATION FIDÈLE ======
   if (hasReferenceImage) {
@@ -347,7 +454,14 @@ function buildProfessionalPrompt({
     instructions.push("   3. Contenu = UNIQUEMENT ce que le client a fourni ci-dessus");
     instructions.push("   4. SUPPRIMER tout élément du template non remplacé par le client");
   } else {
-    instructions.push("RAPPEL: Afficher UNIQUEMENT les éléments listés ci-dessus.");
+    instructions.push("🎯 RAPPEL FINAL - CRÉATION LIBRE:");
+    instructions.push("   1. Design SPECTACULAIRE niveau agence internationale");
+    instructions.push("   2. Typographie STYLISÉE avec effets (3D, ombres, dégradés, glow)");
+    instructions.push("   3. Composition DYNAMIQUE et professionnelle");
+    instructions.push("   4. Effets visuels PREMIUM (lumières, particules, textures)");
+    instructions.push("   5. Afficher UNIQUEMENT les éléments listés ci-dessus");
+    instructions.push("   6. Si palette couleur fournie: L'UTILISER obligatoirement");
+    instructions.push("   7. INTERDIT: design basique, plat, ou amateur");
   }
 
   return instructions.join("\n");
