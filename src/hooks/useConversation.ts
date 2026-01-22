@@ -291,6 +291,61 @@ function formatMissingInfo(missingInfo: string[]): string {
   return `${translated.join(", ")} et ${last}`;
 }
 
+// Fonction d'extraction simple pour fallback - extrait les infos basiques du texte utilisateur
+function simpleExtractInfo(text: string): ExtractedInfo {
+  const extractedInfo: ExtractedInfo = {};
+  
+  // Extraire le titre (première ligne ou texte avant "le" ou début)
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length > 0) {
+    // Chercher un titre explicite
+    const titleMatch = text.match(/titre\s*[:=]?\s*([^\n,]+)/i);
+    if (titleMatch) {
+      extractedInfo.title = titleMatch[1].trim();
+    }
+  }
+  
+  // Extraire les dates
+  const datePatterns = [
+    /(\d{1,2}[\s\/\-]\w+[\s\/\-]\d{2,4})/gi,
+    /(\d{1,2}[\s\/\-]\d{1,2}[\s\/\-]\d{2,4})/gi,
+    /(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{1,2}/gi,
+    /\d{1,2}\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/gi,
+  ];
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      extractedInfo.dates = match[0];
+      break;
+    }
+  }
+  
+  // Extraire les contacts (téléphone, whatsapp)
+  const phoneMatch = text.match(/(\+?\d{2,3}[\s\-]?\d{2,3}[\s\-]?\d{2,3}[\s\-]?\d{2,4})/);
+  if (phoneMatch) {
+    extractedInfo.contact = phoneMatch[1];
+  }
+  
+  // Extraire les prix
+  const priceMatch = text.match(/(\d+[\s,.]?\d*\s*(FCFA|CFA|€|EUR|XOF|XAF|\$|USD))/i);
+  if (priceMatch) {
+    extractedInfo.prices = priceMatch[0];
+  }
+  
+  // Extraire le lieu
+  const lieuMatch = text.match(/lieu\s*[:=]?\s*([^\n,]+)/i) || text.match(/adresse\s*[:=]?\s*([^\n,]+)/i);
+  if (lieuMatch) {
+    extractedInfo.location = lieuMatch[1].trim();
+  }
+  
+  // Si pas de titre trouvé, prendre une partie du texte
+  if (!extractedInfo.title && text.length > 0) {
+    extractedInfo.title = text.split('\n')[0].substring(0, 100);
+  }
+  
+  return extractedInfo;
+}
+
 interface CloneTemplateData {
   id: string;
   imageUrl: string;
@@ -365,7 +420,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     });
   }, [conversationState.step]);
 
-  // Analyser le template au démarrage en mode clone
+  // Analyser le template au démarrage en mode clone - NOUVEAU FLUX SIMPLIFIÉ
   useEffect(() => {
     if (isCloneMode && cloneTemplate && conversationState.step === "analyzing_template") {
       const analyzeTemplate = async () => {
@@ -398,55 +453,58 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             },
           });
 
-          if (error || !data?.success) {
-            console.error("Template analysis error:", error);
-            // Fallback: demander juste les infos de base
-            setTemplateQuestions([
-              { id: "title", question: "Quel est le titre ou thème de votre affiche ?", type: "text", placeholder: "Ex: Grande Veillée de Prière", required: true },
-              { id: "details", question: "Quelles autres informations voulez-vous afficher ?", type: "multiline", placeholder: "Dates, lieu, contact, prix...", required: false }
-            ]);
-          } else {
-            setTemplateQuestions(data.analysis.requiredQuestions || []);
+          setIsProcessing(false);
+          
+          // Stocker les infos du template
+          let templateDescription = "Template professionnel africain";
+          let detectedElements: string[] = [];
+          
+          if (!error && data?.success && data.analysis) {
+            templateDescription = `${data.analysis.templateDescription || ''}. ${data.analysis.suggestedPrompt || ''}`;
             
-            // Stocker la description du style pour la génération
-            if (data.analysis.templateDescription || data.analysis.suggestedPrompt) {
-              setConversationState(prev => ({
-                ...prev,
-                referenceDescription: `${data.analysis.templateDescription || ''}. ${data.analysis.suggestedPrompt || ''}`
-              }));
-            }
+            // Collecter les éléments détectés pour informer l'utilisateur
+            const detected = data.analysis.detectedElements || {};
+            if (detected.hasTitle) detectedElements.push("titre");
+            if (detected.hasDate) detectedElements.push("date");
+            if (detected.hasTime) detectedElements.push("heure");
+            if (detected.hasLocation) detectedElements.push("lieu");
+            if (detected.hasContact) detectedElements.push("contact");
+            if (detected.hasPrice) detectedElements.push("prix/tarif");
+            if (detected.hasSpeaker) detectedElements.push("orateur/artiste");
+            if (detected.hasOrganizer) detectedElements.push("organisateur");
           }
 
-          setIsProcessing(false);
-          setConversationState(prev => ({ ...prev, step: "template_questions" }));
+          // Mettre à jour l'état avec la description du style
+          setConversationState(prev => ({
+            ...prev,
+            step: "clone_gathering",
+            referenceDescription: templateDescription,
+          }));
           
-          // Poser la première question
-          const questions = data?.analysis?.requiredQuestions || [
-            { id: "title", question: "Quel est le titre ou thème de votre affiche ?", type: "text", placeholder: "Ex: Grande Veillée de Prière", required: true }
-          ];
+          // Remplacer le message initial par le message avec l'image et les instructions
+          setMessages([{
+            id: "clone-intro",
+            role: "assistant",
+            content: buildCloneIntroMessage(detectedElements),
+            timestamp: new Date(),
+            image: cloneTemplate.imageUrl
+          }]);
           
-          if (questions.length > 0) {
-            setMessages(prev => prev.filter(m => m.id !== "initial"));
-            setMessages(prev => [...prev, {
-              id: "template-intro",
-              role: "assistant",
-              content: `J'ai analysé cette affiche. Pour créer votre version personnalisée, répondez à quelques questions :\n\n${questions[0].question}`,
-              timestamp: new Date(),
-              image: cloneTemplate.imageUrl
-            }]);
-          }
         } catch (err) {
           console.error("Error analyzing template:", err);
           setIsProcessing(false);
-          // Fallback
-          setTemplateQuestions([
-            { id: "title", question: "Quel est le titre de votre affiche ?", type: "text", placeholder: "Titre principal", required: true }
-          ]);
-          setConversationState(prev => ({ ...prev, step: "template_questions" }));
-          setMessages(prev => [...prev.filter(m => m.id !== "initial"), {
-            id: "template-intro",
+          
+          // Fallback: passer directement à la collecte
+          setConversationState(prev => ({ 
+            ...prev, 
+            step: "clone_gathering",
+            referenceDescription: "Template professionnel"
+          }));
+          
+          setMessages([{
+            id: "clone-intro",
             role: "assistant", 
-            content: "Pour personnaliser cette affiche, quel titre voulez-vous utiliser ?",
+            content: buildCloneIntroMessage([]),
             timestamp: new Date(),
             image: cloneTemplate.imageUrl
           }]);
@@ -456,6 +514,27 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       analyzeTemplate();
     }
   }, [isCloneMode, cloneTemplate, conversationState.step]);
+  
+  // Construire le message d'introduction pour le mode clone
+  const buildCloneIntroMessage = (detectedElements: string[]): string => {
+    let message = `🎨 **Parfait ! Je vais créer votre affiche personnalisée en utilisant ce design comme modèle.**\n\n`;
+    
+    if (detectedElements.length > 0) {
+      message += `📋 J'ai détecté sur cette affiche : **${detectedElements.join(", ")}**\n\n`;
+    }
+    
+    message += `📝 **Donnez-moi TOUTES les informations pour votre affiche en un seul message :**\n\n`;
+    message += `• **Titre** de votre événement/offre\n`;
+    message += `• **Date et heure** (si applicable)\n`;
+    message += `• **Lieu** (si applicable)\n`;
+    message += `• **Contact** : téléphone, WhatsApp, email\n`;
+    message += `• **Prix/Tarifs** (si applicable)\n`;
+    message += `• **Orateur/Artiste** (si applicable)\n`;
+    message += `• Tout autre détail important\n\n`;
+    message += `💡 **Astuce** : Si vous ne voulez pas inclure une information visible sur le modèle, ne la mentionnez simplement pas et je ne l'ajouterai pas sur votre affiche.`;
+    
+    return message;
+  };
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, image?: string) => {
     const newMessage: ChatMessage = {
@@ -1007,6 +1086,58 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             
             addMessage("assistant", "Parfait ! Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
           }
+        }
+        return;
+      }
+
+      // Handle clone gathering - user provides ALL information in one message
+      if (step === "clone_gathering") {
+        addLoadingMessage();
+        setIsProcessing(true);
+        
+        try {
+          // Analyser le message de l'utilisateur pour extraire les informations
+          const { data, error } = await supabase.functions.invoke("analyze-request", {
+            body: { userText: content },
+          });
+          
+          removeLoadingMessage();
+          setIsProcessing(false);
+          
+          let extractedInfo: ExtractedInfo = {};
+          
+          if (!error && data?.success && data.analysis) {
+            extractedInfo = data.analysis.extractedInfo || {};
+          } else {
+            // Fallback: extraction simple à partir du texte
+            extractedInfo = simpleExtractInfo(content);
+          }
+          
+          // Stocker les infos et passer à la sélection des couleurs
+          setConversationState(prev => ({
+            ...prev,
+            step: "colors",
+            extractedInfo: extractedInfo,
+            description: content,
+          }));
+          
+          addMessage("assistant", "Parfait ! 🎨 Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
+        } catch (err) {
+          console.error("Error analyzing clone content:", err);
+          removeLoadingMessage();
+          setIsProcessing(false);
+          
+          // Fallback: utiliser une extraction simple
+          const extractedInfo = simpleExtractInfo(content);
+          
+          setConversationState(prev => ({
+            ...prev,
+            step: "colors",
+            extractedInfo: extractedInfo,
+            description: content,
+          }));
+          
+          addMessage("assistant", "Parfait ! 🎨 Choisissez une palette de couleurs pour votre affiche :");
         }
         return;
       }

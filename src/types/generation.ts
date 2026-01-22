@@ -287,7 +287,8 @@ export interface ConversationState {
     | "complete" 
     | "modifying"
     | "analyzing_template" // Analyse d'un template à cloner
-    | "template_questions"; // Questions personnalisées basées sur le template
+    | "template_questions" // Questions personnalisées basées sur le template
+    | "clone_gathering"; // Collecte des informations en un seul message pour le clonage
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
