@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Sparkles, ArrowUpRight, Eye } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 interface GeneratedImage {
   id: string;
@@ -10,10 +11,13 @@ interface GeneratedImage {
   created_at: string;
 }
 
+const INITIAL_DISPLAY_COUNT = 8;
+
 export function ShowcaseSection() {
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     fetchShowcaseImages();
@@ -137,7 +141,7 @@ export function ShowcaseSection() {
 
         {/* Images Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {images.map((image, index) => (
+          {(showAll ? images : images.slice(0, INITIAL_DISPLAY_COUNT)).map((image, index) => (
             <div
               key={image.id}
               className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-[3/4] bg-card/40 border border-border/40"
@@ -181,16 +185,29 @@ export function ShowcaseSection() {
           ))}
         </div>
 
-        {/* View More Link */}
-        <div className="text-center mt-12">
-          <a
-            href="#templates"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
-          >
-            Voir plus de créations
-            <ArrowUpRight className="w-4 h-4" />
-          </a>
-        </div>
+        {/* View More / View Less Button */}
+        {images.length > INITIAL_DISPLAY_COUNT && (
+          <div className="text-center mt-12">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowAll(!showAll)}
+              className="gap-2 px-8 py-6 text-base font-medium border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+            >
+              {showAll ? (
+                <>
+                  Voir moins
+                  <ChevronUp className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  Découvrir plus ({images.length - INITIAL_DISPLAY_COUNT} autres)
+                  <ChevronDown className="w-5 h-5" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Lightbox Modal */}
