@@ -138,7 +138,7 @@ export default function AppPage() {
     clearCreditError,
   } = useConversation(cloneTemplate);
 
-  const { history, saveToHistory, clearHistory, updateEditedImage, isAuthenticated: historyAuth } = useHistory();
+  const { history, saveToHistory, clearHistory, updateEditedImage, markAsDownloaded, updateUserRating, isAuthenticated: historyAuth } = useHistory();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Show upgrade modal when credit error occurs
@@ -230,8 +230,10 @@ export default function AppPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const imageToDownload = generatedImage || selectedHistoryImage?.imageUrl;
+    const imageId = feedbackImageId || selectedHistoryImage?.id;
+    
     if (imageToDownload) {
       const link = document.createElement("a");
       link.href = imageToDownload;
@@ -239,6 +241,13 @@ export default function AppPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Marquer l'image comme téléchargée (pour le showcase)
+      if (imageId) {
+        await markAsDownloaded({ id: imageId });
+      }
+      
+      toast.success("Image téléchargée !");
     }
   };
 

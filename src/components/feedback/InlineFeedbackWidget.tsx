@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface InlineFeedbackWidgetProps {
   imageId?: string;
-  onFeedbackSubmitted?: () => void;
+  onFeedbackSubmitted?: (rating: number) => void;
 }
 
 const EMOJI_RATINGS = [
@@ -42,6 +42,7 @@ export function InlineFeedbackWidget({ imageId, onFeedbackSubmitted }: InlineFee
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Soumettre le feedback général
       const { error } = await supabase.rpc('submit_generation_feedback' as never, {
         p_user_id: user?.id || null,
         p_image_id: imageId || null,
@@ -51,9 +52,21 @@ export function InlineFeedbackWidget({ imageId, onFeedbackSubmitted }: InlineFee
 
       if (error) throw error;
 
+      // Mettre à jour la note directement sur l'image pour la logique du showcase
+      if (imageId) {
+        const { error: updateError } = await supabase
+          .from("generated_images")
+          .update({ user_rating: rating } as any)
+          .eq("id", imageId);
+        
+        if (updateError) {
+          console.error("Error updating image rating:", updateError);
+        }
+      }
+
       setSubmitted(true);
       toast.success("Merci pour votre feedback !");
-      onFeedbackSubmitted?.();
+      onFeedbackSubmitted?.(rating);
     } catch (err) {
       console.error("Error submitting feedback:", err);
       toast.error("Erreur lors de l'envoi du feedback");

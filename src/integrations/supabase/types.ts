@@ -91,6 +91,7 @@ export type Database = {
           domain: string | null
           id: string
           image_url: string
+          is_downloaded: boolean | null
           is_free_plan: boolean | null
           is_showcase: boolean | null
           logo_positions: string[] | null
@@ -99,6 +100,7 @@ export type Database = {
           reference_image_url: string | null
           resolution: string
           user_id: string | null
+          user_rating: number | null
         }
         Insert: {
           aspect_ratio: string
@@ -108,6 +110,7 @@ export type Database = {
           domain?: string | null
           id?: string
           image_url: string
+          is_downloaded?: boolean | null
           is_free_plan?: boolean | null
           is_showcase?: boolean | null
           logo_positions?: string[] | null
@@ -116,6 +119,7 @@ export type Database = {
           reference_image_url?: string | null
           resolution: string
           user_id?: string | null
+          user_rating?: number | null
         }
         Update: {
           aspect_ratio?: string
@@ -125,6 +129,7 @@ export type Database = {
           domain?: string | null
           id?: string
           image_url?: string
+          is_downloaded?: boolean | null
           is_free_plan?: boolean | null
           is_showcase?: boolean | null
           logo_positions?: string[] | null
@@ -133,6 +138,7 @@ export type Database = {
           reference_image_url?: string | null
           resolution?: string
           user_id?: string | null
+          user_rating?: number | null
         }
         Relationships: []
       }

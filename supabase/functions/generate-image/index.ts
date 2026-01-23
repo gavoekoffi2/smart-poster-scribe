@@ -544,61 +544,111 @@ async function createTask(
 async function pollForResult(
   apiKey: string,
   taskId: string,
-  maxAttempts: number = 120, // Increased for 4K which takes longer (~22-30 seconds)
-  intervalMs: number = 2500  // Poll more frequently
+  resolution: string = "2K",
+  maxAttempts: number = 150, // Increased for 4K which takes much longer
+  baseIntervalMs: number = 2000  // Base polling interval
 ): Promise<string> {
-  console.log(`Polling for result, taskId: ${taskId}, maxAttempts: ${maxAttempts}`);
+  // Adjust timeouts based on resolution - 4K takes significantly longer
+  const resolutionConfig: Record<string, { maxAttempts: number; baseInterval: number }> = {
+    "1K": { maxAttempts: 80, baseInterval: 2000 },
+    "2K": { maxAttempts: 120, baseInterval: 2000 },
+    "4K": { maxAttempts: 200, baseInterval: 2500 }, // 4K needs more time (~8+ min timeout)
+  };
+  
+  const config = resolutionConfig[resolution] || resolutionConfig["2K"];
+  maxAttempts = config.maxAttempts;
+  baseIntervalMs = config.baseInterval;
+  
+  console.log(`Polling for result, taskId: ${taskId}, resolution: ${resolution}, maxAttempts: ${maxAttempts}`);
   const startTime = Date.now();
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 5;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const elapsedSec = Math.round((Date.now() - startTime) / 1000);
-    console.log(`Poll attempt ${attempt + 1}/${maxAttempts} (elapsed: ${elapsedSec}s)`);
+    
+    // Use exponential backoff for early attempts, then steady polling
+    const intervalMs = attempt < 10 
+      ? Math.min(baseIntervalMs * (1 + attempt * 0.2), 5000) 
+      : baseIntervalMs;
+    
+    console.log(`Poll attempt ${attempt + 1}/${maxAttempts} (elapsed: ${elapsedSec}s, interval: ${Math.round(intervalMs)}ms)`);
 
-    const response = await fetch(
-      `${KIE_API_BASE}/recordInfo?taskId=${taskId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      }
-    );
+    try {
+      const response = await fetch(
+        `${KIE_API_BASE}/recordInfo?taskId=${taskId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
+      );
 
-    if (!response.ok) {
-      console.error("Poll error:", response.status);
-      // Don't fail immediately on poll errors, retry
-      if (attempt < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      if (!response.ok) {
+        consecutiveErrors++;
+        console.error(`Poll error: ${response.status} (consecutive: ${consecutiveErrors})`);
+        
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          throw new Error(`Trop d'erreurs consécutives lors du polling: ${response.status}`);
+        }
+        
+        // Wait longer after errors
+        await new Promise((resolve) => setTimeout(resolve, intervalMs * 2));
         continue;
       }
-      throw new Error(`Erreur récupération statut: ${response.status}`);
-    }
+      
+      // Reset error counter on success
+      consecutiveErrors = 0;
 
-    const data = (await response.json()) as KieRecordInfoResponse;
-    console.log(`Poll response state: ${data.data?.state}, costTime: ${data.data?.costTime}ms`);
+      const data = (await response.json()) as KieRecordInfoResponse;
+      console.log(`Poll response state: ${data.data?.state}, costTime: ${data.data?.costTime}ms`);
 
-    if (data.data?.state === "success" && data.data.resultJson) {
-      const result = JSON.parse(data.data.resultJson) as KieResultJson;
-      if (result.resultUrls && result.resultUrls.length > 0) {
-        const totalTime = Math.round((Date.now() - startTime) / 1000);
-        console.log(`Generation successful in ${totalTime}s, URL: ${result.resultUrls[0]}`);
-        return result.resultUrls[0];
+      if (data.data?.state === "success" && data.data.resultJson) {
+        const result = JSON.parse(data.data.resultJson) as KieResultJson;
+        if (result.resultUrls && result.resultUrls.length > 0) {
+          const totalTime = Math.round((Date.now() - startTime) / 1000);
+          console.log(`Generation successful in ${totalTime}s, URL: ${result.resultUrls[0]}`);
+          return result.resultUrls[0];
+        }
+        throw new Error("Pas d'URL dans le résultat");
       }
-      throw new Error("Pas d'URL dans le résultat");
-    }
 
-    if (data.data?.state === "fail") {
-      const errorMsg = data.data.failMsg || data.data.failCode || "Erreur inconnue";
-      console.error(`Generation failed: ${errorMsg}`);
-      throw new Error(`Génération échouée: ${errorMsg}`);
-    }
+      if (data.data?.state === "fail") {
+        const errorMsg = data.data.failMsg || data.data.failCode || "Erreur inconnue";
+        console.error(`Generation failed: ${errorMsg}`);
+        
+        // Some failures are retryable
+        if (errorMsg.includes("timeout") || errorMsg.includes("rate limit") || errorMsg.includes("busy")) {
+          console.log("Retryable error detected, continuing polling...");
+          await new Promise((resolve) => setTimeout(resolve, intervalMs * 3));
+          continue;
+        }
+        
+        throw new Error(`Génération échouée: ${errorMsg}`);
+      }
 
-    // Still waiting or processing
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      // Still waiting or processing
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    } catch (fetchError) {
+      // Network errors should be retried
+      if (fetchError instanceof TypeError || (fetchError as any)?.name === "TypeError") {
+        consecutiveErrors++;
+        console.error(`Network error during poll (consecutive: ${consecutiveErrors}):`, fetchError);
+        
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          throw new Error("Erreur réseau persistante lors du polling");
+        }
+        
+        await new Promise((resolve) => setTimeout(resolve, intervalMs * 2));
+        continue;
+      }
+      throw fetchError;
+    }
   }
 
   const totalTime = Math.round((Date.now() - startTime) / 1000);
-  throw new Error(`Délai d'attente dépassé après ${totalTime} secondes`);
+  throw new Error(`Délai d'attente dépassé après ${totalTime} secondes. Réessayez avec une résolution inférieure si le problème persiste.`);
 }
 
 const MAX_PROMPT_LENGTH = 5000;
@@ -1138,7 +1188,7 @@ serve(async (req) => {
       outputFormat
     );
 
-    const resultUrl = await pollForResult(KIE_API_KEY, taskId);
+    const resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
 
     if (tempFilePaths.length > 0) {
       await cleanupTempImages(supabase, tempFilePaths);
