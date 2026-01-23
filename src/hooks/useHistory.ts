@@ -22,6 +22,15 @@ interface UpdateImageParams {
   imageUrl: string;
 }
 
+interface MarkDownloadedParams {
+  id: string;
+}
+
+interface UpdateRatingParams {
+  id: string;
+  rating: number;
+}
+
 export function useHistory() {
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -297,6 +306,48 @@ export function useHistory() {
     }
   }, [user]);
 
+  // Mark an image as downloaded (for showcase logic)
+  const markAsDownloaded = useCallback(async (params: MarkDownloadedParams): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("generated_images")
+        .update({ is_downloaded: true } as any)
+        .eq("id", params.id);
+
+      if (error) {
+        console.error("Error marking as downloaded:", error);
+        return false;
+      }
+
+      console.log("Image marked as downloaded:", params.id);
+      return true;
+    } catch (err) {
+      console.error("Error marking as downloaded:", err);
+      return false;
+    }
+  }, []);
+
+  // Update user rating for an image (for showcase logic)
+  const updateUserRating = useCallback(async (params: UpdateRatingParams): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("generated_images")
+        .update({ user_rating: params.rating } as any)
+        .eq("id", params.id);
+
+      if (error) {
+        console.error("Error updating user rating:", error);
+        return false;
+      }
+
+      console.log("Image rating updated:", params.id, "rating:", params.rating);
+      return true;
+    } catch (err) {
+      console.error("Error updating user rating:", err);
+      return false;
+    }
+  }, []);
+
   return {
     history,
     isLoading,
@@ -306,6 +357,8 @@ export function useHistory() {
     clearHistory,
     deleteFromHistory,
     updateEditedImage,
+    markAsDownloaded,
+    updateUserRating,
     refreshHistory: fetchHistory,
   };
 }
