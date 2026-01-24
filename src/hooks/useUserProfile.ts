@@ -18,6 +18,7 @@ export interface UserProfile {
   how_heard_about_us: string | null;
   expectations: string | null;
   onboarding_completed: boolean;
+  tutorial_completed: boolean;
   created_at: string;
   updated_at: string;
 }

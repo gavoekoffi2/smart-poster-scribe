@@ -5,8 +5,10 @@ import { useConversation } from "@/hooks/useConversation";
 import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useTutorial } from "@/hooks/useTutorial";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
+import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { DomainSelect } from "@/components/chat/DomainSelect";
 import { ColorPalette } from "@/components/chat/ColorPalette";
@@ -24,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
 import { GeneratedImage, AspectRatio } from "@/types/generation";
 import { toast } from "sonner";
-
 interface CreditError {
   error: string;
   message: string;
@@ -94,6 +95,7 @@ export default function AppPage() {
   
   const { profile } = useUserProfile();
   const { user, isAuthenticated, signOut } = useAuth();
+  const { shouldShowTutorial, isLoading: tutorialLoading, completeTutorial } = useTutorial(user?.id);
   const {
     messages,
     conversationState,
@@ -769,6 +771,13 @@ export default function AppPage() {
         creditError={creditError}
       />
 
+      {/* Tutorial Overlay */}
+      {shouldShowTutorial && user && !tutorialLoading && (
+        <TutorialOverlay
+          userId={user.id}
+          onComplete={completeTutorial}
+        />
+      )}
     </div>
   );
 }
