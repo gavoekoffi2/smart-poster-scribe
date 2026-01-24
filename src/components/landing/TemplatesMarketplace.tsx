@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowUpRight, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart } from "lucide-react";
+import { Sparkles, ArrowUpRight, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -205,22 +205,27 @@ export function TemplatesMarketplace() {
   const [loading, setLoading] = useState(true);
   const [selectedDomain, setSelectedDomain] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<ReferenceTemplate | null>(null);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
+  
   useEffect(() => {
     fetchTemplates();
-  }, [selectedDomain]);
+  }, [selectedDomain, showAllTemplates]);
+  
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("reference_templates").select("*").order("created_at", {
-        ascending: false
-      }).limit(24);
+      let query = supabase
+        .from("reference_templates")
+        .select("*")
+        .neq("design_category", "user-contributed") // Exclure les contributions utilisateurs
+        .order("created_at", { ascending: false })
+        .limit(showAllTemplates ? 50 : 12);
+      
       if (selectedDomain !== "all") {
         query = query.eq("domain", selectedDomain);
       }
-      const {
-        data,
-        error
-      } = await query;
+      
+      const { data, error } = await query;
       if (error) throw error;
       setTemplates(data || []);
     } catch (err) {
@@ -328,6 +333,28 @@ export function TemplatesMarketplace() {
               />
             ))}
           </div>}
+
+        {/* Bouton Voir plus / Voir moins */}
+        {templates.length >= 12 && (
+          <div className="text-center mt-8">
+            <button
+              onClick={() => setShowAllTemplates(!showAllTemplates)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-card/60 border border-border/40 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all duration-300"
+            >
+              {showAllTemplates ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  <span className="text-sm font-medium">Voir moins</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  <span className="text-sm font-medium">Découvrir plus de templates</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* CTA */}
         <div className="text-center mt-12">
