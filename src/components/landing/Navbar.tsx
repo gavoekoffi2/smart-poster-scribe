@@ -48,10 +48,10 @@ export function Navbar({ onGetStarted }: NavbarProps) {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/30 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
-                <LogoIcon size={40} />
+          <div className="relative">
+              <div className="absolute inset-0 bg-primary/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <div className="relative w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden border border-border/30">
+                <LogoIcon size={48} />
               </div>
             </div>
             <div className="hidden sm:block">
