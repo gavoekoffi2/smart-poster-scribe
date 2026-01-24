@@ -281,6 +281,7 @@ export type Database = {
           industry: string | null
           onboarding_completed: boolean | null
           phone: string | null
+          tutorial_completed: boolean | null
           updated_at: string
           user_id: string
           website: string | null
@@ -299,6 +300,7 @@ export type Database = {
           industry?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          tutorial_completed?: boolean | null
           updated_at?: string
           user_id: string
           website?: string | null
@@ -317,6 +319,7 @@ export type Database = {
           industry?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          tutorial_completed?: boolean | null
           updated_at?: string
           user_id?: string
           website?: string | null
