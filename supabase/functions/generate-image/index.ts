@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { detectDomainFromPrompt, buildExpertSkillsPrompt } from "./expertSkills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -305,6 +306,16 @@ function buildProfessionalPrompt({
     instructions.push("   - Compositions ennuyeuses et prévisibles");
     instructions.push("   - Manque de hiérarchie visuelle");
     instructions.push("   - Couleurs ternes ou mal assorties");
+    instructions.push("");
+    
+    // ====== INJECTION DES COMPÉTENCES GRAPHISTES EXPERTS ======
+    // Détection automatique du domaine à partir du prompt utilisateur
+    const detectedDomain = detectDomainFromPrompt(userPrompt);
+    console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+    
+    // Injection des compétences spécifiques au domaine
+    const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
+    instructions.push(expertSkillsPrompt);
     instructions.push("");
   }
 
