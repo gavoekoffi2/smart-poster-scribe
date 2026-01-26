@@ -1,109 +1,216 @@
 
-# Plan : Gestion des Templates et Chat Inspirations
+# Plan : Intégration des Compétences Graphistes Experts
 
-## Résumé du Problème
+## Objectif
 
-1. **Templates user-contributed affichés**: Les images de référence ajoutées par les utilisateurs sont actuellement visibles dans le marketplace, alors qu'elles ne devraient pas l'être.
-
-2. **Chat bloqué en mode "S'inspirer"**: Quand un utilisateur clique sur "S'inspirer" depuis un template, le chat ne permet pas d'écrire car l'étape `clone_gathering` n'est pas incluse dans la liste des étapes avec champ texte.
+Intégrer les 4 profils de compétences de graphistes professionnels dans le système de génération d'images pour créer des affiches de niveau agence internationale, en utilisant **uniquement les données fournies par l'utilisateur**.
 
 ---
 
-## Solution Proposée
+## Profils de Compétences à Intégrer
 
-### Partie 1 : Filtrer les templates affichés
-
-**Objectif**: Ne montrer que les templates officiels (créés par les designers) sur la page d'accueil et le marketplace, tout en gardant les contributions utilisateurs pour l'inspiration interne.
-
-**Modifications**:
-
-1. **TemplatesMarketplace.tsx** - Ajouter un filtre pour exclure les templates `user-contributed`:
-   - Modifier la requête pour filtrer `design_category != 'user-contributed'`
-   - Afficher seulement 12 templates par défaut
-   - Ajouter un bouton "Voir plus de templates" qui affiche tous les templates officiels
-
-2. **TemplatesMarquee.tsx** - Aucun changement nécessaire (utilise des images locales)
+| Profil | Domaines Applicables | Caractéristiques Principales |
+|--------|---------------------|------------------------------|
+| Corporate Modern | `formation`, `technology`, `business_services`, `education` | Composition 60/40, hiérarchie 3 niveaux, grille 12 colonnes |
+| Surréaliste/Photoréaliste | `event`, `music`, `sport`, `ecommerce` | 3-5 plans de profondeur, perspectives extrêmes, emojis 3D |
+| Spirituel/Religieux | `church` | Zones lumière divine, mix typographique obligatoire, palettes symboliques |
+| Restaurant/Food | `restaurant` | Plat = 40-60% surface, règle nombres impairs, effets vapeur/fraîcheur |
 
 ---
 
-### Partie 2 : Débloquer le chat en mode inspiration
+## Architecture Technique
 
-**Objectif**: Permettre aux utilisateurs d'interagir avec le chat après avoir sélectionné un template à cloner.
+### 1. Nouveau Fichier de Compétences
 
-**Modifications**:
-
-1. **AppPage.tsx (ligne 257)** - Ajouter `clone_gathering` à la liste des étapes avec champ texte:
-   ```
-   Avant:
-   const showTextInput = step === "greeting" || step === "details" || ...
-   
-   Après:
-   const showTextInput = step === "greeting" || step === "clone_gathering" || step === "details" || ...
-   ```
-
----
-
-### Partie 3 : Bouton "Découvrir plus" pour les templates
-
-**Objectif**: Permettre aux utilisateurs de voir plus de templates d'inspiration.
-
-**Modifications dans TemplatesMarketplace.tsx**:
-
-1. Afficher un nombre limité de templates par défaut (8-12)
-2. Ajouter un état `showAllTemplates` pour contrôler l'affichage
-3. Ajouter un bouton "Découvrir plus de templates" qui:
-   - Affiche tous les templates officiels quand cliqué
-   - Change en "Voir moins" après expansion
-
----
-
-## Fichiers à Modifier
-
-| Fichier | Modifications |
-|---------|---------------|
-| `src/pages/AppPage.tsx` | Ajouter `clone_gathering` dans `showTextInput` |
-| `src/components/landing/TemplatesMarketplace.tsx` | Filtrer user-contributed, ajouter bouton voir plus |
-
----
-
-## Détails Techniques
-
-### Modification 1 : AppPage.tsx
+Créer un fichier `expertSkills.ts` dans le dossier `supabase/functions/generate-image/` contenant:
 
 ```text
-Ligne 257 : Ajouter "clone_gathering" || après "greeting" ||
+supabase/functions/generate-image/
+├── index.ts           (fichier principal - à modifier)
+└── expertSkills.ts    (NOUVEAU - compétences graphistes)
 ```
 
-### Modification 2 : TemplatesMarketplace.tsx
+### 2. Structure du Fichier expertSkills.ts
 
-La requête actuelle:
-```typescript
-supabase.from("reference_templates")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(24)
+```text
+// Interface pour un profil de compétences
+ExpertSkillProfile {
+  id: string
+  name: string
+  applicableDomains: string[]
+  composition: string[]      // Règles de composition
+  typography: string[]       // Règles typographiques  
+  colorSystem: string[]      // Système colorimétrique
+  visualElements: string[]   // Éléments visuels spécifiques
+  effects: string[]          // Effets et finitions
+  principles: string[]       // Principes à respecter
+  errors: string[]           // Erreurs à éviter
+}
 ```
 
-Nouvelle requête:
-```typescript
-supabase.from("reference_templates")
-  .select("*")
-  .neq("design_category", "user-contributed") // Exclure contributions utilisateurs
-  .order("created_at", { ascending: false })
-  .limit(showAllTemplates ? 50 : 12) // Limiter à 12 par défaut
+### 3. Mapping Domaine → Profil
+
+```text
+church           → Spirituel/Religieux
+restaurant       → Restaurant/Food
+formation        → Corporate Modern
+education        → Corporate Modern
+technology       → Corporate Modern
+business_services→ Corporate Modern
+event            → Surréaliste/Photoréaliste
+music            → Surréaliste/Photoréaliste  
+sport            → Surréaliste/Photoréaliste
+ecommerce        → Surréaliste/Photoréaliste (+ éléments Corporate)
+fashion          → Surréaliste/Photoréaliste (à enrichir plus tard)
+realestate       → Corporate Modern (à enrichir plus tard)
+health           → Corporate Modern (à enrichir plus tard)
+other            → Corporate Modern (profil par défaut)
 ```
 
-### Ajout du bouton "Voir plus"
+---
 
-- État: `const [showAllTemplates, setShowAllTemplates] = useState(false)`
-- Bouton après la grille de templates avec icône ChevronDown/ChevronUp
-- Texte: "Découvrir plus de templates" / "Voir moins"
+## Modifications du Fichier index.ts
+
+### Point d'Insertion
+
+Dans la fonction `buildProfessionalPrompt`, section **"MODE CRÉATION LIBRE"** (lignes 206-309), ajouter l'injection des compétences expertes après les instructions générales.
+
+### Logique d'Intégration
+
+```text
+1. Détecter le domaine depuis userPrompt (analyse de mots-clés)
+2. Sélectionner le profil de compétences approprié
+3. Injecter les instructions condensées dans le prompt
+4. Combiner avec les templates de la base de données si disponibles
+```
+
+### Nouvelle Section dans le Prompt
+
+```text
+╔═══════════════════════════════════════════════════════════════════════╗
+║  🎓 COMPÉTENCES GRAPHISTE EXPERT - [NOM DU PROFIL]                    ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+[Instructions condensées du profil sélectionné]
+- Règles de composition
+- Système typographique  
+- Palette colorimétrique
+- Effets visuels spécifiques
+- Erreurs à éviter
+```
+
+---
+
+## Détails des 4 Profils
+
+### Profil 1 : Corporate Modern
+
+**Applicable à:** Formation, Technologie, Éducation, Services Entreprises
+
+**Règles clés condensées:**
+- Composition asymétrique 60/40 ou 70/30
+- Hiérarchie visuelle 3 niveaux (Primaire 25%, Secondaire 18%, Tertiaire 12%)
+- Palette 60-30-10 (dominante-accent-highlight)
+- Layering: arrière-plan texturé (10-20% opacité) → formes colorées → sujet + texte
+- Typographie max 2-3 familles, titre en Ultra-bold
+- Marges minimum 5%, respiration 30-40% espace vide
+- Ombres 20-30% opacité, coins arrondis 15-25px
+
+### Profil 2 : Surréaliste/Photoréaliste
+
+**Applicable à:** Événements, Musique, Sport, E-commerce
+
+**Règles clés condensées:**
+- 3-5 plans de profondeur avec flou progressif
+- Perspectives extrêmes (15-45° d'angle)
+- Scènes impossibles mais physiquement crédibles
+- Typographie massive (70-120pt), multi-color inline
+- Palette haute saturation (70-100%)
+- Emojis 3D photoréalistes avec ombres cohérentes
+- Motion blur directionnel sur mouvements
+- Color grading unifié final
+
+### Profil 3 : Spirituel/Religieux
+
+**Applicable à:** Église, Cultes, Événements spirituels
+
+**Règles clés condensées:**
+- Zones: Titre (40-50% haut), Portrait (30-40% droite), Infos (20-25% bas)
+- Mix typographique obligatoire: Script + Sans-serif Bold + Serif
+- Palettes symboliques: Royauté Divine (Bleu/Or), Feu de l'Esprit (Rouge/Orange)
+- Effets lumière divine: god rays 15-30°, halos, particules bokeh
+- Portrait prédicateur: tiers droit, 35-45% hauteur, rim light
+- Bannières 3D texturées (satin/tissu)
+- Overlay sombre 40-60% pour contraste
+
+### Profil 4 : Restaurant/Food
+
+**Applicable à:** Restaurant, Food
+
+**Règles clés condensées:**
+- Plat principal: 40-60% de la surface, 100% net
+- Règle des nombres impairs (1, 3, 5 éléments)
+- Profondeur: Plat net → Ingrédients 30-50% flou → Ambiance 60-80% flou
+- Prix très visible: 28-40pt bold dans badges colorés
+- Effets: vapeur 15-30% opacité, gouttes de fraîcheur
+- Éclairage 45° soft light
+- Saturation +10-20% sur aliments
+- 30-40% espace négatif obligatoire
+
+---
+
+## Fichiers à Créer/Modifier
+
+| Fichier | Action | Description |
+|---------|--------|-------------|
+| `supabase/functions/generate-image/expertSkills.ts` | CRÉER | Définitions des 4 profils de compétences |
+| `supabase/functions/generate-image/index.ts` | MODIFIER | Import + injection des compétences dans buildProfessionalPrompt |
+
+---
+
+## Fonction d'Injection
+
+```text
+function getExpertSkillsForDomain(domain: string): string[]
+
+1. Mapper le domaine au profil approprié
+2. Retourner les instructions condensées
+3. Si domaine inconnu → utiliser Corporate Modern par défaut
+```
+
+---
+
+## Détection du Domaine
+
+Améliorer la détection en analysant le `userPrompt` pour des mots-clés:
+
+```text
+Église/Church: "église", "culte", "pasteur", "prière", "jeûne", "chrétien"
+Restaurant: "restaurant", "menu", "plat", "cuisine", "chef", "food"
+Formation: "formation", "séminaire", "atelier", "cours", "certification"
+Événement: "concert", "festival", "show", "soirée", "gala"
+```
 
 ---
 
 ## Résultat Attendu
 
-1. ✅ Les templates contributeurs restent en base de données mais ne s'affichent plus publiquement
-2. ✅ Seuls les meilleurs templates officiels sont visibles
-3. ✅ Bouton pour voir plus de templates disponible
-4. ✅ Le chat fonctionne quand on clique sur "S'inspirer" - l'utilisateur peut répondre aux questions de l'IA
+Quand un utilisateur crée une affiche sans template de référence:
+
+1. Le système détecte le domaine (ex: "église")
+2. Charge le profil "Spirituel/Religieux"
+3. Injecte les compétences expertes dans le prompt
+4. L'IA génère une affiche avec:
+   - Structure zones correcte (titre haut, portrait droite)
+   - Mix typographique (script + bold)
+   - Effets lumière divine
+   - Palette or/bleu royal
+   - **Uniquement les données fournies par l'utilisateur**
+
+---
+
+## Prochaines Étapes (Après Validation)
+
+1. Ajouter les profils pour: Mode/Fashion, Immobilier, Santé
+2. Créer un système de "blend" entre profils pour domaines hybrides
+3. Permettre aux utilisateurs de choisir un style parmi plusieurs options
