@@ -1,0 +1,490 @@
+// ============================================================================
+// COMPÉTENCES GRAPHISTES EXPERTS - PROFILES DE DESIGN PROFESSIONNEL
+// ============================================================================
+// Ces profils définissent les règles de design pour chaque domaine d'activité
+// Utilisés par buildProfessionalPrompt en mode création libre (sans template)
+// ============================================================================
+
+export interface ExpertSkillProfile {
+  id: string;
+  name: string;
+  applicableDomains: string[];
+  composition: string[];
+  typography: string[];
+  colorSystem: string[];
+  visualElements: string[];
+  effects: string[];
+  principles: string[];
+  errors: string[];
+}
+
+// ============================================================================
+// PROFIL 1: CORPORATE MODERN
+// Applicable à: Formation, Technologie, Éducation, Services Entreprises
+// ============================================================================
+const CORPORATE_MODERN: ExpertSkillProfile = {
+  id: "corporate_modern",
+  name: "Corporate Modern",
+  applicableDomains: ["formation", "technology", "education", "business_services", "realestate", "health", "other"],
+  composition: [
+    "Composition asymétrique 60/40 ou 70/30 (jamais centré)",
+    "Grille invisible de 12 colonnes pour alignement",
+    "Hiérarchie 3 niveaux: Primaire (25-30% surface), Secondaire (18-22%), Tertiaire (12-15%)",
+    "Layering: Arrière-plan texturé (10-20% opacité) → Formes colorées → Sujet + Texte",
+    "Marges minimum 5% sur tous les côtés",
+    "30-40% d'espace vide obligatoire pour respiration",
+    "Point focal principal positionné sur intersection des tiers",
+  ],
+  typography: [
+    "Maximum 2-3 familles de polices",
+    "Titre: Sans-serif ULTRA-BOLD (Montserrat Black, Poppins ExtraBold)",
+    "Sous-titre: Graisse medium, taille 40-50% du titre",
+    "Corps: Regular, haute lisibilité, interligne 1.4-1.6",
+    "Contraste typographique fort: Très gras + Très fin",
+    "Espacement lettres titre: +2 à +5% pour impact",
+    "Jamais plus de 3 tailles de police différentes",
+  ],
+  colorSystem: [
+    "Ratio 60-30-10: Dominante (60%), Accent (30%), Highlight (10%)",
+    "Palette corporate: Bleu (#0066CC à #004080), Vert (#00875A), Gris (#333-#666)",
+    "Tons professionnels et sobres, jamais criards",
+    "Dégradés subtils (pas plus de 2 couleurs)",
+    "Contrastes élevés pour lisibilité (ratio 4.5:1 minimum)",
+    "Blanc ou crème pour espaces négatifs",
+  ],
+  visualElements: [
+    "Formes géométriques simples (cercles, rectangles arrondis)",
+    "Icônes flat design avec style cohérent",
+    "Photos professionnelles détourées proprement",
+    "Cadres et bordures fines (1-2px)",
+    "Badges et labels rectangulaires arrondis (15-25px radius)",
+    "Lignes de séparation subtiles",
+  ],
+  effects: [
+    "Ombres portées douces: 20-30% opacité, flou 15-25px",
+    "Coins arrondis uniformes: 15-25px partout",
+    "Overlay de couleur sur photos: 5-15% opacité",
+    "Pas d'effets 3D exagérés",
+    "Grain photographique subtil: 3-5% opacité",
+    "Vignettage léger: 10-15% sur les bords",
+  ],
+  principles: [
+    "Crédibilité et professionnalisme avant tout",
+    "Clarté du message en moins de 3 secondes",
+    "Équilibre entre espace vide et contenu",
+    "Cohérence visuelle absolue entre tous les éléments",
+    "Hiérarchie d'information immédiatement compréhensible",
+  ],
+  errors: [
+    "Trop de couleurs (max 3-4)",
+    "Typographie décontractée ou ludique",
+    "Effets néon ou brillants",
+    "Arrière-plans trop chargés",
+    "Manque d'espace blanc",
+    "Photos de mauvaise qualité",
+    "Alignements approximatifs",
+  ],
+};
+
+// ============================================================================
+// PROFIL 2: SURRÉALISTE / PHOTORÉALISTE
+// Applicable à: Événements, Musique, Sport, E-commerce
+// ============================================================================
+const SURREALIST_PHOTOREALISTIC: ExpertSkillProfile = {
+  id: "surrealist_photorealistic",
+  name: "Surréaliste / Photoréaliste",
+  applicableDomains: ["event", "music", "sport", "ecommerce", "fashion"],
+  composition: [
+    "3-5 plans de profondeur avec flou progressif (premier plan net → arrière-plan flouté 60-80%)",
+    "Perspectives dynamiques: angle 15-45° pour impact dramatique",
+    "Personnages/produits en avant-plan, éléments 3D flottants autour",
+    "Scènes impossibles mais physiquement crédibles",
+    "Superposition audacieuse de plans avec transparences",
+    "Zone héro centrale occupant 50-70% de la surface",
+    "Équilibre dynamique asymétrique",
+  ],
+  typography: [
+    "Typographie MASSIVE: 70-120pt pour titres principaux",
+    "Multi-color inline: différentes couleurs dans le même mot",
+    "Effets 3D prononcés sur titres: extrusion, ombres portées fortes",
+    "Contours lumineux (stroke) contrastants",
+    "Texte intégré dans la scène (derrière/devant personnages)",
+    "Dégradés métalliques ou néon dans les lettres",
+    "Distorsion légère du texte pour dynamisme (perspective)",
+  ],
+  colorSystem: [
+    "Haute saturation: 70-100% sur couleurs principales",
+    "Palette énergique: Magenta (#FF00FF), Cyan (#00FFFF), Orange vif (#FF6600), Jaune (#FFFF00)",
+    "Dégradés audacieux multi-couleurs (sunset, neon, holographique)",
+    "Color grading unifié sur toute l'image",
+    "Contraste extrême: noirs profonds + couleurs vibrantes",
+    "Touches de blanc pur pour highlights",
+  ],
+  visualElements: [
+    "Emojis et objets 3D photoréalistes avec ombres cohérentes",
+    "Particules flottantes: confettis, étoiles, étincelles",
+    "Éléments en lévitation autour du sujet principal",
+    "Textures métalliques, chrome, holographiques",
+    "Produits/personnages détourés avec reflets",
+    "Formes géométriques 3D (sphères, cubes, tores)",
+  ],
+  effects: [
+    "Motion blur directionnel sur éléments en mouvement",
+    "Lens flares et reflets lumineux prononcés",
+    "Glow/lueur néon autour des éléments clés (10-20px, 60-80% opacité)",
+    "Réflexions au sol ou surfaces brillantes",
+    "Bokeh prononcé en arrière-plan",
+    "Effets de lumière volumétrique (god rays)",
+    "Color grading cinématique final",
+  ],
+  principles: [
+    "Impact visuel immédiat et mémorable",
+    "Énergie et dynamisme dans chaque élément",
+    "Cohérence de la source lumineuse malgré le surréalisme",
+    "Le regard doit être attiré vers le centre/sujet",
+    "Créer l'émerveillement et l'excitation",
+  ],
+  errors: [
+    "Scènes plates sans profondeur",
+    "Éclairage incohérent entre éléments",
+    "Objets flottants sans ombres",
+    "Couleurs désaturées ou ternes",
+    "Manque de contraste",
+    "Typographie basique sans effets",
+    "Composition statique et prévisible",
+  ],
+};
+
+// ============================================================================
+// PROFIL 3: SPIRITUEL / RELIGIEUX
+// Applicable à: Église, Cultes, Événements spirituels
+// ============================================================================
+const SPIRITUAL_RELIGIOUS: ExpertSkillProfile = {
+  id: "spiritual_religious",
+  name: "Spirituel / Religieux",
+  applicableDomains: ["church"],
+  composition: [
+    "Division en zones: Titre (40-50% haut), Portrait (30-40% côté droit), Informations (20-25% bas)",
+    "Portrait prédicateur/orateur: tiers droit, 35-45% de la hauteur",
+    "Arrière-plan: silhouettes floues de fidèles (mains levées, prière)",
+    "Overlay sombre 40-60% opacité pour contraste texte",
+    "Profondeur: Fond flouté → Overlay → Texte → Portrait net",
+    "Source lumineuse principale en haut (lumière divine descendante)",
+  ],
+  typography: [
+    "MIX TYPOGRAPHIQUE OBLIGATOIRE: Script + Sans-serif Bold + Serif",
+    "Mots spirituels clés en police Script/Calligraphique (Culte, Grâce, Gloire, Saint-Esprit)",
+    "Informations principales en Sans-serif Ultra-Bold",
+    "Versets bibliques en Serif élégant + italique",
+    "Titre principal: 50-80pt avec effets dorés",
+    "Tailles: Titre 50-80pt, Sous-titre 24-36pt, Prédicateur 18-24pt, Infos 16-20pt",
+    "Glow doré sur titres importants: 2-4px, couleur or, opacité 60-80%",
+  ],
+  colorSystem: [
+    "PALETTE ROYAUTÉ DIVINE: Bleu royal (#0033AA) + Or (#FFD700) + Blanc",
+    "PALETTE FEU DE L'ESPRIT: Rouge (#CC3300) + Orange (#FF6600) + Jaune (#FFCC00)",
+    "PALETTE GLOIRE CÉLESTE: Brun/Sépia (#5C4033) + Or + Crème (#FFF8DC)",
+    "PALETTE RÉVÉLATION: Vert foncé (#1A4D2E) + Or + Blanc",
+    "Dégradés verticaux: Haut lumineux → Bas sombre",
+    "Overlay de teinte chaude (or, orange) à 15-25% sur toute l'image",
+  ],
+  visualElements: [
+    "Rayons de lumière divine (god rays): angle 15-30°, opacité 20-35%",
+    "Halos lumineux autour des titres ou portraits",
+    "Particules lumineuses (bokeh, poussière dorée)",
+    "Bannières 3D texturées (effet satin/tissu) pour titres",
+    "Cercle ou forme arrondie colorée derrière le portrait",
+    "Lens flares subtils en haut à gauche/droite",
+    "Ornements décoratifs: lignes dorées, cadres",
+  ],
+  effects: [
+    "Rim light (contour lumineux) autour du portrait sur fond sombre",
+    "Ombres portées prononcées: Distance 5-10px, Angle 135°, Flou 8-15px",
+    "Underlines/soulignements décoratifs sous mots clés",
+    "Flou gaussien élevé (40-80%) sur arrière-plan",
+    "Ombres sous bannières 3D: opacité 40-60%",
+    "Vignettage: assombrissement des bords 15-25%",
+    "Grain photographique subtil: 3-5% pour unité",
+  ],
+  principles: [
+    "Dignité et respect: inspirer la révérence",
+    "Clarté du message spirituel immédiate",
+    "Atmosphère appropriée: solennelle (cultes), puissante (jeûnes), joyeuse (célébrations)",
+    "Symbolisme intentionnel: chaque couleur a une signification",
+    "Professionnalisme: crédibilité du ministère",
+    "Informations pratiques (date, heure, lieu) très visibles",
+  ],
+  errors: [
+    "Arrière-plans trop chargés distrayant du message",
+    "Portraits de mauvaise qualité ou mal détourés",
+    "Plus de 3 couleurs principales",
+    "Textes illisibles sur fonds complexes",
+    "Date/heure/lieu peu visibles",
+    "Typographie trop décontractée",
+    "Symboles religieux mal placés ou disproportionnés",
+    "Manque de hiérarchie entre titre et détails",
+  ],
+};
+
+// ============================================================================
+// PROFIL 4: RESTAURANT / FOOD
+// Applicable à: Restaurant, Food, Traiteur
+// ============================================================================
+const RESTAURANT_FOOD: ExpertSkillProfile = {
+  id: "restaurant_food",
+  name: "Restaurant / Food",
+  applicableDomains: ["restaurant"],
+  composition: [
+    "Plat principal: 40-60% de la surface, 100% net (jamais flouté)",
+    "Positionnement plat: légèrement décentré (règle des tiers)",
+    "RÈGLE DES NOMBRES IMPAIRS: 1, 3 ou 5 éléments visibles (jamais 2, 4, 6)",
+    "30-40% d'espace négatif obligatoire pour respiration",
+    "Profondeur: Plat net → Ingrédients 30-50% flou → Ambiance 60-80% flou",
+    "Zone texte/offre: 25-35%, Zone informations: 10-15% (footer)",
+    "Composition en Z ou F pour parcours visuel naturel",
+  ],
+  typography: [
+    "Titres offres: Sans-serif Bold ou Script élégant selon standing",
+    "Noms de plats: Serif classique OU Script moderne",
+    "PRIX TRÈS VISIBLE: 28-40pt bold, dans badges colorés distincts",
+    "Descriptions: Sans-serif regular, 14-18pt, max 2-3 lignes",
+    "Contact: 12-16pt, numéro téléphone 1.5-2x plus grand",
+    "Symboles: % pour réductions, ★ pour spécialités",
+    "Espacement généreux entre plat et prix (minimum 15px)",
+  ],
+  colorSystem: [
+    "Couleurs chaudes pour stimuler appétit: Orange, Rouge, Jaune",
+    "Fond: 50-60% neutre (ne pas distraire du plat)",
+    "Plat: 30-40% (couleurs naturelles de la nourriture)",
+    "Accents/CTA: 10-15% couleur vive de la marque",
+    "Saturation +10-20% sur aliments (look appétissant)",
+    "Température: légèrement chaude (+5 à +15) pour plats chauds",
+    "Couleurs froides uniquement pour boissons/desserts froids",
+  ],
+  visualElements: [
+    "Ingrédients flottants en arrière-plan (tomates, épices, herbes)",
+    "Effets vapeur sur plats chauds: 15-30% opacité, lignes courbes montantes",
+    "Gouttes de fraîcheur sur fruits/légumes/boissons: 2-8px, opacité 60-90%",
+    "Textures de surface: bois, marbre, ardoise, tissu (20-40% opacité)",
+    "Props contextuels: couverts, ingrédients bruts",
+    "Badges promotionnels: cercles, étoiles, rubans diagonaux (15-20% largeur)",
+  ],
+  effects: [
+    "Éclairage 45° soft light (simule lumière naturelle fenêtre)",
+    "Ombres douces sous plat: 20-40% opacité, flou 20-30px",
+    "Profondeur de champ réduite (f/2.8 à f/5.6 simulée)",
+    "Vibrance +15-25% sans exagération",
+    "Toutes ombres même direction (135° standard)",
+    "Condensation sur verres: flou + opacité 40-60%",
+    "Rotation badges promotionnels: -15° à -25° pour dynamisme",
+  ],
+  principles: [
+    "LE PLAT EST LA STAR: tout sert à le mettre en valeur",
+    "Appétit visuel: la photo doit donner faim immédiatement",
+    "Prix TOUJOURS très visible, jamais caché",
+    "Simplicité: chaque élément a un rôle défini",
+    "Qualité d'image élevée: pas de photos floues",
+    "Style adapté au standing (fast-food vs gastronomique)",
+  ],
+  errors: [
+    "Photos de plats floues ou mal éclairées",
+    "Trop d'éléments (max 5-7 objets visibles)",
+    "Prix illisibles ou cachés",
+    "Fond qui concurrence le plat (trop coloré ou net)",
+    "Couleurs non-naturelles sur la nourriture",
+    "Manque d'espace négatif (composition étouffée)",
+    "Informations de contact invisibles",
+    "Plat flouté ou en arrière-plan",
+  ],
+};
+
+// ============================================================================
+// COLLECTION DE TOUS LES PROFILS
+// ============================================================================
+export const EXPERT_SKILL_PROFILES: ExpertSkillProfile[] = [
+  CORPORATE_MODERN,
+  SURREALIST_PHOTOREALISTIC,
+  SPIRITUAL_RELIGIOUS,
+  RESTAURANT_FOOD,
+];
+
+// ============================================================================
+// MAPPING DOMAINE → PROFIL
+// ============================================================================
+const DOMAIN_TO_PROFILE_MAP: Record<string, string> = {
+  // Spirituel/Religieux
+  church: "spiritual_religious",
+  
+  // Restaurant/Food
+  restaurant: "restaurant_food",
+  
+  // Corporate Modern
+  formation: "corporate_modern",
+  education: "corporate_modern",
+  technology: "corporate_modern",
+  business_services: "corporate_modern",
+  realestate: "corporate_modern",
+  health: "corporate_modern",
+  service: "corporate_modern",
+  other: "corporate_modern",
+  
+  // Surréaliste/Photoréaliste
+  event: "surrealist_photorealistic",
+  music: "surrealist_photorealistic",
+  sport: "surrealist_photorealistic",
+  ecommerce: "surrealist_photorealistic",
+  fashion: "surrealist_photorealistic",
+};
+
+// ============================================================================
+// DÉTECTION DE DOMAINE PAR MOTS-CLÉS
+// ============================================================================
+const DOMAIN_KEYWORDS: Record<string, string[]> = {
+  church: [
+    "église", "eglise", "culte", "pasteur", "évêque", "eveque", "prophète", "prophete",
+    "prière", "priere", "jeûne", "jeune", "veillée", "veillee", "chrétien", "chretien",
+    "louange", "adoration", "gospel", "worship", "crusade", "convention", "revival",
+    "saint-esprit", "saint esprit", "dieu", "seigneur", "biblique", "temple", "tabernacle",
+    "dimanche", "nuit de prière", "intercession", "onction", "ministère", "ministere"
+  ],
+  restaurant: [
+    "restaurant", "menu", "plat", "cuisine", "chef", "manger", "repas", "déjeuner", "dejeuner",
+    "dîner", "diner", "buffet", "traiteur", "food", "gastronomie", "recette", "saveur",
+    "délice", "delice", "gourmand", "culinaire", "table", "réservation", "reservation",
+    "livraison", "commande", "prix", "promotion", "offre", "promo", "réduction", "reduction"
+  ],
+  formation: [
+    "formation", "séminaire", "seminaire", "atelier", "workshop", "cours", "coaching",
+    "masterclass", "webinaire", "conférence", "conference", "certification", "diplôme",
+    "diplome", "apprentissage", "compétence", "competence", "professionnel", "carrière",
+    "carriere", "emploi", "entrepreneuriat", "business", "management", "leadership"
+  ],
+  event: [
+    "événement", "evenement", "concert", "soirée", "soiree", "fête", "fete", "célébration",
+    "celebration", "show", "spectacle", "gala", "festival", "cérémonie", "ceremonie",
+    "inauguration", "anniversaire", "mariage", "fiançailles", "fiancailles", "party"
+  ],
+  music: [
+    "musique", "music", "album", "single", "artiste", "chanteur", "chanteuse", "rap",
+    "afrobeat", "hip-hop", "hip hop", "rnb", "r&b", "jazz", "reggae", "coupé-décalé",
+    "coupe decale", "afropop", "ndombolo", "rumba", "makossa"
+  ],
+  sport: [
+    "sport", "football", "basket", "basketball", "match", "tournoi", "compétition",
+    "competition", "athlète", "athlete", "équipe", "equipe", "marathon", "course",
+    "natation", "tennis", "boxe", "arts martiaux", "fitness", "musculation"
+  ],
+  ecommerce: [
+    "promo", "promotion", "solde", "réduction", "reduction", "vente", "achat", "boutique",
+    "shop", "produit", "article", "offre", "prix", "livraison", "commande", "panier",
+    "paiement", "commerce", "magasin", "stock", "nouveau", "nouveauté"
+  ],
+  fashion: [
+    "mode", "fashion", "collection", "vêtement", "vetement", "style", "couture", "défilé",
+    "defile", "boutique", "prêt-à-porter", "pret a porter", "accessoire", "bijou",
+    "tendance", "élégance", "elegance", "chic", "glamour"
+  ],
+  technology: [
+    "technologie", "tech", "digital", "numérique", "numerique", "application", "app",
+    "startup", "innovation", "hackathon", "développement", "developpement", "code",
+    "programmation", "intelligence artificielle", "ia", "ai", "data", "cloud"
+  ],
+  health: [
+    "santé", "sante", "health", "médical", "medical", "hôpital", "hopital", "clinique",
+    "consultation", "bien-être", "bien etre", "fitness", "pharmacie", "docteur", "médecin",
+    "medecin", "soins", "traitement", "thérapie", "therapie"
+  ],
+  realestate: [
+    "immobilier", "appartement", "maison", "terrain", "location", "vente", "agence",
+    "propriété", "propriete", "logement", "résidence", "residence", "villa", "duplex",
+    "studio", "chambre", "loyer", "achat", "investissement"
+  ],
+  education: [
+    "éducation", "education", "école", "ecole", "université", "universite", "étudiant",
+    "etudiant", "enseignement", "professeur", "cours", "examen", "diplôme", "diplome",
+    "baccalauréat", "baccalaureat", "licence", "master", "doctorat"
+  ],
+};
+
+/**
+ * Détecte le domaine à partir du contenu du prompt
+ */
+export function detectDomainFromPrompt(prompt: string): string {
+  const promptLower = prompt.toLowerCase();
+  
+  let bestMatch = { domain: "other", score: 0 };
+  
+  for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
+    let score = 0;
+    for (const keyword of keywords) {
+      if (promptLower.includes(keyword)) {
+        score += 1;
+        // Bonus pour correspondance exacte de mot
+        const regex = new RegExp(`\\b${keyword}\\b`, "i");
+        if (regex.test(promptLower)) {
+          score += 0.5;
+        }
+      }
+    }
+    if (score > bestMatch.score) {
+      bestMatch = { domain, score };
+    }
+  }
+  
+  console.log(`Domain detection: "${bestMatch.domain}" with score ${bestMatch.score}`);
+  return bestMatch.domain;
+}
+
+/**
+ * Retourne le profil de compétences pour un domaine donné
+ */
+export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
+  const profileId = DOMAIN_TO_PROFILE_MAP[domain] || "corporate_modern";
+  const profile = EXPERT_SKILL_PROFILES.find(p => p.id === profileId);
+  return profile || CORPORATE_MODERN;
+}
+
+/**
+ * Génère les instructions condensées pour injection dans le prompt
+ */
+export function buildExpertSkillsPrompt(domain: string): string {
+  const profile = getExpertProfileForDomain(domain);
+  
+  const lines: string[] = [];
+  
+  lines.push("");
+  lines.push("╔═══════════════════════════════════════════════════════════════════════╗");
+  lines.push(`║  🎓 COMPÉTENCES GRAPHISTE EXPERT - ${profile.name.toUpperCase().padEnd(30)}  ║`);
+  lines.push("╚═══════════════════════════════════════════════════════════════════════╝");
+  lines.push("");
+  
+  lines.push("━━━ COMPOSITION ━━━");
+  profile.composition.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ TYPOGRAPHIE ━━━");
+  profile.typography.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ SYSTÈME COLORIMÉTRIQUE ━━━");
+  profile.colorSystem.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ ÉLÉMENTS VISUELS ━━━");
+  profile.visualElements.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ EFFETS & FINITIONS ━━━");
+  profile.effects.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ PRINCIPES À RESPECTER ━━━");
+  profile.principles.forEach(rule => lines.push(`   ✓ ${rule}`));
+  lines.push("");
+  
+  lines.push("━━━ ERREURS À ÉVITER ABSOLUMENT ━━━");
+  profile.errors.forEach(rule => lines.push(`   ❌ ${rule}`));
+  lines.push("");
+  
+  return lines.join("\n");
+}
