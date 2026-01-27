@@ -197,6 +197,102 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
       }
     ]
   },
+
+  // YouTube - flux complet pour miniatures virales
+  youtube: {
+    domain: "youtube",
+    label: "Miniature YouTube",
+    templateRequirements: ["face_image", "video_title"],
+    questions: [
+      // Q1: Titre de la vidéo (OBLIGATOIRE)
+      {
+        id: "video_title",
+        question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à choisir les meilleurs éléments visuels et le texte percutant.",
+        type: "text",
+        required: true,
+        priority: 1,
+        followUp: {
+          condition: "any",
+          nextStep: "title_collected",
+          textInput: {
+            label: "Titre de la vidéo",
+            placeholder: "Ex: Comment j'ai gagné 10 000€ en 30 jours",
+            multiline: false
+          }
+        }
+      },
+      // Q2: Photo propre ou générée ?
+      {
+        id: "has_own_image",
+        question: "📸 **Voulez-vous utiliser votre propre photo pour la miniature ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez une photo de vous (idéalement gros plan avec expression marquée)\n• **Non** : L'IA générera un visage adapté à votre contenu",
+        type: "boolean",
+        required: true,
+        priority: 2,
+        followUp: {
+          condition: "yes",
+          nextStep: "own_image",
+          imageUpload: {
+            multiple: false,
+            label: "Votre photo",
+            hint: "Envoyez une photo de vous (idéalement en gros plan avec une expression marquée)"
+          }
+        }
+      },
+      // Q3: Origine (si génération IA)
+      {
+        id: "subject_ethnicity",
+        question: "🌍 **Quelle origine pour la personne à générer ?**\n\n• Africain(e)\n• Caucasien(ne)\n• Asiatique\n• Autre",
+        type: "choice",
+        choices: ["Africain(e)", "Caucasien(ne)", "Asiatique", "Autre"],
+        required: false,
+        priority: 3
+      },
+      // Q4: Âge (si génération IA)
+      {
+        id: "subject_age",
+        question: "👤 **Quel âge approximatif pour la personne ?**\n\n• Jeune (18-30 ans)\n• Adulte (30-50 ans)\n• Senior (50+ ans)",
+        type: "choice",
+        choices: ["Jeune (18-30 ans)", "Adulte (30-50 ans)", "Senior (50+ ans)"],
+        required: false,
+        priority: 4
+      },
+      // Q5: Expression faciale
+      {
+        id: "desired_expression",
+        question: "😮 **Quelle expression faciale souhaitez-vous ?**\n\n• 😮 Surprise / Choc (le plus viral)\n• 🤔 Concentration\n• 😊 Joie / Excitation\n• 😎 Confiance",
+        type: "choice",
+        choices: ["Surprise / Choc", "Concentration", "Joie / Excitation", "Confiance"],
+        required: false,
+        priority: 5
+      },
+      // Q6: Logo
+      {
+        id: "has_logo",
+        question: "🏷️ **Voulez-vous ajouter votre logo sur la miniature ?**\n\nBeaucoup de créateurs ajoutent leur logo pour renforcer leur marque personnelle.",
+        type: "boolean",
+        required: false,
+        priority: 6,
+        followUp: {
+          condition: "yes",
+          nextStep: "youtube_logo",
+          imageUpload: {
+            multiple: true,
+            label: "Vos logos",
+            hint: "Vous pouvez ajouter plusieurs logos"
+          }
+        }
+      },
+      // Q7: Position du logo
+      {
+        id: "logo_position",
+        question: "📍 **Où souhaitez-vous placer le logo ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre\n↙ Bas gauche | ↘ Bas droite\n\n💡 Conseil : Le coin inférieur droit est le plus populaire car il n'interfère pas avec le visage.",
+        type: "choice",
+        choices: ["Haut gauche", "Haut droite", "Centre", "Bas gauche", "Bas droite"],
+        required: false,
+        priority: 7
+      }
+    ]
+  },
 };
 
 // Fonction pour obtenir les questions d'un domaine (triées par priorité)

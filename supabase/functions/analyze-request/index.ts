@@ -29,6 +29,7 @@ const MAX_TEXT_LENGTH = 5000;
 
 // ============ HEURISTIC FALLBACK (when AI gateway is temporarily unavailable) ============
 const DOMAIN_KEYWORDS: Array<{ domain: string; keywords: string[] }> = [
+  { domain: "youtube", keywords: ["miniature", "thumbnail", "youtube", "vignette", "chaîne", "chaine", "vidéo youtube", "video youtube", "youtuber", "youtubeur", "créateur de contenu", "createur de contenu", "abonnés", "abonnes", "vues", "viral", "clickbait", "tutoriel youtube", "tuto youtube", "vlog", "unboxing", "storytime", "reaction", "réaction"] },
   { domain: "church", keywords: ["église", "eglise", "culte", "pasteur", "prière", "priere", "gospel", "veillée", "veillee"] },
   { domain: "restaurant", keywords: ["restaurant", "menu", "plat", "cuisine", "maquis", "bar", "café", "cafe"] },
   { domain: "formation", keywords: ["formation", "atelier", "workshop", "masterclass", "coaching", "webinaire", "séminaire", "seminaire"] },
@@ -163,9 +164,10 @@ Pour une affiche événement → la date peut être importante SI non fournie
 Pour une affiche promotionnelle → RIEN n'est vraiment essentiel, créer avec ce qu'on a
 
 === DOMAINES (valeurs exactes) ===
-church, event, education, formation, restaurant, fashion, music, sport, technology, health, realestate, service
+church, event, education, formation, restaurant, fashion, music, sport, technology, health, realestate, service, youtube
 
 DÉTECTION INTELLIGENTE:
+- "miniature/thumbnail/youtube/vignette/youtubeur/clickbait" → "youtube"
 - "église/culte/pasteur/prière/gospel" → "church"
 - "événement/conférence/gala/mariage/fête" → "event"
 - "formation/atelier/workshop/coaching" → "formation"

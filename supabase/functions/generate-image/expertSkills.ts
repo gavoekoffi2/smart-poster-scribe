@@ -299,6 +299,86 @@ const RESTAURANT_FOOD: ExpertSkillProfile = {
 };
 
 // ============================================================================
+// PROFIL 5: MINIATURES YOUTUBE VIRALES
+// Applicable à: YouTube, Thumbnails, Vignettes
+// ============================================================================
+const YOUTUBE_THUMBNAIL: ExpertSkillProfile = {
+  id: "youtube_thumbnail",
+  name: "Miniatures YouTube Virales",
+  applicableDomains: ["youtube", "thumbnail", "miniature"],
+  composition: [
+    "Visage humain CENTRAL: 30-50% de la surface totale obligatoire",
+    "Expression faciale EXAGÉRÉE (surprise, choc, joie intense, concentration extrême)",
+    "Cadrage gros plan ou plan poitrine sur le sujet",
+    "Format OBLIGATOIRE: 16:9 (1280x720 ou 1920x1080)",
+    "Arrière-plan simplifié: flou bokeh OU couleur unie OU contexte visuel simple",
+    "Maximum 1-3 objets symboliques surdimensionnés ('props')",
+    "Zone texte: 25-35% de la surface, JAMAIS sur le visage",
+    "Point focal sur le regard du sujet (yeux écarquillés idéal)",
+  ],
+  typography: [
+    "Police Sans-serif ULTRA-GRASSE uniquement (Impact, Bebas Neue, Montserrat Black)",
+    "Taille MASSIVE: 70-120pt pour titres principaux (les plus grandes de tous les profils)",
+    "Maximum 5-7 mots (court et percutant, arrêter le scroll)",
+    "Bordure de contraste OBLIGATOIRE: stroke 3-6px noir ou blanc",
+    "Mots-clés en couleur vive: Jaune (#FFFF00), Rouge (#FF0000), Vert (#00FF00)",
+    "Chiffres et montants TOUJOURS mis en évidence ($27K, 2026, 100%, 10M)",
+    "Fond coloré rectangle arrondi derrière mots-clés importants",
+    "Jamais de police fine, script ou décorative",
+  ],
+  colorSystem: [
+    "Hyper-saturation OBLIGATOIRE: +30 à +50% sur toute l'image",
+    "Contraste EXTRÊME (le plus élevé de tous les profils): +20-40%",
+    "Palette Énergie/Action: Rouge (#FF0000), Jaune (#FFFF00), Orange (#FF6600)",
+    "Palette Productivité: Bleu (#0066FF), Vert (#00CC00) avec accents jaunes",
+    "Palette Richesse/Argent: Or (#FFD700), Noir profond (#000000), Blanc pur (#FFFFFF)",
+    "Température légèrement chaude pour dynamisme",
+    "Éclairage dramatique avec highlights marqués sur le visage",
+    "Ombres prononcées pour relief 3D du sujet",
+  ],
+  visualElements: [
+    "Objets symboliques SURDIMENSIONNÉS (billets, téléphones, logos, argent)",
+    "Flèches et cercles rouges/jaunes pour pointer éléments importants",
+    "Logos d'applications reconnaissables (YouTube, PayPal, Shopify, Amazon)",
+    "Symboles de succès: montres luxe, voitures, ordinateurs, billets",
+    "Emojis 3D si appropriés (surdimensionnés, style Apple)",
+    "Encadrés et badges pour prix et chiffres (cercles, étoiles, rubans)",
+    "Props contextuels liés au sujet de la vidéo",
+  ],
+  effects: [
+    "Saturation globale: +30-50% obligatoire",
+    "Contraste global: +20-40% pour rendu 'pop'",
+    "Éclairage dramatique sur le visage (highlights très marqués)",
+    "Ombres prononcées pour relief 3D",
+    "Bordures de texte ÉPAISSES: 3-6px minimum",
+    "Fond coloré derrière mots-clés (rectangles arrondis 15-25px)",
+    "Rendu final 'POP': couleurs qui sautent aux yeux",
+    "Vignettage léger: 10-15% sur les bords pour focus central",
+  ],
+  principles: [
+    "ARRÊTER LE SCROLL en moins de 1 seconde",
+    "Répondre à: 'Qu'est-ce que je vais apprendre et pourquoi c'est important ?'",
+    "3 PILIERS: Visage expressif + Texte percutant + Symboles de valeur",
+    "Émotion IMMÉDIATE (surprise, curiosité, excitation)",
+    "Message clair en UN COUP D'ŒIL",
+    "Contraste MAXIMAL sur fond YouTube (blanc/gris)",
+    "Le visage est l'élément le plus important (100% des miniatures virales)",
+  ],
+  errors: [
+    "Trop de texte (max 7 mots absolument)",
+    "Texte illisible (trop petit, pas de contraste, pas de bordure)",
+    "Visage trop petit ou absent de la miniature",
+    "Expression neutre ou ennuyeuse sur le visage",
+    "Arrière-plan distrayant ou trop chargé",
+    "Couleurs ternes, désaturées ou fades",
+    "Manque de contraste global",
+    "Police trop fine, script ou décorative",
+    "Chiffres et montants non mis en évidence",
+    "Logo qui cache ou interfère avec le visage",
+  ],
+};
+
+// ============================================================================
 // COLLECTION DE TOUS LES PROFILS
 // ============================================================================
 export const EXPERT_SKILL_PROFILES: ExpertSkillProfile[] = [
@@ -306,12 +386,18 @@ export const EXPERT_SKILL_PROFILES: ExpertSkillProfile[] = [
   SURREALIST_PHOTOREALISTIC,
   SPIRITUAL_RELIGIOUS,
   RESTAURANT_FOOD,
+  YOUTUBE_THUMBNAIL,
 ];
 
 // ============================================================================
 // MAPPING DOMAINE → PROFIL
 // ============================================================================
 const DOMAIN_TO_PROFILE_MAP: Record<string, string> = {
+  // YouTube Thumbnails
+  youtube: "youtube_thumbnail",
+  thumbnail: "youtube_thumbnail",
+  miniature: "youtube_thumbnail",
+  
   // Spirituel/Religieux
   church: "spiritual_religious",
   
@@ -340,6 +426,13 @@ const DOMAIN_TO_PROFILE_MAP: Record<string, string> = {
 // DÉTECTION DE DOMAINE PAR MOTS-CLÉS
 // ============================================================================
 const DOMAIN_KEYWORDS: Record<string, string[]> = {
+  youtube: [
+    "miniature", "thumbnail", "youtube", "vignette", "chaîne", "chaine", "vidéo youtube",
+    "video youtube", "youtuber", "youtubeur", "créateur", "createur", "contenu", "abonnés",
+    "abonnes", "vues", "viral", "buzz", "clickbait", "tutoriel", "tuto", "vlog", "podcast",
+    "interview", "réaction", "reaction", "challenge", "storytime", "unboxing", "haul",
+    "review", "avis", "test", "1m vues", "millions de vues", "subscriber", "subscribe"
+  ],
   church: [
     "église", "eglise", "culte", "pasteur", "évêque", "eveque", "prophète", "prophete",
     "prière", "priere", "jeûne", "jeune", "veillée", "veillee", "chrétien", "chretien",
