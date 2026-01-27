@@ -1,7 +1,22 @@
 import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Templates from public folder - organized by rows
+// Helper pour détecter le domaine depuis le chemin de l'image
+function getDomainFromPath(imagePath: string): string {
+  if (imagePath.includes('/youtube/')) return 'youtube';
+  if (imagePath.includes('/church/')) return 'church';
+  if (imagePath.includes('/restaurant/')) return 'restaurant';
+  if (imagePath.includes('/event/')) return 'event';
+  if (imagePath.includes('/formation/')) return 'formation';
+  if (imagePath.includes('/ecommerce/')) return 'ecommerce';
+  if (imagePath.includes('/service/')) return 'service';
+  if (imagePath.includes('/fashion/')) return 'fashion';
+  return 'other';
+}
+
 const MARQUEE_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
   row1: [
     "/reference-templates/church/14-jours-jeune.jpg",
@@ -13,6 +28,7 @@ const MARQUEE_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
     "/reference-templates/church/21-jours-jeune-goshen.jpg",
     "/reference-templates/ecommerce/see-wide-collections.jpg",
     "/reference-templates/event/concert-celebration-epouse.jpg",
+    "/reference-templates/youtube/ecommerce-tiktok-sales.jpg",
   ],
   row2: [
     "/reference-templates/church/ciel-ouvert.jpg",
@@ -24,6 +40,7 @@ const MARQUEE_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
     "/reference-templates/ecommerce/valentine-package.jpg",
     "/reference-templates/restaurant/favours-kitchen.jpg",
     "/reference-templates/service/ozark-graphics-design.jpg",
+    "/reference-templates/youtube/commencer-ecommerce.jpg",
   ],
   row3: [
     "/reference-templates/event/praise-worship-concert.jpg",
@@ -50,9 +67,39 @@ function MarqueeRow({
   rotation?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   // Double the images for seamless loop
   const duplicatedImages = [...images, ...images, ...images];
+
+  const handleInspire = async (e: React.MouseEvent, imageUrl: string) => {
+    e.stopPropagation();
+    
+    // Déterminer le domaine depuis le chemin
+    const domain = getDomainFromPath(imageUrl);
+    
+    // Vérifier l'authentification
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // Stocker le template pour après login
+      sessionStorage.setItem('pendingCloneTemplate', JSON.stringify({
+        imageUrl,
+        domain
+      }));
+      navigate("/auth", { 
+        state: { redirectTo: "/app", pendingClone: true } 
+      });
+      return;
+    }
+    
+    // Utilisateur connecté → aller directement à l'app
+    navigate("/app", {
+      state: {
+        cloneTemplate: { imageUrl, domain }
+      }
+    });
+  };
   
   return (
     <div 
@@ -81,10 +128,13 @@ function MarqueeRow({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/80 backdrop-blur-sm text-primary-foreground text-xs font-medium w-fit">
+              <button
+                onClick={(e) => handleInspire(e, image)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 hover:bg-primary backdrop-blur-sm text-primary-foreground text-xs font-medium transition-all duration-200 hover:scale-105 shadow-lg cursor-pointer"
+              >
                 <Sparkles className="w-3 h-3" />
                 S'inspirer
-              </div>
+              </button>
             </div>
           </div>
         ))}
