@@ -1,322 +1,192 @@
 
-# Plan Mis à Jour : Flux Complet pour Miniatures YouTube avec Logos
+# Plan : Intégration des Miniatures YouTube dans le Marquee
 
-## Objectif
-
-Intégrer un flux de questions intelligentes pour les miniatures YouTube qui collecte :
-1. **Titre de la vidéo** (obligatoire)
-2. **Photo du visage** (propre photo OU génération IA avec caractéristiques)
-3. **Logo(s)** (optionnel, avec position et mise en valeur)
-4. **Expression faciale** (optionnelle)
+## Objectifs
+1. Ajouter les miniatures YouTube au défilement animé du landing page
+2. Rendre le bouton "S'inspirer" fonctionnel et cliquable sur toutes les images du marquee
 
 ---
 
-## Flux de Questions Complet
+## Fichiers Uploadés à Intégrer
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  UTILISATEUR DEMANDE UNE MINIATURE YOUTUBE                      │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                ┌──────────────────────────┐
-                │  Q1: Titre de la vidéo   │
-                │  (Obligatoire)           │
-                └──────────────────────────┘
-                              │
-                              ▼
-                ┌──────────────────────────┐
-                │  Q2: Avez-vous votre     │
-                │  propre photo ?          │
-                └──────────────────────────┘
-                       │           │
-                      OUI         NON
-                       │           │
-                       ▼           ▼
-              ┌────────────┐  ┌──────────────────┐
-              │  Upload    │  │  Q3: Origine     │
-              │  Photo     │  │  (Africain, etc) │
-              └────────────┘  └──────────────────┘
-                       │           │
-                       │           ▼
-                       │  ┌──────────────────┐
-                       │  │  Q4: Âge         │
-                       │  │  (Jeune, Adulte) │
-                       │  └──────────────────┘
-                       │           │
-                       ▼           ▼
-                ┌──────────────────────────┐
-                │  Q5: Expression          │
-                │  (Optionnelle)           │
-                └──────────────────────────┘
-                              │
-                              ▼
-         ┌────────────────────────────────────────┐
-         │  Q6: Avez-vous un logo à inclure ?     │  ◀── NOUVEAU
-         │  (Utiliser logo par défaut / Upload /  │
-         │   Passer)                              │
-         └────────────────────────────────────────┘
-                       │           │
-                      OUI         NON
-                       │           │
-                       ▼           │
-              ┌────────────────┐   │
-              │  Q7: Position  │   │
-              │  du logo ?     │   │
-              │  (Grille 5     │   │
-              │   positions)   │   │
-              └────────────────┘   │
-                       │           │
-                       ▼           │
-              ┌────────────────┐   │
-              │  Autre logo ?  │   │
-              │  (Boucle si    │   │
-              │   oui)         │   │
-              └────────────────┘   │
-                       │           │
-                       ▼           ▼
-                ┌──────────────────────────┐
-                │  GÉNÉRATION MINIATURE    │
-                │  avec profil expert      │
-                └──────────────────────────┘
-```
+Les 2 miniatures YouTube uploadées :
+- `maxresdefault.jpg` - Miniature e-commerce/TikTok (37.45k€ ventes)
+- `maxresdefault_1.jpg` - Miniature e-commerce (Commencer le E-commerce)
 
 ---
 
-## Modifications à Apporter
-
-### Fichiers à Modifier
+## Fichiers à Créer/Modifier
 
 | Fichier | Action | Description |
 |---------|--------|-------------|
-| `src/types/generation.ts` | MODIFIER | Ajouter `Domain = "youtube"` et interface `YouTubeInfo` |
-| `src/config/domainQuestions.ts` | MODIFIER | Ajouter configuration complète pour "youtube" avec questions logos |
-| `supabase/functions/analyze-request/index.ts` | MODIFIER | Ajouter mots-clés détection YouTube |
-| `supabase/functions/generate-image/expertSkills.ts` | MODIFIER | Compléter profil YOUTUBE_THUMBNAIL |
+| `public/reference-templates/youtube/` | CRÉER | Nouveau dossier pour les miniatures |
+| `public/reference-templates/youtube/*.jpg` | COPIER | Copier les miniatures uploadées |
+| `src/components/landing/TemplatesMarquee.tsx` | MODIFIER | Ajouter les miniatures + bouton fonctionnel |
 
 ---
 
-## Détail des Questions YouTube
+## 1. Création du Dossier et Copie des Images
 
-### Configuration dans `domainQuestions.ts`
+Créer la structure :
+```
+public/reference-templates/youtube/
+├── ecommerce-tiktok-sales.jpg      (maxresdefault.jpg)
+├── commencer-ecommerce.jpg         (maxresdefault_1.jpg)
+```
 
-```text
-youtube: {
-  domain: "youtube",
-  label: "Miniature YouTube",
-  templateRequirements: ["face_image", "video_title"],
-  questions: [
-    // Q1: Titre de la vidéo (OBLIGATOIRE)
-    {
-      id: "video_title",
-      question: "Quel est le titre de votre vidéo YouTube ?",
-      type: "text",
-      required: true,
-      priority: 1
-    },
-    
-    // Q2: Photo propre ou générée ?
-    {
-      id: "has_own_image",
-      question: "Voulez-vous utiliser votre propre photo ?",
-      type: "boolean",
-      required: true,
-      priority: 2,
-      followUp: {
-        condition: "yes",
-        imageUpload: { multiple: false, label: "Votre photo" }
-      }
-    },
-    
-    // Q3: Origine (si génération IA)
-    {
-      id: "subject_ethnicity",
-      question: "Quelle origine pour la personne à générer ?",
-      type: "choice",
-      choices: ["Africain(e)", "Caucasien(ne)", "Asiatique", "Autre"],
-      conditionalOn: { questionId: "has_own_image", value: false },
-      priority: 3
-    },
-    
-    // Q4: Âge (si génération IA)
-    {
-      id: "subject_age",
-      question: "Quel âge approximatif ?",
-      type: "choice",
-      choices: ["Jeune (18-30)", "Adulte (30-50)", "Senior (50+)"],
-      conditionalOn: { questionId: "has_own_image", value: false },
-      priority: 4
-    },
-    
-    // Q5: Expression faciale
-    {
-      id: "desired_expression",
-      question: "Quelle expression faciale ?",
-      type: "choice",
-      choices: ["Surprise/Choc", "Concentration", "Joie/Excitation", "Confiance"],
-      required: false,
-      priority: 5
-    },
-    
-    // Q6: Logo (NOUVEAU) - Utilise le système existant DefaultLogoSelect
-    {
-      id: "has_logo",
-      question: "Voulez-vous ajouter un logo sur la miniature ?",
-      type: "boolean",
-      required: false,
-      priority: 6,
-      followUp: {
-        condition: "yes",
-        imageUpload: { 
-          multiple: true, 
-          label: "Vos logos",
-          hint: "Vous pouvez ajouter plusieurs logos"
-        }
-      }
-    },
-    
-    // Q7: Position du logo (si logo fourni) - Utilise LogoPositionSelect existant
-    {
-      id: "logo_position",
-      question: "Où placer le logo ?",
-      type: "choice",
-      choices: ["Haut gauche", "Haut droite", "Centre", "Bas gauche", "Bas droite"],
-      conditionalOn: { questionId: "has_logo", value: true },
-      priority: 7
+---
+
+## 2. Modifications du Composant TemplatesMarquee.tsx
+
+### A. Imports à Ajouter
+
+```typescript
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+```
+
+### B. Ajouter les Miniatures YouTube aux Listes
+
+```typescript
+const MARQUEE_TEMPLATES = {
+  row1: [
+    // Templates existants...
+    "/reference-templates/youtube/ecommerce-tiktok-sales.jpg",  // NOUVEAU
+  ],
+  row2: [
+    // Templates existants...
+    "/reference-templates/youtube/commencer-ecommerce.jpg",     // NOUVEAU
+  ],
+  row3: [
+    // Templates existants...
+  ],
+};
+```
+
+### C. Fonction de Détection du Domaine
+
+Ajouter une fonction helper pour détecter le domaine depuis le chemin de l'image :
+
+```typescript
+function getDomainFromPath(imagePath: string): string {
+  if (imagePath.includes('/youtube/')) return 'youtube';
+  if (imagePath.includes('/church/')) return 'church';
+  if (imagePath.includes('/restaurant/')) return 'restaurant';
+  if (imagePath.includes('/event/')) return 'event';
+  if (imagePath.includes('/formation/')) return 'formation';
+  if (imagePath.includes('/ecommerce/')) return 'ecommerce';
+  if (imagePath.includes('/service/')) return 'service';
+  if (imagePath.includes('/fashion/')) return 'fashion';
+  return 'other';
+}
+```
+
+### D. Transformer le Bouton Statique en Bouton Cliquable
+
+**Avant (non fonctionnel) :**
+```tsx
+<div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/80...">
+  <Sparkles className="w-3 h-3" />
+  S'inspirer
+</div>
+```
+
+**Après (fonctionnel) :**
+```tsx
+<button
+  onClick={(e) => handleInspire(e, image)}
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 hover:bg-primary backdrop-blur-sm text-primary-foreground text-xs font-medium transition-all duration-200 hover:scale-105 shadow-lg"
+>
+  <Sparkles className="w-3 h-3" />
+  S'inspirer
+</button>
+```
+
+### E. Logique de Navigation (handleInspire)
+
+Implémenter la même logique que dans `TemplatesMarketplace` :
+
+```typescript
+const handleInspire = async (e: React.MouseEvent, imageUrl: string) => {
+  e.stopPropagation();
+  
+  // Déterminer le domaine depuis le chemin
+  const domain = getDomainFromPath(imageUrl);
+  
+  // Vérifier l'authentification
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    // Stocker le template pour après login
+    sessionStorage.setItem('pendingCloneTemplate', JSON.stringify({
+      imageUrl,
+      domain
+    }));
+    navigate("/auth", { 
+      state: { redirectTo: "/app", pendingClone: true } 
+    });
+    return;
+  }
+  
+  // Utilisateur connecté → aller directement à l'app
+  navigate("/app", {
+    state: {
+      cloneTemplate: { imageUrl, domain }
     }
-  ]
-}
+  });
+};
 ```
 
 ---
 
-## Interface YouTubeInfo Mise à Jour
+## 3. Adaptation du Style pour les Miniatures YouTube
 
-```text
-interface YouTubeInfo {
-  // Titre et contenu
-  videoTitle: string;
-  
-  // Photo du sujet
-  hasOwnImage: boolean;
-  ownImage?: string;              // Photo utilisateur (base64)
-  subjectEthnicity?: string;      // Si génération IA
-  subjectAge?: string;            // Si génération IA
-  subjectGender?: string;         // Si génération IA
-  desiredExpression?: string;     // Surprise, Concentration, etc.
-  
-  // Logos (NOUVEAU)
-  hasLogo: boolean;
-  logos?: Array<{
-    imageUrl: string;
-    position: "top-left" | "top-right" | "center" | "bottom-left" | "bottom-right";
-  }>;
-}
+Les miniatures YouTube sont en format 16:9 (paysage) alors que les affiches sont en 3:4 (portrait).
+
+Pour maintenir la cohérence visuelle dans le défilement, j'ai deux options :
+
+**Option 1 : Détecter et adapter le ratio**
+```typescript
+const isYouTube = image.includes('/youtube/');
+className={`... ${isYouTube ? 'aspect-video' : 'aspect-[3/4]'}`}
+```
+
+**Option 2 : Garder le même ratio pour tous (recommandé)**
+Les miniatures seront affichées avec le même ratio que les affiches (objet-cover) pour un défilement uniforme.
+
+**Je recommande l'Option 2** pour une meilleure cohérence visuelle du marquee.
+
+---
+
+## 4. Structure Finale du Composant
+
+```
+TemplatesMarquee.tsx
+├── Imports (useNavigate, supabase, Sparkles)
+├── MARQUEE_TEMPLATES (avec miniatures YouTube)
+├── getDomainFromPath() - fonction helper
+├── MarqueeRow component
+│   ├── useNavigate hook
+│   ├── handleInspire() - navigation fonctionnelle
+│   └── bouton cliquable avec onClick
+└── export TemplatesMarquee
 ```
 
 ---
 
-## Intégration avec Composants Existants
+## Comportement Attendu
 
-Le système réutilisera les composants existants :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `DefaultLogoSelect` | Proposer le logo par défaut du profil utilisateur OU upload d'un nouveau |
-| `LogoPositionSelect` | Grille visuelle pour choisir la position (5 options) |
-| `ImageUploadButton` | Upload de la photo et des logos |
+1. **Affichage** : Les miniatures YouTube défilent avec les autres affiches
+2. **Hover** : Le bouton "S'inspirer" apparaît au survol
+3. **Clic** :
+   - Si **non connecté** → Redirige vers `/auth` (template stocké pour après login)
+   - Si **connecté** → Redirige vers `/app` avec le template en état
 
 ---
 
-## Règles de Mise en Valeur du Logo (dans expertSkills.ts)
+## Avantages
 
-Ajouter dans le profil YOUTUBE_THUMBNAIL :
-
-```text
-logoPlacement: [
-  "Logo visible mais NON intrusif (ne pas couvrir le visage)",
-  "Taille: 8-15% de la surface totale de la miniature",
-  "Position recommandée: coin inférieur droit ou supérieur gauche",
-  "Ombre portée légère pour détacher du fond",
-  "Si logo sombre sur fond sombre: ajouter contour blanc/clair",
-  "Si logo clair sur fond clair: ajouter contour sombre",
-  "Opacité: 90-100% (logo bien visible)",
-  "Ne JAMAIS déformer les proportions du logo"
-]
-```
-
----
-
-## Messages UX pour les Logos
-
-### Question Logo
-
-```text
-🏷️ **Voulez-vous ajouter votre logo sur la miniature ?**
-
-Beaucoup de créateurs ajoutent leur logo pour renforcer leur marque personnelle.
-
-• **Oui** : Utilisez votre logo par défaut ou uploadez-en un nouveau
-• **Non** : Continuer sans logo
-```
-
-### Si Logo Uploadé
-
-```text
-📍 **Où souhaitez-vous placer le logo ?**
-
-[Grille visuelle avec 5 positions]
-↖ Haut gauche  |           | ↗ Haut droite
-               | ◉ Centre  |
-↙ Bas gauche   |           | ↘ Bas droite
-
-💡 Conseil : Le coin inférieur droit est le plus populaire car il n'interfère pas avec le visage.
-```
-
-### Autre Logo ?
-
-```text
-➕ **Voulez-vous ajouter un autre logo ?**
-
-• **Oui** : Ajouter un logo supplémentaire
-• **Non** : Continuer vers la génération
-```
-
----
-
-## Résultat Attendu
-
-Quand l'utilisateur demande une miniature YouTube :
-
-1. **Détection automatique** du domaine "youtube"
-2. **Questions séquentielles** :
-   - Titre de la vidéo
-   - Photo propre ou génération IA (+ caractéristiques si IA)
-   - Expression faciale souhaitée
-   - Logo(s) avec position(s)
-3. **Génération** d'une miniature professionnelle avec :
-   - Visage expressif central (30-50%)
-   - Texte court et percutant extrait du titre
-   - Couleurs hyper-saturées
-   - Logo(s) bien positionné(s) et mis en valeur
-   - Format 16:9 (1280x720)
-
----
-
-## Fichiers à Créer/Modifier (Résumé Final)
-
-| Fichier | Modifications |
-|---------|---------------|
-| `src/types/generation.ts` | + Domain "youtube", + interface YouTubeInfo avec logos |
-| `src/config/domainQuestions.ts` | + Configuration complète youtube avec 7 questions |
-| `supabase/functions/analyze-request/index.ts` | + Mots-clés détection YouTube |
-| `supabase/functions/generate-image/expertSkills.ts` | + Profil YOUTUBE_THUMBNAIL complet + règles logos |
-
----
-
-## Prochaines Étapes (Après Implémentation)
-
-1. Tester le flux complet avec upload de photo + logos
-2. Vérifier que les logos sont bien positionnés dans la génération
-3. Ajouter des suggestions de texte basées sur le titre de la vidéo
-4. Permettre de choisir parmi plusieurs styles de miniatures
+1. **Visibilité** : Les visiteurs voient que la plateforme fait aussi des miniatures YouTube
+2. **Cohérence UX** : Le bouton fonctionne partout (Marquee + Marketplace)
+3. **Conversion** : Chaque image peut déclencher une inscription/connexion
+4. **Réutilisation** : Même logique d'authentification que le reste de l'app
