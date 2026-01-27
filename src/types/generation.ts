@@ -30,6 +30,7 @@ export type Domain =
   | "health" 
   | "realestate"
   | "formation"
+  | "youtube"
   | "other";
 
 export interface DomainInfo {
@@ -219,6 +220,22 @@ export interface EventInfo {
   dressCode?: string;
 }
 
+// Type pour les informations miniature YouTube
+export interface YouTubeInfo {
+  videoTitle: string;
+  hasOwnImage: boolean;
+  ownImage?: string;
+  subjectEthnicity?: "africain" | "caucasien" | "asiatique" | "autre";
+  subjectAge?: "jeune" | "adulte" | "senior";
+  subjectGender?: "homme" | "femme";
+  desiredExpression?: "surprise" | "concentration" | "joie" | "confiance";
+  hasLogo: boolean;
+  logos?: Array<{
+    imageUrl: string;
+    position: LogoPosition;
+  }>;
+}
+
 // Type générique pour stocker les infos spécifiques au domaine
 export interface DomainSpecificInfo {
   realEstate?: RealEstateInfo;
@@ -230,6 +247,7 @@ export interface DomainSpecificInfo {
   education?: EducationInfo;
   church?: ChurchInfo;
   event?: EventInfo;
+  youtube?: YouTubeInfo;
 }
 
 // Type pour suivre les questions posées et réponses

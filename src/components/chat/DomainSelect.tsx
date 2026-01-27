@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 
 const domains: DomainInfo[] = [
+  { id: "youtube", label: "Miniature YouTube" },
   { id: "formation", label: "Formation" },
   { id: "church", label: "Église / Culte" },
   { id: "event", label: "Événement" },
