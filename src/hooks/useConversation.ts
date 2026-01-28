@@ -115,23 +115,40 @@ function buildPrompt(state: ConversationState) {
   // ====== SECTION 1: PALETTE COULEUR OBLIGATOIRE ======
   if (colorPalette?.length) {
     lines.push("╔══════════════════════════════════════════════════════════════╗");
-    lines.push("║  🎨 PALETTE COULEUR OBLIGATOIRE - CODES HEX EXACTS           ║");
+    lines.push("║  🎨 PALETTE COULEUR OBLIGATOIRE - REMPLACEMENT TOTAL          ║");
     lines.push("╚══════════════════════════════════════════════════════════════╝");
     lines.push("");
-    lines.push("⚠️ UTILISER CES COULEURS EXACTES (remplacer les couleurs du template):");
+    lines.push("🚨 REMPLACER TOUTES les couleurs du template par celles-ci:");
+    lines.push("");
+    
     colorPalette.slice(0, 6).forEach((hex, index) => {
       const colorName = hexToColorName(hex);
       if (index === 0) {
-        lines.push(`   COULEUR DOMINANTE: ${hex} (${colorName}) → fonds, grandes zones`);
+        lines.push(`   🎯 DOMINANTE (60%): ${hex} (${colorName})`);
+        lines.push(`      → Utiliser pour: arrière-plan, grandes zones, fonds`);
       } else if (index === 1) {
-        lines.push(`   COULEUR SECONDAIRE: ${hex} (${colorName}) → titres, accents`);
+        lines.push(`   🎯 SECONDAIRE (30%): ${hex} (${colorName})`);
+        lines.push(`      → Utiliser pour: titres, accents, bandeaux importants`);
+      } else if (index === 2) {
+        lines.push(`   🎯 ACCENT (10%): ${hex} (${colorName})`);
+        lines.push(`      → Utiliser pour: détails, CTA, bordures, highlights`);
       } else {
-        lines.push(`   COULEUR ${index + 1}: ${hex} (${colorName}) → détails, bordures`);
+        lines.push(`   ➕ COMPLÉMENTAIRE #${index + 1}: ${hex} (${colorName})`);
+        lines.push(`      → Utiliser pour: dégradés, effets, variations`);
       }
     });
+    
     lines.push("");
-    lines.push("❌ NE PAS garder les couleurs originales du template");
-    lines.push("✓ REMPLACER toutes les couleurs par cette palette");
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    lines.push("⚠️ HARMONISATION INTELLIGENTE:");
+    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    lines.push("   • Créer des dégradés harmonieux entre ces couleurs");
+    lines.push("   • Ajouter des effets (ombres, glow, reflets) pour unifier");
+    lines.push("   • Utiliser la plus sombre pour le fond si besoin de contraste");
+    lines.push("   • Garantir la lisibilité avec contrastes forts sur le texte");
+    lines.push("");
+    lines.push("❌ INTERDIT: Garder TOUTE couleur du template original");
+    lines.push("❌ INTERDIT: Mélanger anciennes et nouvelles couleurs");
     lines.push("");
   }
 

@@ -12,6 +12,7 @@ export interface ExpertSkillProfile {
   composition: string[];
   typography: string[];
   colorSystem: string[];
+  colorHarmonization: string[];  // Nouvelles règles d'harmonisation des couleurs utilisateur
   visualElements: string[];
   effects: string[];
   principles: string[];
@@ -51,6 +52,17 @@ const CORPORATE_MODERN: ExpertSkillProfile = {
     "Dégradés subtils (pas plus de 2 couleurs)",
     "Contrastes élevés pour lisibilité (ratio 4.5:1 minimum)",
     "Blanc ou crème pour espaces négatifs",
+  ],
+  colorHarmonization: [
+    "⚠️ SI PALETTE UTILISATEUR FOURNIE → REMPLACER TOUTES les couleurs du template",
+    "Couleur #1 (DOMINANTE 60%): Fonds, grandes zones, éléments principaux",
+    "Couleur #2 (SECONDAIRE 30%): Titres, accents, éléments importants",
+    "Couleur #3 (ACCENT 10%): Détails, bordures, CTA, highlights",
+    "Harmonisation corporate: dégradés subtils entre les couleurs, ombres cohérentes",
+    "Si couleurs similaires: variations de luminosité (+/-20%) pour différencier",
+    "Si couleurs contrastées: utiliser la plus sombre pour le fond",
+    "Garantir lisibilité: texte clair sur fond foncé OU texte foncé sur fond clair",
+    "Ajouter blanc/gris neutres si besoin d'équilibre",
   ],
   visualElements: [
     "Formes géométriques simples (cercles, rectangles arrondis)",
@@ -120,6 +132,17 @@ const SURREALIST_PHOTOREALISTIC: ExpertSkillProfile = {
     "Contraste extrême: noirs profonds + couleurs vibrantes",
     "Touches de blanc pur pour highlights",
   ],
+  colorHarmonization: [
+    "⚠️ SI PALETTE UTILISATEUR FOURNIE → REMPLACER TOUTES les couleurs du template",
+    "Couleur #1 (DOMINANTE 60%): Fond principal, zones de base (saturer à 80-100%)",
+    "Couleur #2 (SECONDAIRE 30%): Titres 3D, effets glow, accents néon",
+    "Couleur #3 (ACCENT 10%): Highlights, lens flares, particules",
+    "Harmonisation surréaliste: créer dégradés audacieux entre les couleurs utilisateur",
+    "Ajouter effets néon/glow pour unifier des couleurs qui ne se mélangent pas",
+    "Color grading: appliquer une teinte unifiée sur toute l'image",
+    "Si couleurs ternes fournies: les saturer à +30-50% pour impact",
+    "Utiliser reflets et brillances pour créer cohésion visuelle",
+  ],
   visualElements: [
     "Emojis et objets 3D photoréalistes avec ombres cohérentes",
     "Particules flottantes: confettis, étoiles, étincelles",
@@ -187,6 +210,17 @@ const SPIRITUAL_RELIGIOUS: ExpertSkillProfile = {
     "PALETTE RÉVÉLATION: Vert foncé (#1A4D2E) + Or + Blanc",
     "Dégradés verticaux: Haut lumineux → Bas sombre",
     "Overlay de teinte chaude (or, orange) à 15-25% sur toute l'image",
+  ],
+  colorHarmonization: [
+    "⚠️ SI PALETTE UTILISATEUR FOURNIE → REMPLACER TOUTES les couleurs du template",
+    "Couleur #1 (DOMINANTE 60%): Arrière-plan avec overlay 40-60% opacité",
+    "Couleur #2 (SECONDAIRE 30%): Titres, bandeaux, effets de lumière divine",
+    "Couleur #3 (ACCENT 10%): Rayons de lumière, halos, bordures dorées",
+    "Harmonisation spirituelle: ajouter des effets de lumière divine pour unifier",
+    "Les couleurs chaudes (or, orange) peuvent servir d'overlay 15-25% pour harmoniser",
+    "Créer dégradés verticaux: couleur dominante en haut → plus sombre en bas",
+    "Rim light (contour lumineux) utilisant la couleur d'accent autour des portraits",
+    "Glow doré sur titres: 2-4px, couleur secondaire, opacité 60-80%",
   ],
   visualElements: [
     "Rayons de lumière divine (god rays): angle 15-30°, opacité 20-35%",
@@ -260,6 +294,17 @@ const RESTAURANT_FOOD: ExpertSkillProfile = {
     "Saturation +10-20% sur aliments (look appétissant)",
     "Température: légèrement chaude (+5 à +15) pour plats chauds",
     "Couleurs froides uniquement pour boissons/desserts froids",
+  ],
+  colorHarmonization: [
+    "⚠️ SI PALETTE UTILISATEUR FOURNIE → REMPLACER TOUTES les couleurs du template",
+    "Couleur #1 (DOMINANTE 60%): Fond/arrière-plan (table, mur, texture bois/marbre)",
+    "Couleur #2 (SECONDAIRE 30%): Badges promo, bandeaux, zones de prix",
+    "Couleur #3 (ACCENT 10%): Bordures, CTA, highlights sur plats",
+    "⚠️ EXCEPTION FOOD: Les couleurs naturelles de la nourriture restent INTACTES",
+    "Appliquer la palette UNIQUEMENT sur les éléments graphiques (fond, texte, badges)",
+    "Si palette froide (bleu, violet): utiliser comme fond, ajouter éclairage chaud sur plats",
+    "Créer cohésion: couleur secondaire en bordures du plat ou reflets sur assiettes",
+    "Badges rotationnels (-15° à -25°) dans la couleur d'accent pour dynamisme",
   ],
   visualElements: [
     "Ingrédients flottants en arrière-plan (tomates, épices, herbes)",
@@ -335,6 +380,17 @@ const YOUTUBE_THUMBNAIL: ExpertSkillProfile = {
     "Température légèrement chaude pour dynamisme",
     "Éclairage dramatique avec highlights marqués sur le visage",
     "Ombres prononcées pour relief 3D du sujet",
+  ],
+  colorHarmonization: [
+    "⚠️ SI PALETTE UTILISATEUR FOURNIE → REMPLACER TOUTES les couleurs du template",
+    "Couleur #1 (DOMINANTE 60%): Fond principal (saturer à +30-50% obligatoire)",
+    "Couleur #2 (SECONDAIRE 30%): Texte principal avec bordure épaisse (3-6px)",
+    "Couleur #3 (ACCENT 10%): Rectangles arrondis derrière mots-clés, flèches, highlights",
+    "Harmonisation YouTube: TOUJOURS hyper-saturer les couleurs utilisateur",
+    "Si couleurs ternes fournies: augmenter saturation +30% et contraste +20%",
+    "Fond coloré rectangle arrondi (15-25px) derrière mots-clés importants",
+    "Éclairage sur visage: reflets de la couleur dominante sur la peau",
+    "Bordures de texte ÉPAISSES: utiliser couleur contrastante (noir sur clair, blanc sur foncé)",
   ],
   visualElements: [
     "Objets symboliques SURDIMENSIONNÉS (billets, téléphones, logos, argent)",
@@ -561,6 +617,11 @@ export function buildExpertSkillsPrompt(domain: string): string {
   
   lines.push("━━━ SYSTÈME COLORIMÉTRIQUE ━━━");
   profile.colorSystem.forEach(rule => lines.push(`   • ${rule}`));
+  lines.push("");
+  
+  // Nouvelle section: Harmonisation des couleurs utilisateur
+  lines.push("━━━ 🎨 HARMONISATION DES COULEURS UTILISATEUR ━━━");
+  profile.colorHarmonization.forEach(rule => lines.push(`   • ${rule}`));
   lines.push("");
   
   lines.push("━━━ ÉLÉMENTS VISUELS ━━━");
