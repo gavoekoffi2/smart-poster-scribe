@@ -1,273 +1,272 @@
 
-# Plan : Integration des Miniatures YouTube et Interface d'Administration du Marquee
+# Plan : Flux Intelligent de Création de Miniatures YouTube
 
 ## Objectif
 
-1. **Ajouter les 4 nouvelles miniatures YouTube** au marquee du landing page
-2. **Creer une interface d'administration** pour gerer dynamiquement les images du marquee (ajouter/supprimer/activer-desactiver)
+Créer un flux conversationnel intelligent pour les miniatures YouTube qui :
 
----
+1. **Quand l'utilisateur clique "S'inspirer" sur une miniature** :
+   - Analyser la miniature de référence (visage, texte, logos, style)
+   - Poser des questions personnalisées basées sur ce qui est détecté
+   - Permettre l'upload d'images (photos personnelles, logos)
+   - Demander les préférences de mise en scène (logo dans les mains, autour, etc.)
 
-## Fichiers Uploades a Integrer
-
-Les 4 miniatures YouTube uploadees :
-- `maxresdefault_1-2.jpg` - E-commerce/Shopify (Commencer le E-commerce - Cout total)
-- `maxresdefault-2.jpg` - TikTok Sales (37.45k euro ventes)
-- `maxresdefault_3.jpg` - YouTube Subscribers (28K abonnes vs -72)
-- `maxresdefault_2.jpg` - Business (Ne pas lancer de Business)
+2. **Quand l'utilisateur veut créer une miniature SANS référence** :
+   - Demander le titre de la vidéo (élément clé)
+   - S'inspirer automatiquement des miniatures existantes en base
+   - Poser des questions intelligentes (photo personnelle, expression, logos)
+   - Créer une miniature professionnelle basée sur le profil expert YouTube
 
 ---
 
 ## Architecture de la Solution
 
-### Approche : Table Dediee en Base de Donnees
-
-Le marquee sera gere dynamiquement via une table `marquee_items` :
-- Stockage des images et leur configuration
-- Chargement dynamique avec fallback sur les images actuelles
-- Interface admin dediee pour la gestion
-
----
-
-## Fichiers a Creer/Modifier
+### Changements Requis
 
 | Fichier | Action | Description |
 |---------|--------|-------------|
-| `public/reference-templates/youtube/*.jpg` | COPIER | Ajouter les 4 nouvelles miniatures |
-| Migration SQL | CREER | Table `marquee_items` avec RLS |
-| `src/pages/AdminMarquee.tsx` | CREER | Page de gestion du marquee |
-| `src/components/landing/TemplatesMarquee.tsx` | MODIFIER | Charger depuis la DB avec fallback |
-| `src/pages/AdminDashboard.tsx` | MODIFIER | Ajouter lien vers gestion marquee |
-| `src/App.tsx` | MODIFIER | Ajouter route `/admin/marquee` |
-| `src/integrations/supabase/types.ts` | AUTO-UPDATE | Types generes automatiquement |
+| `supabase/functions/analyze-template/index.ts` | MODIFIER | Ajouter détection spécifique miniatures YouTube (visage, expression, texte court) |
+| `src/config/domainQuestions.ts` | MODIFIER | Améliorer les questions YouTube avec préférences de mise en scène |
+| `src/hooks/useConversation.ts` | MODIFIER | Ajouter logique pour flux YouTube avec/sans référence |
+| Migration SQL | CRÉER | Insérer les 12 miniatures YouTube dans `reference_templates` |
+| `src/types/generation.ts` | MODIFIER | Ajouter type `YouTubePreferences` pour les préférences de mise en scène |
 
 ---
 
-## Phase 1 : Ajout des Miniatures
+## Phase 1 : Enrichir la Base de Données
 
-### Copie des Fichiers
+### Migration SQL - Insertion des Templates YouTube
 
-```text
-public/reference-templates/youtube/
-├── commencer-ecommerce.jpg       (existant)
-├── ecommerce-tiktok-sales.jpg    (existant)
-├── ecommerce-cout-total.jpg      (NOUVEAU - maxresdefault_1-2.jpg)
-├── tiktok-ventes-37k.jpg         (NOUVEAU - maxresdefault-2.jpg)
-├── youtube-subscribers-28k.jpg   (NOUVEAU - maxresdefault_3.jpg)
-├── ne-pas-lancer-business.jpg    (NOUVEAU - maxresdefault_2.jpg)
-```
-
----
-
-## Phase 2 : Migration Base de Donnees
-
-### Table `marquee_items`
+Les 12 miniatures YouTube existantes seront ajoutées à la table `reference_templates` pour que le système puisse s'en inspirer automatiquement :
 
 ```sql
-CREATE TABLE public.marquee_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  image_url TEXT NOT NULL,
-  domain TEXT NOT NULL DEFAULT 'other',
-  row_number INTEGER NOT NULL CHECK (row_number BETWEEN 1 AND 3),
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN DEFAULT true,
-  title TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
-);
-
--- Index pour les requetes frequentes
-CREATE INDEX idx_marquee_items_active 
-  ON public.marquee_items(is_active, row_number, sort_order);
-
--- RLS
-ALTER TABLE public.marquee_items ENABLE ROW LEVEL SECURITY;
-
--- Lecture publique des elements actifs
-CREATE POLICY "Anyone can view active marquee items"
-  ON public.marquee_items FOR SELECT
-  USING (is_active = true);
-
--- Gestion par les admins/content managers
-CREATE POLICY "Admins can manage marquee items"
-  ON public.marquee_items FOR ALL
-  USING (has_any_role(auth.uid(), ARRAY['super_admin', 'admin', 'content_manager']::app_role[]));
-```
-
-### Seed Initial des Donnees
-
-Migration pour inserer les images actuellement codees en dur :
-
-```sql
-INSERT INTO public.marquee_items (image_url, domain, row_number, sort_order, is_active)
+INSERT INTO public.reference_templates (domain, design_category, image_url, description, tags)
 VALUES
-  -- Row 1
-  ('/reference-templates/church/14-jours-jeune.jpg', 'church', 1, 1, true),
-  ('/reference-templates/ecommerce/mega-sales-event.jpg', 'ecommerce', 1, 2, true),
-  -- ... autres images existantes
-  ('/reference-templates/youtube/ecommerce-tiktok-sales.jpg', 'youtube', 1, 10, true),
-  -- Row 2
-  ('/reference-templates/youtube/commencer-ecommerce.jpg', 'youtube', 2, 10, true),
-  -- Nouvelles miniatures
-  ('/reference-templates/youtube/ecommerce-cout-total.jpg', 'youtube', 1, 11, true),
-  ('/reference-templates/youtube/tiktok-ventes-37k.jpg', 'youtube', 2, 11, true),
-  ('/reference-templates/youtube/youtube-subscribers-28k.jpg', 'youtube', 3, 10, true),
-  ('/reference-templates/youtube/ne-pas-lancer-business.jpg', 'youtube', 3, 11, true);
+  ('youtube', 'thumbnail', '/reference-templates/youtube/yomi-denzel-ia-business.avif', 
+   'Miniature virale business/IA avec visage expressif, texte massif, objets 3D flottants (argent, téléphone)', 
+   ARRAY['business', 'ia', 'argent', 'viral', 'visage-expressif']),
+  ('youtube', 'thumbnail', '/reference-templates/youtube/yomi-denzel-millionnaire.avif',
+   'Miniature succès/richesse avec expression de confiance, couleurs dorées, chiffres mis en valeur',
+   ARRAY['millionnaire', 'richesse', 'confiance', 'or', 'succès']),
+  -- ... (les 12 miniatures)
 ```
 
 ---
 
-## Phase 3 : Page d'Administration du Marquee
+## Phase 2 : Améliorer l'Analyse de Miniatures (Edge Function)
 
-### Structure de `AdminMarquee.tsx`
+### Modifications de `analyze-template/index.ts`
 
-```text
-AdminMarquee
-├── Header (titre + navigation retour)
-├── Section Upload/Ajout
-│   ├── Upload nouvelle image OU
-│   ├── Selection depuis templates existants
-│   ├── Choix de la rangee (1, 2, ou 3)
-│   └── Bouton ajouter
-├── Sections par Rangee (x3)
-│   ├── Rangee 1 - Defilement gauche vers droite
-│   │   └── Grille d'images avec toggle actif/inactif + suppression
-│   ├── Rangee 2 - Defilement droite vers gauche
-│   │   └── Grille d'images avec toggle actif/inactif + suppression
-│   └── Rangee 3 - Defilement gauche vers droite
-│       └── Grille d'images avec toggle actif/inactif + suppression
-```
+Ajouter un prompt spécifique pour les miniatures YouTube qui détecte :
 
-### Fonctionnalites
-
-1. **Vue par rangee** : Affichage des 3 rangees du marquee
-2. **Ajouter une image** :
-   - Upload d'une nouvelle image vers storage
-   - Ou selection depuis les templates de reference existants
-   - Attribution a une rangee specifique
-3. **Activer/Desactiver** : Toggle switch sans supprimer
-4. **Supprimer** : Retirer du marquee (avec confirmation)
-5. **Preview en temps reel** : Voir l'effet des changements
-
----
-
-## Phase 4 : Modification du Composant TemplatesMarquee
-
-### Logique de Chargement Dynamique
+- **Visage** : Expression (surprise, joie, confiance), position, taille
+- **Texte** : Mots-clés, chiffres, couleurs du texte
+- **Objets** : Logos, symboles (argent, téléphone, voiture)
+- **Style** : Palette de couleurs, fond, effets (glow, ombres)
 
 ```typescript
-// Etat initial avec fallback
-const [marqueeItems, setMarqueeItems] = useState<{
-  row1: string[];
-  row2: string[];
-  row3: string[];
-}>({
-  row1: FALLBACK_TEMPLATES.row1,
-  row2: FALLBACK_TEMPLATES.row2,
-  row3: FALLBACK_TEMPLATES.row3,
-});
+// Nouveau système prompt pour miniatures YouTube
+const youtubeAnalysisPrompt = `
+Tu analyses une MINIATURE YOUTUBE pour permettre à l'utilisateur de créer une miniature similaire.
 
-// Chargement depuis la base de donnees
-useEffect(() => {
-  const loadMarqueeItems = async () => {
-    const { data, error } = await supabase
-      .from("marquee_items")
-      .select("image_url, row_number")
-      .eq("is_active", true)
-      .order("sort_order");
-    
-    if (data && data.length > 0) {
-      const grouped = {
-        row1: data.filter(i => i.row_number === 1).map(i => i.image_url),
-        row2: data.filter(i => i.row_number === 2).map(i => i.image_url),
-        row3: data.filter(i => i.row_number === 3).map(i => i.image_url),
-      };
-      // Seulement mettre a jour si des donnees existent
-      if (grouped.row1.length > 0 || grouped.row2.length > 0 || grouped.row3.length > 0) {
-        setMarqueeItems(grouped);
-      }
-    }
-    // Sinon, garder le fallback
-  };
-  
-  loadMarqueeItems();
-}, []);
+ÉLÉMENTS SPÉCIFIQUES À DÉTECTER:
+1. VISAGE: Expression (surprise/choc/joie/confiance), position (centre/gauche/droite), taille (% surface)
+2. TEXTE: Mots-clés visibles, chiffres/montants, style (couleur, bordure, fond)
+3. OBJETS SYMBOLIQUES: Argent, téléphone, logo, voiture, produits
+4. STYLE: Palette couleurs, saturation, fond (flou/couleur/contexte)
+5. MISE EN SCÈNE: Relation entre personne et objets (tenir, pointer, autour)
+
+QUESTIONS À GÉNÉRER (personnalisées selon ce qui est détecté):
+- Si visage détecté → "Voulez-vous utiliser votre propre photo ?"
+- Si texte détecté → "Quel est le titre de votre vidéo ?"
+- Si logos détectés → "Avez-vous des logos à inclure ?"
+- Si objets symboliques → "Voulez-vous une mise en scène similaire ?"
+`;
 ```
 
 ---
 
-## Phase 5 : Navigation Admin
+## Phase 3 : Améliorer les Questions YouTube
 
-### Mise a Jour du Dashboard
+### Modifications de `src/config/domainQuestions.ts`
 
-Ajouter dans `navItems` :
+Enrichir la configuration YouTube avec des questions de mise en scène :
 
 ```typescript
-{ 
-  id: 'marquee' as const, 
-  label: "Marquee", 
-  icon: Rows3,  // ou GalleryHorizontal
-  permission: 'manage_templates' 
+youtube: {
+  domain: "youtube",
+  label: "Miniature YouTube",
+  templateRequirements: ["face_image", "video_title"],
+  questions: [
+    // Q1: Titre de la vidéo (OBLIGATOIRE - contexte principal)
+    {
+      id: "video_title",
+      question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à choisir les meilleurs éléments visuels.",
+      type: "text",
+      required: true,
+      priority: 1,
+    },
+    // Q2: Photo propre ou générée
+    {
+      id: "has_own_image",
+      question: "📸 **Voulez-vous utiliser votre propre photo ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez une photo avec expression marquée\n• **Non** : L'IA générera un visage adapté",
+      type: "boolean",
+      required: true,
+      priority: 2,
+    },
+    // Q3: Préférences de mise en scène (NOUVEAU)
+    {
+      id: "scene_preference",
+      question: "🎭 **Comment souhaitez-vous la mise en scène ?**\n\nExemples de ce que vous pouvez demander :\n• \"Je tiens un billet de 100€ dans la main\"\n• \"Mon logo flotte à côté de ma tête\"\n• \"Des pièces d'or tombent autour de moi\"\n• \"Je pointe vers le texte\"\n• \"Je montre mon téléphone avec l'écran visible\"\n\n💡 Décrivez la scène que vous imaginez :",
+      type: "text",
+      required: false,
+      priority: 3,
+    },
+    // Q4: Logos (multiples)
+    {
+      id: "has_logo",
+      question: "🏷️ **Voulez-vous ajouter des logos ?**\n\nVous pouvez en ajouter plusieurs pour renforcer votre marque.",
+      type: "boolean",
+      required: false,
+      priority: 4,
+    },
+    // Q5: Position des logos
+    {
+      id: "logo_position",
+      question: "📍 **Où placer le(s) logo(s) ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre (dans les mains/flottant)\n↙ Bas gauche | ↘ Bas droite",
+      type: "choice",
+      choices: ["Haut gauche", "Haut droite", "Centre (dans les mains)", "Bas gauche", "Bas droite"],
+      required: false,
+      priority: 5,
+    },
+    // Q6: Expression faciale (si IA génère le visage)
+    {
+      id: "desired_expression",
+      question: "😮 **Quelle expression faciale ?**\n\n• 😮 Surprise/Choc (le plus viral)\n• 🤔 Concentration\n• 😊 Joie/Excitation\n• 😎 Confiance",
+      type: "choice",
+      choices: ["Surprise/Choc", "Concentration", "Joie/Excitation", "Confiance"],
+      required: false,
+      priority: 6,
+    },
+  ]
 }
 ```
 
-### Nouvelle Route
+---
+
+## Phase 4 : Logique de Conversation Intelligente
+
+### Modifications de `src/hooks/useConversation.ts`
+
+#### Cas 1 : Utilisateur clique "S'inspirer" sur une miniature YouTube
 
 ```typescript
-// Dans App.tsx
-<Route path="/admin/marquee" element={<AdminMarquee />} />
+// Quand cloneTemplate.domain === 'youtube'
+if (cloneTemplate?.domain === 'youtube') {
+  // 1. Analyser la miniature avec le prompt spécialisé
+  const { data } = await supabase.functions.invoke("analyze-template", {
+    body: { 
+      imageUrl: cloneTemplate.imageUrl, 
+      domain: 'youtube',
+      isYouTubeThumbnail: true  // Flag pour activer l'analyse spécialisée
+    },
+  });
+  
+  // 2. Construire un message personnalisé basé sur ce qui est détecté
+  let introMessage = `🎬 **Je vais créer une miniature YouTube en m'inspirant de ce style !**\n\n`;
+  introMessage += `📋 J'ai détecté sur cette miniature :\n`;
+  if (data.analysis.hasExpressiveFace) introMessage += `• Un visage avec expression ${data.analysis.faceExpression}\n`;
+  if (data.analysis.hasText) introMessage += `• Du texte percutant (${data.analysis.textCount} mots)\n`;
+  if (data.analysis.hasSymbolicObjects) introMessage += `• Des objets symboliques (${data.analysis.objects.join(', ')})\n`;
+  
+  introMessage += `\n📝 **Répondez à ces questions pour personnaliser votre miniature :**`;
+  
+  // 3. Poser les questions dans l'ordre de priorité
+  // La première question est toujours le titre de la vidéo
+}
+```
+
+#### Cas 2 : Utilisateur veut créer une miniature SANS référence
+
+```typescript
+// Quand domain === 'youtube' et pas de referenceImage
+if (domain === 'youtube' && !referenceImage) {
+  // 1. Récupérer les miniatures existantes pour s'en inspirer
+  const { data: templates } = await supabase
+    .from("reference_templates")
+    .select("*")
+    .eq("domain", "youtube");
+  
+  // 2. Sélectionner une miniature aléatoire comme inspiration interne
+  // (l'utilisateur ne la voit pas, mais l'IA s'en inspire)
+  const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+  
+  // 3. Utiliser le profil expert YOUTUBE_THUMBNAIL
+  // + la description du template choisi comme contexte
+  setConversationState(prev => ({
+    ...prev,
+    referenceDescription: `Style miniature virale inspiré de: ${randomTemplate.description}`,
+  }));
+  
+  // 4. Poser les questions YouTube intelligentes
+  addMessage("assistant", 
+    `🎬 **Créons une miniature YouTube qui fait cliquer !**\n\n` +
+    `Je vais m'inspirer des meilleures pratiques virales pour créer votre miniature.\n\n` +
+    `${getDomainQuestions('youtube')[0].question}`
+  );
+}
 ```
 
 ---
 
-## Resume des Modifications
+## Phase 5 : Intégration des Préférences de Mise en Scène
 
-### Fichiers a Creer
+### Modification du Prompt de Génération
 
-| Fichier | Description |
-|---------|-------------|
-| `src/pages/AdminMarquee.tsx` | Interface complete de gestion du marquee |
+Dans `supabase/functions/generate-image/index.ts`, intégrer les préférences de mise en scène :
 
-### Fichiers a Modifier
+```typescript
+// Si domaine YouTube et préférences de mise en scène
+if (domain === 'youtube' && scenePreference) {
+  prompt += `\n\n=== MISE EN SCÈNE DEMANDÉE ===\n`;
+  prompt += `Le sujet doit être montré : ${scenePreference}\n`;
+  prompt += `Intégrer cette mise en scène de manière naturelle et professionnelle.\n`;
+  prompt += `Les objets/logos mentionnés doivent être photoréalistes et bien intégrés.`;
+}
+```
+
+---
+
+## Résumé des Fichiers à Modifier
 
 | Fichier | Modifications |
 |---------|---------------|
-| `src/components/landing/TemplatesMarquee.tsx` | Chargement dynamique + fallback |
-| `src/pages/AdminDashboard.tsx` | Ajout lien navigation vers marquee |
-| `src/App.tsx` | Route `/admin/marquee` |
-
-### Migration SQL
-
-| Action | Description |
-|--------|-------------|
-| CREATE TABLE | `marquee_items` avec colonnes et contraintes |
-| CREATE INDEX | Index sur `is_active`, `row_number`, `sort_order` |
-| RLS POLICIES | Lecture publique + gestion admin |
-| SEED DATA | Migration des images actuelles vers la DB |
-
-### Assets
-
-| Fichier | Destination |
-|---------|-------------|
-| `maxresdefault_1-2.jpg` | `public/reference-templates/youtube/ecommerce-cout-total.jpg` |
-| `maxresdefault-2.jpg` | `public/reference-templates/youtube/tiktok-ventes-37k.jpg` |
-| `maxresdefault_3.jpg` | `public/reference-templates/youtube/youtube-subscribers-28k.jpg` |
-| `maxresdefault_2.jpg` | `public/reference-templates/youtube/ne-pas-lancer-business.jpg` |
+| `supabase/functions/analyze-template/index.ts` | Ajouter analyse spécialisée YouTube avec détection visage/expression/objets |
+| `src/config/domainQuestions.ts` | Enrichir questions YouTube avec préférences de mise en scène |
+| `src/hooks/useConversation.ts` | Ajouter logique flux YouTube avec/sans référence + sélection automatique de template |
+| `src/types/generation.ts` | Ajouter `scenePreference` à `YouTubeInfo` |
+| `supabase/functions/generate-image/index.ts` | Intégrer les préférences de mise en scène dans le prompt |
+| Migration SQL | Insérer les 12 miniatures YouTube dans `reference_templates` |
 
 ---
 
 ## Comportement Final
 
-### Pour les Visiteurs
+### Pour l'utilisateur qui clique "S'inspirer" sur une miniature
 
-- Le marquee affiche les images gerees dynamiquement depuis la base de donnees
-- Fallback sur les images codees en dur si la DB est vide
-- Le bouton "S'inspirer" fonctionne sur toutes les images (y compris YouTube)
+1. L'IA analyse la miniature et détecte les éléments
+2. Message personnalisé : "J'ai détecté un visage expressif, du texte percutant, des symboles d'argent..."
+3. Questions dans l'ordre :
+   - Titre de votre vidéo ?
+   - Votre propre photo ? (upload possible)
+   - Mise en scène souhaitée ? (texte libre)
+   - Logos à ajouter ? (upload multiple)
+   - Position des logos ?
+4. Génération avec le style de la référence + contenu utilisateur
 
-### Pour les Administrateurs
+### Pour l'utilisateur qui crée une miniature sans référence
 
-- Acces a `/admin/marquee` depuis le dashboard
-- Vue des 3 rangees avec toutes les images
-- Possibilite d'ajouter/supprimer/activer-desactiver des images
-- Detection automatique du domaine depuis le chemin de l'image
-- Changements appliques en temps reel sur le landing page
+1. Détection du domaine "youtube" via mots-clés (miniature, thumbnail, vignette)
+2. L'IA sélectionne automatiquement une miniature de référence interne
+3. Questions intelligentes basées sur le profil expert YouTube
+4. Génération avec le profil YOUTUBE_THUMBNAIL + inspiration cachée
