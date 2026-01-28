@@ -200,16 +200,38 @@ function getDefaultAnalysis(domain?: string): TemplateAnalysisResult {
 function getStandardAnalysisPrompt(): string {
   return `Tu es un expert graphiste spécialisé dans l'analyse d'affiches publicitaires africaines pour le CLONAGE.
 
-🎯 OBJECTIF: Analyser cette affiche pour permettre à l'utilisateur de la CLONER avec son propre contenu.
-Le clone doit avoir le MÊME DESIGN EXACT, seules les informations textuelles changent.
+🎯 OBJECTIF PRINCIPAL:
+Analyser TOUTE L'INGÉNIERIE GRAPHIQUE de cette affiche pour permettre à l'utilisateur de la CLONER avec son propre contenu.
+Le clone doit avoir le MÊME DESIGN EXACT, seules les informations textuelles et visuelles changent.
+
+⚠️ RÈGLE FONDAMENTALE - ZÉRO INFORMATION ORIGINALE:
+L'affiche générée ne doit contenir AUCUNE information du template original.
+TOUS les éléments identifiés doivent être remplacés par les données de l'utilisateur.
+Si l'utilisateur ne fournit pas un équivalent → cet élément DISPARAÎT de l'affiche.
 
 ANALYSE REQUISE:
-1. Identifier CHAQUE zone de texte visible sur l'affiche
-2. Comprendre PRÉCISÉMENT la structure du design
-3. Générer des questions pour que l'utilisateur fournisse TOUTES les informations à remplacer
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ÉLÉMENTS À DÉTECTER (cherche dans l'image):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 📝 IDENTIFIER CHAQUE ZONE DE TEXTE:
+   - Position exacte (ex: "titre centré en haut sur fond doré")
+   - Style typographique (police, taille, effets 3D, ombres, glow)
+   - Contenu actuel (pour savoir quoi demander à l'utilisateur)
+
+2. 🖼️ IDENTIFIER LES ÉLÉMENTS VISUELS:
+   - Logos présents (position, taille) → à REMPLACER ou SUPPRIMER
+   - Photos de personnes (nombre, positions) → à REMPLACER ou SUPPRIMER
+   - Produits/objets (positions) → à REMPLACER ou SUPPRIMER
+   - Icônes (réseaux sociaux, symboles) → à REMPLACER ou SUPPRIMER
+
+3. 🎨 ANALYSER LE DESIGN (À REPRODUIRE):
+   - Layout et composition
+   - Palette de couleurs dominantes
+   - Effets visuels (lumières, dégradés, textures)
+   - Éléments décoratifs (cadres, formes, motifs)
+   - Style général (moderne, spirituel, festif, corporate...)
+
+ÉLÉMENTS À DÉTECTER (et demander à l'utilisateur):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • TITRE PRINCIPAL - le texte le plus grand/visible
 • SOUS-TITRE / SLOGAN - texte secondaire sous le titre
 • DATE(S) - jour, mois, année de l'événement
@@ -218,29 +240,22 @@ ANALYSE REQUISE:
 • CONTACT - téléphone, WhatsApp, email
 • PRIX / TARIFS - entrée, billets, coûts
 • ORATEUR(S) / ARTISTE(S) - noms et titres des intervenants
+• NOMBRE DE PERSONNES - combien de personnes sont affichées
 • INVITÉS - autres personnalités mentionnées
 • ORGANISATEUR - église, entreprise, association
 • RÉSEAUX SOCIAUX - Facebook, Instagram, YouTube
 • MENU / PRODUITS - si applicable (restaurant, commerce)
 • SPONSORS / PARTENAIRES - logos et noms visibles
+• LOGOS - tout logo visible sur l'affiche
 
-RÈGLES CRITIQUES POUR LE CLONAGE:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. CHAQUE texte visible sur l'affiche = UNE question pour l'utilisateur
-2. Si tu vois 8 zones de texte → génère 8 questions minimum
-3. L'utilisateur DOIT fournir TOUTES les infos pour remplacer le contenu original
-4. NE JAMAIS laisser du contenu du template original sur le clone
-5. Si une info n'est pas fournie, elle ne sera PAS sur le clone (pas d'invention)
-
-DESCRIPTION DU TEMPLATE (très important pour le clonage):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Décris PRÉCISÉMENT:
-- Position de CHAQUE élément (ex: "titre en haut centré sur fond doré")
-- Couleurs dominantes et palette
-- Style typographique (moderne, classique, bold, script)
-- Éléments décoratifs (cadres, formes, dégradés, effets lumineux)
-- Position du/des personnage(s) si présent(s)
-- Fond (couleur unie, dégradé, image, motifs)
+RÈGLES CRITIQUES POUR LE QUESTIONNAIRE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CHAQUE élément identifié = UNE question pour l'utilisateur
+2. Si tu détectes 8 zones → génère 8 questions minimum
+3. Pour les LOGOS: toujours demander "Voulez-vous ajouter votre logo ?"
+4. Pour les PERSONNES: demander combien il veut et s'il a des photos
+5. Si l'utilisateur ne répond pas → cet élément sera SUPPRIMÉ (pas gardé)
+6. Proposer l'option "générer automatiquement" pour les personnes
 
 FORMAT DE RÉPONSE (JSON strict):
 {
@@ -253,44 +268,52 @@ FORMAT DE RÉPONSE (JSON strict):
     "hasContact": true/false,
     "hasPrice": true/false,
     "hasSpeaker": true/false,
+    "hasMultiplePeople": true/false,
+    "peopleCount": number,
     "hasGuests": true/false,
     "hasOrganizer": true/false,
     "hasMenu": true/false,
     "hasProducts": true/false,
     "hasLogo": true/false,
+    "logoCount": number,
     "hasSocialMedia": true/false
   },
   "requiredQuestions": [
     {
-      "id": "title",
+      "id": "unique_id",
       "question": "Question claire en français",
-      "type": "text" ou "multiline",
+      "type": "text" ou "multiline" ou "image" ou "boolean",
       "placeholder": "Exemple concret",
-      "required": true/false
+      "required": true/false,
+      "allowMultiple": true/false (pour les images),
+      "offerAutoGenerate": true/false (pour les personnes)
     }
   ],
-  "templateDescription": "Description ULTRA-DÉTAILLÉE du layout pour reproduction exacte",
-  "suggestedPrompt": "Instructions de clonage: reproduire exactement [décrire le design] avec le contenu utilisateur",
-  "layoutGuide": {
-    "titlePosition": "position exacte du titre",
-    "datePosition": "position de la date",
-    "contactPosition": "position du contact",
-    "visualPosition": "position du visuel/personnage"
+  "templateDescription": "Description ULTRA-DÉTAILLÉE du layout et du style pour reproduction exacte",
+  "suggestedPrompt": "Instructions de clonage précises",
+  "designAnalysis": {
+    "layout": "description de la mise en page",
+    "typography": "styles de texte utilisés",
+    "colors": "palette de couleurs",
+    "effects": "effets visuels (lumières, ombres, etc.)",
+    "mood": "ambiance générale"
   }
 }
 
 EXEMPLES DE QUESTIONS À GÉNÉRER:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • "Quel est le titre principal de votre affiche ?" (required: true)
 • "Avez-vous un sous-titre ou slogan ?" (required: false)
-• "Quelle est la date de l'événement ? (ex: 25 Janvier 2025)" (required: true si détecté)
-• "À quelle heure commence l'événement ?" (required: true si horaire visible)
-• "Quel est le lieu ? (adresse complète)" (required: true si lieu visible)
+• "Quelle est la date de l'événement ?" (required: true si détecté)
+• "Voulez-vous ajouter votre logo ?" (required: false, type: image)
+• "Je détecte 3 personnes sur l'affiche. Combien voulez-vous sur la vôtre ?"
+• "Avez-vous des photos à fournir, ou voulez-vous que je génère des personnes automatiquement ?"
 • "Quels sont vos contacts ? (téléphone, WhatsApp)" (required: true si contact visible)
-• "Qui est l'orateur/artiste principal ? (nom et fonction)" (required: true si orateur visible)
-• "Quels sont les tarifs ? (ex: Entrée: 5000 FCFA)" (required: true si prix visible)
 
-⚠️ IMPORTANT: Sois EXHAUSTIF. Le but est de capturer TOUT le contenu textuel pour un clone parfait.`;
+⚠️ IMPORTANT: 
+- Sois EXHAUSTIF dans la détection pour éviter de garder des éléments de l'original
+- Pour chaque élément détecté, l'utilisateur DOIT fournir un remplacement OU accepter sa suppression
+- Propose toujours l'option de génération automatique pour les personnes/visages`;
 }
 
 // Prompt spécialisé pour l'analyse de miniatures YouTube
