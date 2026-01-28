@@ -54,7 +54,7 @@ const POSTER_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
   ],
 };
 
-// Miniatures YouTube professionnelles
+// Miniatures YouTube professionnelles (sans doublons)
 const YOUTUBE_THUMBNAILS: string[] = [
   "/reference-templates/youtube/ecommerce-tiktok-sales.jpg",
   "/reference-templates/youtube/commencer-ecommerce.jpg",
@@ -62,8 +62,6 @@ const YOUTUBE_THUMBNAILS: string[] = [
   "/reference-templates/youtube/tiktok-ventes-37k.jpg",
   "/reference-templates/youtube/youtube-subscribers-28k.jpg",
   "/reference-templates/youtube/ne-pas-lancer-business.jpg",
-  "/reference-templates/youtube/abonnes-28k-secret.jpg",
-  "/reference-templates/youtube/ne-pas-lancer-business-2.jpg",
   "/reference-templates/youtube/yomi-denzel-ia-business.avif",
   "/reference-templates/youtube/yomi-denzel-millionnaire.avif",
   "/reference-templates/youtube/yomi-denzel-tesla.avif",
