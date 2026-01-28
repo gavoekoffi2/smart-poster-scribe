@@ -63,6 +63,9 @@ const CORPORATE_MODERN: ExpertSkillProfile = {
     "Si couleurs contrastées: utiliser la plus sombre pour le fond",
     "Garantir lisibilité: texte clair sur fond foncé OU texte foncé sur fond clair",
     "Ajouter blanc/gris neutres si besoin d'équilibre",
+    "🚨 COMBINAISONS INTERDITES: bleu/orange, rouge/vert vif, jaune/violet en contact direct",
+    "💡 SOLUTION BLANC: Si les couleurs clashent, ajouter du blanc comme séparateur/harmonisateur",
+    "⚡ Le blanc passe avec TOUTES les couleurs - l'utiliser généreusement pour créer de l'espace",
   ],
   visualElements: [
     "Formes géométriques simples (cercles, rectangles arrondis)",
@@ -142,6 +145,9 @@ const SURREALIST_PHOTOREALISTIC: ExpertSkillProfile = {
     "Color grading: appliquer une teinte unifiée sur toute l'image",
     "Si couleurs ternes fournies: les saturer à +30-50% pour impact",
     "Utiliser reflets et brillances pour créer cohésion visuelle",
+    "🚨 COMBINAISONS QUI CLASHENT: bleu texte sur orange fond, rouge sur vert vif",
+    "💡 SOLUTION: Ajouter bordure blanche/noire épaisse sur texte pour séparer les couleurs",
+    "⚡ Le BLANC ou NOIR en contour crée une barrière visuelle entre couleurs qui clashent",
   ],
   visualElements: [
     "Emojis et objets 3D photoréalistes avec ombres cohérentes",
@@ -221,6 +227,9 @@ const SPIRITUAL_RELIGIOUS: ExpertSkillProfile = {
     "Créer dégradés verticaux: couleur dominante en haut → plus sombre en bas",
     "Rim light (contour lumineux) utilisant la couleur d'accent autour des portraits",
     "Glow doré sur titres: 2-4px, couleur secondaire, opacité 60-80%",
+    "🚨 ÉVITER: texte coloré directement sur fond de couleur similaire ou opposée",
+    "💡 SOLUTION BLANC: Ajouter du BLANC pur dans les zones de texte pour garantir lisibilité",
+    "⚡ Titres en BLANC avec ombre de couleur dominante = harmonie parfaite en contexte spirituel",
   ],
   visualElements: [
     "Rayons de lumière divine (god rays): angle 15-30°, opacité 20-35%",
@@ -305,6 +314,9 @@ const RESTAURANT_FOOD: ExpertSkillProfile = {
     "Si palette froide (bleu, violet): utiliser comme fond, ajouter éclairage chaud sur plats",
     "Créer cohésion: couleur secondaire en bordures du plat ou reflets sur assiettes",
     "Badges rotationnels (-15° à -25°) dans la couleur d'accent pour dynamisme",
+    "🚨 ÉVITER: couleurs vives derrière le plat qui détournent l'attention de la nourriture",
+    "💡 SOLUTION BLANC/CRÈME: Utiliser blanc ou crème près du plat pour le mettre en valeur",
+    "⚡ Prix en BLANC sur badge coloré = lisibilité maximale et appétit visuel préservé",
   ],
   visualElements: [
     "Ingrédients flottants en arrière-plan (tomates, épices, herbes)",
@@ -391,6 +403,10 @@ const YOUTUBE_THUMBNAIL: ExpertSkillProfile = {
     "Fond coloré rectangle arrondi (15-25px) derrière mots-clés importants",
     "Éclairage sur visage: reflets de la couleur dominante sur la peau",
     "Bordures de texte ÉPAISSES: utiliser couleur contrastante (noir sur clair, blanc sur foncé)",
+    "🚨 INTERDICTION ABSOLUE: texte bleu sur orange, rouge sur vert, jaune sur violet (fait mal aux yeux)",
+    "💡 SOLUTION OBLIGATOIRE: Bordure BLANCHE (4-6px) ou NOIRE autour du texte pour isoler les couleurs",
+    "⚡ Le BLANC comme bordure texte = TOUJOURS lisible, passe avec TOUTES les combinaisons de fond",
+    "🎯 RÈGLE YOUTUBE: Si couleurs clashent, mettre fond blanc derrière le texte avec bordure colorée",
   ],
   visualElements: [
     "Objets symboliques SURDIMENSIONNÉS (billets, téléphones, logos, argent)",
