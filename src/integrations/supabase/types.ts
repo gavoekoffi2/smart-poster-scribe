@@ -177,6 +177,45 @@ export type Database = {
           },
         ]
       }
+      marquee_items: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          image_url: string
+          is_active: boolean
+          item_type: string
+          row_number: number
+          sort_order: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          item_type: string
+          row_number?: number
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          item_type?: string
+          row_number?: number
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       partner_designers: {
         Row: {
           bio: string | null
