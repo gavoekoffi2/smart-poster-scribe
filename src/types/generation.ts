@@ -234,6 +234,8 @@ export interface YouTubeInfo {
     imageUrl: string;
     position: LogoPosition;
   }>;
+  // Nouveau: préférences de mise en scène créative
+  scenePreference?: string;
 }
 
 // Type générique pour stocker les infos spécifiques au domaine
