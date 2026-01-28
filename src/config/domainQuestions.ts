@@ -238,40 +238,57 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
           }
         }
       },
-      // Q3: Origine (si génération IA)
+      // Q3: Préférences de mise en scène (NOUVEAU)
+      {
+        id: "scene_preference",
+        question: "🎭 **Comment souhaitez-vous la mise en scène ?** (optionnel)\n\nExemples de ce que vous pouvez demander :\n• \"Je tiens un billet de 100€ dans la main\"\n• \"Mon logo flotte à côté de ma tête\"\n• \"Des pièces d'or tombent autour de moi\"\n• \"Je pointe vers le texte\"\n• \"Je montre mon téléphone avec l'écran visible\"\n\n💡 Tapez \"passer\" si vous n'avez pas de préférence.",
+        type: "text",
+        required: false,
+        priority: 3,
+        followUp: {
+          condition: "any",
+          nextStep: "scene_collected",
+          textInput: {
+            label: "Mise en scène souhaitée",
+            placeholder: "Ex: Je tiens une liasse de billets, des symboles d'argent flottent autour de moi",
+            multiline: true
+          }
+        }
+      },
+      // Q4: Origine (si génération IA)
       {
         id: "subject_ethnicity",
         question: "🌍 **Quelle origine pour la personne à générer ?**\n\n• Africain(e)\n• Caucasien(ne)\n• Asiatique\n• Autre",
         type: "choice",
         choices: ["Africain(e)", "Caucasien(ne)", "Asiatique", "Autre"],
         required: false,
-        priority: 3
+        priority: 4
       },
-      // Q4: Âge (si génération IA)
+      // Q5: Âge (si génération IA)
       {
         id: "subject_age",
         question: "👤 **Quel âge approximatif pour la personne ?**\n\n• Jeune (18-30 ans)\n• Adulte (30-50 ans)\n• Senior (50+ ans)",
         type: "choice",
         choices: ["Jeune (18-30 ans)", "Adulte (30-50 ans)", "Senior (50+ ans)"],
         required: false,
-        priority: 4
+        priority: 5
       },
-      // Q5: Expression faciale
+      // Q6: Expression faciale
       {
         id: "desired_expression",
         question: "😮 **Quelle expression faciale souhaitez-vous ?**\n\n• 😮 Surprise / Choc (le plus viral)\n• 🤔 Concentration\n• 😊 Joie / Excitation\n• 😎 Confiance",
         type: "choice",
         choices: ["Surprise / Choc", "Concentration", "Joie / Excitation", "Confiance"],
         required: false,
-        priority: 5
+        priority: 6
       },
-      // Q6: Logo
+      // Q7: Logo
       {
         id: "has_logo",
         question: "🏷️ **Voulez-vous ajouter votre logo sur la miniature ?**\n\nBeaucoup de créateurs ajoutent leur logo pour renforcer leur marque personnelle.",
         type: "boolean",
         required: false,
-        priority: 6,
+        priority: 7,
         followUp: {
           condition: "yes",
           nextStep: "youtube_logo",
@@ -282,14 +299,14 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
           }
         }
       },
-      // Q7: Position du logo
+      // Q8: Position du logo
       {
         id: "logo_position",
-        question: "📍 **Où souhaitez-vous placer le logo ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre\n↙ Bas gauche | ↘ Bas droite\n\n💡 Conseil : Le coin inférieur droit est le plus populaire car il n'interfère pas avec le visage.",
+        question: "📍 **Où souhaitez-vous placer le logo ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre (dans les mains/flottant)\n↙ Bas gauche | ↘ Bas droite\n\n💡 Conseil : Le coin inférieur droit est le plus populaire car il n'interfère pas avec le visage.",
         type: "choice",
-        choices: ["Haut gauche", "Haut droite", "Centre", "Bas gauche", "Bas droite"],
+        choices: ["Haut gauche", "Haut droite", "Centre (dans les mains)", "Bas gauche", "Bas droite"],
         required: false,
-        priority: 7
+        priority: 8
       }
     ]
   },

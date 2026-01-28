@@ -445,11 +445,17 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             }
           }
 
+          // Détecter si c'est une miniature YouTube
+          const isYouTubeThumbnail = cloneTemplate.domain === 'youtube' || 
+            cloneTemplate.imageUrl.toLowerCase().includes('youtube') ||
+            cloneTemplate.imageUrl.toLowerCase().includes('thumbnail');
+
           const { data, error } = await supabase.functions.invoke("analyze-template", {
             body: { 
               imageUrl: imageToAnalyze, 
               domain: cloneTemplate.domain,
-              existingDescription: cloneTemplate.description
+              existingDescription: cloneTemplate.description,
+              isYouTubeThumbnail, // Flag pour activer l'analyse spécialisée YouTube
             },
           });
 
@@ -458,9 +464,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           // Stocker les infos du template
           let templateDescription = "Template professionnel africain";
           let detectedElements: string[] = [];
+          let youtubeAnalysis: any = null;
           
           if (!error && data?.success && data.analysis) {
             templateDescription = `${data.analysis.templateDescription || ''}. ${data.analysis.suggestedPrompt || ''}`;
+            youtubeAnalysis = data.analysis.youtubeAnalysis || null;
             
             // Collecter les éléments détectés pour informer l'utilisateur
             const detected = data.analysis.detectedElements || {};
@@ -472,20 +480,31 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             if (detected.hasPrice) detectedElements.push("prix/tarif");
             if (detected.hasSpeaker) detectedElements.push("orateur/artiste");
             if (detected.hasOrganizer) detectedElements.push("organisateur");
+            // Éléments spécifiques YouTube
+            if (detected.hasExpressiveFace) detectedElements.push("visage expressif");
+            if (detected.hasText) detectedElements.push("texte percutant");
+            if (detected.hasSymbolicObjects) detectedElements.push(`objets symboliques (${detected.objects?.join(', ') || 'argent, logos'})`);
+            if (detected.hasLogo) detectedElements.push("logo");
           }
 
-          // Mettre à jour l'état avec la description du style
+          // Mettre à jour l'état avec la description du style et le domaine
           setConversationState(prev => ({
             ...prev,
             step: "clone_gathering",
             referenceDescription: templateDescription,
+            domain: (cloneTemplate.domain as Domain) || prev.domain,
           }));
+          
+          // Construire le message d'intro selon le type de template
+          const introMessage = isYouTubeThumbnail 
+            ? buildYouTubeCloneIntroMessage(detectedElements, youtubeAnalysis)
+            : buildCloneIntroMessage(detectedElements);
           
           // Remplacer le message initial par le message avec l'image et les instructions
           setMessages([{
             id: "clone-intro",
             role: "assistant",
-            content: buildCloneIntroMessage(detectedElements),
+            content: introMessage,
             timestamp: new Date(),
             image: cloneTemplate.imageUrl
           }]);
@@ -532,6 +551,36 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     message += `• **Orateur/Artiste** (si applicable)\n`;
     message += `• Tout autre détail important\n\n`;
     message += `💡 **Astuce** : Si vous ne voulez pas inclure une information visible sur le modèle, ne la mentionnez simplement pas et je ne l'ajouterai pas sur votre affiche.`;
+    
+    return message;
+  };
+
+  // Construire le message d'introduction pour le clone de miniature YouTube
+  const buildYouTubeCloneIntroMessage = (detectedElements: string[], youtubeAnalysis: any): string => {
+    let message = `🎬 **Je vais créer une miniature YouTube en m'inspirant de ce style !**\n\n`;
+    
+    if (detectedElements.length > 0) {
+      message += `📋 J'ai détecté sur cette miniature :\n`;
+      detectedElements.forEach(el => {
+        message += `• ${el}\n`;
+      });
+      message += `\n`;
+    }
+    
+    if (youtubeAnalysis?.suggestedStagingOptions?.length > 0) {
+      message += `🎭 **Options de mise en scène similaires possibles :**\n`;
+      youtubeAnalysis.suggestedStagingOptions.slice(0, 3).forEach((option: string) => {
+        message += `• ${option}\n`;
+      });
+      message += `\n`;
+    }
+    
+    message += `📝 **Pour personnaliser votre miniature, donnez-moi :**\n\n`;
+    message += `• 🎬 **Titre de votre vidéo** (obligatoire)\n`;
+    message += `• 📸 **Votre photo** (envoyez-la) OU dites "générer" pour que l'IA crée un visage\n`;
+    message += `• 🎭 **Mise en scène souhaitée** (ex: "je tiens des billets", "mon logo flotte à côté")\n`;
+    message += `• 🏷️ **Logo(s)** à ajouter (si applicable)\n\n`;
+    message += `💡 **Conseil** : Le visage expressif est la clé d'une miniature virale ! Décrivez tout en un message.`;
     
     return message;
   };
@@ -630,6 +679,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           console.log("Session refresh warning:", refreshError.message);
         }
         
+        // Extraire les préférences de mise en scène YouTube si disponibles
+        const youtubeScenePreference = state.domainSpecificInfo?.youtube?.scenePreference 
+          || state.domainQuestionState?.collectedTexts?.scene_preference;
+        
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
@@ -643,6 +696,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             formatWidth: formatPreset?.width,
             formatHeight: formatPreset?.height,
             usageType: state.usageType || "social",
+            // Nouvelles props pour YouTube
+            scenePreference: youtubeScenePreference || undefined,
+            domain: state.domain || undefined,
           },
         });
 

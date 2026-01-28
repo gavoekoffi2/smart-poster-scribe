@@ -760,6 +760,8 @@ serve(async (req) => {
       aspectRatio = "3:4",
       resolution = "2K",
       outputFormat = "png",
+      scenePreference, // Nouvelle prop pour les préférences de mise en scène YouTube
+      domain, // Domaine passé par le client
     } = body;
 
     let referenceImage = rawReferenceImage as string | undefined;
@@ -1179,8 +1181,22 @@ serve(async (req) => {
     // Détecter si c'est un mode clone (passé dans le body de la requête)
     const isCloneMode = body.isCloneMode === true;
     
+    // Construire le texte pour les préférences de mise en scène YouTube
+    let scenePreferenceText = "";
+    if (scenePreference && typeof scenePreference === "string" && scenePreference.trim().length > 0) {
+      const cleanedScene = scenePreference.toLowerCase().trim();
+      // Ignorer si l'utilisateur a tapé "passer" ou similaire
+      if (!["passer", "skip", "non", "aucun", "rien"].includes(cleanedScene)) {
+        scenePreferenceText = `\n\n=== MISE EN SCÈNE DEMANDÉE (YOUTUBE) ===\n`;
+        scenePreferenceText += `Le sujet doit être montré : ${scenePreference}\n`;
+        scenePreferenceText += `Intégrer cette mise en scène de manière naturelle et professionnelle.\n`;
+        scenePreferenceText += `Les objets/logos mentionnés doivent être photoréalistes et bien intégrés.\n`;
+        scenePreferenceText += `Le visage reste central et expressif, la mise en scène l'enrichit sans le masquer.`;
+      }
+    }
+    
     const professionalPrompt = buildProfessionalPrompt({
-      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : ""),
+      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText,
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
       hasLogoImage: logoImages && logoImages.length > 0,
@@ -1189,6 +1205,8 @@ serve(async (req) => {
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
+    console.log("Scene preference included:", scenePreference ? "yes" : "no");
+    console.log("Domain:", domain || "not specified");
 
     const taskId = await createTask(
       KIE_API_KEY,
