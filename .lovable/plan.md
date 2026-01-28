@@ -1,272 +1,220 @@
 
-# Plan : Flux Intelligent de Création de Miniatures YouTube
+# Plan : Gestion Intelligente des Palettes de Couleurs et Sélection Automatique de Templates
 
 ## Objectif
 
-Créer un flux conversationnel intelligent pour les miniatures YouTube qui :
+Améliorer le système de génération pour :
 
-1. **Quand l'utilisateur clique "S'inspirer" sur une miniature** :
-   - Analyser la miniature de référence (visage, texte, logos, style)
-   - Poser des questions personnalisées basées sur ce qui est détecté
-   - Permettre l'upload d'images (photos personnelles, logos)
-   - Demander les préférences de mise en scène (logo dans les mains, autour, etc.)
+1. **Respect ABSOLU de la palette utilisateur** : Les couleurs fournies par l'utilisateur remplacent TOUJOURS celles du template de référence, avec un agencement professionnel intelligent.
 
-2. **Quand l'utilisateur veut créer une miniature SANS référence** :
-   - Demander le titre de la vidéo (élément clé)
-   - S'inspirer automatiquement des miniatures existantes en base
-   - Poser des questions intelligentes (photo personnelle, expression, logos)
-   - Créer une miniature professionnelle basée sur le profil expert YouTube
+2. **Agencement professionnel des couleurs** : L'IA s'inspire des templates en base de données pour agencer harmonieusement les couleurs de l'utilisateur, même si elles ne se mélangent pas naturellement.
+
+3. **Sélection automatique de template** : Quand l'utilisateur n'a pas de template de référence, le système sélectionne automatiquement le meilleur template correspondant au domaine et applique les couleurs de l'utilisateur.
+
+4. **Respect des compétences graphiques** : Utiliser les 5 profils experts existants pour guider l'agencement des couleurs selon les règles professionnelles.
 
 ---
 
 ## Architecture de la Solution
 
-### Changements Requis
+### Fichiers à Modifier
 
 | Fichier | Action | Description |
 |---------|--------|-------------|
-| `supabase/functions/analyze-template/index.ts` | MODIFIER | Ajouter détection spécifique miniatures YouTube (visage, expression, texte court) |
-| `src/config/domainQuestions.ts` | MODIFIER | Améliorer les questions YouTube avec préférences de mise en scène |
-| `src/hooks/useConversation.ts` | MODIFIER | Ajouter logique pour flux YouTube avec/sans référence |
-| Migration SQL | CRÉER | Insérer les 12 miniatures YouTube dans `reference_templates` |
-| `src/types/generation.ts` | MODIFIER | Ajouter type `YouTubePreferences` pour les préférences de mise en scène |
+| `supabase/functions/generate-image/index.ts` | MODIFIER | Renforcer les instructions de remplacement des couleurs et ajouter une section "Color Harmonization" |
+| `supabase/functions/generate-image/expertSkills.ts` | MODIFIER | Ajouter des règles d'agencement de couleurs par profil expert |
+| `src/hooks/useConversation.ts` | MODIFIER | Améliorer le message buildPrompt() pour inclure des instructions d'harmonisation |
 
 ---
 
-## Phase 1 : Enrichir la Base de Données
+## Phase 1 : Renforcer les Instructions de Remplacement de Couleurs
 
-### Migration SQL - Insertion des Templates YouTube
+### Modifications de `generate-image/index.ts` - buildProfessionalPrompt()
 
-Les 12 miniatures YouTube existantes seront ajoutées à la table `reference_templates` pour que le système puisse s'en inspirer automatiquement :
+Ajouter une nouvelle section "HARMONISATION DES COULEURS" qui donne des instructions précises sur comment utiliser la palette utilisateur :
 
-```sql
-INSERT INTO public.reference_templates (domain, design_category, image_url, description, tags)
-VALUES
-  ('youtube', 'thumbnail', '/reference-templates/youtube/yomi-denzel-ia-business.avif', 
-   'Miniature virale business/IA avec visage expressif, texte massif, objets 3D flottants (argent, téléphone)', 
-   ARRAY['business', 'ia', 'argent', 'viral', 'visage-expressif']),
-  ('youtube', 'thumbnail', '/reference-templates/youtube/yomi-denzel-millionnaire.avif',
-   'Miniature succès/richesse avec expression de confiance, couleurs dorées, chiffres mis en valeur',
-   ARRAY['millionnaire', 'richesse', 'confiance', 'or', 'succès']),
-  -- ... (les 12 miniatures)
+```text
+╔═══════════════════════════════════════════════════════════════════════╗
+║  🎨 HARMONISATION PROFESSIONNELLE DE LA PALETTE UTILISATEUR           ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+⚠️ RÈGLE ABSOLUE: Utiliser UNIQUEMENT les couleurs fournies par l'utilisateur.
+   Les couleurs du template original doivent être TOTALEMENT REMPLACÉES.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYSTÈME D'ATTRIBUTION DES COULEURS (Règle 60-30-10):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   • Couleur #1 (60%): DOMINANTE → Arrière-plan, grandes zones, fonds
+   • Couleur #2 (30%): SECONDAIRE → Titres principaux, accents forts
+   • Couleur #3 (10%): HIGHLIGHT → Détails, bordures, CTA, éléments clés
+   • Couleurs supplémentaires: Dégradés, variations, effets subtils
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECHNIQUES D'HARMONISATION PROFESSIONNELLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ✓ Si les couleurs sont similaires (même famille):
+     → Créer des variations de saturation/luminosité pour différencier
+     → Ajouter des dégradés subtils entre elles
+   
+   ✓ Si les couleurs sont contrastées (complémentaires):
+     → Utiliser la plus sombre pour le fond
+     → Réserver la plus vive pour les accents
+     → Ajouter une couleur neutre (noir/blanc/gris) pour équilibrer
+   
+   ✓ Si les couleurs ne se mélangent pas naturellement:
+     → Ajouter des effets de lumière (glow, reflets) pour unifier
+     → Créer des dégradés doux entre les zones de couleur
+     → Utiliser des ombres pour séparer visuellement les éléments
+     → Ajouter une texture ou un overlay pour créer de la cohésion
+   
+   ✓ Pour garantir la lisibilité:
+     → Texte clair sur fond foncé OU texte foncé sur fond clair
+     → Contours/ombres sur le texte si le contraste est faible
+     → Jamais de texte coloré sur fond de couleur proche
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ INTERDIT ABSOLUMENT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ❌ Garder UNE SEULE couleur du template original
+   ❌ Mélanger les couleurs du template avec celles de l'utilisateur
+   ❌ Ignorer une couleur fournie par l'utilisateur
+   ❌ Créer un design où les couleurs sont mal agencées/illisibles
 ```
 
 ---
 
-## Phase 2 : Améliorer l'Analyse de Miniatures (Edge Function)
+## Phase 2 : Enrichir les Profils Experts avec des Règles Colorimétriques
 
-### Modifications de `analyze-template/index.ts`
+### Modifications de `expertSkills.ts`
 
-Ajouter un prompt spécifique pour les miniatures YouTube qui détecte :
-
-- **Visage** : Expression (surprise, joie, confiance), position, taille
-- **Texte** : Mots-clés, chiffres, couleurs du texte
-- **Objets** : Logos, symboles (argent, téléphone, voiture)
-- **Style** : Palette de couleurs, fond, effets (glow, ombres)
+Chaque profil expert existant (CORPORATE_MODERN, SURREALIST_PHOTOREALISTIC, SPIRITUAL_RELIGIOUS, RESTAURANT_FOOD, YOUTUBE_THUMBNAIL) sera enrichi avec une nouvelle propriété `colorHarmonization` qui donne des conseils spécifiques au domaine :
 
 ```typescript
-// Nouveau système prompt pour miniatures YouTube
-const youtubeAnalysisPrompt = `
-Tu analyses une MINIATURE YOUTUBE pour permettre à l'utilisateur de créer une miniature similaire.
-
-ÉLÉMENTS SPÉCIFIQUES À DÉTECTER:
-1. VISAGE: Expression (surprise/choc/joie/confiance), position (centre/gauche/droite), taille (% surface)
-2. TEXTE: Mots-clés visibles, chiffres/montants, style (couleur, bordure, fond)
-3. OBJETS SYMBOLIQUES: Argent, téléphone, logo, voiture, produits
-4. STYLE: Palette couleurs, saturation, fond (flou/couleur/contexte)
-5. MISE EN SCÈNE: Relation entre personne et objets (tenir, pointer, autour)
-
-QUESTIONS À GÉNÉRER (personnalisées selon ce qui est détecté):
-- Si visage détecté → "Voulez-vous utiliser votre propre photo ?"
-- Si texte détecté → "Quel est le titre de votre vidéo ?"
-- Si logos détectés → "Avez-vous des logos à inclure ?"
-- Si objets symboliques → "Voulez-vous une mise en scène similaire ?"
-`;
+colorHarmonization: [
+  "Pour un domaine église/spirituel:",
+  "- Couleur dominante: Arrière-plan avec overlay 40-60%",
+  "- Couleur secondaire: Titres et bandeaux avec effets dorés si possible",
+  "- Couleur tertiaire: Détails, rayons de lumière, highlights",
+  "- Ajouter des effets de lumière divine pour unifier les couleurs",
+  "- Les couleurs chaudes (or, orange) peuvent servir d'overlay pour harmoniser",
+]
 ```
+
+Ces règles seront injectées dans le prompt via la fonction `buildExpertSkillsPrompt()` existante.
 
 ---
 
-## Phase 3 : Améliorer les Questions YouTube
+## Phase 3 : Améliorer le Prompt de Génération (useConversation.ts)
 
-### Modifications de `src/config/domainQuestions.ts`
+### Modifications de `buildPrompt()`
 
-Enrichir la configuration YouTube avec des questions de mise en scène :
-
-```typescript
-youtube: {
-  domain: "youtube",
-  label: "Miniature YouTube",
-  templateRequirements: ["face_image", "video_title"],
-  questions: [
-    // Q1: Titre de la vidéo (OBLIGATOIRE - contexte principal)
-    {
-      id: "video_title",
-      question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à choisir les meilleurs éléments visuels.",
-      type: "text",
-      required: true,
-      priority: 1,
-    },
-    // Q2: Photo propre ou générée
-    {
-      id: "has_own_image",
-      question: "📸 **Voulez-vous utiliser votre propre photo ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez une photo avec expression marquée\n• **Non** : L'IA générera un visage adapté",
-      type: "boolean",
-      required: true,
-      priority: 2,
-    },
-    // Q3: Préférences de mise en scène (NOUVEAU)
-    {
-      id: "scene_preference",
-      question: "🎭 **Comment souhaitez-vous la mise en scène ?**\n\nExemples de ce que vous pouvez demander :\n• \"Je tiens un billet de 100€ dans la main\"\n• \"Mon logo flotte à côté de ma tête\"\n• \"Des pièces d'or tombent autour de moi\"\n• \"Je pointe vers le texte\"\n• \"Je montre mon téléphone avec l'écran visible\"\n\n💡 Décrivez la scène que vous imaginez :",
-      type: "text",
-      required: false,
-      priority: 3,
-    },
-    // Q4: Logos (multiples)
-    {
-      id: "has_logo",
-      question: "🏷️ **Voulez-vous ajouter des logos ?**\n\nVous pouvez en ajouter plusieurs pour renforcer votre marque.",
-      type: "boolean",
-      required: false,
-      priority: 4,
-    },
-    // Q5: Position des logos
-    {
-      id: "logo_position",
-      question: "📍 **Où placer le(s) logo(s) ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre (dans les mains/flottant)\n↙ Bas gauche | ↘ Bas droite",
-      type: "choice",
-      choices: ["Haut gauche", "Haut droite", "Centre (dans les mains)", "Bas gauche", "Bas droite"],
-      required: false,
-      priority: 5,
-    },
-    // Q6: Expression faciale (si IA génère le visage)
-    {
-      id: "desired_expression",
-      question: "😮 **Quelle expression faciale ?**\n\n• 😮 Surprise/Choc (le plus viral)\n• 🤔 Concentration\n• 😊 Joie/Excitation\n• 😎 Confiance",
-      type: "choice",
-      choices: ["Surprise/Choc", "Concentration", "Joie/Excitation", "Confiance"],
-      required: false,
-      priority: 6,
-    },
-  ]
-}
-```
-
----
-
-## Phase 4 : Logique de Conversation Intelligente
-
-### Modifications de `src/hooks/useConversation.ts`
-
-#### Cas 1 : Utilisateur clique "S'inspirer" sur une miniature YouTube
+Enrichir la section palette de couleurs avec des instructions plus détaillées sur comment utiliser chaque couleur :
 
 ```typescript
-// Quand cloneTemplate.domain === 'youtube'
-if (cloneTemplate?.domain === 'youtube') {
-  // 1. Analyser la miniature avec le prompt spécialisé
-  const { data } = await supabase.functions.invoke("analyze-template", {
-    body: { 
-      imageUrl: cloneTemplate.imageUrl, 
-      domain: 'youtube',
-      isYouTubeThumbnail: true  // Flag pour activer l'analyse spécialisée
-    },
+// ====== SECTION 1: PALETTE COULEUR OBLIGATOIRE ======
+if (colorPalette?.length) {
+  lines.push("╔══════════════════════════════════════════════════════════════╗");
+  lines.push("║  🎨 PALETTE COULEUR OBLIGATOIRE - REMPLACEMENT TOTAL          ║");
+  lines.push("╚══════════════════════════════════════════════════════════════╝");
+  lines.push("");
+  lines.push("🚨 REMPLACER TOUTES les couleurs du template par celles-ci:");
+  lines.push("");
+  
+  colorPalette.slice(0, 6).forEach((hex, index) => {
+    const colorName = hexToColorName(hex);
+    if (index === 0) {
+      lines.push(`   🎯 DOMINANTE (60%): ${hex} (${colorName})`);
+      lines.push(`      → Utiliser pour: arrière-plan, grandes zones, fonds`);
+    } else if (index === 1) {
+      lines.push(`   🎯 SECONDAIRE (30%): ${hex} (${colorName})`);
+      lines.push(`      → Utiliser pour: titres, accents, bandeaux importants`);
+    } else if (index === 2) {
+      lines.push(`   🎯 ACCENT (10%): ${hex} (${colorName})`);
+      lines.push(`      → Utiliser pour: détails, CTA, bordures, highlights`);
+    } else {
+      lines.push(`   ➕ COMPLÉMENTAIRE #${index + 1}: ${hex} (${colorName})`);
+      lines.push(`      → Utiliser pour: dégradés, effets, variations`);
+    }
   });
   
-  // 2. Construire un message personnalisé basé sur ce qui est détecté
-  let introMessage = `🎬 **Je vais créer une miniature YouTube en m'inspirant de ce style !**\n\n`;
-  introMessage += `📋 J'ai détecté sur cette miniature :\n`;
-  if (data.analysis.hasExpressiveFace) introMessage += `• Un visage avec expression ${data.analysis.faceExpression}\n`;
-  if (data.analysis.hasText) introMessage += `• Du texte percutant (${data.analysis.textCount} mots)\n`;
-  if (data.analysis.hasSymbolicObjects) introMessage += `• Des objets symboliques (${data.analysis.objects.join(', ')})\n`;
-  
-  introMessage += `\n📝 **Répondez à ces questions pour personnaliser votre miniature :**`;
-  
-  // 3. Poser les questions dans l'ordre de priorité
-  // La première question est toujours le titre de la vidéo
-}
-```
-
-#### Cas 2 : Utilisateur veut créer une miniature SANS référence
-
-```typescript
-// Quand domain === 'youtube' et pas de referenceImage
-if (domain === 'youtube' && !referenceImage) {
-  // 1. Récupérer les miniatures existantes pour s'en inspirer
-  const { data: templates } = await supabase
-    .from("reference_templates")
-    .select("*")
-    .eq("domain", "youtube");
-  
-  // 2. Sélectionner une miniature aléatoire comme inspiration interne
-  // (l'utilisateur ne la voit pas, mais l'IA s'en inspire)
-  const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
-  
-  // 3. Utiliser le profil expert YOUTUBE_THUMBNAIL
-  // + la description du template choisi comme contexte
-  setConversationState(prev => ({
-    ...prev,
-    referenceDescription: `Style miniature virale inspiré de: ${randomTemplate.description}`,
-  }));
-  
-  // 4. Poser les questions YouTube intelligentes
-  addMessage("assistant", 
-    `🎬 **Créons une miniature YouTube qui fait cliquer !**\n\n` +
-    `Je vais m'inspirer des meilleures pratiques virales pour créer votre miniature.\n\n` +
-    `${getDomainQuestions('youtube')[0].question}`
-  );
+  lines.push("");
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("⚠️ HARMONISATION INTELLIGENTE:");
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("   • Créer des dégradés harmonieux entre ces couleurs");
+  lines.push("   • Ajouter des effets (ombres, glow, reflets) pour unifier");
+  lines.push("   • Utiliser la plus sombre pour le fond si besoin de contraste");
+  lines.push("   • Garantir la lisibilité avec contrastes forts sur le texte");
+  lines.push("");
+  lines.push("❌ INTERDIT: Garder TOUTE couleur du template original");
+  lines.push("❌ INTERDIT: Mélanger anciennes et nouvelles couleurs");
+  lines.push("");
 }
 ```
 
 ---
 
-## Phase 5 : Intégration des Préférences de Mise en Scène
+## Phase 4 : Sélection Automatique de Template avec Application de Palette
 
-### Modification du Prompt de Génération
+### Logique Existante (déjà implémentée mais à renforcer)
 
-Dans `supabase/functions/generate-image/index.ts`, intégrer les préférences de mise en scène :
+Le système sélectionne déjà un template automatiquement quand aucune référence n'est fournie (lignes 1037-1162 de generate-image/index.ts). Cette logique sera renforcée pour :
+
+1. **Passer le domaine détecté au système de profils experts**
+2. **Injecter les règles d'harmonisation spécifiques au domaine**
+3. **Rappeler explicitement de remplacer les couleurs du template sélectionné**
 
 ```typescript
-// Si domaine YouTube et préférences de mise en scène
-if (domain === 'youtube' && scenePreference) {
-  prompt += `\n\n=== MISE EN SCÈNE DEMANDÉE ===\n`;
-  prompt += `Le sujet doit être montré : ${scenePreference}\n`;
-  prompt += `Intégrer cette mise en scène de manière naturelle et professionnelle.\n`;
-  prompt += `Les objets/logos mentionnés doivent être photoréalistes et bien intégrés.`;
+// Après la sélection du template (ligne ~1157)
+if (referenceImage && colorPalette?.length > 0) {
+  // Ajouter une note explicite que même pour le template auto-sélectionné,
+  // les couleurs doivent être remplacées
+  console.log(`Auto-selected template for domain "${picked.domain}". User palette will replace template colors.`);
 }
 ```
 
 ---
 
-## Résumé des Fichiers à Modifier
+## Résumé des Changements
 
 | Fichier | Modifications |
 |---------|---------------|
-| `supabase/functions/analyze-template/index.ts` | Ajouter analyse spécialisée YouTube avec détection visage/expression/objets |
-| `src/config/domainQuestions.ts` | Enrichir questions YouTube avec préférences de mise en scène |
-| `src/hooks/useConversation.ts` | Ajouter logique flux YouTube avec/sans référence + sélection automatique de template |
-| `src/types/generation.ts` | Ajouter `scenePreference` à `YouTubeInfo` |
-| `supabase/functions/generate-image/index.ts` | Intégrer les préférences de mise en scène dans le prompt |
-| Migration SQL | Insérer les 12 miniatures YouTube dans `reference_templates` |
+| `supabase/functions/generate-image/index.ts` | Ajouter section "HARMONISATION DES COULEURS" dans buildProfessionalPrompt() avec règles 60-30-10 et techniques d'harmonisation |
+| `supabase/functions/generate-image/expertSkills.ts` | Ajouter propriété `colorHarmonization` à chaque profil expert avec conseils spécifiques au domaine |
+| `src/hooks/useConversation.ts` | Améliorer buildPrompt() pour inclure des instructions détaillées sur l'utilisation de chaque couleur de la palette |
 
 ---
 
-## Comportement Final
+## Comportement Final Attendu
 
-### Pour l'utilisateur qui clique "S'inspirer" sur une miniature
+### Avec Template de Référence (Mode Clone)
 
-1. L'IA analyse la miniature et détecte les éléments
-2. Message personnalisé : "J'ai détecté un visage expressif, du texte percutant, des symboles d'argent..."
-3. Questions dans l'ordre :
-   - Titre de votre vidéo ?
-   - Votre propre photo ? (upload possible)
-   - Mise en scène souhaitée ? (texte libre)
-   - Logos à ajouter ? (upload multiple)
-   - Position des logos ?
-4. Génération avec le style de la référence + contenu utilisateur
+1. L'utilisateur choisit un template (ex: affiche église avec couleurs dorées/violettes)
+2. L'utilisateur sélectionne sa palette (ex: vert, orange, blanc)
+3. Le système génère une affiche avec:
+   - ✅ EXACTEMENT le même layout/design que le template
+   - ✅ UNIQUEMENT les couleurs vert/orange/blanc de l'utilisateur
+   - ✅ Agencement professionnel des couleurs (vert = fond, orange = accents, blanc = texte)
+   - ✅ Effets pour harmoniser les couleurs si nécessaire
+   - ❌ AUCUNE trace des couleurs originales (doré/violet)
 
-### Pour l'utilisateur qui crée une miniature sans référence
+### Sans Template de Référence (Mode Création Libre)
 
-1. Détection du domaine "youtube" via mots-clés (miniature, thumbnail, vignette)
-2. L'IA sélectionne automatiquement une miniature de référence interne
-3. Questions intelligentes basées sur le profil expert YouTube
-4. Génération avec le profil YOUTUBE_THUMBNAIL + inspiration cachée
+1. L'utilisateur décrit son besoin (ex: "affiche pour un concert gospel")
+2. Le système détecte automatiquement le domaine (church/event)
+3. Le système sélectionne un template approprié comme base structurelle
+4. L'utilisateur sélectionne sa palette de couleurs
+5. Le système génère une affiche avec:
+   - ✅ Structure/layout inspiré du template sélectionné
+   - ✅ UNIQUEMENT les couleurs de l'utilisateur
+   - ✅ Profil expert "Spirituel/Religieux" appliqué pour les effets
+   - ✅ Agencement professionnel des couleurs selon les règles du profil
+   - ❌ AUCUNE information du template d'inspiration
+
+### Règles d'Harmonisation Intelligentes
+
+Le système appliquera automatiquement ces techniques :
+- **Couleurs similaires** → Variations de saturation pour différencier
+- **Couleurs contrastées** → Plus sombre pour le fond, plus vive pour les accents
+- **Couleurs qui ne se mélangent pas** → Effets de lumière, dégradés doux, overlays
+- **Garantie de lisibilité** → Contrastes forts, contours sur le texte si nécessaire
