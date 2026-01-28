@@ -62,6 +62,14 @@ const YOUTUBE_THUMBNAILS: string[] = [
   "/reference-templates/youtube/tiktok-ventes-37k.jpg",
   "/reference-templates/youtube/youtube-subscribers-28k.jpg",
   "/reference-templates/youtube/ne-pas-lancer-business.jpg",
+  "/reference-templates/youtube/abonnes-28k-secret.jpg",
+  "/reference-templates/youtube/ne-pas-lancer-business-2.jpg",
+  "/reference-templates/youtube/yomi-denzel-ia-business.avif",
+  "/reference-templates/youtube/yomi-denzel-millionnaire.avif",
+  "/reference-templates/youtube/yomi-denzel-tesla.avif",
+  "/reference-templates/youtube/ibrahim-kamara-ia-business.avif",
+  "/reference-templates/youtube/ibrahim-kamara-money-phone.avif",
+  "/reference-templates/youtube/ibrahim-kamara-online-money.avif",
 ];
 
 function MarqueeRow({ 
