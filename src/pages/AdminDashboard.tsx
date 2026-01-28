@@ -53,7 +53,7 @@ interface RecentUser {
   created_at: string;
 }
 
-type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions';
+type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions' | 'marquee' | 'showcase';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -157,8 +157,10 @@ export default function AdminDashboard() {
 
   const navItems = [
     { id: 'dashboard' as const, label: "Vue d'ensemble", icon: LayoutDashboard, permission: 'view_dashboard' },
-    { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates' },
-    { id: 'subscriptions' as const, label: "Abonnements", icon: Crown, permission: 'manage_users' },
+    { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates', route: '/admin/templates' },
+    { id: 'marquee' as const, label: "Marquee", icon: Palette, permission: 'manage_templates', route: '/admin/marquee' },
+    { id: 'showcase' as const, label: "Showcase", icon: Palette, permission: 'manage_templates', route: '/admin/showcase' },
+    { id: 'subscriptions' as const, label: "Abonnements", icon: Crown, permission: 'manage_users', route: '/admin/subscriptions' },
     { id: 'images' as const, label: "Affiches", icon: Palette, permission: 'view_dashboard' },
     { id: 'users' as const, label: "Utilisateurs", icon: Users, permission: 'manage_users' },
     { id: 'designers' as const, label: "Graphistes", icon: Palette, permission: 'manage_designers' },
@@ -185,26 +187,24 @@ export default function AdminDashboard() {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
             
-            return (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className={`w-full justify-start gap-3 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => {
-                  if (item.id === 'templates') {
-                    navigate("/admin/templates");
-                  } else if (item.id === 'subscriptions') {
-                    navigate("/admin/subscriptions");
-                  } else {
-                    setActiveSection(item.id);
-                  }
-                }}
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className={`w-full justify-start gap-3 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => {
+                    if ('route' in item && item.route) {
+                      navigate(item.route);
+                    } else {
+                      setActiveSection(item.id);
+                    }
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
         </nav>
 
         <div className="space-y-2 pt-4 border-t border-border">

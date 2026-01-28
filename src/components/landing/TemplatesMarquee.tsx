@@ -1,9 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Templates from public folder - organized by rows
 // Helper pour détecter le domaine depuis le chemin de l'image
 function getDomainFromPath(imagePath: string): string {
   if (imagePath.includes('/youtube/')) return 'youtube';
@@ -17,8 +16,8 @@ function getDomainFromPath(imagePath: string): string {
   return 'other';
 }
 
-// Templates affiches professionnelles
-const POSTER_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
+// Fallback templates (utilisés si la base de données est vide)
+const FALLBACK_POSTER_TEMPLATES = {
   row1: [
     "/reference-templates/church/14-jours-jeune.jpg",
     "/reference-templates/ecommerce/mega-sales-event.jpg",
@@ -26,9 +25,6 @@ const POSTER_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
     "/reference-templates/formation/webinaire-power-bi.jpg",
     "/reference-templates/restaurant/best-taste-kitchen.jpg",
     "/reference-templates/service/boost-social-media.jpg",
-    "/reference-templates/church/21-jours-jeune-goshen.jpg",
-    "/reference-templates/ecommerce/see-wide-collections.jpg",
-    "/reference-templates/event/concert-celebration-epouse.jpg",
   ],
   row2: [
     "/reference-templates/church/ciel-ouvert.jpg",
@@ -37,9 +33,6 @@ const POSTER_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
     "/reference-templates/event/mega-all-night.jpg",
     "/reference-templates/formation/formation-ecommerce-alibaba.jpg",
     "/reference-templates/church/special-bonzola.jpg",
-    "/reference-templates/ecommerce/valentine-package.jpg",
-    "/reference-templates/restaurant/favours-kitchen.jpg",
-    "/reference-templates/service/ozark-graphics-design.jpg",
   ],
   row3: [
     "/reference-templates/event/praise-worship-concert.jpg",
@@ -48,14 +41,10 @@ const POSTER_TEMPLATES: { row1: string[]; row2: string[]; row3: string[] } = {
     "/reference-templates/restaurant/bloom-resto-bar.jpg",
     "/reference-templates/service/lanro-picture-visuels.jpg",
     "/reference-templates/ecommerce/rush-fruitys-products.jpg",
-    "/reference-templates/event/worship-xperience.jpg",
-    "/reference-templates/church/jinterviens-trone-grace.jpg",
-    "/reference-templates/restaurant/piment-doux-promo.jpg",
   ],
 };
 
-// Miniatures YouTube professionnelles (sans doublons)
-const YOUTUBE_THUMBNAILS: string[] = [
+const FALLBACK_YOUTUBE_THUMBNAILS = [
   "/reference-templates/youtube/ecommerce-tiktok-sales.jpg",
   "/reference-templates/youtube/commencer-ecommerce.jpg",
   "/reference-templates/youtube/ecommerce-cout-total.jpg",
@@ -69,6 +58,15 @@ const YOUTUBE_THUMBNAILS: string[] = [
   "/reference-templates/youtube/ibrahim-kamara-money-phone.avif",
   "/reference-templates/youtube/ibrahim-kamara-online-money.avif",
 ];
+
+interface MarqueeItem {
+  id: string;
+  image_url: string;
+  domain: string;
+  item_type: string;
+  row_number: number;
+  sort_order: number;
+}
 
 function MarqueeRow({ 
   images, 
@@ -84,51 +82,31 @@ function MarqueeRow({
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
-  // Double the images for seamless loop
   const duplicatedImages = [...images, ...images, ...images];
 
   const handleInspire = async (e: React.MouseEvent, imageUrl: string) => {
     e.stopPropagation();
-    
-    // Déterminer le domaine depuis le chemin
     const domain = getDomainFromPath(imageUrl);
-    
-    // Vérifier l'authentification
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      // Stocker le template pour après login
-      sessionStorage.setItem('pendingCloneTemplate', JSON.stringify({
-        imageUrl,
-        domain
-      }));
-      navigate("/auth", { 
-        state: { redirectTo: "/app", pendingClone: true } 
-      });
+      sessionStorage.setItem('pendingCloneTemplate', JSON.stringify({ imageUrl, domain }));
+      navigate("/auth", { state: { redirectTo: "/app", pendingClone: true } });
       return;
     }
     
-    // Utilisateur connecté → aller directement à l'app
-    navigate("/app", {
-      state: {
-        cloneTemplate: { imageUrl, domain }
-      }
-    });
+    navigate("/app", { state: { cloneTemplate: { imageUrl, domain } } });
   };
   
   return (
     <div 
       className="overflow-hidden py-2 w-[120%] -ml-[10%]"
-      style={{ 
-        transform: `rotate(${rotation}deg)`,
-      }}
+      style={{ transform: `rotate(${rotation}deg)` }}
       ref={containerRef}
     >
       <div 
         className={`flex gap-4 ${direction === "left" ? "animate-marquee-left" : "animate-marquee-right"}`}
-        style={{ 
-          animationDuration: `${speed}s`,
-        }}
+        style={{ animationDuration: `${speed}s` }}
       >
         {duplicatedImages.map((image, index) => (
           <div
@@ -158,7 +136,6 @@ function MarqueeRow({
   );
 }
 
-// Composant pour les miniatures YouTube avec format 16:9
 function YouTubeMarqueeRow({ 
   images, 
   direction = "left", 
@@ -202,11 +179,9 @@ function YouTubeMarqueeRow({
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               loading="lazy"
             />
-            {/* Overlay effet brillant */}
             <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Badge YouTube */}
             <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-red-600/90 backdrop-blur-sm text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -214,7 +189,6 @@ function YouTubeMarqueeRow({
               YouTube
             </div>
             
-            {/* Bouton S'inspirer */}
             <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
               <button
                 onClick={(e) => handleInspire(e, image)}
@@ -232,6 +206,59 @@ function YouTubeMarqueeRow({
 }
 
 export function TemplatesMarquee() {
+  const [youtubeImages, setYoutubeImages] = useState<string[]>(FALLBACK_YOUTUBE_THUMBNAILS);
+  const [posterRows, setPosterRows] = useState<{ row1: string[]; row2: string[]; row3: string[] }>(FALLBACK_POSTER_TEMPLATES);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMarqueeItems();
+  }, []);
+
+  const fetchMarqueeItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("marquee_items")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Séparer YouTube et Poster
+        const youtube = data
+          .filter((item: MarqueeItem) => item.item_type === "youtube")
+          .map((item: MarqueeItem) => item.image_url);
+        
+        const posters = data.filter((item: MarqueeItem) => item.item_type === "poster");
+        
+        if (youtube.length > 0) {
+          setYoutubeImages(youtube);
+        }
+        
+        if (posters.length > 0) {
+          setPosterRows({
+            row1: posters.filter((p: MarqueeItem) => p.row_number === 1).map((p: MarqueeItem) => p.image_url),
+            row2: posters.filter((p: MarqueeItem) => p.row_number === 2).map((p: MarqueeItem) => p.image_url),
+            row3: posters.filter((p: MarqueeItem) => p.row_number === 3).map((p: MarqueeItem) => p.image_url),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching marquee items:", err);
+      // Les fallbacks sont déjà définis par défaut
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Utiliser les fallbacks si les rows sont vides
+  const displayPosterRows = {
+    row1: posterRows.row1.length > 0 ? posterRows.row1 : FALLBACK_POSTER_TEMPLATES.row1,
+    row2: posterRows.row2.length > 0 ? posterRows.row2 : FALLBACK_POSTER_TEMPLATES.row2,
+    row3: posterRows.row3.length > 0 ? posterRows.row3 : FALLBACK_POSTER_TEMPLATES.row3,
+  };
+
   return (
     <section className="py-20 relative overflow-hidden">
       {/* Background effects */}
@@ -260,7 +287,7 @@ export function TemplatesMarquee() {
         </div>
         
         <YouTubeMarqueeRow 
-          images={YOUTUBE_THUMBNAILS} 
+          images={youtubeImages} 
           direction="right" 
           speed={30}
         />
@@ -292,19 +319,19 @@ export function TemplatesMarquee() {
         {/* Marquee Rows with diagonal effect */}
         <div className="space-y-3 -rotate-2">
           <MarqueeRow 
-            images={POSTER_TEMPLATES.row1} 
+            images={displayPosterRows.row1} 
             direction="left" 
             speed={45}
             rotation={0}
           />
           <MarqueeRow 
-            images={POSTER_TEMPLATES.row2} 
+            images={displayPosterRows.row2} 
             direction="right" 
             speed={50}
             rotation={0}
           />
           <MarqueeRow 
-            images={POSTER_TEMPLATES.row3} 
+            images={displayPosterRows.row3} 
             direction="left" 
             speed={40}
             rotation={0}
