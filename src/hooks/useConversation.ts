@@ -2417,6 +2417,18 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage]
   );
 
+  // Handler pour passer l'étape des couleurs
+  const handleColorsSkip = useCallback(() => {
+    addMessage("user", "Sans palette de couleurs");
+    setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: undefined }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "D'accord, je conserverai les couleurs du style original. 🎨\n\nSouhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
+
   const handleLogoImage = useCallback(
     (imageDataUrl: string) => {
       addMessage("user", "Logo envoyé", imageDataUrl);
@@ -2763,6 +2775,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     handleStylePreferencesAndSelectTemplate,
     handleSkipStylePreferences,
     handleColorsConfirm,
+    handleColorsSkip,
     handleLogoImage,
     handleLogoPosition,
     handleSkipLogo,

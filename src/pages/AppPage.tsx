@@ -125,6 +125,7 @@ export default function AppPage() {
     handleStylePreferencesAndSelectTemplate,
     handleSkipStylePreferences,
     handleColorsConfirm,
+    handleColorsSkip,
     handleLogoImage,
     handleLogoPosition,
     handleSkipLogo,
@@ -464,6 +465,7 @@ export default function AppPage() {
                     selectedColors={selectedColors}
                     onColorsChange={setSelectedColors}
                     onConfirm={() => handleColorsConfirm(selectedColors)}
+                    onSkip={handleColorsSkip}
                     disabled={isProcessing}
                     defaultPalette={profile?.default_color_palette}
                   />

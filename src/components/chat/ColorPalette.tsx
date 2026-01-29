@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, X, Sparkles } from "lucide-react";
+import { Check, Plus, X, Sparkles, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const predefinedPalettes = [
@@ -16,6 +16,7 @@ interface ColorPaletteProps {
   selectedColors: string[];
   onColorsChange: (colors: string[]) => void;
   onConfirm: () => void;
+  onSkip?: () => void;
   disabled?: boolean;
   defaultPalette?: string[];
 }
@@ -24,6 +25,7 @@ export function ColorPalette({
   selectedColors,
   onColorsChange,
   onConfirm,
+  onSkip,
   disabled,
   defaultPalette,
 }: ColorPaletteProps) {
@@ -59,6 +61,27 @@ export function ColorPalette({
 
   return (
     <div className="space-y-4 w-full max-w-md">
+      {/* Skip option */}
+      <button
+        onClick={onSkip}
+        disabled={disabled}
+        className={cn(
+          "w-full p-3 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 hover:bg-muted/40 transition-all",
+          "flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <Ban className="w-4 h-4" />
+        <span className="text-sm font-medium">Ne pas appliquer de palette de couleurs</span>
+      </button>
+
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50"></div>
+        </div>
+        <span className="relative bg-background px-3 text-xs text-muted-foreground">ou choisir une palette</span>
+      </div>
+
       {/* Default palette from user preferences */}
       {hasDefaultPalette && (
         <div className="space-y-2">
@@ -174,10 +197,12 @@ export function ColorPalette({
       )}
 
       {/* Confirm button */}
-      <Button onClick={onConfirm} disabled={disabled} className="w-full">
-        <Check className="w-4 h-4 mr-2" />
-        Confirmer les couleurs
-      </Button>
+      {selectedColors.length > 0 && (
+        <Button onClick={onConfirm} disabled={disabled} className="w-full">
+          <Check className="w-4 h-4 mr-2" />
+          Confirmer les couleurs
+        </Button>
+      )}
     </div>
   );
 }
