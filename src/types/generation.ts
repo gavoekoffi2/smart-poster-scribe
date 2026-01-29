@@ -252,6 +252,55 @@ export interface DomainSpecificInfo {
   youtube?: YouTubeInfo;
 }
 
+// =============== TYPES POUR L'ANALYSE AVANCÉE DES TEMPLATES ===============
+
+// Éléments détectés dans un template avec comptage précis
+export interface TemplateAnalysisDetail {
+  peopleCount: number;
+  peopleDescriptions: string[];
+  logoCount: number;
+  logoPositions: string[];
+  hasPhoneNumber: boolean;
+  hasEmail: boolean;
+  hasAddress: boolean;
+  hasDate: boolean;
+  hasTime: boolean;
+  hasPrice: boolean;
+  hasSocialIcons: boolean;
+  socialPlatforms: string[];
+  productCount: number;
+  textZones: {
+    type: string;
+    content: string;
+  }[];
+}
+
+// Type pour les éléments manquants lors du clonage
+export interface MissingElement {
+  type: "people" | "logos" | "products" | "text";
+  templateCount: number;
+  userProvided: number;
+  question: string;
+  options: ("upload" | "generate" | "skip")[];
+  allowMultipleImages: boolean;
+  maxImages: number;
+}
+
+// Type pour les remplacements collectés
+export interface CollectedReplacements {
+  people?: { 
+    images: string[]; 
+    generated: boolean;
+  };
+  logos?: { 
+    images: string[]; 
+    positions: string[];
+  };
+  products?: { 
+    images: string[];
+  };
+}
+
 // Type pour suivre les questions posées et réponses
 export interface DomainQuestionState {
   currentQuestionId: string | null;
@@ -308,7 +357,8 @@ export interface ConversationState {
     | "modifying"
     | "analyzing_template" // Analyse d'un template à cloner
     | "template_questions" // Questions personnalisées basées sur le template
-    | "clone_gathering"; // Collecte des informations en un seul message pour le clonage
+    | "clone_gathering" // Collecte des informations en un seul message pour le clonage
+    | "missing_elements"; // Questions sur les éléments manquants (photos, logos, etc.)
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
@@ -346,4 +396,9 @@ export interface ConversationState {
   // Format de sortie sélectionné
   formatPreset?: FormatPreset;
   usageType?: UsageType;
+  // Nouveau: Analyse détaillée du template pour le clonage intelligent
+  templateAnalysis?: TemplateAnalysisDetail;
+  missingElements?: MissingElement[];
+  currentMissingElementIndex?: number;
+  collectedReplacements?: CollectedReplacements;
 }
