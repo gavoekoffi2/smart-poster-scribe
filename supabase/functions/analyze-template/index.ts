@@ -264,64 +264,18 @@ function getDefaultAnalysis(domain?: string): TemplateAnalysisResult {
   };
 }
 
-// Prompt enrichi pour l'analyse exhaustive des templates
+// Prompt OPTIMISÉ pour l'analyse rapide des templates (version simplifiée pour la vitesse)
 function getEnhancedAnalysisPrompt(): string {
-  return `Tu es un expert graphiste spécialisé dans l'analyse EXHAUSTIVE d'affiches publicitaires africaines pour le CLONAGE PERSONNALISÉ.
+  return `Tu es un expert graphiste. Analyse RAPIDEMENT cette affiche publicitaire.
 
-🎯 OBJECTIF PRINCIPAL:
-Analyser cette affiche avec PRÉCISION pour permettre un clonage PARFAIT où l'utilisateur remplace TOUS les éléments avec son propre contenu.
-Le système doit savoir EXACTEMENT ce qui doit être remplacé ou supprimé.
+RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
-⚠️ RÈGLE FONDAMENTALE - ZÉRO INFORMATION ORIGINALE:
-TOUT ce qui est identifié sur cette affiche devra être soit:
-1. REMPLACÉ par les données de l'utilisateur
-2. SUPPRIMÉ si l'utilisateur ne fournit pas d'équivalent
-
-ANALYSE REQUISE - COMPTAGE PRÉCIS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. 👥 PERSONNES/VISAGES:
-   - Compte EXACT du nombre de personnes/visages visibles
-   - Description de chaque personne (ex: "homme en costume", "femme avec micro")
-   - Position de chaque personne (gauche, centre, droite)
-   - Ces personnes devront être REMPLACÉES ou SUPPRIMÉES
-
-2. 🏷️ LOGOS:
-   - Nombre EXACT de logos visibles
-   - Position de chaque logo (haut-gauche, bas-droite, etc.)
-   - Ces logos devront être REMPLACÉS ou SUPPRIMÉS
-
-3. 📝 ZONES DE TEXTE (liste chaque zone séparément):
-   - Titre principal: contenu et position
-   - Sous-titre: contenu et position
-   - Dates: format et position
-   - Heures: format et position
-   - Lieu/Adresse: contenu et position
-   - Contact (téléphone, email): format et position
-   - Prix/Tarifs: format et position
-   - Noms d'orateurs/artistes: format et position
-   - Organisateur: format et position
-   - Réseaux sociaux: plateformes visibles
-
-4. 🛍️ PRODUITS/OBJETS:
-   - Nombre de produits visibles
-   - Type de chaque produit
-   - Ces produits devront être REMPLACÉS ou SUPPRIMÉS
-
-5. 🎨 DESIGN (À REPRODUIRE - ne pas demander):
-   - Layout général
-   - Style typographique
-   - Palette de couleurs
-   - Effets visuels
-   - Éléments décoratifs (à conserver)
-
-FORMAT DE RÉPONSE (JSON strict):
 {
   "detectedElements": {
-    "peopleCount": [nombre exact de personnes],
-    "peopleDescriptions": ["description personne 1", "description personne 2"],
-    "logoCount": [nombre exact de logos],
-    "logoPositions": ["position logo 1", "position logo 2"],
+    "peopleCount": [nombre de personnes visibles],
+    "peopleDescriptions": ["description courte de chaque personne"],
+    "logoCount": [nombre de logos],
+    "logoPositions": ["position de chaque logo"],
     "hasPhoneNumber": true/false,
     "hasEmail": true/false,
     "hasAddress": true/false,
@@ -329,130 +283,28 @@ FORMAT DE RÉPONSE (JSON strict):
     "hasTime": true/false,
     "hasPrice": true/false,
     "hasSocialIcons": true/false,
-    "socialPlatforms": ["Facebook", "Instagram", "WhatsApp"],
+    "socialPlatforms": ["nom des plateformes visibles"],
     "productCount": [nombre de produits],
-    "textZones": [
-      {"type": "title", "content": "Texte du titre détecté"},
-      {"type": "subtitle", "content": "Texte du sous-titre"},
-      {"type": "date", "content": "Format de date détecté"},
-      {"type": "time", "content": "Format d'heure"},
-      {"type": "location", "content": "Texte du lieu"},
-      {"type": "contact", "content": "Format contact"},
-      {"type": "price", "content": "Format prix"},
-      {"type": "speaker", "content": "Noms des orateurs"},
-      {"type": "organizer", "content": "Nom organisateur"}
-    ]
+    "textZones": [{"type": "title/subtitle/date/contact/price/other", "content": "texte détecté"}]
   },
-  "requiredQuestions": [
-    {
-      "id": "people_photos",
-      "question": "J'ai détecté [X] personne(s) sur cette affiche. Souhaitez-vous :\\n• Envoyer vos propres photos\\n• Que je génère automatiquement des personnes africaines\\n• Créer l'affiche sans personnes",
-      "type": "choice",
-      "options": ["Fournir mes photos", "Générer automatiquement", "Sans personnes"],
-      "required": true,
-      "allowMultipleImages": true,
-      "maxImages": [nombre de personnes],
-      "offerAutoGenerate": true
-    },
-    {
-      "id": "logos",
-      "question": "L'affiche contient [X] logo(s). Voulez-vous ajouter votre/vos logo(s) ?",
-      "type": "choice",
-      "options": ["Envoyer mon logo", "Sans logo"],
-      "required": false,
-      "allowMultipleImages": true,
-      "maxImages": [nombre de logos]
-    }
-  ],
-  "templateDescription": "Description COMPLÈTE du layout, style typographique, effets visuels, composition et ambiance",
-  "suggestedPrompt": "Instructions précises pour reproduire ce design avec un nouveau contenu",
-  "designAnalysis": {
-    "layout": "Description de la mise en page",
-    "typography": "Styles de polices utilisés",
-    "colors": "Palette de couleurs dominantes",
-    "effects": "Effets visuels (lumières, ombres, etc.)",
-    "mood": "Ambiance générale (festif, spirituel, corporate, etc.)"
-  }
+  "requiredQuestions": [],
+  "templateDescription": "Description courte du style et layout",
+  "suggestedPrompt": "Instruction courte pour reproduire ce design"
+}`;
 }
 
-RÈGLES CRITIQUES POUR LES QUESTIONS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Si des PERSONNES sont détectées → Question avec 3 options:
-   - "Fournir mes photos" (permettre upload multiple jusqu'au nombre détecté)
-   - "Générer automatiquement" (l'IA créera des personnes africaines nouvelles)
-   - "Sans personnes" (supprimer cette zone de l'affiche)
-
-2. Si des LOGOS sont détectés → Question:
-   - "Envoyer mon logo"
-   - "Sans logo" (supprimer tous les logos)
-
-3. Pour les TEXTES → Générer une question consolidée demandant toutes les infos:
-   - Titre
-   - Dates/Heures (si détectés)
-   - Lieu (si détecté)
-   - Contact (si détecté)
-   - Prix (si détecté)
-   - Orateurs/Artistes (si détectés)
-
-4. Si des PRODUITS sont détectés → Question similaire aux personnes
-
-⚠️ IMPORTANT:
-- Compte PRÉCISÉMENT chaque élément
-- Chaque élément détecté = une donnée à remplacer ou supprimer
-- Si l'utilisateur ne fournit pas d'équivalent → l'élément sera SUPPRIMÉ`;
-}
-
-// Prompt spécialisé pour l'analyse de miniatures YouTube
+// Prompt OPTIMISÉ pour l'analyse de miniatures YouTube (version rapide)
 function getYouTubeAnalysisPrompt(): string {
-  return `Tu es un EXPERT en miniatures YouTube virales, spécialisé dans l'analyse pour permettre à l'utilisateur de créer une miniature similaire.
+  return `Tu es un expert en miniatures YouTube. Analyse RAPIDEMENT cette miniature.
 
-🎯 OBJECTIF: Analyser cette MINIATURE YOUTUBE pour permettre à l'utilisateur de créer une miniature personnalisée avec le MÊME STYLE VISUEL.
+RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
-ÉLÉMENTS SPÉCIFIQUES À DÉTECTER:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. VISAGE HUMAIN (élément CLÉ des miniatures virales):
-   - Expression faciale: surprise/choc, joie, concentration, confiance, colère
-   - Position: centre, gauche, droite
-   - Taille approximative: % de la surface (ex: "30-40% de l'image")
-   - Angle: face, 3/4, profil
-   - Éclairage: dramatique, studio, naturel
-
-2. TEXTE PERCUTANT:
-   - Mots-clés visibles (liste exacte)
-   - Nombre de mots (les meilleures miniatures ont 3-7 mots max)
-   - Style: gras, contour, ombre, 3D, dégradé
-   - Couleurs du texte
-   - Position du texte par rapport au visage
-
-3. OBJETS SYMBOLIQUES:
-   - Argent/Billets: présence, position, interaction avec la personne
-   - Téléphone/Écrans: présence, ce qu'ils montrent
-   - Voitures/Luxe: présence
-   - Logos: nombre, positions
-   - Flèches/Indicateurs: présence, direction
-   - Produits/Objets thématiques
-
-4. MISE EN SCÈNE:
-   - La personne tient-elle quelque chose? (objet dans les mains)
-   - Y a-t-il des éléments flottants autour?
-   - Interaction entre la personne et les objets
-
-5. STYLE VISUEL:
-   - Palette couleurs dominante
-   - Saturation: normale, hyper-saturée
-   - Contraste: normal, dramatique
-   - Fond: couleur unie, dégradé, contexte réel, flou
-   - Effets: glow, particules, lumières
-
-FORMAT DE RÉPONSE (JSON strict):
 {
   "detectedElements": {
     "peopleCount": 1,
-    "peopleDescriptions": ["description du créateur/personnage"],
-    "logoCount": [nombre de logos],
-    "logoPositions": ["positions"],
+    "peopleDescriptions": ["description du créateur"],
+    "logoCount": 0,
+    "logoPositions": [],
     "hasPhoneNumber": false,
     "hasEmail": false,
     "hasAddress": false,
@@ -461,49 +313,23 @@ FORMAT DE RÉPONSE (JSON strict):
     "hasPrice": false,
     "hasSocialIcons": false,
     "socialPlatforms": [],
-    "productCount": [nombre d'objets/produits],
-    "textZones": [
-      {"type": "title", "content": "Texte principal de la miniature"}
-    ],
+    "productCount": 0,
+    "textZones": [{"type": "title", "content": "texte principal"}],
     "hasExpressiveFace": true/false,
-    "faceExpression": "surprise/joie/concentration/confiance",
+    "faceExpression": "surprise/joie/concentration",
     "hasText": true/false,
     "hasSymbolicObjects": true/false,
-    "objects": ["argent", "téléphone", "voiture"]
+    "objects": ["argent", "téléphone", etc.]
   },
   "youtubeAnalysis": {
     "viralScore": "élevé/moyen/faible",
     "mainColorScheme": ["#couleur1", "#couleur2"],
     "saturationLevel": "hyper-saturée/normale",
-    "compositionStyle": "centré sur visage/asymétrique/texte dominant",
-    "suggestedStagingOptions": [
-      "Tenir un billet/téléphone",
-      "Pointer vers le texte",
-      "Éléments flottants autour"
-    ]
+    "compositionStyle": "centré/asymétrique",
+    "suggestedStagingOptions": ["option1", "option2"]
   },
-  "requiredQuestions": [
-    {
-      "id": "video_title",
-      "question": "Quel est le titre de votre vidéo YouTube ?",
-      "type": "text",
-      "placeholder": "Ex: Comment j'ai gagné 10 000€ en 30 jours",
-      "required": true
-    },
-    {
-      "id": "user_photo",
-      "question": "Souhaitez-vous utiliser votre propre photo ou que je génère un visage ?",
-      "type": "choice",
-      "options": ["Envoyer ma photo", "Générer automatiquement"],
-      "required": true,
-      "allowMultipleImages": false,
-      "maxImages": 1,
-      "offerAutoGenerate": true
-    }
-  ],
-  "templateDescription": "Description du style visuel pour reproduction",
-  "suggestedPrompt": "Miniature YouTube style viral avec..."
-}
-
-⚠️ IMPORTANT: Le visage expressif est l'élément CLÉ. Analyse-le en détail pour que l'utilisateur puisse reproduire l'impact émotionnel.`;
+  "requiredQuestions": [],
+  "templateDescription": "Description courte du style",
+  "suggestedPrompt": "Instruction pour reproduire"
+}`;
 }

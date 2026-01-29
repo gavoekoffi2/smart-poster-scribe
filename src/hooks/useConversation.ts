@@ -440,7 +440,57 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     });
   }, [conversationState.step]);
 
-  // Analyser le template au démarrage en mode clone - FLUX AVEC ANALYSE EXHAUSTIVE
+  // Fonction pour compresser une image base64 (max 2MB pour analyse rapide)
+  const compressImageForAnalysis = async (base64: string, maxSizeMB: number = 2): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        
+        // Calculer la taille actuelle approximative
+        const base64Content = base64.includes(',') ? base64.split(',')[1] : base64;
+        const currentSizeMB = (base64Content.length * 3 / 4) / (1024 * 1024);
+        
+        // Si déjà assez petit, retourner tel quel
+        if (currentSizeMB <= maxSizeMB) {
+          resolve(base64);
+          return;
+        }
+        
+        // Calculer le ratio de réduction nécessaire
+        const ratio = Math.sqrt(maxSizeMB / currentSizeMB);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+        
+        // Limiter à 1200px max pour l'analyse
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(base64);
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        // Utiliser une qualité réduite pour l'analyse (0.7)
+        const compressed = canvas.toDataURL('image/jpeg', 0.7);
+        console.log(`Image compressed for analysis: ${currentSizeMB.toFixed(2)}MB -> ${((compressed.length * 3 / 4) / (1024 * 1024)).toFixed(2)}MB`);
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error("Impossible de charger l'image"));
+      img.src = base64;
+    });
+  };
+
+  // Analyser le template au démarrage en mode clone - FLUX OPTIMISÉ
   useEffect(() => {
     if (isCloneMode && cloneTemplate && conversationState.step === "analyzing_template") {
       const analyzeTemplate = async () => {
@@ -453,16 +503,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               const res = await fetch(cloneTemplate.imageUrl);
               if (res.ok) {
                 const blob = await res.blob();
-                imageToAnalyze = await new Promise<string>((resolve, reject) => {
+                const base64 = await new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
                   reader.onloadend = () => resolve(String(reader.result));
                   reader.onerror = () => reject(new Error("Impossible de lire l'image"));
                   reader.readAsDataURL(blob);
                 });
+                // Compresser pour l'analyse (max 2MB)
+                imageToAnalyze = await compressImageForAnalysis(base64, 2);
               }
             } catch (e) {
               console.warn("Erreur conversion base64:", e);
             }
+          } else if (imageToAnalyze.startsWith('data:image/')) {
+            // Compresser aussi les images base64 déjà fournies
+            imageToAnalyze = await compressImageForAnalysis(imageToAnalyze, 2);
           }
 
           // Détecter si c'est une miniature YouTube
@@ -711,6 +766,56 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const logoImages = logos.map((l) => l.imageUrl);
         const logoPositions = logos.map((l) => l.position);
 
+        // Fonction pour compresser une image pour la génération (max 8MB)
+        const compressImageForGeneration = async (base64: string, maxSizeMB: number = 8): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let { width, height } = img;
+              
+              // Calculer la taille actuelle approximative
+              const base64Content = base64.includes(',') ? base64.split(',')[1] : base64;
+              const currentSizeMB = (base64Content.length * 3 / 4) / (1024 * 1024);
+              
+              // Si déjà assez petit, retourner tel quel
+              if (currentSizeMB <= maxSizeMB) {
+                resolve(base64);
+                return;
+              }
+              
+              // Calculer le ratio de réduction nécessaire
+              const ratio = Math.sqrt(maxSizeMB / currentSizeMB);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+              
+              // Limiter à 2000px max pour la génération
+              const maxDim = 2000;
+              if (width > maxDim || height > maxDim) {
+                const scale = maxDim / Math.max(width, height);
+                width = Math.round(width * scale);
+                height = Math.round(height * scale);
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                resolve(base64);
+                return;
+              }
+              
+              ctx.drawImage(img, 0, 0, width, height);
+              // Utiliser qualité 0.85 pour la génération
+              const compressed = canvas.toDataURL('image/jpeg', 0.85);
+              console.log(`Image compressed for generation: ${currentSizeMB.toFixed(2)}MB -> ${((compressed.length * 3 / 4) / (1024 * 1024)).toFixed(2)}MB`);
+              resolve(compressed);
+            };
+            img.onerror = () => reject(new Error("Impossible de charger l'image"));
+            img.src = base64;
+          });
+        };
+
         // Si on utilise un template local (public/reference-templates), on l'envoie en base64
         // pour éviter les échecs de téléchargement côté backend.
         let referenceImageToSend: string | undefined = state.referenceImage || undefined;
@@ -721,16 +826,25 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               const res = await fetch(referenceImageToSend);
               if (res.ok) {
                 const blob = await res.blob();
-                referenceImageToSend = await new Promise<string>((resolve, reject) => {
+                const base64 = await new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
                   reader.onloadend = () => resolve(String(reader.result));
                   reader.onerror = () => reject(new Error("Impossible de lire l'image de template"));
                   reader.readAsDataURL(blob);
                 });
+                // Compresser pour la génération (max 8MB)
+                referenceImageToSend = await compressImageForGeneration(base64, 8);
               }
             } catch (e) {
               console.warn("Impossible de convertir le template en base64, envoi de l'URL:", e);
             }
+          }
+        } else if (referenceImageToSend && referenceImageToSend.startsWith("data:image/")) {
+          // Compresser aussi les images base64 existantes si trop grandes
+          try {
+            referenceImageToSend = await compressImageForGeneration(referenceImageToSend, 8);
+          } catch (e) {
+            console.warn("Impossible de compresser l'image de référence:", e);
           }
         }
 
