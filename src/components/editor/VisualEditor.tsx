@@ -357,13 +357,16 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     // The AI estimates font size for the original image, we need to scale it
     const scaledFontSize = Math.max(14, Math.min(80, (block.fontSize || 32) * imageScale));
 
-    console.log(`Adding text block: "${block.text}" at (${scaledX}, ${scaledY}) fontSize: ${scaledFontSize}`);
+    // Use the color extracted by AI, default to white if not available
+    const textColor = block.color || "#FFFFFF";
+    
+    console.log(`Adding text block: "${block.text}" at (${scaledX}, ${scaledY}) fontSize: ${scaledFontSize} color: ${textColor}`);
 
     const text = new IText(block.text, {
       left: scaledX,
       top: scaledY,
       fontSize: scaledFontSize,
-      fill: "#FFFFFF", // Default to white for visibility on most poster backgrounds
+      fill: textColor, // Use original color from AI extraction
       fontFamily: activeFont.value,
       fontWeight: "bold",
       shadow: new Shadow({ color: "rgba(0,0,0,0.8)", blur: 4, offsetX: 2, offsetY: 2 }),
@@ -394,7 +397,10 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         canvas.renderAll();
         saveToHistory();
         setActiveTool("select");
-        toast.success(`${textBlocks.length} texte(s) détecté(s) et ajouté(s) comme calques éditables!`);
+        toast.success(
+          `${textBlocks.length} texte(s) détecté(s) ! Vous pouvez maintenant modifier les calques texte. L'ancien texte reste visible sur l'image de fond - modifiez les calques pour personnaliser.`,
+          { duration: 6000 }
+        );
       }
     } catch (error) {
       console.error("Text Extraction Error:", error);

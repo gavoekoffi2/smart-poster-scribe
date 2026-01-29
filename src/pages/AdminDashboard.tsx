@@ -28,6 +28,7 @@ import {
   Settings,
   Crown,
   UserCog,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,7 +54,7 @@ interface RecentUser {
   created_at: string;
 }
 
-type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions' | 'marquee' | 'showcase';
+type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions' | 'marquee' | 'showcase' | 'feedback';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -160,6 +161,7 @@ export default function AdminDashboard() {
     { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates', route: '/admin/templates' },
     { id: 'marquee' as const, label: "Marquee", icon: Palette, permission: 'manage_templates', route: '/admin/marquee' },
     { id: 'showcase' as const, label: "Showcase", icon: Palette, permission: 'manage_templates', route: '/admin/showcase' },
+    { id: 'feedback' as const, label: "Feedbacks", icon: MessageSquare, permission: 'view_dashboard', route: '/admin/feedback' },
     { id: 'subscriptions' as const, label: "Abonnements", icon: Crown, permission: 'manage_users', route: '/admin/subscriptions' },
     { id: 'images' as const, label: "Affiches", icon: Palette, permission: 'view_dashboard' },
     { id: 'users' as const, label: "Utilisateurs", icon: Users, permission: 'manage_users' },
