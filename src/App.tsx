@@ -14,6 +14,7 @@ import AdminDesigners from "./pages/AdminDesigners";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminMarquee from "./pages/AdminMarquee";
 import AdminShowcase from "./pages/AdminShowcase";
+import AdminFeedback from "./pages/AdminFeedback";
 import DesignerRegistration from "./pages/DesignerRegistration";
 import DesignerDashboard from "./pages/DesignerDashboard";
 import DesignerUpload from "./pages/DesignerUpload";
@@ -39,6 +40,7 @@ const App = () => (
         <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
         <Route path="/admin/marquee" element={<AdminMarquee />} />
         <Route path="/admin/showcase" element={<AdminShowcase />} />
+        <Route path="/admin/feedback" element={<AdminFeedback />} />
         <Route path="/designer/register" element={<DesignerRegistration />} />
         <Route path="/designer/dashboard" element={<DesignerDashboard />} />
         <Route path="/designer/upload" element={<DesignerUpload />} />

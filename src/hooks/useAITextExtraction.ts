@@ -10,6 +10,7 @@ export interface ExtractedTextBlock {
   height: number;
   confidence: number;
   fontSize?: number;
+  color?: string;
 }
 
 export function useAITextExtraction() {

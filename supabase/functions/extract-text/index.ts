@@ -13,6 +13,7 @@ interface TextBlock {
   text: string;
   x: number;
   y: number;
+  color?: string;
   width: number;
   height: number;
   confidence: number;
@@ -68,18 +69,20 @@ INSTRUCTIONS CRITIQUES:
 2. x=0 est le bord gauche, x=100 est le bord droit
 3. y=0 est le bord supérieur, y=100 est le bord inférieur
 4. La taille de police doit être estimée en pixels (généralement entre 14 et 120px pour les affiches)
+5. IMPORTANT: Identifie la couleur EXACTE du texte en format hexadécimal (#RRGGBB)
 
 FORMAT DE RÉPONSE (JSON uniquement, pas de texte autour):
 [
-  {"text": "TITRE PRINCIPAL", "x": 10, "y": 5, "width": 80, "height": 10, "fontSize": 72},
-  {"text": "Sous-titre", "x": 15, "y": 18, "width": 70, "height": 5, "fontSize": 36}
+  {"text": "TITRE PRINCIPAL", "x": 10, "y": 5, "width": 80, "height": 10, "fontSize": 72, "color": "#FFFFFF"},
+  {"text": "Sous-titre", "x": 15, "y": 18, "width": 70, "height": 5, "fontSize": 36, "color": "#FFD700"}
 ]
 
 RÈGLES:
 - Retourne UNIQUEMENT le tableau JSON, aucun autre texte
 - Si aucun texte trouvé, retourne []
 - Inclus TOUT le texte visible: titres, sous-titres, dates, lieux, contacts, etc.
-- Groupe les lignes connexes si elles forment un bloc logique`
+- Groupe les lignes connexes si elles forment un bloc logique
+- La couleur doit être la couleur visible du texte (pas la couleur du fond)`
           },
           {
             role: "user",
@@ -138,6 +141,8 @@ RÈGLES:
           height: Math.max(2, Math.min(50, Number(block.height) || 5)),
           confidence: 95, // AI extraction is generally reliable
           fontSize: Math.max(12, Math.min(150, Number(block.fontSize) || 32)),
+          // Preserve original text color (default to white if not detected)
+          color: typeof block.color === 'string' && block.color.startsWith('#') ? block.color : "#FFFFFF",
         })).filter((block: TextBlock) => block.text.length > 0);
         
         console.log("Processed text blocks:", JSON.stringify(textBlocks));

@@ -237,19 +237,34 @@ export default function AppPage() {
     const imageId = feedbackImageId || selectedHistoryImage?.id;
     
     if (imageToDownload) {
-      const link = document.createElement("a");
-      link.href = imageToDownload;
-      link.download = `graphiste-gpt-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Marquer l'image comme téléchargée (pour le showcase)
-      if (imageId) {
-        await markAsDownloaded({ id: imageId });
+      try {
+        // Fetch the image as blob to force download (prevents opening in new tab)
+        const response = await fetch(imageToDownload, { mode: 'cors' });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `graphiste-gpt-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up blob URL
+        URL.revokeObjectURL(blobUrl);
+        
+        // Marquer l'image comme téléchargée (pour le showcase)
+        if (imageId) {
+          await markAsDownloaded({ id: imageId });
+        }
+        
+        toast.success("Image téléchargée !");
+      } catch (error) {
+        console.error("Download error:", error);
+        // Fallback: open in new tab if fetch fails
+        window.open(imageToDownload, "_blank");
+        toast.info("L'image s'ouvre dans un nouvel onglet");
       }
-      
-      toast.success("Image téléchargée !");
     }
   };
 
