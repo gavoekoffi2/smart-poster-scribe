@@ -193,10 +193,49 @@ function buildProfessionalPrompt({
 }): string {
   const instructions: string[] = [];
 
+  // ====== BLOC PRIORITAIRE ABSOLU - MODE ÉDITION/CLONAGE ======
+  if (isCloneMode || hasReferenceImage) {
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("██  🚨🚨🚨 INSTRUCTION PRIORITAIRE ABSOLUE - LIRE EN PREMIER 🚨🚨🚨  ██");
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("");
+    instructions.push("TU ES EN MODE: **ÉDITION/MODIFICATION D'IMAGE**");
+    instructions.push("Tu NE CRÉES PAS une nouvelle image. Tu ÉDITES l'image de référence fournie.");
+    instructions.push("");
+    instructions.push("┌─────────────────────────────────────────────────────────────────────┐");
+    instructions.push("│  CETTE IMAGE DE RÉFÉRENCE = TA BASE DE TRAVAIL                     │");
+    instructions.push("│  Tu dois la MODIFIER DIRECTEMENT, pas la recréer de zéro.          │");
+    instructions.push("│  Le résultat doit être VISUELLEMENT IDENTIQUE au template.         │");
+    instructions.push("└─────────────────────────────────────────────────────────────────────┘");
+    instructions.push("");
+    instructions.push("🔴 INTERDICTION ABSOLUE:");
+    instructions.push("   - NE PAS créer un nouveau design depuis zéro");
+    instructions.push("   - NE PAS changer la mise en page");
+    instructions.push("   - NE PAS modifier le style graphique (effets, ombres, textures)");
+    instructions.push("   - NE PAS réarranger les éléments décoratifs");
+    instructions.push("   - NE PAS inventer de nouveaux éléments visuels");
+    instructions.push("");
+    instructions.push("🟢 CE QUE TU FAIS:");
+    instructions.push("   - Tu GARDES exactement le même design visuel");
+    instructions.push("   - Tu REMPLACES les textes par ceux du client (mêmes emplacements)");
+    instructions.push("   - Tu REMPLACES les visages par ceux du client (si fournis)");
+    instructions.push("   - Tu REMPLACES les logos par ceux du client (si fournis)");
+    instructions.push("   - Tu SUPPRIMES les éléments non fournis (ne pas inventer)");
+    instructions.push("");
+    instructions.push("📊 COMPARAISON AVANT/APRÈS:");
+    instructions.push("   AVANT: Affiche originale avec contenu du template");
+    instructions.push("   APRÈS: MÊME AFFICHE visuellement, mais avec contenu du CLIENT");
+    instructions.push("   → Quelqu'un qui voit les deux doit penser: 'C'est la même affiche, juste personnalisée'");
+    instructions.push("");
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("");
+  }
+
   // ====== RÔLE ET OBJECTIF PRINCIPAL ======
   instructions.push("=== RÔLE ===");
   if (isCloneMode || hasReferenceImage) {
-    instructions.push("Tu es un graphiste d'élite spécialisé dans la PERSONNALISATION FIDÈLE d'affiches publicitaires. Tu PERSONNALISES un design existant, tu ne crées pas de zéro.");
+    instructions.push("Tu es un ÉDITEUR D'IMAGES professionnel. Ta spécialité: MODIFIER des affiches existantes en remplaçant uniquement le contenu textuel et visuel, SANS toucher au design.");
+    instructions.push("Tu travailles comme si tu avais Photoshop: tu sélectionnes les zones de texte, tu les effaces, tu retapes le nouveau texte au même endroit avec le même style.");
   } else {
     instructions.push("Tu es un DIRECTEUR ARTISTIQUE et GRAPHISTE DE RENOMMÉE MONDIALE, expert en création d'affiches publicitaires EXCEPTIONNELLES pour l'Afrique francophone.");
     instructions.push("Tu travailles pour les plus grandes marques et événements. Chaque création doit être SPECTACULAIRE et MÉMORABLE.");
@@ -488,25 +527,44 @@ function buildProfessionalPrompt({
   instructions.push("");
   instructions.push("═══════════════════════════════════════════════════════════════════════");
   instructions.push("");
-  if (hasReferenceImage) {
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎯 RAPPEL FINAL - CLONAGE FIDÈLE AVEC CONTENU CLIENT UNIQUEMENT      ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+  if (hasReferenceImage || isCloneMode) {
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("██  🚨 RAPPEL FINAL CRITIQUE - MODE ÉDITION D'IMAGE UNIQUEMENT 🚨      ██");
+    instructions.push("████████████████████████████████████████████████████████████████████████");
     instructions.push("");
-    instructions.push("1. ✅ REPRODUIRE exactement le DESIGN et LAYOUT du template");
-    instructions.push("2. ✅ APPLIQUER les couleurs de l'utilisateur (si fournies)");
-    instructions.push("3. ✅ AFFICHER uniquement le contenu fourni par le client ci-dessus");
-    instructions.push("4. ⛔ SUPPRIMER TOTALEMENT tout texte/logo/info du template original");
-    instructions.push("5. ⛔ NE RIEN INVENTER - si le client n'a pas fourni, la zone est vide/supprimée");
+    instructions.push("⚠️ RÉCAPITULATIF - TU FAIS UNE ÉDITION, PAS UNE CRÉATION:");
     instructions.push("");
-    instructions.push("🚨 VÉRIFICATION FINALE:");
-    instructions.push("   Avant de générer, vérifie que RIEN du template original ne reste:");
-    instructions.push("   - Aucun logo de l'ancien template");
-    instructions.push("   - Aucun numéro de téléphone de l'ancien template");
-    instructions.push("   - Aucun nom/titre de l'ancien template");
-    instructions.push("   - Aucune date/lieu de l'ancien template");
-    instructions.push("   - L'affiche doit sembler 100% nouvelle, créée pour CE client");
-  } else {
+    instructions.push("┌─────────────────────────────────────────────────────────────────────┐");
+    instructions.push("│  L'image de référence fournie = TON CANVAS DE TRAVAIL              │");
+    instructions.push("│  Tu MODIFIES cette image, tu ne crées PAS une nouvelle image.      │");
+    instructions.push("└─────────────────────────────────────────────────────────────────────┘");
+    instructions.push("");
+    instructions.push("✅ GARDER IDENTIQUE:");
+    instructions.push("   • La composition exacte (où sont placés les éléments)");
+    instructions.push("   • Le style graphique (effets 3D, ombres, lumières, textures)");
+    instructions.push("   • Les formes décoratives (cadres, lignes, motifs)");
+    instructions.push("   • La typographie stylisée (polices, effets sur le texte)");
+    instructions.push("   • L'ambiance générale (couleurs dominantes, atmosphère)");
+    instructions.push("");
+    instructions.push("🔄 REMPLACER UNIQUEMENT:");
+    instructions.push("   • Le texte du template → Par le texte du client ci-dessus");
+    instructions.push("   • Les visages du template → Par ceux du client (si fournis)");
+    instructions.push("   • Les logos du template → Par ceux du client (si fournis)");
+    instructions.push("   • Les couleurs → Par la palette du client (si fournie)");
+    instructions.push("");
+    instructions.push("❌ SUPPRIMER (si non fourni par le client):");
+    instructions.push("   • Logos originaux → Effacer la zone");
+    instructions.push("   • Numéros/emails originaux → Effacer complètement");
+    instructions.push("   • Dates/lieux originaux → Effacer complètement");
+    instructions.push("   • Noms de personnes originaux → Effacer");
+    instructions.push("");
+    instructions.push("📊 TEST DE VALIDATION:");
+    instructions.push("   Compare ton résultat à l'image de référence:");
+    instructions.push("   → La STRUCTURE doit être IDENTIQUE");
+    instructions.push("   → Le STYLE doit être IDENTIQUE");
+    instructions.push("   → Seul le CONTENU TEXTUEL/VISUEL change (celui du client)");
+    instructions.push("   → AUCUNE information du template original ne doit apparaître");
+    instructions.push("");
     instructions.push("🎯 RAPPEL FINAL - CRÉATION LIBRE:");
     instructions.push("   1. Design SPECTACULAIRE niveau agence internationale");
     instructions.push("   2. Typographie STYLISÉE avec effets (3D, ombres, dégradés, glow)");
