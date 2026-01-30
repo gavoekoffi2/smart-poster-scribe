@@ -17,6 +17,7 @@ export interface ExpertSkillProfile {
   effects: string[];
   principles: string[];
   errors: string[];
+  referenceStyleGuide: string[];  // NOUVEAU: Guide de style visuel concret pour qualité pro
 }
 
 // ============================================================================
@@ -98,6 +99,20 @@ const CORPORATE_MODERN: ExpertSkillProfile = {
     "Manque d'espace blanc",
     "Photos de mauvaise qualité",
     "Alignements approximatifs",
+  ],
+  referenceStyleGuide: [
+    "Style visuel des meilleures affiches corporate africaines:",
+    "- Fond avec dégradé bleu corporate (#0066CC → #004080) ou vert (#00875A)",
+    "- Photo du formateur/expert détourée proprement, positionné à droite (35-40% largeur)",
+    "- Titre en Montserrat ExtraBold blanc avec ombre portée douce",
+    "- Sous-titre en police light, italique pour contraste",
+    "- Badge 'CERTIFICATION' ou 'NOUVEAU' en haut à gauche (rectangle arrondi coloré)",
+    "- Icônes professionnelles pour illustrer les bénéfices (max 3-4)",
+    "- Footer avec informations (date, lieu, prix) sur fond légèrement plus foncé",
+    "- QR Code discret en bas à droite pour inscription",
+    "Exemple: 'MASTERCLASS MARKETING DIGITAL' avec formateur en costume",
+    "fond bleu marine → bleu ciel dégradé, badge jaune 'PLACES LIMITÉES',",
+    "3 icônes blanches (laptop, graphique, cible), prix en badge arrondi vert.",
   ],
 };
 
@@ -181,6 +196,20 @@ const SURREALIST_PHOTOREALISTIC: ExpertSkillProfile = {
     "Manque de contraste",
     "Typographie basique sans effets",
     "Composition statique et prévisible",
+  ],
+  referenceStyleGuide: [
+    "Style visuel des meilleures affiches événementielles africaines:",
+    "- Fond spectaculaire: coucher de soleil, skyline de ville, scène de concert",
+    "- Artiste/DJ en avant-plan avec éclairage dramatique, pose dynamique",
+    "- Titre MASSIF en 3D avec effets néon, chrome ou holographique",
+    "- Multiples plans de profondeur: fond flouté → éléments 3D → artiste → texte",
+    "- Particules, confettis, étincelles flottant dans l'air",
+    "- Dégradés audacieux magenta-cyan ou orange-violet",
+    "- Lens flares et rayons de lumière depuis derrière l'artiste",
+    "- Logo sponsors en bas, discret mais visible",
+    "Exemple: 'AFROBEAT FESTIVAL 2024' avec artiste bras levés devant foule,",
+    "ciel orange-rose coucher de soleil, titre doré 3D avec glow violet,",
+    "silhouettes de mains levées en premier plan, confettis dorés tombant.",
   ],
 };
 
@@ -267,6 +296,22 @@ const SPIRITUAL_RELIGIOUS: ExpertSkillProfile = {
     "Symboles religieux mal placés ou disproportionnés",
     "Manque de hiérarchie entre titre et détails",
   ],
+  referenceStyleGuide: [
+    "Style visuel des meilleures affiches d'église africaines:",
+    "- Fond sombre (bleu nuit #0A1628 ou violet profond #1A0A2E) avec overlay 40-60%",
+    "- Portrait du pasteur/prédicateur tiers droit, éclairage rim light doré",
+    "- Titre principal en 3D avec effet OR MÉTALLIQUE et glow lumineux",
+    "- Rayons de lumière divine descendant d'en haut à gauche (god rays)",
+    "- Silhouettes floues de fidèles mains levées en arrière-plan (prière)",
+    "- Bannière 3D texturée (effet satin/tissu) pour les dates/horaires",
+    "- Particules dorées/lumineuses flottant (atmosphère céleste)",
+    "- Mots spirituels clés en police script (Grâce, Gloire, Saint-Esprit)",
+    "- Verset biblique en italique élégant, encadré discret",
+    "Exemple: 'GRANDE CROISADE DE MIRACLES' avec Bishop en costume blanc,",
+    "fond bleu nuit avec étoiles et nuages, titre doré 3D avec glow,",
+    "rayons de lumière derrière lui, infos dans bandeau rouge en bas,",
+    "icônes réseaux sociaux et numéro WhatsApp bien visibles.",
+  ],
 };
 
 // ============================================================================
@@ -352,6 +397,22 @@ const RESTAURANT_FOOD: ExpertSkillProfile = {
     "Manque d'espace négatif (composition étouffée)",
     "Informations de contact invisibles",
     "Plat flouté ou en arrière-plan",
+  ],
+  referenceStyleGuide: [
+    "Style visuel des meilleures affiches restaurant africaines:",
+    "- Plat principal STAR: occupe 40-60% de l'affiche, net et appétissant",
+    "- Fond sobre (bois, ardoise, marbre) avec flou bokeh (60-80%)",
+    "- Vapeur légère montant du plat pour effet 'fraîcheur/chaleur'",
+    "- Ingrédients frais flottant autour (tomates, épices, herbes) en arrière-plan",
+    "- Badge PROMO rotatif (-20°) en rouge/jaune vif avec prix barré",
+    "- Nom du plat en police élégante (script ou serif)",
+    "- Prix TRÈS visible dans cercle ou rectangle coloré",
+    "- Photo du chef ou logo restaurant en coin discret",
+    "- Numéro WhatsApp/téléphone en grand en bas",
+    "Exemple: 'POULET BRAISÉ SPÉCIAL' avec poulet doré fumant au centre,",
+    "fond table en bois flouté, piments et oignons flottants,",
+    "badge '-30%' rouge incliné, prix '3500 FCFA' en jaune,",
+    "logo restaurant en haut gauche, WhatsApp en bas droite.",
   ],
 };
 
@@ -447,6 +508,22 @@ const YOUTUBE_THUMBNAIL: ExpertSkillProfile = {
     "Police trop fine, script ou décorative",
     "Chiffres et montants non mis en évidence",
     "Logo qui cache ou interfère avec le visage",
+  ],
+  referenceStyleGuide: [
+    "Style visuel des meilleures miniatures YouTube africaines:",
+    "- Visage CENTRAL occupant 35-50% de la miniature, expression CHOQUÉE ou EXCITÉE",
+    "- Yeux écarquillés, bouche ouverte en 'O' de surprise",
+    "- Fond simplifié: couleur unie vive OU flou bokeh OU contexte minimal",
+    "- Texte MASSIF (70-100pt) en 3-5 mots MAX avec bordure épaisse (4-6px)",
+    "- Chiffres/montants en TRÈS GRAND avec fond coloré (cercle/rectangle arrondi)",
+    "- Objet symbolique SURDIMENSIONNÉ (billets, téléphone, logo, produit)",
+    "- Flèche rouge/jaune pointant vers élément important",
+    "- Saturation +30-50%, contraste +20-40% sur toute l'image",
+    "- Couleurs HYPER vives: jaune #FFFF00, rouge #FF0000, bleu #0066FF",
+    "Exemple: Youtubeur africain bouche ouverte, yeux grands, tenant un iPhone géant,",
+    "fond jaune vif uni, texte 'J'AI GAGNÉ 27 000€' en noir bordure blanche,",
+    "'27 000€' sur fond rouge en très grand, logo PayPal en coin,",
+    "flèche rouge pointant vers le montant, saturation maximale.",
   ],
 };
 
@@ -622,6 +699,13 @@ export function buildExpertSkillsPrompt(domain: string): string {
   lines.push(`║  🎓 COMPÉTENCES GRAPHISTE EXPERT - ${profile.name.toUpperCase().padEnd(30)}  ║`);
   lines.push("╚═══════════════════════════════════════════════════════════════════════╝");
   lines.push("");
+  
+  // NOUVEAU: Guide de style visuel en premier (exemples concrets)
+  if (profile.referenceStyleGuide && profile.referenceStyleGuide.length > 0) {
+    lines.push("━━━ 🎯 GUIDE DE STYLE VISUEL (NIVEAU DE QUALITÉ ATTENDU) ━━━");
+    profile.referenceStyleGuide.forEach(rule => lines.push(`   ${rule}`));
+    lines.push("");
+  }
   
   lines.push("━━━ COMPOSITION ━━━");
   profile.composition.forEach(rule => lines.push(`   • ${rule}`));
