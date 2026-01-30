@@ -319,39 +319,43 @@ function buildProfessionalPrompt({
     instructions.push("");
   }
 
-  // ====== RÈGLE FONDAMENTALE: PERSONNALISATION FIDÈLE ======
-  if (hasReferenceImage) {
+  // ====== RÈGLE FONDAMENTALE: MODE MODIFICATION D'IMAGE ======
+  if (hasReferenceImage || isCloneMode) {
     instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎯 PERSONNALISATION FIDÈLE D'UN DESIGN EXISTANT                      ║");
+    instructions.push("║  ⚠️ MODE MODIFICATION D'IMAGE - RÈGLES STRICTES                       ║");
     instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
     instructions.push("");
-    instructions.push("⚠️ RÈGLE FONDAMENTALE: Tu PERSONNALISES le template de référence.");
-    instructions.push("   Tu ne crées pas, tu ADAPTES fidèlement.");
+    instructions.push("🚨 MISSION CRITIQUE: Tu reçois une AFFICHE EXISTANTE. Tu dois la MODIFIER.");
+    instructions.push("   Tu ne crées PAS une nouvelle affiche. Tu MODIFIES celle-ci.");
+    instructions.push("   C'est un travail de PERSONNALISATION, pas de création.");
     instructions.push("");
+    
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("CE QUE TU CONSERVES EXACTEMENT DU TEMPLATE:");
+    instructions.push("CE QUE TU GARDES INTACT (NE TOUCHE PAS):");
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("1. MISE EN PAGE:");
-    instructions.push("   ✓ Disposition exacte des éléments (positions, zones, grille)");
-    instructions.push("   ✓ Marges, espacements, alignements identiques");
-    instructions.push("   ✓ Proportions et équilibre visuel");
+    instructions.push("   ✓ La MISE EN PAGE exacte (positions de tous les éléments)");
+    instructions.push("   ✓ Le STYLE GRAPHIQUE (effets 3D, ombres, dégradés, textures)");
+    instructions.push("   ✓ La STRUCTURE (découpage des zones, proportions, marges)");
+    instructions.push("   ✓ Les ÉLÉMENTS DÉCORATIFS (formes, lignes, motifs, cadres)");
+    instructions.push("   ✓ Les EFFETS DE LUMIÈRE (halos, rayons, reflets, bokeh)");
+    instructions.push("   ✓ La TYPOGRAPHIE et ses effets (polices stylisées, 3D, glow)");
+    instructions.push("   ✓ L'AMBIANCE générale (couleurs dominantes, atmosphère)");
     instructions.push("");
-    instructions.push("2. TYPOGRAPHIE:");
-    instructions.push("   ✓ Style de police (ou très similaire)");
-    instructions.push("   ✓ Tailles relatives (titre grand, détails petits)");
-    instructions.push("   ✓ Effets sur texte (ombres, contours, dégradés)");
-    instructions.push("   ✓ Positions des zones de texte");
+    
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("CE QUE TU MODIFIES (REMPLACE OU SUPPRIME):");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ➤ TEXTES: Efface les textes originaux → Place les textes de l'utilisateur");
+    instructions.push("   ➤ COULEURS: Si palette fournie → Remplace TOUTES les couleurs");
+    instructions.push("   ➤ LOGOS: Efface les logos originaux → Place ceux de l'utilisateur (ou zone vide)");
+    instructions.push("   ➤ VISAGES: Efface les visages originaux → Place ceux de l'utilisateur (ou supprime)");
+    instructions.push("   ➤ CONTACTS: Efface tous les numéros/emails → Place ceux de l'utilisateur uniquement");
+    instructions.push("   ➤ DATES: Efface dates/horaires → Place ceux de l'utilisateur uniquement");
     instructions.push("");
-    instructions.push("3. ÉLÉMENTS GRAPHIQUES:");
-    instructions.push("   ✓ Formes décoratives (cercles, lignes, cadres, motifs)");
-    instructions.push("   ✓ Effets lumineux (flares, halos, reflets)");
-    instructions.push("   ✓ Textures et dégradés de fond");
-    instructions.push("   ✓ Cadres et bordures");
-    instructions.push("");
-    instructions.push("4. STRUCTURE:");
-    instructions.push("   ✓ Si personnage à gauche → personnage à gauche");
-    instructions.push("   ✓ Si bandeau en bas → bandeau en bas");
-    instructions.push("   ✓ Si logo en haut → logo en haut");
+    
+    instructions.push("🎯 RÉSULTAT ATTENDU:");
+    instructions.push("   L'affiche finale = La MÊME affiche visuellement, mais avec le contenu du client.");
+    instructions.push("   Un observateur doit voir le MÊME design, juste personnalisé.");
     instructions.push("");
     
     instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
@@ -374,52 +378,17 @@ function buildProfessionalPrompt({
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("   ✓ Si les couleurs sont similaires (même famille):");
     instructions.push("     → Créer des variations de saturation/luminosité pour différencier");
-    instructions.push("     → Ajouter des dégradés subtils entre elles");
-    instructions.push("");
     instructions.push("   ✓ Si les couleurs sont contrastées (complémentaires):");
-    instructions.push("     → Utiliser la plus sombre pour le fond");
-    instructions.push("     → Réserver la plus vive pour les accents");
-    instructions.push("     → Ajouter une couleur neutre (noir/blanc/gris) pour équilibrer");
-    instructions.push("");
+    instructions.push("     → Utiliser la plus sombre pour le fond, la plus vive pour accents");
     instructions.push("   ✓ Si les couleurs ne se mélangent pas naturellement:");
-    instructions.push("     → AJOUTER DU BLANC comme séparateur/harmonisateur (le blanc passe avec tout)");
-    instructions.push("     → Ajouter des effets de lumière (glow, reflets) pour unifier");
-    instructions.push("     → Créer des dégradés doux entre les zones de couleur");
-    instructions.push("     → Utiliser des ombres pour séparer visuellement les éléments");
-    instructions.push("     → Ajouter une texture ou un overlay pour créer de la cohésion");
-    instructions.push("");
-    instructions.push("   ✓ Pour garantir la lisibilité:");
-    instructions.push("     → Texte clair sur fond foncé OU texte foncé sur fond clair");
-    instructions.push("     → Contours/ombres sur le texte si le contraste est faible");
-    instructions.push("     → Jamais de texte coloré sur fond de couleur proche");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("🚨 COMBINAISONS INTERDITES (FONT MAL AUX YEUX):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ❌ Texte BLEU sur fond ORANGE (vibration optique, illisible)");
-    instructions.push("   ❌ Texte ROUGE sur fond VERT vif (effet sapin de Noël)");
-    instructions.push("   ❌ Texte JAUNE sur fond VIOLET (contraste agressif)");
-    instructions.push("   ❌ Couleurs complémentaires en contact direct sans séparation");
-    instructions.push("   ❌ Deux couleurs saturées côte à côte sans espace neutre");
+    instructions.push("     → AJOUTER DU BLANC comme séparateur/harmonisateur");
     instructions.push("");
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("💡 SOLUTION UNIVERSELLE: LE BLANC COMME HARMONISATEUR");
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("   ✓ Le BLANC passe avec TOUTES les couleurs");
-    instructions.push("   ✓ Ajouter du blanc entre deux couleurs qui clashent");
     instructions.push("   ✓ Bordure blanche (3-6px) autour du texte sur fond coloré");
     instructions.push("   ✓ Zones blanches ou crème pour aérer le design");
-    instructions.push("   ✓ Rectangle blanc derrière le texte si le fond est trop vif");
-    instructions.push("   ✓ Le NOIR fonctionne aussi comme séparateur neutre");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("❌ INTERDIT ABSOLUMENT:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ❌ Garder UNE SEULE couleur du template original");
-    instructions.push("   ❌ Mélanger les couleurs du template avec celles de l'utilisateur");
-    instructions.push("   ❌ Ignorer une couleur fournie par l'utilisateur");
-    instructions.push("   ❌ Créer un design où les couleurs sont mal agencées/illisibles");
-    instructions.push("   ❌ Poser des couleurs qui clashent sans utiliser le blanc pour séparer");
     instructions.push("");
     
     instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
@@ -436,35 +405,12 @@ function buildProfessionalPrompt({
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("");
     instructions.push("❌ LOGOS: Si l'utilisateur n'a PAS fourni de logo → AUCUN logo sur l'affiche");
-    instructions.push("   (supprimer complètement les logos du template original)");
-    instructions.push("");
-    instructions.push("❌ TEXTES: Tous les textes du template (noms, slogans, descriptions)");
-    instructions.push("   → SUPPRIMER et remplacer UNIQUEMENT par ce que le client a fourni");
-    instructions.push("   → Si le client n'a pas fourni d'équivalent → zone VIDE ou supprimée");
-    instructions.push("");
-    instructions.push("❌ NUMÉROS DE TÉLÉPHONE: Ceux du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT le numéro du client s'il l'a fourni");
-    instructions.push("");
-    instructions.push("❌ DATES/HORAIRES: Celles du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT les dates du client s'il les a fournies");
-    instructions.push("");
-    instructions.push("❌ LIEUX/ADRESSES: Ceux du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT le lieu du client s'il l'a fourni");
-    instructions.push("");
-    instructions.push("❌ PRIX/TARIFS: Ceux du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT les prix du client s'il les a fournis");
-    instructions.push("");
-    instructions.push("❌ NOMS/PERSONNES: Les orateurs/artistes du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT les noms fournis par le client");
-    instructions.push("   → Si le template a 3 personnes mais le client en fournit 1:");
-    instructions.push("     • Option 1: Afficher seulement la personne du client");
-    instructions.push("     • Option 2: Si le client a demandé, générer les autres automatiquement");
-    instructions.push("");
-    instructions.push("❌ RÉSEAUX SOCIAUX: Les handles du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT ceux du client s'il les a fournis");
-    instructions.push("");
-    instructions.push("❌ EMAILS/SITES WEB: Ceux du template → EFFACER TOTALEMENT");
-    instructions.push("   → Afficher UNIQUEMENT ceux du client s'il les a fournis");
+    instructions.push("❌ TEXTES: Tous les textes du template → SUPPRIMER et remplacer par ceux du client");
+    instructions.push("❌ NUMÉROS: Ceux du template → EFFACER. Afficher UNIQUEMENT celui du client");
+    instructions.push("❌ DATES: Celles du template → EFFACER. Afficher UNIQUEMENT celles du client");
+    instructions.push("❌ LIEUX: Ceux du template → EFFACER. Afficher UNIQUEMENT celui du client");
+    instructions.push("❌ NOMS: Les personnes du template → EFFACER. Afficher UNIQUEMENT ceux du client");
+    instructions.push("❌ RÉSEAUX SOCIAUX: Ceux du template → EFFACER. Afficher UNIQUEMENT ceux du client");
     instructions.push("");
     instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     instructions.push("🎯 CE QUE TU REPRODUIS (L'INGÉNIERIE GRAPHIQUE):");
@@ -1089,8 +1035,12 @@ serve(async (req) => {
 
     // ====== SÉLECTION INTELLIGENTE DE TEMPLATE SI AUCUNE IMAGE FOURNIE ======
     // Cette logique garantit qu'on utilise TOUJOURS un template de référence pour le design
+    // NOUVEAU: On suit si le template a été auto-sélectionné pour le traiter comme un CLONAGE
+    let isAutoSelectedTemplate = false;
+    
     if (!referenceImage) {
       console.log("No reference image provided. Selecting best matching template...");
+      console.log("🎯 Mode: Template auto-sélectionné sera traité comme CLONAGE");
       try {
         // Analyser le prompt pour détecter le domaine et les mots-clés
         const promptLower = prompt.toLowerCase();
@@ -1207,7 +1157,13 @@ serve(async (req) => {
           
           // Convertir le chemin relatif en URL absolue
           referenceImage = resolveTemplateUrl(picked.image_url);
-          console.log(`Selected template from domain "${picked.domain}" with URL: ${referenceImage}`);
+          
+          // NOUVEAU: Marquer que ce template a été auto-sélectionné
+          // Il sera traité comme un CLONAGE, pas une création libre
+          isAutoSelectedTemplate = true;
+          
+          console.log(`✅ Selected template from domain "${picked.domain}" with URL: ${referenceImage}`);
+          console.log(`🎯 isAutoSelectedTemplate = true → Mode CLONAGE activé`);
         }
       } catch (e) {
         console.warn("Error selecting intelligent fallback:", e);
@@ -1274,8 +1230,11 @@ serve(async (req) => {
       ? `LOGOS PLACEMENT: ${logoPositions.map((pos: string, i: number) => `Logo ${i+1} at ${pos}`).join(", ")}.`
       : "";
     
-    // Détecter si c'est un mode clone (passé dans le body de la requête)
-    const isCloneMode = body.isCloneMode === true;
+    // Détecter si c'est un mode clone (passé dans le body de la requête OU auto-sélectionné)
+    // NOUVEAU: Les templates auto-sélectionnés sont AUSSI traités comme du clonage
+    const isCloneMode = body.isCloneMode === true || isAutoSelectedTemplate;
+    
+    console.log(`🎯 Mode final: isCloneMode=${isCloneMode} (body=${body.isCloneMode}, autoSelected=${isAutoSelectedTemplate})`);
     
     // Construire le texte pour les préférences de mise en scène YouTube
     let scenePreferenceText = "";
