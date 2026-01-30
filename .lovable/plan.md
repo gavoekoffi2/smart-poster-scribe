@@ -1,320 +1,199 @@
 
-# Plan : Analyse Intelligente et Personnalisation Complète des Affiches de Référence
+# Plan : Amélioration Radicale de la Qualité de Génération
 
-## Objectif
+## Problème Identifié
 
-Améliorer le système pour que lors du clonage d'une affiche (mode "S'inspirer" ou sélection automatique de template) :
+Le système actuel a deux faiblesses majeures :
 
-1. **Analyse exhaustive** : L'IA analyse TOUS les éléments de l'affiche de référence (textes, logos, personnes, icônes, etc.)
-2. **Comparaison avec les données utilisateur** : Identifier les éléments manquants par rapport au template
-3. **Questions intelligentes** : Demander à l'utilisateur s'il veut fournir ces éléments, les générer, ou les supprimer
-4. **Upload multiple** : Permettre l'upload de plusieurs images si le template en contient plusieurs
-5. **Génération automatique optionnelle** : Proposer de générer des images (personnes, produits) si l'utilisateur n'en a pas
-6. **Règle zéro information originale** : Ne jamais garder d'élément du template qui n'a pas été remplacé par l'utilisateur
+### Mode Sans Référence (Création Libre)
+- Les affiches générées sont trop basiques car l'IA ne "voit" pas les designs professionnels
+- Le système sélectionne automatiquement un template en base, mais le prompt demande une "création libre" au lieu d'utiliser ce template comme modèle de design
+- Les compétences expertes sont injectées en texte mais l'IA ne les applique pas visuellement car elle n'a pas de référence visuelle
 
----
-
-## Architecture de la Solution
-
-### Fichiers à Modifier
-
-| Fichier | Action | Description |
-|---------|--------|-------------|
-| `supabase/functions/analyze-template/index.ts` | MODIFIER | Enrichir l'analyse pour détecter précisément chaque élément et proposer des questions adaptées |
-| `src/hooks/useConversation.ts` | MODIFIER | Améliorer le flux de clonage pour comparer données utilisateur vs template et poser des questions ciblées |
-| `src/types/generation.ts` | MODIFIER | Ajouter les types pour les éléments détectés et les options de remplacement |
-| `supabase/functions/generate-image/index.ts` | MODIFIER | Renforcer les instructions de suppression des éléments non fournis |
+### Mode Avec Référence (Clonage)
+- Les instructions sont bonnes mais pas assez RADICALES
+- Le prompt demande de "personnaliser" au lieu de dire "MODIFIER CETTE IMAGE EXACTE"
+- L'IA recrée parfois une nouvelle affiche au lieu de modifier l'existante
 
 ---
 
-## Phase 1 : Améliorer l'Analyse du Template
+## Solution Proposée
 
-### Modifications de `analyze-template/index.ts`
+### 1. Modifier la logique en Mode Sans Référence
 
-Enrichir le prompt d'analyse pour détecter avec précision :
+**Changement clé** : Quand aucune image de référence n'est fournie, le système sélectionne TOUJOURS un template correspondant au domaine (déjà fait) MAIS le prompt doit explicitement demander de CLONER ce template, pas de faire une création libre.
 
-**Éléments à détecter avec comptage précis :**
-- Nombre exact de personnes/visages
-- Nombre de logos
-- Nombre de zones de texte (titre, sous-titre, dates, contacts, etc.)
-- Icônes de réseaux sociaux
-- Images de produits
-- Éléments décoratifs (à conserver)
+```
+AVANT (problématique):
+- Mode création libre → Injecte compétences expertes en texte
+- L'IA génère de zéro → Résultat basique
 
-**Nouveau format de sortie JSON :**
-```json
-{
-  "detectedElements": {
-    "peopleCount": 3,
-    "peopleDescriptions": ["homme en costume", "femme avec micro", "homme âgé"],
-    "logoCount": 2,
-    "logoPositions": ["haut-gauche", "bas-droite"],
-    "hasPhoneNumber": true,
-    "hasEmail": true,
-    "hasAddress": true,
-    "hasDate": true,
-    "hasTime": true,
-    "hasPrice": true,
-    "hasSocialIcons": true,
-    "socialPlatforms": ["Facebook", "Instagram", "WhatsApp"],
-    "productCount": 0,
-    "textZones": [
-      {"type": "title", "content": "Grande Veillée de Prière"},
-      {"type": "subtitle", "content": "Avec Pasteur..."},
-      {"type": "date", "content": "15 Mars 2025"},
-      {"type": "contact", "content": "+225 07 00 00 00"}
-    ]
-  },
-  "requiredQuestions": [
-    {
-      "id": "people_photos",
-      "question": "J'ai détecté 3 personnes sur cette affiche. Voulez-vous :\n1. Fournir vos propres photos\n2. Que je génère automatiquement des personnes\n3. Créer l'affiche sans personnes",
-      "type": "choice",
-      "options": ["Fournir mes photos", "Générer automatiquement", "Sans personnes"],
-      "allowMultipleImages": true,
-      "maxImages": 3
-    }
-  ]
-}
+APRÈS (solution):
+- Mode création libre → Sélectionne template en base
+- Le prompt dit "CLONE ce design et personnalise-le"
+- L'IA reproduit le design professionnel → Résultat pro
+```
+
+### 2. Renforcer le Mode Avec Référence
+
+**Changement clé** : Le prompt doit être encore plus explicite sur le fait qu'il s'agit d'une MODIFICATION d'image existante, pas une recréation.
+
+```
+NOUVEAU PROMPT (extrait):
+"Tu reçois une AFFICHE EXISTANTE. Tu dois la MODIFIER, pas la recréer.
+Garde EXACTEMENT:
+- La mise en page (où sont les textes, les images, les zones)
+- Le style graphique (effets, couleurs, typographie)
+- Les éléments décoratifs
+
+Change UNIQUEMENT:
+- Les textes → par les textes de l'utilisateur
+- Les couleurs → par la palette de l'utilisateur (si fournie)
+- Les logos → par ceux de l'utilisateur (ou supprimer si non fournis)
+- Les visages → par ceux de l'utilisateur (ou supprimer si non fournis)
+
+RÉSULTAT = Même affiche, personnalisée pour ce client"
 ```
 
 ---
 
-## Phase 2 : Améliorer le Flux Conversationnel de Clonage
+## Modifications Techniques
 
-### Modifications de `useConversation.ts`
+### Fichier 1 : `supabase/functions/generate-image/index.ts`
 
-**Nouvelle logique après analyse du template :**
+#### Modification A : Changer le mode "création libre" en mode "clonage intelligent"
 
-1. **Construire un message d'introduction détaillé** qui liste TOUS les éléments détectés
-2. **Comparer avec les données fournies** après la première réponse de l'utilisateur
-3. **Poser des questions ciblées** pour les éléments manquants
+Actuellement, quand `hasReferenceImage = false` au début, on passe en mode "création libre". Mais après la sélection automatique de template, on a maintenant une image de référence. Il faut traiter ce cas comme un CLONAGE.
 
-**Pseudo-code du nouveau flux :**
-```typescript
-// Après analyse du template
-const buildEnhancedCloneIntroMessage = (analysis: TemplateAnalysis): string => {
-  let message = "🎨 **J'ai analysé cette affiche en détail !**\n\n";
-  
-  message += "📋 **Éléments détectés à remplacer :**\n";
-  
-  if (analysis.peopleCount > 0) {
-    message += `• ${analysis.peopleCount} personne(s) : ${analysis.peopleDescriptions.join(", ")}\n`;
-  }
-  if (analysis.logoCount > 0) {
-    message += `• ${analysis.logoCount} logo(s)\n`;
-  }
-  if (analysis.hasPhoneNumber) message += "• Numéro de téléphone\n";
-  if (analysis.hasEmail) message += "• Adresse email\n";
-  if (analysis.hasAddress) message += "• Lieu/Adresse\n";
-  if (analysis.hasDate) message += "• Date\n";
-  if (analysis.hasPrice) message += "• Prix/Tarifs\n";
-  
-  message += "\n📝 **Donnez-moi VOS informations pour personnaliser cette affiche.**\n";
-  message += "💡 **Important** : Tout ce que vous ne fournissez pas sera supprimé de l'affiche finale.";
-  
-  return message;
-};
-
-// Après la première réponse utilisateur - Comparer et demander les manquants
-const analyzeUserInputVsTemplate = (
-  userInput: ExtractedInfo, 
-  templateAnalysis: TemplateAnalysis
-): MissingElements[] => {
-  const missing: MissingElements[] = [];
-  
-  // Vérifier les personnes
-  if (templateAnalysis.peopleCount > 0) {
-    // L'utilisateur n'a pas fourni de photos
-    missing.push({
-      type: "people",
-      templateCount: templateAnalysis.peopleCount,
-      userCount: 0,
-      question: `L'affiche modèle contient ${templateAnalysis.peopleCount} personne(s). Souhaitez-vous :\n• Envoyer vos photos (vous pouvez en envoyer jusqu'à ${templateAnalysis.peopleCount})\n• Que je génère automatiquement des personnes africaines\n• Continuer sans personnes (je supprimerai cet espace)`,
-      options: ["upload", "generate", "skip"]
-    });
-  }
-  
-  // Vérifier les logos
-  if (templateAnalysis.logoCount > 0 && !userInput.hasLogo) {
-    missing.push({
-      type: "logos",
-      templateCount: templateAnalysis.logoCount,
-      question: `L'affiche contient ${templateAnalysis.logoCount} logo(s). Voulez-vous ajouter votre logo ?`,
-      options: ["upload", "skip"]
-    });
-  }
-  
-  return missing;
-};
-```
-
----
-
-## Phase 3 : Ajouter les Types Nécessaires
-
-### Modifications de `types/generation.ts`
+Ajouter une variable `isAutoSelectedTemplate` pour savoir si le template a été auto-sélectionné :
 
 ```typescript
-// Nouveau type pour les éléments détectés dans un template
-export interface TemplateAnalysisDetail {
-  peopleCount: number;
-  peopleDescriptions: string[];
-  logoCount: number;
-  logoPositions: string[];
-  hasPhoneNumber: boolean;
-  hasEmail: boolean;
-  hasAddress: boolean;
-  hasDate: boolean;
-  hasTime: boolean;
-  hasPrice: boolean;
-  hasSocialIcons: boolean;
-  socialPlatforms: string[];
-  productCount: number;
-  textZones: {
-    type: string;
-    content: string;
-  }[];
-}
+// Ligne ~1090-1215
+let isAutoSelectedTemplate = false;
 
-// Type pour les éléments manquants
-export interface MissingElement {
-  type: "people" | "logos" | "products" | "text";
-  templateCount: number;
-  userProvided: number;
-  question: string;
-  options: ("upload" | "generate" | "skip")[];
-  allowMultipleImages: boolean;
-  maxImages: number;
-}
-
-// Enrichir ConversationState
-export interface ConversationState {
-  // ... existing fields ...
-  templateAnalysis?: TemplateAnalysisDetail;
-  missingElements?: MissingElement[];
-  currentMissingElementIndex?: number;
-  collectedReplacements?: {
-    people?: { images: string[]; generated: boolean };
-    logos?: { images: string[]; positions: string[] };
-    products?: { images: string[] };
-  };
+if (!referenceImage) {
+  // ... sélection intelligente existante ...
+  if (templateSelected) {
+    isAutoSelectedTemplate = true;
+    referenceImage = selectedTemplateUrl;
+  }
 }
 ```
 
----
-
-## Phase 4 : Renforcer les Instructions de Génération
-
-### Modifications de `generate-image/index.ts`
-
-Ajouter une section explicite sur les éléments collectés vs manquants :
+Puis modifier `buildProfessionalPrompt` pour traiter le template auto-sélectionné comme un clonage :
 
 ```typescript
-// Dans buildProfessionalPrompt()
-if (isCloneMode && templateAnalysis) {
-  instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-  instructions.push("║  📊 RAPPORT DE REMPLACEMENT DES ÉLÉMENTS                              ║");
-  instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-  instructions.push("");
-  
-  // PERSONNES
-  if (templateAnalysis.peopleCount > 0) {
-    if (collectedReplacements.people?.images?.length > 0) {
-      instructions.push(`✅ PERSONNES: ${collectedReplacements.people.images.length} photo(s) fournie(s) par l'utilisateur → UTILISER CES PHOTOS`);
-    } else if (collectedReplacements.people?.generated) {
-      instructions.push(`✅ PERSONNES: Générer ${templateAnalysis.peopleCount} personne(s) africaine(s) NOUVELLES (pas celles du template)`);
-    } else {
-      instructions.push(`❌ PERSONNES: L'utilisateur n'a pas fourni de photos → SUPPRIMER les ${templateAnalysis.peopleCount} personne(s) du template`);
-    }
-  }
-  
-  // LOGOS
-  if (templateAnalysis.logoCount > 0) {
-    if (collectedReplacements.logos?.images?.length > 0) {
-      instructions.push(`✅ LOGOS: ${collectedReplacements.logos.images.length} logo(s) fourni(s) → UTILISER CES LOGOS aux positions ${collectedReplacements.logos.positions.join(", ")}`);
-    } else {
-      instructions.push(`❌ LOGOS: Aucun logo fourni → SUPPRIMER tous les logos du template (${templateAnalysis.logoCount})`);
-    }
-  }
-  
-  instructions.push("");
-  instructions.push("🚨 RAPPEL CRITIQUE: Tout élément non marqué ✅ ci-dessus DOIT être SUPPRIMÉ.");
-}
+const professionalPrompt = buildProfessionalPrompt({
+  userPrompt: prompt,
+  hasReferenceImage: !!referenceImage,
+  hasContentImage: !!contentImage,
+  hasLogoImage: logoImages && logoImages.length > 0,
+  aspectRatio,
+  isCloneMode: isCloneMode || isAutoSelectedTemplate, // NOUVEAU
+});
 ```
 
----
+#### Modification B : Renforcer les instructions de clonage/modification
 
-## Phase 5 : Gérer l'Upload Multiple d'Images
-
-### Modifications dans `useConversation.ts` - handleImageUpload()
+Remplacer la section "PERSONNALISATION FIDÈLE" par des instructions plus RADICALES :
 
 ```typescript
-// Permettre l'upload de plusieurs images pour les personnes/produits
-const handleMultipleImageUpload = async (
-  images: string[],
-  elementType: "people" | "products" | "logos"
-) => {
-  const currentState = conversationStateRef.current;
-  const currentMissing = currentState.missingElements?.[currentState.currentMissingElementIndex || 0];
-  
-  if (!currentMissing) return;
-  
-  // Stocker les images collectées
-  setConversationState(prev => ({
-    ...prev,
-    collectedReplacements: {
-      ...prev.collectedReplacements,
-      [elementType]: {
-        images: images,
-        generated: false
-      }
-    }
-  }));
-  
-  // Passer à l'élément manquant suivant ou continuer le flux
-  const nextIndex = (currentState.currentMissingElementIndex || 0) + 1;
-  if (nextIndex < (currentState.missingElements?.length || 0)) {
-    // Poser la question suivante
-    const nextMissing = currentState.missingElements![nextIndex];
-    setConversationState(prev => ({
-      ...prev,
-      currentMissingElementIndex: nextIndex
-    }));
-    addMessage("assistant", nextMissing.question);
-  } else {
-    // Tous les éléments manquants ont été traités → passer aux couleurs
-    setConversationState(prev => ({
-      ...prev,
-      step: "colors"
-    }));
-    addMessage("assistant", "Parfait ! 🎨 Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
-  }
+// Section Mode Clonage (lignes 323-492)
+instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+instructions.push("║  ⚠️ MODE MODIFICATION D'IMAGE - RÈGLES STRICTES                       ║");
+instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+instructions.push("");
+instructions.push("🚨 MISSION: Tu reçois une AFFICHE EXISTANTE. Tu dois la MODIFIER.");
+instructions.push("   Tu ne crées PAS une nouvelle affiche. Tu MODIFIES celle-ci.");
+instructions.push("");
+instructions.push("━━━ CE QUE TU GARDES INTACT (NE TOUCHE PAS) ━━━");
+instructions.push("   ✓ La MISE EN PAGE exacte (positions de tous les éléments)");
+instructions.push("   ✓ Le STYLE GRAPHIQUE (effets 3D, ombres, dégradés, textures)");
+instructions.push("   ✓ La STRUCTURE (découpage des zones, proportions, marges)");
+instructions.push("   ✓ Les ÉLÉMENTS DÉCORATIFS (formes, lignes, motifs, cadres)");
+instructions.push("   ✓ Les EFFETS DE LUMIÈRE (halos, rayons, reflets, bokeh)");
+instructions.push("");
+instructions.push("━━━ CE QUE TU MODIFIES (REMPLACE OU SUPPRIME) ━━━");
+instructions.push("   ➤ TEXTES: Efface les textes originaux → Place les textes de l'utilisateur");
+instructions.push("   ➤ COULEURS: Si palette fournie → Remplace TOUTES les couleurs");
+instructions.push("   ➤ LOGOS: Efface les logos originaux → Place ceux de l'utilisateur (ou zone vide)");
+instructions.push("   ➤ VISAGES: Efface les visages originaux → Place ceux de l'utilisateur (ou supprime la zone)");
+instructions.push("   ➤ CONTACTS: Efface tous les numéros/emails originaux → Place ceux de l'utilisateur uniquement");
+instructions.push("");
+instructions.push("🎯 RÉSULTAT ATTENDU:");
+instructions.push("   L'affiche finale = La MÊME affiche visuellement, mais avec le contenu du client.");
+instructions.push("   Un observateur doit voir le MÊME design, juste personnalisé.");
+```
+
+### Fichier 2 : `supabase/functions/generate-image/expertSkills.ts`
+
+Ajouter une nouvelle section dans les profils experts pour le "style de référence" - c'est-à-dire des exemples visuels descriptifs des meilleurs templates de chaque domaine pour que l'IA comprenne le niveau de qualité attendu.
+
+Ajouter un champ `referenceStyleGuide` à chaque profil :
+
+```typescript
+interface ExpertSkillProfile {
+  // ... champs existants ...
+  referenceStyleGuide: string[]; // NOUVEAU
+}
+
+const SPIRITUAL_RELIGIOUS: ExpertSkillProfile = {
+  // ... autres champs ...
+  referenceStyleGuide: [
+    "Style visuel des meilleures affiches d'église africaines:",
+    "- Fond sombre avec overlay bleu/violet (40-60% opacité)",
+    "- Portrait du prédicateur tiers droit, avec rim light doré",
+    "- Titre principal en 3D avec effet or métallique et glow",
+    "- Rayons de lumière divine descendant d'en haut à gauche",
+    "- Silhouettes floues de fidèles mains levées en arrière-plan",
+    "- Bannière 3D texturée (effet satin) pour les dates",
+    "- Particules dorées flottantes créant une atmosphère céleste",
+    "Exemple: 'Grande Croisade de Miracles' avec Bishop en costume blanc,",
+    "fond bleu nuit avec étoiles, titre doré 3D avec glow, infos dans",
+    "un bandeau rouge en bas avec icônes de réseaux sociaux.",
+  ],
 };
 ```
 
 ---
 
-## Résumé des Comportements Finaux
+## Résumé des Changements
 
-### Scénario 1 : L'utilisateur clique sur "S'inspirer" d'une affiche avec 3 personnes
+| Aspect | Avant | Après |
+|--------|-------|-------|
+| Mode sans référence | Création libre → Basique | Clone template auto-sélectionné → Pro |
+| Template auto-sélectionné | Traité comme "sans référence" | Traité comme mode CLONE |
+| Instructions de clonage | "Personnalise le design" | "MODIFIE cette image exacte" |
+| Profils experts | Règles abstraites | + Guide de style visuel concret |
+| Vocabulaire du prompt | "Reproduire", "S'inspirer" | "Modifier", "Garder intact", "Remplacer" |
 
-1. **Analyse** → Détecte 3 personnes, 1 logo, date, lieu, contact
-2. **Message** → "J'ai détecté 3 personnes, 1 logo, une date, un lieu et un contact sur cette affiche..."
-3. **L'utilisateur donne ses infos** (titre, date, contact)
-4. **Comparaison** → Il manque les photos des personnes et le logo
-5. **Question 1** → "L'affiche contient 3 personnes. Voulez-vous : fournir vos photos / générer automatiquement / continuer sans personnes ?"
-6. **Si "générer"** → Le système note qu'il doit générer 3 personnes africaines NOUVELLES
-7. **Si "sans personnes"** → Le système note qu'il doit SUPPRIMER cette zone
-8. **Question 2** → "Voulez-vous ajouter votre logo ?"
-9. **Si "non"** → Le logo du template sera SUPPRIMÉ
+---
 
-### Scénario 2 : L'utilisateur demande une affiche sans fournir de template (création libre)
+## Impact Attendu
 
-1. **Sélection automatique** → Le système choisit un template en base correspondant au domaine
-2. **Même flux qu'au-dessus** → Analyse, comparaison, questions sur les éléments manquants
-3. **Génération** → Utilise le DESIGN du template mais UNIQUEMENT les données de l'utilisateur
+### Pour les utilisateurs sans référence :
+- L'IA reçoit toujours un template professionnel de la base
+- Le prompt lui demande de CLONER ce template
+- Résultat : Design professionnel garanti, niveau graphiste
 
-### Règle Absolue Appliquée
+### Pour les utilisateurs avec référence :
+- Instructions plus RADICALES et EXPLICITES
+- L'IA comprend qu'elle doit MODIFIER, pas recréer
+- Résultat : L'affiche de référence exacte, juste personnalisée
 
-**TOUT élément du template original qui n'a pas de remplacement fourni par l'utilisateur sera SUPPRIMÉ ou remplacé par une génération IA si l'utilisateur l'a demandé.**
+---
+
+## Détails Techniques
+
+### Fichiers à modifier :
+1. `supabase/functions/generate-image/index.ts` - Logique de sélection et prompt principal
+2. `supabase/functions/generate-image/expertSkills.ts` - Ajout des guides de style visuels
+
+### Nombre de lignes estimé :
+- ~50 lignes modifiées dans index.ts
+- ~100 lignes ajoutées dans expertSkills.ts
+
+### Risques :
+- Aucun changement de structure de données
+- Pas d'impact sur l'authentification ou les crédits
+- Rétro-compatible avec l'existant
