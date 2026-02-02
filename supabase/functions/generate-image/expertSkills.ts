@@ -699,6 +699,9 @@ export function buildExpertSkillsPrompt(domain: string): string {
   lines.push(`║  🎓 COMPÉTENCES GRAPHISTE EXPERT - ${profile.name.toUpperCase().padEnd(30)}  ║`);
   lines.push("╚═══════════════════════════════════════════════════════════════════════╝");
   lines.push("");
+  lines.push("⚠️ APPLIQUER EN PLUS: Les standards professionnels universels ci-dessus.");
+  lines.push("Ces règles spécifiques au domaine COMPLÈTENT les fondamentaux (7 piliers, typo, couleurs).");
+  lines.push("");
   
   // NOUVEAU: Guide de style visuel en premier (exemples concrets)
   if (profile.referenceStyleGuide && profile.referenceStyleGuide.length > 0) {
