@@ -173,7 +173,7 @@ export function StepIndicator({ currentStep }: { currentStep: ConversationState[
   const stepLabels = ["Domaine", "Détails", "Contenu", "Style", "Couleurs", "Logo", "Image", "Fini"];
 
   return (
-    <div className="relative py-4 px-4 overflow-hidden">
+    <div className="relative pt-4 pb-8 px-4 overflow-visible">
       {/* Background decorative gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent" />
       
@@ -209,11 +209,11 @@ export function StepIndicator({ currentStep }: { currentStep: ConversationState[
                   )}
                 </div>
                 
-                {/* Step label on hover */}
+                {/* Step label - always visible for active, hover for others */}
                 <div className={`
-                  absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap
+                  absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap
                   text-[9px] font-medium transition-all duration-300
-                  ${isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"}
+                  ${isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-70 group-hover:opacity-100"}
                 `}>
                   {stepLabels[index]}
                 </div>
