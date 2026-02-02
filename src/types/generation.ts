@@ -273,6 +273,12 @@ export interface TemplateAnalysisDetail {
     type: string;
     content: string;
   }[];
+  // Éléments décoratifs (icônes, symboles, objets spécifiques au domaine)
+  decorativeElements?: {
+    icons: string[];
+    symbols: string[];
+    domainSpecificItems: string[];
+  };
 }
 
 // Type pour les éléments manquants lors du clonage
@@ -409,4 +415,6 @@ export interface ConversationState {
   zonesToDelete?: Array<{ type: string; content: string; position?: string }>;
   // Zones hors contexte détectées (ex: frais d'inscription sur une affiche de service)
   contextMismatchZones?: Array<{ type: string; content: string; position?: string }>;
+  // Objets/icônes hors contexte détectés (ex: diplôme sur une affiche de service)
+  mismatchedObjects?: Array<{ type: string; name: string; position?: string }>;
 }

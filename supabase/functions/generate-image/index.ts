@@ -527,6 +527,79 @@ function buildProfessionalPrompt({
     instructions.push("   • Des zones où on devine qu'il manque quelque chose");
     instructions.push("   • Un design déséquilibré à cause de suppressions");
     instructions.push("");
+    
+    // ====== SECTION OBJETS/ICÔNES HORS CONTEXTE ======
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  🎯 OBJETS ET ICÔNES - SUPPRESSION DES ÉLÉMENTS HORS CONTEXTE         ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    instructions.push("");
+    instructions.push("🚨 RÈGLE ABSOLUE: Les objets/icônes spécifiques au domaine original DOIVENT DISPARAÎTRE.");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("OBJETS À SUPPRIMER (si le domaine utilisateur ne correspond pas):");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ❌ Église/Spirituel: croix, bible, colombe, bougie, autel, ange, chapelet");
+    instructions.push("   ❌ Formation/Éducation: diplôme, livre, tableau, chapeau universitaire, certificat");
+    instructions.push("   ❌ Restaurant: fourchette, couteau, cuillère, assiette, toque de chef, casserole");
+    instructions.push("   ❌ Musique: micro, note de musique, guitare, platine, DJ, casque audio");
+    instructions.push("   ❌ YouTube: bouton play, subscribe, icône abonnement, notification");
+    instructions.push("   ❌ Mode: cintre, mannequin, étiquette prix");
+    instructions.push("   ❌ Santé: stéthoscope, seringue, croix médicale, pilules");
+    instructions.push("   ❌ Sport: ballon, trophée, médaille, maillot");
+    instructions.push("   ❌ Immobilier: clé, plan, maison stylisée");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("PROCÉDURE DE REMPLACEMENT DES OBJETS:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   1. IDENTIFIER tous les objets/icônes spécifiques au domaine original");
+    instructions.push("   2. SUPPRIMER complètement ces éléments de l'image");
+    instructions.push("   3. REMPLACER l'espace par:");
+    instructions.push("      • Un élément décoratif NEUTRE (forme géométrique, effet de lumière)");
+    instructions.push("      • Un agrandissement d'un élément du client (logo, photo, texte)");
+    instructions.push("      • Une extension du fond/texture existant");
+    instructions.push("   4. NE JAMAIS laisser un espace vide à la place de l'objet supprimé");
+    instructions.push("");
+    
+    // ====== POLITIQUE ZÉRO ESPACE VIDE - RENFORCÉE ======
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("██  🚨 POLITIQUE ZÉRO ESPACE VIDE - APPLICATION STRICTE              ██");
+    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("");
+    instructions.push("⚠️ SI TU SUPPRIMES UNE ZONE (texte, objet, icône), TU DOIS COMBLER L'ESPACE.");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("TECHNIQUES DE COMBLEMENT OBLIGATOIRES:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   📌 OPTION 1 - EXTENSION:");
+    instructions.push("      • Étendre le bandeau/forme voisin(e) pour couvrir la zone");
+    instructions.push("      • Agrandir le texte du client pour occuper plus d'espace");
+    instructions.push("      • Élargir une photo ou un logo existant");
+    instructions.push("");
+    instructions.push("   📌 OPTION 2 - FUSION:");
+    instructions.push("      • Fusionner deux zones en une seule plus grande");
+    instructions.push("      • Combiner le fond avec la zone supprimée");
+    instructions.push("      • Étendre le fond uniforme sur toute la zone");
+    instructions.push("");
+    instructions.push("   📌 OPTION 3 - DÉCORATION:");
+    instructions.push("      • Ajouter un élément décoratif NEUTRE du style original (forme, motif)");
+    instructions.push("      • Étendre un effet de lumière ou de dégradé");
+    instructions.push("      • Utiliser un pattern/texture subtile cohérent avec le design");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("❌ CE QUI EST ABSOLUMENT INTERDIT:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   • Un bandeau visible SANS texte dedans");
+    instructions.push("   • Une zone rectangulaire/circulaire vide");
+    instructions.push("   • Un espace blanc/noir flagrant là où il y avait du contenu");
+    instructions.push("   • Un layout déséquilibré avec des 'trous' visibles");
+    instructions.push("   • Un objet/icône du domaine original qui reste visible");
+    instructions.push("   • Une zone où on devine qu'il manquait quelque chose");
+    instructions.push("");
+    instructions.push("🎯 TEST VISUEL FINAL: Regarde ton affiche finale. Si tu vois:");
+    instructions.push("   - Une zone qui semble 'vide' ou 'incomplète' → CORRIGE-LA");
+    instructions.push("   - Un objet/icône qui ne correspond pas au contenu du client → SUPPRIME-LE");
+    instructions.push("   - Un déséquilibre visuel → REDISTRIBUE les éléments");
+    instructions.push("");
   }
 
   // ====== RÈGLE SUR LE CONTENU UTILISATEUR ======

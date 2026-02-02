@@ -264,11 +264,11 @@ function getDefaultAnalysis(domain?: string): TemplateAnalysisResult {
   };
 }
 
-// Prompt OPTIMISÉ pour l'analyse EXHAUSTIVE des templates - extraction de TOUS les textes
+// Prompt OPTIMISÉ pour l'analyse EXHAUSTIVE des templates - extraction de TOUS les textes et objets
 function getEnhancedAnalysisPrompt(): string {
   return `Tu es un expert graphiste. Analyse cette affiche publicitaire de manière EXHAUSTIVE.
 
-🎯 MISSION CRITIQUE: Extraire le contenu EXACT de CHAQUE zone de texte visible.
+🎯 MISSION CRITIQUE: Extraire le contenu EXACT de CHAQUE zone de texte visible ET identifier TOUS les objets/icônes.
 
 RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
@@ -353,7 +353,12 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
         "content": "[Tout autre texte visible non catégorisé]",
         "position": "position"
       }
-    ]
+    ],
+    "decorativeElements": {
+      "icons": ["liste des icônes visibles: croix, micro, fourchette, diplôme, etc."],
+      "symbols": ["liste des symboles: €, FCFA, %, ★, cœur, etc."],
+      "domainSpecificItems": ["objets spécifiques au domaine: bible, autel, toque de chef, certificat, ballon, etc."]
+    }
   },
   "requiredQuestions": [],
   "templateDescription": "Description du style visuel et de la mise en page",
@@ -365,14 +370,21 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
 2. Copier le contenu EXACT (mot pour mot, chiffre pour chiffre)
 3. Ne pas inventer - si tu ne peux pas lire, mettre "[illisible]"
 4. Inclure les accroches, slogans, phrases secondaires (type "slogan" ou "tagline")
-5. Positions valides: top-left, top-center, top-right, middle-left, center, middle-right, bottom-left, bottom-center, bottom-right`;
+5. Positions valides: top-left, top-center, top-right, middle-left, center, middle-right, bottom-left, bottom-center, bottom-right
+
+⚠️ RÈGLES CRITIQUES POUR decorativeElements:
+1. Lister TOUS les objets/icônes visibles sur l'affiche
+2. Identifier les icônes de réseaux sociaux (Facebook, Instagram, WhatsApp, etc.)
+3. Identifier les symboles religieux (croix, bible, colombe, etc.)
+4. Identifier les objets liés au domaine (fourchette/restaurant, diplôme/formation, micro/musique, etc.)
+5. Ne pas inclure les éléments purement décoratifs abstraits (formes géométriques simples)`;
 }
 
 // Prompt OPTIMISÉ pour l'analyse EXHAUSTIVE de miniatures YouTube
 function getYouTubeAnalysisPrompt(): string {
   return `Tu es un expert en miniatures YouTube. Analyse cette miniature de manière EXHAUSTIVE.
 
-🎯 MISSION: Extraire le contenu EXACT de CHAQUE élément textuel visible.
+🎯 MISSION: Extraire le contenu EXACT de CHAQUE élément textuel visible ET identifier les objets/icônes.
 
 RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
@@ -413,6 +425,11 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
         "position": "position"
       }
     ],
+    "decorativeElements": {
+      "icons": ["icônes visibles: play button, subscribe, notification, etc."],
+      "symbols": ["symboles: €, $, flèches, émojis, etc."],
+      "domainSpecificItems": ["objets: argent, téléphone, voiture, ordinateur, etc."]
+    },
     "hasExpressiveFace": true/false,
     "faceExpression": "surprise/joie/concentration/choc/excitation",
     "hasText": true/false,
@@ -434,5 +451,10 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
 ⚠️ RÈGLES POUR textZones:
 1. Copier le texte EXACTEMENT comme affiché
 2. Inclure TOUS les textes visibles, même petits
-3. Spécifier la position de chaque texte`;
+3. Spécifier la position de chaque texte
+
+⚠️ RÈGLES POUR decorativeElements:
+1. Lister TOUS les objets visibles (argent, téléphone, voiture, etc.)
+2. Identifier les icônes YouTube (play button, subscribe, etc.)
+3. Ces éléments sont importants pour la mise en scène`;
 }
