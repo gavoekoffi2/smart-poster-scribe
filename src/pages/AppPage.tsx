@@ -16,6 +16,7 @@ import { FormatSelect } from "@/components/chat/FormatSelect";
 import { ImageUploadButton } from "@/components/chat/ImageUploadButton";
 import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
 import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
+import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
@@ -137,6 +138,12 @@ export default function AppPage() {
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
+    // Secondary images handlers
+    handleAddSecondaryImage,
+    handleRemoveSecondaryImage,
+    handleUpdateSecondaryImageInstructions,
+    handleConfirmSecondaryImages,
+    // Format handlers
     handleFormatSelect,
     handleSkipFormat,
     resetConversation,
@@ -459,6 +466,7 @@ export default function AppPage() {
   const showLogoUpload = step === "logo";
   const showLogoPosition = step === "logo_position";
   const showContentImageUpload = step === "content_image";
+  const showSecondaryImages = step === "secondary_images";
   const showMainSpeakerPhotoUpload = step === "main_speaker_photo";
   const showGuestPhotoUpload = step === "guest_photo";
   const showProductCharacterSkip = step === "product_character_check";
@@ -822,13 +830,26 @@ export default function AppPage() {
                   <ImageUploadButton
                     onImageSelect={handleContentImage}
                     disabled={isProcessing}
-                    label="Ajouter image de contenu"
+                    label="Ajouter image principale"
                   />
                   <Button variant="ghost" size="sm" onClick={handleSkipContentImage} disabled={isProcessing} className="hover:bg-muted/50">
                     <SkipForward className="w-4 h-4 mr-2" />
                     Générer automatiquement
                   </Button>
                 </div>
+              )}
+
+              {showSecondaryImages && (
+                <SecondaryImagesInput
+                  secondaryImages={conversationState.secondaryImages || []}
+                  onAddImage={handleAddSecondaryImage}
+                  onRemoveImage={handleRemoveSecondaryImage}
+                  onUpdateInstructions={handleUpdateSecondaryImageInstructions}
+                  onConfirm={handleConfirmSecondaryImages}
+                  onSkip={handleConfirmSecondaryImages}
+                  disabled={isProcessing}
+                  mainImageUrl={conversationState.contentImage}
+                />
               )}
 
               {showDomainQuestionImages && (

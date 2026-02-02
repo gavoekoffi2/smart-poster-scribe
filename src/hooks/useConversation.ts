@@ -18,6 +18,7 @@ import {
   TemplateAnalysisDetail,
   MissingElement,
   CollectedReplacements,
+  SecondaryImage,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ function buildPrompt(state: ConversationState) {
     restaurantInfo,
     language = "français",
     referenceImage,
+    secondaryImages,
   } = state;
 
   const lines: string[] = [];
@@ -282,6 +284,29 @@ function buildPrompt(state: ConversationState) {
   // ====== SECTION 5: PERSONNAGES ======
   if (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter) {
     lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
+    lines.push("");
+  }
+
+  // ====== SECTION 6: IMAGES SECONDAIRES ======
+  if (secondaryImages && secondaryImages.length > 0) {
+    lines.push("╔══════════════════════════════════════════════════════════════╗");
+    lines.push("║  📸 IMAGES SECONDAIRES À INTÉGRER                            ║");
+    lines.push("╚══════════════════════════════════════════════════════════════╝");
+    lines.push("");
+    lines.push(`${secondaryImages.length} image(s) secondaire(s) à placer sur l'affiche:`);
+    lines.push("");
+    
+    secondaryImages.forEach((img, index) => {
+      lines.push(`IMAGE SECONDAIRE #${index + 1}:`);
+      if (img.instructions && img.instructions.trim()) {
+        lines.push(`   → Instructions: "${img.instructions}"`);
+      } else {
+        lines.push(`   → Placer harmonieusement sur l'affiche`);
+      }
+      lines.push("");
+    });
+    
+    lines.push("⚠️ Intégrer ces images de manière cohérente avec le design global.");
     lines.push("");
   }
 
@@ -995,6 +1020,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const youtubeScenePreference = state.domainSpecificInfo?.youtube?.scenePreference 
           || state.domainQuestionState?.collectedTexts?.scene_preference;
         
+        // Préparer les images secondaires
+        const secondaryImagesData = state.secondaryImages?.map(img => ({
+          imageUrl: img.imageUrl,
+          instructions: img.instructions || "",
+        })) || [];
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
@@ -1004,6 +1035,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
+            secondaryImages: secondaryImagesData.length > 0 ? secondaryImagesData : undefined,
             isCloneMode: isCloneModeActive,
             formatWidth: formatPreset?.width,
             formatHeight: formatPreset?.height,
@@ -2830,13 +2862,14 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       setConversationState((prev) => ({
         ...prev,
-        step: "format",
+        step: "secondary_images",
         contentImage: imageDataUrl,
         needsContentImage: false,
+        secondaryImages: [],
       }));
 
       setTimeout(() => {
-        addMessage("assistant", "Choisissez le format de votre affiche. Sélectionnez un format pour réseaux sociaux (résolution web) ou pour impression (haute résolution).");
+        addMessage("assistant", "Image principale ajoutée ! ✨\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ? Vous pouvez en ajouter autant que vous voulez.");
       }, 250);
     },
     [addMessage]
@@ -2847,15 +2880,73 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
     setConversationState((prev) => ({
       ...prev,
-      step: "format",
+      step: "secondary_images",
       needsContentImage: true,
+      secondaryImages: [],
     }));
 
     setTimeout(() => {
       addMessage(
         "assistant",
-        "Choisissez le format de votre affiche. Sélectionnez un format pour réseaux sociaux (résolution web) ou pour impression (haute résolution)."
+        "D'accord, l'image principale sera générée automatiquement.\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ?"
       );
+    }, 250);
+  }, [addMessage]);
+
+  // Handlers pour les images secondaires
+  const handleAddSecondaryImage = useCallback(
+    (image: SecondaryImage) => {
+      addMessage("user", `Image secondaire ajoutée${image.instructions ? ` : "${image.instructions}"` : ''}`, image.imageUrl);
+      
+      setConversationState((prev) => ({
+        ...prev,
+        secondaryImages: [...(prev.secondaryImages || []), image],
+      }));
+
+      setTimeout(() => {
+        const count = (conversationStateRef.current.secondaryImages?.length || 0) + 1;
+        addMessage(
+          "assistant",
+          `📸 ${count} image(s) secondaire(s) ajoutée(s) ! Ajoutez-en d'autres ou cliquez sur 'Continuer' pour passer au format.`
+        );
+      }, 250);
+    },
+    [addMessage]
+  );
+
+  const handleRemoveSecondaryImage = useCallback(
+    (id: string) => {
+      setConversationState((prev) => ({
+        ...prev,
+        secondaryImages: (prev.secondaryImages || []).filter((img) => img.id !== id),
+      }));
+    },
+    []
+  );
+
+  const handleUpdateSecondaryImageInstructions = useCallback(
+    (id: string, instructions: string) => {
+      setConversationState((prev) => ({
+        ...prev,
+        secondaryImages: (prev.secondaryImages || []).map((img) =>
+          img.id === id ? { ...img, instructions } : img
+        ),
+      }));
+    },
+    []
+  );
+
+  const handleConfirmSecondaryImages = useCallback(() => {
+    const count = conversationStateRef.current.secondaryImages?.length || 0;
+    addMessage("user", count > 0 ? `Continuer avec ${count} image(s) secondaire(s)` : "Continuer sans image secondaire");
+
+    setConversationState((prev) => ({
+      ...prev,
+      step: "format",
+    }));
+
+    setTimeout(() => {
+      addMessage("assistant", "Choisissez le format de votre affiche. Sélectionnez un format pour réseaux sociaux (résolution web) ou pour impression (haute résolution).");
     }, 250);
   }, [addMessage]);
 
@@ -3108,6 +3199,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     handleSkipLogo,
     handleContentImage,
     handleSkipContentImage,
+    // Secondary images handlers
+    handleAddSecondaryImage,
+    handleRemoveSecondaryImage,
+    handleUpdateSecondaryImageInstructions,
+    handleConfirmSecondaryImages,
+    // Format handlers
     handleFormatSelect,
     handleSkipFormat,
     resetConversation,
