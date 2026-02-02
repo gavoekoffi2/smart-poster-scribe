@@ -546,6 +546,7 @@ serve(async (req) => {
       logoImages,
       logoPositions,
       contentImage,
+      secondaryImages, // Images secondaires avec instructions
       aspectRatio = "3:4",
       resolution = "2K",
       outputFormat = "png",
@@ -601,11 +602,23 @@ serve(async (req) => {
       }
     }
 
+    // Validate secondary images if provided
+    if (secondaryImages && Array.isArray(secondaryImages)) {
+      console.log("Secondary images count:", secondaryImages.length);
+      for (let i = 0; i < secondaryImages.length; i++) {
+        const secImg = secondaryImages[i];
+        if (secImg.imageUrl && !isUrlLike(secImg.imageUrl)) {
+          validateBase64Size(secImg.imageUrl, MAX_IMAGE_SIZE_MB, `Image secondaire ${i + 1}`);
+        }
+      }
+    }
+
     console.log("Request validated:");
     console.log("- Prompt length:", prompt.length);
     console.log("- Has reference image (raw):", !!rawReferenceImage);
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Has content image:", !!contentImage);
+    console.log("- Secondary images count:", secondaryImages?.length || 0);
 
     const originHeader = req.headers.get("origin") || undefined;
     const refererHeader = req.headers.get("referer") || undefined;
@@ -967,6 +980,28 @@ serve(async (req) => {
       }
     }
 
+    // Process secondary images
+    let secondaryImageInstructions = "";
+    if (secondaryImages && Array.isArray(secondaryImages) && secondaryImages.length > 0) {
+      console.log(`Processing ${secondaryImages.length} secondary images...`);
+      for (let i = 0; i < secondaryImages.length; i++) {
+        const secImg = secondaryImages[i];
+        if (secImg.imageUrl) {
+          try {
+            const secUrl = await processImage(supabase, secImg.imageUrl, `secondary_${i}`, requestOrigin);
+            imageInputs.push(secUrl);
+            tempFilePaths.push(secUrl);
+            
+            // Build instructions text for the prompt
+            const instructions = secImg.instructions?.trim() || `Image secondaire ${i + 1}`;
+            secondaryImageInstructions += `\n- Image secondaire #${i + 1}: ${instructions}`;
+          } catch (e) {
+            console.error(`Error processing secondary image ${i}:`, e);
+          }
+        }
+      }
+    }
+
     if (contentImage) {
       const contentUrl = await processImage(supabase, contentImage, "content", requestOrigin);
       imageInputs.push(contentUrl);
@@ -997,8 +1032,17 @@ serve(async (req) => {
       }
     }
     
+    // Build secondary images section for the prompt
+    let secondaryImagesPromptSection = "";
+    if (secondaryImageInstructions) {
+      secondaryImagesPromptSection = `\n\n=== IMAGES SECONDAIRES À INTÉGRER ===`;
+      secondaryImagesPromptSection += `\nIntégrer harmonieusement ces images supplémentaires sur l'affiche:`;
+      secondaryImagesPromptSection += secondaryImageInstructions;
+      secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
+    }
+    
     const professionalPrompt = buildProfessionalPrompt({
-      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText,
+      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection,
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
       hasLogoImage: logoImages && logoImages.length > 0,
@@ -1008,6 +1052,7 @@ serve(async (req) => {
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
     console.log("Scene preference included:", scenePreference ? "yes" : "no");
+    console.log("Secondary images instructions included:", secondaryImageInstructions ? "yes" : "no");
     console.log("Domain:", domain || "not specified");
 
     const taskId = await createTask(

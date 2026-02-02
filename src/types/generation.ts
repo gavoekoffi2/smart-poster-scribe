@@ -111,6 +111,13 @@ export interface ChatMessage {
   isLoading?: boolean;
 }
 
+// Type pour les images secondaires avec instructions personnalisées
+export interface SecondaryImage {
+  id: string;
+  imageUrl: string;
+  instructions: string;
+}
+
 export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
 export interface LogoWithPosition {
@@ -358,8 +365,10 @@ export interface ConversationState {
     | "logo" 
     | "logo_position" 
     | "content_image" 
+    | "secondary_images" // Nouvelle étape: images secondaires avec instructions
+    | "secondary_image_instructions" // Instructions pour l'image secondaire en cours
     | "generating" 
-    | "complete" 
+    | "complete"
     | "modifying"
     | "analyzing_template" // Analyse d'un template à cloner
     | "template_questions" // Questions personnalisées basées sur le template
@@ -417,4 +426,8 @@ export interface ConversationState {
   contextMismatchZones?: Array<{ type: string; content: string; position?: string }>;
   // Objets/icônes hors contexte détectés (ex: diplôme sur une affiche de service)
   mismatchedObjects?: Array<{ type: string; name: string; position?: string }>;
+  // Images secondaires avec instructions personnalisées
+  secondaryImages?: SecondaryImage[];
+  // Image secondaire en cours d'ajout
+  pendingSecondaryImage?: string;
 }
