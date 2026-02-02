@@ -7,6 +7,13 @@ export interface TemplateTextZone {
   position?: string;
 }
 
+// Interface pour les éléments décoratifs du template
+export interface TemplateDecorativeElement {
+  type: "icon" | "symbol" | "object";
+  name: string;
+  position?: string;
+}
+
 // Types de zones et leurs domaines pertinents
 // Note: "service" n'existe pas comme Domain, on utilise "other" pour les services généraux
 const ZONE_DOMAIN_RELEVANCE: Record<string, Domain[]> = {
@@ -167,6 +174,204 @@ const ZONE_CONTENT_PATTERNS: Record<string, RegExp[]> = {
   ],
 };
 
+// ============= MATRICE DE PERTINENCE OBJET/ICÔNE ↔ DOMAINE =============
+const OBJECT_DOMAIN_RELEVANCE: Record<string, Domain[]> = {
+  // Objets universels (peuvent apparaître partout)
+  "étoile": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
+  "star": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
+  "flèche": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
+  "arrow": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
+  
+  // Objets église/spirituel
+  "croix": ["church"],
+  "cross": ["church"],
+  "bible": ["church"],
+  "colombe": ["church"],
+  "dove": ["church"],
+  "bougie": ["church", "event"],
+  "candle": ["church", "event"],
+  "prière": ["church"],
+  "prayer": ["church"],
+  "autel": ["church"],
+  "altar": ["church"],
+  "chaire": ["church"],
+  "ange": ["church"],
+  "angel": ["church"],
+  "chapelet": ["church"],
+  "rosary": ["church"],
+  "calice": ["church"],
+  "chalice": ["church"],
+  
+  // Objets formation/éducation
+  "diplôme": ["formation", "education"],
+  "diploma": ["formation", "education"],
+  "livre": ["formation", "education", "church"],
+  "book": ["formation", "education", "church"],
+  "tableau": ["formation", "education"],
+  "blackboard": ["formation", "education"],
+  "crayon": ["formation", "education"],
+  "pencil": ["formation", "education"],
+  "stylo": ["formation", "education"],
+  "pen": ["formation", "education"],
+  "chapeau universitaire": ["formation", "education"],
+  "graduation cap": ["formation", "education"],
+  "mortarboard": ["formation", "education"],
+  "certificat": ["formation", "education"],
+  "certificate": ["formation", "education"],
+  "calculatrice": ["formation", "education"],
+  "calculator": ["formation", "education"],
+  "règle": ["formation", "education"],
+  "ruler": ["formation", "education"],
+  "cahier": ["formation", "education"],
+  "notebook": ["formation", "education"],
+  
+  // Objets restaurant
+  "fourchette": ["restaurant"],
+  "fork": ["restaurant"],
+  "couteau": ["restaurant"],
+  "knife": ["restaurant"],
+  "cuillère": ["restaurant"],
+  "spoon": ["restaurant"],
+  "assiette": ["restaurant"],
+  "plate": ["restaurant"],
+  "verre": ["restaurant", "event"],
+  "glass": ["restaurant", "event"],
+  "chef": ["restaurant"],
+  "toque": ["restaurant"],
+  "chef hat": ["restaurant"],
+  "casserole": ["restaurant"],
+  "pot": ["restaurant"],
+  "poêle": ["restaurant"],
+  "pan": ["restaurant"],
+  "tablier": ["restaurant"],
+  "apron": ["restaurant"],
+  
+  // Objets musique/événement
+  "micro": ["music", "event", "church"],
+  "microphone": ["music", "event", "church"],
+  "note de musique": ["music"],
+  "musical note": ["music"],
+  "guitare": ["music"],
+  "guitar": ["music"],
+  "platine": ["music"],
+  "turntable": ["music"],
+  "dj": ["music"],
+  "casque": ["music", "technology"],
+  "headphones": ["music", "technology"],
+  "piano": ["music"],
+  "batterie": ["music"],
+  "drums": ["music"],
+  "saxophone": ["music"],
+  "trompette": ["music"],
+  "trumpet": ["music"],
+  "enceinte": ["music", "event"],
+  "speaker": ["music", "event"],
+  
+  // Objets YouTube/Tech
+  "play button": ["youtube"],
+  "bouton play": ["youtube"],
+  "subscribe": ["youtube"],
+  "abonner": ["youtube"],
+  "youtube": ["youtube"],
+  "téléphone": ["youtube", "technology", "other"],
+  "phone": ["youtube", "technology", "other"],
+  "smartphone": ["youtube", "technology", "other"],
+  "billets": ["youtube", "fashion", "other"],
+  "money": ["youtube", "fashion", "realestate", "other"],
+  "argent": ["youtube", "fashion", "realestate", "other"],
+  "dollar": ["youtube", "fashion", "realestate", "other"],
+  "euro": ["youtube", "fashion", "realestate", "other"],
+  "ordinateur": ["youtube", "technology", "formation", "education"],
+  "computer": ["youtube", "technology", "formation", "education"],
+  "laptop": ["youtube", "technology", "formation", "education"],
+  "écran": ["youtube", "technology"],
+  "screen": ["youtube", "technology"],
+  "clavier": ["technology"],
+  "keyboard": ["technology"],
+  "souris": ["technology"],
+  "mouse": ["technology"],
+  
+  // Objets mode/commerce
+  "vêtement": ["fashion"],
+  "clothing": ["fashion"],
+  "sac": ["fashion"],
+  "bag": ["fashion"],
+  "chaussure": ["fashion"],
+  "shoe": ["fashion"],
+  "étiquette prix": ["fashion", "restaurant", "other"],
+  "price tag": ["fashion", "restaurant", "other"],
+  "cintre": ["fashion"],
+  "hanger": ["fashion"],
+  "mannequin": ["fashion"],
+  "robe": ["fashion"],
+  "dress": ["fashion"],
+  "costume": ["fashion"],
+  "suit": ["fashion"],
+  "lunettes": ["fashion", "other"],
+  "glasses": ["fashion", "other"],
+  "montre": ["fashion", "other"],
+  "watch": ["fashion", "other"],
+  "bijou": ["fashion"],
+  "jewelry": ["fashion"],
+  "collier": ["fashion"],
+  "necklace": ["fashion"],
+  "bracelet": ["fashion"],
+  
+  // Objets santé
+  "stéthoscope": ["health"],
+  "stethoscope": ["health"],
+  "coeur": ["health", "church", "event"],
+  "heart": ["health", "church", "event"],
+  "médicament": ["health"],
+  "medicine": ["health"],
+  "pilule": ["health"],
+  "pill": ["health"],
+  "croix médicale": ["health"],
+  "medical cross": ["health"],
+  "seringue": ["health"],
+  "syringe": ["health"],
+  "thermomètre": ["health"],
+  "thermometer": ["health"],
+  "blouse": ["health"],
+  "hôpital": ["health"],
+  "hospital": ["health"],
+  
+  // Objets immobilier
+  "maison": ["realestate"],
+  "house": ["realestate"],
+  "clé": ["realestate"],
+  "key": ["realestate"],
+  "plan": ["realestate"],
+  "blueprint": ["realestate"],
+  "immeuble": ["realestate"],
+  "building": ["realestate"],
+  "appartement": ["realestate"],
+  "apartment": ["realestate"],
+  "villa": ["realestate"],
+  "terrain": ["realestate"],
+  "land": ["realestate"],
+  
+  // Objets sport
+  "ballon": ["sport"],
+  "ball": ["sport"],
+  "trophée": ["sport", "event"],
+  "trophy": ["sport", "event"],
+  "médaille": ["sport", "formation"],
+  "medal": ["sport", "formation"],
+  "stade": ["sport"],
+  "stadium": ["sport"],
+  "maillot": ["sport"],
+  "jersey": ["sport"],
+  "raquette": ["sport"],
+  "racket": ["sport"],
+  "haltère": ["sport", "health"],
+  "dumbbell": ["sport", "health"],
+  "vélo": ["sport"],
+  "bicycle": ["sport"],
+  "chaussure de sport": ["sport"],
+  "sneaker": ["sport"],
+};
+
 /**
  * Détecte les incohérences contextuelles entre le template et le domaine utilisateur
  * Par exemple: zones de "frais d'inscription" sur une affiche de service
@@ -229,6 +434,82 @@ export function detectContextMismatch(
   message += `- **Fournir un remplacement** (écrivez le texte à mettre à la place de chaque zone)\n`;
   
   return { mismatchedZones, message };
+}
+
+/**
+ * Détecte les objets/icônes hors contexte dans un template
+ */
+export function detectObjectMismatch(
+  decorativeElements: TemplateDecorativeElement[] | undefined,
+  userDomain: Domain | undefined
+): { mismatchedObjects: TemplateDecorativeElement[]; message: string } {
+  if (!userDomain || !decorativeElements?.length) {
+    return { mismatchedObjects: [], message: "" };
+  }
+  
+  const mismatchedObjects: TemplateDecorativeElement[] = [];
+  
+  for (const element of decorativeElements) {
+    const elementName = element.name.toLowerCase().trim();
+    const relevantDomains = OBJECT_DOMAIN_RELEVANCE[elementName] || [];
+    
+    // Si l'objet a des domaines spécifiques ET que le domaine utilisateur n'en fait pas partie
+    if (relevantDomains.length > 0 && !relevantDomains.includes(userDomain)) {
+      mismatchedObjects.push(element);
+    }
+  }
+  
+  if (mismatchedObjects.length === 0) {
+    return { mismatchedObjects: [], message: "" };
+  }
+  
+  let message = `⚠️ **Objets/Icônes hors contexte détectés !**\n\n`;
+  message += `Ces éléments visuels ne correspondent pas à votre ${getDomainLabel(userDomain)} :\n\n`;
+  
+  for (const obj of mismatchedObjects) {
+    const typeLabel = obj.type === "icon" ? "Icône" : obj.type === "symbol" ? "Symbole" : "Objet";
+    message += `• ${typeLabel}: "${obj.name}"\n`;
+  }
+  
+  message += `\n📌 **Ces éléments seront automatiquement supprimés** et remplacés par des éléments appropriés ou l'espace sera adapté.\n`;
+  message += `Tapez "ok" pour continuer ou fournissez des précisions si besoin.`;
+  
+  return { mismatchedObjects, message };
+}
+
+/**
+ * Convertit les éléments décoratifs de l'analyse en format standardisé
+ */
+export function parseDecorativeElements(
+  analysisDecorativeElements?: {
+    icons?: string[];
+    symbols?: string[];
+    domainSpecificItems?: string[];
+  }
+): TemplateDecorativeElement[] {
+  if (!analysisDecorativeElements) return [];
+  
+  const elements: TemplateDecorativeElement[] = [];
+  
+  if (analysisDecorativeElements.icons) {
+    for (const icon of analysisDecorativeElements.icons) {
+      elements.push({ type: "icon", name: icon });
+    }
+  }
+  
+  if (analysisDecorativeElements.symbols) {
+    for (const symbol of analysisDecorativeElements.symbols) {
+      elements.push({ type: "symbol", name: symbol });
+    }
+  }
+  
+  if (analysisDecorativeElements.domainSpecificItems) {
+    for (const item of analysisDecorativeElements.domainSpecificItems) {
+      elements.push({ type: "object", name: item });
+    }
+  }
+  
+  return elements;
 }
 
 /**
