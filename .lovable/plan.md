@@ -1,189 +1,282 @@
 
+# Plan : Détection d'Incohérence Contextuelle et Adaptation du Layout
 
-# Plan : Garantir Zéro Contenu Original sur l'Affiche Finale
+## Problème Identifié
 
-## Problèmes Identifiés
+L'utilisateur décrit deux problèmes critiques :
 
-L'utilisateur a constaté deux problèmes critiques :
+### 1. Zones Hors Contexte Non Détectées
+Quand un utilisateur utilise un template d'un domaine (ex: "formation") pour créer une affiche d'un autre domaine (ex: "service"), le système laisse des textes qui ne correspondent pas au nouveau contexte :
+- "Frais d'inscription" sur une affiche de service
+- "Dates de la formation" sur une affiche de restaurant
+- "Programme" sur une affiche d'événement musical
 
-### 1. Textes Originaux Non Remplacés
-- Quand l'utilisateur ne fournit pas assez de contenu pour remplacer TOUS les textes du template (titres, sous-titres, slogans, etc.), l'IA laisse certains textes originaux
-- Cela inclut TOUT type de texte, pas seulement les dates/contacts/prix
+Le système actuel vérifie seulement si l'utilisateur a fourni un remplacement, mais ne vérifie PAS si la zone du template est **pertinente** pour le contenu de l'utilisateur.
 
-### 2. Couleurs Originales Résiduelles  
-- L'IA ne remplace pas TOUTES les couleurs du template par celles de l'utilisateur
-- Certaines anciennes couleurs restent visibles sur l'affiche finale
+### 2. Zones Vides = Layout Cassé
+Quand des zones sont supprimées, le layout reste avec des espaces vides au lieu de s'adapter au contenu de l'utilisateur. Il faut redistribuer le contenu de l'utilisateur dans les zones disponibles.
 
 ---
 
 ## Solution Proposée
 
-### Volet 1 : Analyse Exhaustive des Zones de Texte
+### Volet 1 : Détection d'Incohérence Contextuelle
 
-Modifier `analyze-template/index.ts` pour extraire TOUS les textes détectés avec leur type et contenu exact, incluant :
-- Titres et sous-titres
-- Slogans et phrases d'accroche
-- Informations factuelles (dates, lieux, prix, contact)
-- Tout autre texte visible
+Ajouter une fonction `detectContextMismatch` qui :
+1. Analyse le **domaine/contexte du template** (via les textZones détectées)
+2. Compare avec le **domaine/contexte du contenu utilisateur**
+3. Identifie les zones qui sont **hors contexte** (ex: "frais d'inscription" sur une affiche de service)
+4. Pose une question explicite : "Cette affiche de formation a des zones comme 'frais d'inscription' qui ne correspondent pas à votre service. Voulez-vous les supprimer ?"
 
-### Volet 2 : Vérification des Correspondances AVANT Génération
+### Volet 2 : Classification des Zones par Domaine
 
-Dans `useConversation.ts`, après que l'utilisateur fournit ses informations, comparer :
-- Ce que le template contient (toutes les zones de texte détectées)
-- Ce que l'utilisateur a fourni
+Créer une matrice de pertinence Zone ↔ Domaine :
 
-Si des zones n'ont pas de correspondance claire → Poser la question pour obtenir le contenu manquant
+```
+| Zone Type        | church | event | formation | service | restaurant | ... |
+|------------------|--------|-------|-----------|---------|------------|-----|
+| price            | ✓      | ✓     | ✓         | ✓       | ✓          |     |
+| registration_fee | ✗      | ✗     | ✓         | ✗       | ✗          |     |
+| program_outline  | ✓      | ✓     | ✓         | ✗       | ✗          |     |
+| menu             | ✗      | ✗     | ✗         | ✗       | ✓          |     |
+| bible_verse      | ✓      | ✗     | ✗         | ✗       | ✗          |     |
+```
 
-### Volet 3 : Tableau de Remplacement Explicite dans le Prompt
+### Volet 3 : Adaptation Intelligente du Layout
 
-Dans `generate-image/index.ts`, ajouter un tableau ASCII qui liste CHAQUE zone de texte détectée et son action :
-- Zone avec remplacement → `✅ REMPLACER PAR: "[contenu utilisateur]"`
-- Zone sans remplacement → `❌ EFFACER COMPLÈTEMENT CETTE ZONE`
-
-### Volet 4 : Instructions Radicales pour les Couleurs
-
-Renforcer les instructions de remplacement de couleurs pour qu'AUCUNE couleur originale ne subsiste :
-- Analyse de chaque zone colorée du template
-- Remplacement systématique par la palette utilisateur
-- Utilisation du blanc comme harmonisateur universel si les couleurs ne s'accordent pas
+Dans le prompt de génération, ajouter des instructions pour :
+1. **Redistribuer le contenu** : Si des zones sont supprimées, répartir le contenu de l'utilisateur dans les zones restantes
+2. **Ajuster les formes** : Si le layout a trop de zones vides, modifier légèrement les formes pour que le design reste équilibré
+3. **Préserver l'essence** : Le style graphique reste identique, seule la distribution des éléments s'adapte
 
 ---
 
 ## Modifications Techniques
 
-### Fichier 1 : `supabase/functions/analyze-template/index.ts`
+### Fichier 1 : `src/hooks/useConversation.ts`
 
-Modifier le prompt d'analyse pour extraire le contenu exact de CHAQUE zone de texte :
-
-```json
-{
-  "textZones": [
-    { "type": "title", "content": "GRANDE VEILLÉE DE PRIÈRE", "position": "top-center" },
-    { "type": "subtitle", "content": "Une nuit avec le Saint-Esprit", "position": "top-center" },
-    { "type": "date", "content": "15 JANVIER 2025", "position": "middle-left" },
-    { "type": "time", "content": "À PARTIR DE 20H", "position": "middle-left" },
-    { "type": "location", "content": "PALAIS DES SPORTS DE YAOUNDÉ", "position": "bottom-center" },
-    { "type": "contact", "content": "+237 6XX XX XX XX", "position": "bottom" },
-    { "type": "speaker", "content": "Avec Bishop JEAN-PAUL", "position": "right" },
-    { "type": "slogan", "content": "ENTRÉE LIBRE", "position": "bottom" },
-    { "type": "other", "content": "Venez nombreux !", "position": "bottom-right" }
-  ]
-}
-```
-
-### Fichier 2 : `src/hooks/useConversation.ts`
-
-Ajouter une fonction de vérification des correspondances après la collecte des informations utilisateur :
+**Modification A** : Ajouter la fonction `detectContextMismatch`
 
 ```typescript
-const checkMissingTextContent = (
-  templateZones: Array<{ type: string; content: string }>,
-  userInfo: ExtractedInfo
-): Array<{ type: string; content: string }> => {
-  const missing: Array<{ type: string; content: string }> = [];
+// Types de zones et leurs domaines pertinents
+const ZONE_DOMAIN_RELEVANCE: Record<string, Domain[]> = {
+  // Zones universelles (pertinentes pour tous)
+  "title": ["church", "event", "formation", "service", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "other"],
+  "subtitle": ["church", "event", "formation", "service", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "other"],
+  "contact": ["church", "event", "formation", "service", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "other"],
+  "date": ["church", "event", "formation", "restaurant", "music", "sport", "other"],
+  "time": ["church", "event", "formation", "restaurant", "music", "sport", "other"],
+  "location": ["church", "event", "formation", "restaurant", "music", "sport", "realestate", "other"],
+  
+  // Zones spécifiques à certains domaines
+  "registration_fee": ["formation", "education"],
+  "program_outline": ["formation", "education", "event", "church"],
+  "menu": ["restaurant"],
+  "dishes": ["restaurant"],
+  "bible_verse": ["church"],
+  "speaker": ["church", "event", "formation"],
+  "artist": ["music", "event"],
+  "price_promo": ["fashion", "technology", "restaurant", "service"],
+  "discount": ["fashion", "technology", "restaurant", "service"],
+  "certification": ["formation", "education"],
+  "duration": ["formation", "education", "event"],
+  "capacity": ["formation", "event"],
+};
+
+// Mots-clés pour détecter le type de zone à partir du contenu
+const ZONE_CONTENT_PATTERNS: Record<string, RegExp[]> = {
+  "registration_fee": [
+    /frais\s*(d[''])?inscription/i,
+    /inscription/i,
+    /tarif\s*formation/i,
+    /formation\s*[:=]/i,
+  ],
+  "program_outline": [
+    /programme/i,
+    /module/i,
+    /cursus/i,
+    /objectif.*pédagogique/i,
+  ],
+  "menu": [
+    /menu/i,
+    /plat/i,
+    /entrée/i,
+    /dessert/i,
+  ],
+  "bible_verse": [
+    /verset/i,
+    /psaume/i,
+    /matthieu|jean|luc|marc/i,
+    /genèse|exode/i,
+  ],
+  "certification": [
+    /certifi/i,
+    /diplôme/i,
+    /attestation/i,
+  ],
+  "capacity": [
+    /places?\s*limité/i,
+    /capacité/i,
+    /\d+\s*places?/i,
+  ],
+};
+
+function detectContextMismatch(
+  templateZones: TemplateTextZone[],
+  userDomain: Domain | undefined,
+  userContent: string
+): { mismatchedZones: TemplateTextZone[]; message: string } {
+  if (!userDomain) return { mismatchedZones: [], message: "" };
+  
+  const mismatchedZones: TemplateTextZone[] = [];
   
   for (const zone of templateZones) {
-    // Vérifier si l'utilisateur a fourni un remplacement pour ce type
-    const hasReplacement = 
-      (zone.type === "title" && userInfo.title) ||
-      (zone.type === "subtitle" && (userInfo.title || userInfo.additionalDetails)) ||
-      (zone.type === "date" && userInfo.dates) ||
-      (zone.type === "time" && userInfo.dates) ||
-      (zone.type === "location" && userInfo.location) ||
-      (zone.type === "contact" && userInfo.contact) ||
-      (zone.type === "price" && userInfo.prices) ||
-      (zone.type === "speaker" && userInfo.speakers) ||
-      // Pour les autres types, vérifier dans additionalDetails ou description
-      (["slogan", "other", "tagline"].includes(zone.type) && userInfo.additionalDetails);
+    // D'abord, détecter le vrai type de la zone à partir de son contenu
+    let detectedType = zone.type;
     
-    if (!hasReplacement) {
-      missing.push(zone);
+    for (const [type, patterns] of Object.entries(ZONE_CONTENT_PATTERNS)) {
+      if (patterns.some(p => p.test(zone.content))) {
+        detectedType = type;
+        break;
+      }
+    }
+    
+    // Vérifier si ce type de zone est pertinent pour le domaine de l'utilisateur
+    const relevantDomains = ZONE_DOMAIN_RELEVANCE[detectedType] || 
+                            ZONE_DOMAIN_RELEVANCE[zone.type] || 
+                            [];
+    
+    // Si le domaine utilisateur n'est pas dans la liste des domaines pertinents
+    if (relevantDomains.length > 0 && !relevantDomains.includes(userDomain)) {
+      mismatchedZones.push({
+        ...zone,
+        type: detectedType, // Utiliser le type détecté
+      });
     }
   }
   
-  return missing;
-};
+  if (mismatchedZones.length === 0) {
+    return { mismatchedZones: [], message: "" };
+  }
+  
+  // Construire le message d'alerte
+  let message = `⚠️ **Attention : Éléments hors contexte détectés !**\n\n`;
+  message += `L'affiche de référence semble être pour un autre domaine et contient :\n\n`;
+  
+  for (const zone of mismatchedZones) {
+    const content = zone.content.length > 40 ? zone.content.slice(0, 40) + "..." : zone.content;
+    message += `• "${content}"\n`;
+  }
+  
+  message += `\nCes éléments ne correspondent pas à votre ${getDomainLabel(userDomain)}.\n\n`;
+  message += `📌 **Que souhaitez-vous faire ?**\n`;
+  message += `- **Supprimer** ces zones (tapez "supprimer" ou "oui")\n`;
+  message += `- **Fournir un remplacement** (écrivez le texte à mettre à la place)\n`;
+  
+  return { mismatchedZones, message };
+}
+
+function getDomainLabel(domain: Domain): string {
+  const labels: Record<Domain, string> = {
+    church: "affiche d'église",
+    event: "affiche d'événement",
+    formation: "affiche de formation",
+    service: "affiche de service",
+    restaurant: "affiche de restaurant",
+    fashion: "affiche mode",
+    music: "affiche musicale",
+    sport: "affiche sportive",
+    technology: "affiche tech",
+    health: "affiche santé",
+    realestate: "affiche immobilière",
+    youtube: "miniature YouTube",
+    other: "affiche",
+  };
+  return labels[domain] || "affiche";
+}
 ```
 
-Modifier le flux `clone_gathering` pour poser des questions sur les zones manquantes :
+**Modification B** : Intégrer la détection dans le flux `clone_gathering`
+
+Après avoir extrait les informations utilisateur, vérifier les incohérences contextuelles :
 
 ```typescript
-// Après collecte des infos utilisateur
-const missingZones = checkMissingTextContent(
-  conversationState.templateAnalysis?.textZones || [],
-  extractedInfo
+// Dans clone_gathering, après checkMissingTextZones
+const { mismatchedZones, message: mismatchMessage } = detectContextMismatch(
+  templateTextZones,
+  conversationStateRef.current.domain,
+  content
 );
 
-if (missingZones.length > 0) {
-  // Construire un message listant les zones manquantes
-  const message = buildMissingContentQuestion(missingZones);
-  addMessage("assistant", message);
-  // Attendre la réponse avant de générer
+if (mismatchedZones.length > 0) {
+  // Stocker les zones incohérentes
+  setConversationState(prev => ({
+    ...prev,
+    step: "confirm_context_mismatch",
+    contextMismatchZones: mismatchedZones,
+    extractedInfo: extractedInfo,
+    description: content,
+  }));
+  
+  addMessage("assistant", mismatchMessage);
   return;
+}
+```
+
+### Fichier 2 : `src/types/generation.ts`
+
+Ajouter le nouveau step et les champs associés :
+
+```typescript
+export interface ConversationState {
+  step: 
+    | ... // existants
+    | "confirm_context_mismatch"; // Confirmation des zones hors contexte
+  // ... existants ...
+  contextMismatchZones?: Array<{ type: string; content: string; position?: string }>;
 }
 ```
 
 ### Fichier 3 : `supabase/functions/generate-image/index.ts`
 
-Ajouter le paramètre `templateTextZones` dans le body de la requête et générer un tableau de remplacement explicite :
+**Modification A** : Ajouter des instructions pour l'adaptation du layout
 
 ```typescript
-// Nouveau paramètre reçu
-const { templateTextZones } = body;
-
-// Dans buildProfessionalPrompt, ajouter le tableau de remplacement
-if (templateTextZones && templateTextZones.length > 0) {
-  instructions.push("╔════════════════════════════════════════════════════════════════════════╗");
-  instructions.push("║  📋 TABLEAU DE REMPLACEMENT - TOUTES LES ZONES DE TEXTE              ║");
-  instructions.push("╚════════════════════════════════════════════════════════════════════════╝");
-  instructions.push("");
-  instructions.push("┌───────────────────┬────────────────────────────────────────────────────┐");
-  instructions.push("│ ZONE ORIGINALE    │ ACTION REQUISE                                     │");
-  instructions.push("├───────────────────┼────────────────────────────────────────────────────┤");
-  
-  templateTextZones.forEach(zone => {
-    const replacement = findReplacementForZone(zone.type, userProvidedContent);
-    if (replacement) {
-      instructions.push(`│ ${zone.type.padEnd(17)} │ ✅ REMPLACER PAR: "${replacement.substring(0, 30)}..." │`);
-    } else {
-      instructions.push(`│ ${zone.type.padEnd(17)} │ ❌ EFFACER COMPLÈTEMENT - ZONE VIDE              │`);
-    }
-  });
-  
-  instructions.push("└───────────────────┴────────────────────────────────────────────────────┘");
-  instructions.push("");
-  instructions.push("⚠️ RÈGLE ABSOLUE: Les zones marquées ❌ doivent être VIDES.");
-  instructions.push("   Ne laisse AUCUN texte original. La zone doit être propre.");
-}
-```
-
-Renforcer les instructions de couleurs :
-
-```typescript
-instructions.push("╔════════════════════════════════════════════════════════════════════════╗");
-instructions.push("║  🎨 REMPLACEMENT TOTAL DES COULEURS - AUCUNE EXCEPTION                 ║");
-instructions.push("╚════════════════════════════════════════════════════════════════════════╝");
+// Après les instructions de suppression des zones
+instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+instructions.push("║  📐 ADAPTATION INTELLIGENTE DU LAYOUT                                 ║");
+instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
 instructions.push("");
-instructions.push("🚨 MISSION COULEUR: AUCUNE couleur du template original ne doit rester.");
+instructions.push("🎯 SI DES ZONES SONT SUPPRIMÉES (pas de contenu de remplacement) :");
 instructions.push("");
-instructions.push("━━━ PROCÉDURE DE REMPLACEMENT ━━━");
-instructions.push("1. SCANNER toutes les zones colorées du template original");
-instructions.push("2. IDENTIFIER chaque couleur (fonds, textes, bordures, effets, ombres)");
-instructions.push("3. REMPLACER par la palette utilisateur selon la règle 60-30-10:");
-instructions.push("   • Couleur #1 (60%): Fonds, grandes zones");
-instructions.push("   • Couleur #2 (30%): Titres, accents majeurs");
-instructions.push("   • Couleur #3 (10%): Détails, bordures, highlights");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("1. REDISTRIBUTION DU CONTENU:");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("   • NE LAISSE PAS de zones vides visibles");
+instructions.push("   • Répartis le contenu de l'utilisateur dans les zones restantes");
+instructions.push("   • Agrandis les textes existants si besoin pour remplir l'espace");
+instructions.push("   • Utilise des éléments décoratifs pour combler (formes, motifs)");
 instructions.push("");
-instructions.push("━━━ SI LES COULEURS NE S'HARMONISENT PAS ━━━");
-instructions.push("🔲 SOLUTION: Utiliser le BLANC comme harmonisateur universel");
-instructions.push("   • Bordures blanches (3-6px) autour du texte coloré");
-instructions.push("   • Fonds blancs ou crème pour aérer");
-instructions.push("   • Séparateurs blancs entre zones de couleurs différentes");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("2. AJUSTEMENT DES FORMES:");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("   • Si un bandeau de texte est supprimé → Étendre le bandeau voisin");
+instructions.push("   • Si une zone de prix est supprimée → Utiliser l'espace pour le titre");
+instructions.push("   • Maintenir l'équilibre visuel du design");
+instructions.push("   • Les formes décoratives peuvent être étendues/réduites");
 instructions.push("");
-instructions.push("❌ INTERDIT ABSOLUMENT:");
-instructions.push("   • Laisser la moindre couleur du template original");
-instructions.push("   • Mélanger anciennes et nouvelles couleurs");
-instructions.push("   • Avoir des zones où l'ancienne couleur transparaît");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("3. PRÉSERVER L'ESSENCE:");
+instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+instructions.push("   ✓ Le STYLE graphique reste identique (effets, couleurs, ambiance)");
+instructions.push("   ✓ La COMPOSITION générale reste reconnaissable");
+instructions.push("   ✓ Seule la DISTRIBUTION des éléments s'adapte au contenu disponible");
+instructions.push("");
+instructions.push("❌ INTERDIT:");
+instructions.push("   • Laisser des espaces vides flagrants");
+instructions.push("   • Des bandeaux de texte vides");
+instructions.push("   • Des zones où on devine qu'il manque quelque chose");
+instructions.push("");
 ```
 
 ---
@@ -191,64 +284,42 @@ instructions.push("   • Avoir des zones où l'ancienne couleur transparaît");
 ## Flux Utilisateur Amélioré
 
 ```
-1. Utilisateur clique "S'inspirer" sur un template
+1. Utilisateur clique "S'inspirer" sur un template de FORMATION
    
-2. Système analyse → Détecte 8 zones de texte:
-   - Titre principal
-   - Sous-titre/slogan
-   - Date
-   - Heure
-   - Lieu
-   - Contact
-   - Nom orateur
-   - Phrase d'accroche
+2. Utilisateur écrit:
+   "Je veux une affiche pour mon salon de coiffure La Joie,
+   contact: +225 07 08 09 10"
    
-3. Système affiche:
-   "J'ai détecté ces éléments à remplacer sur l'affiche:
-   • Titre: 'GRANDE VEILLÉE DE PRIÈRE'
-   • Sous-titre: 'Une nuit avec le Saint-Esprit'
-   • Date et heure
-   • Lieu
-   • Contact
-   • Orateur
-   • Slogan: 'ENTRÉE LIBRE'
+3. Système DÉTECTE:
+   - Domaine utilisateur: "service" (salon de coiffure)
+   - Template domaine: "formation"
+   - Zones HORS CONTEXTE:
+     • "Frais d'inscription: 50 000 FCFA"
+     • "Programme: Module 1, Module 2..."
+     • "Durée: 3 jours"
+     • "Certificat délivré"
    
-   Donnez-moi VOS informations..."
-
-4. Utilisateur fournit:
-   "Conférence des Femmes, le 20 mars 2026, 
-   contact +225 07 08 09 10"
+4. Système AFFICHE:
+   "⚠️ Attention : Éléments hors contexte détectés !
    
-5. Système DÉTECTE les zones manquantes:
-   - Sous-titre/slogan ❌
-   - Heure ❌
-   - Lieu ❌
-   - Orateur ❌
-   - Phrase d'accroche ❌
+   L'affiche de référence semble être pour une formation et contient :
+   • 'Frais d'inscription: 50 000 FCFA'
+   • 'Programme: Module 1, Module 2...'
+   • 'Durée: 3 jours'
+   • 'Certificat délivré'
    
-6. Système DEMANDE:
-   "J'ai remarqué que l'affiche originale a aussi:
-   • Un sous-titre/slogan: 'Une nuit avec le Saint-Esprit'
-   • Une heure
-   • Un lieu
-   • Un nom d'orateur
-   • Une phrase d'accroche
+   Ces éléments ne correspondent pas à votre salon de coiffure.
    
-   Voulez-vous fournir ces informations ou les supprimer de l'affiche?"
+   Voulez-vous :
+   - Supprimer ces zones
+   - Fournir un remplacement"
    
-7. Utilisateur répond:
-   "Sous-titre: Ensemble pour l'excellence, Lieu: Palais des Congrès"
-   OU "Supprime les autres"
+5. Utilisateur: "Supprimer"
    
-8. Génération avec tableau de remplacement EXPLICITE:
-   │ title    │ ✅ REMPLACER: "Conférence des Femmes"    │
-   │ subtitle │ ✅ REMPLACER: "Ensemble pour l'excellence"│
-   │ date     │ ✅ REMPLACER: "20 mars 2026"             │
-   │ time     │ ❌ EFFACER COMPLÈTEMENT                  │
-   │ location │ ✅ REMPLACER: "Palais des Congrès"       │
-   │ contact  │ ✅ REMPLACER: "+225 07 08 09 10"         │
-   │ speaker  │ ❌ EFFACER COMPLÈTEMENT                  │
-   │ slogan   │ ❌ EFFACER COMPLÈTEMENT                  │
+6. Génération avec instructions d'adaptation:
+   - Zones supprimées
+   - Layout adapté (le contenu de l'utilisateur redistribué)
+   - Pas d'espaces vides
 ```
 
 ---
@@ -257,21 +328,21 @@ instructions.push("   • Avoir des zones où l'ancienne couleur transparaît");
 
 | Fichier | Modification | Lignes |
 |---------|--------------|--------|
-| `analyze-template/index.ts` | Extraction contenu exact de toutes les zones | ~40 |
-| `useConversation.ts` | Vérification correspondances + questions | ~100 |
-| `generate-image/index.ts` | Tableau de remplacement explicite + couleurs | ~80 |
+| `src/hooks/useConversation.ts` | Fonction `detectContextMismatch` + gestion du step | ~120 |
+| `src/types/generation.ts` | Nouveau step + champ `contextMismatchZones` | ~5 |
+| `supabase/functions/generate-image/index.ts` | Instructions d'adaptation du layout | ~50 |
 
 ---
 
 ## Impact Attendu
 
-### Textes
-- **0% de texte original** : Chaque zone est soit remplacée, soit explicitement effacée
-- L'utilisateur est informé des zones sans correspondance AVANT génération
-- L'IA a des instructions claires pour chaque zone spécifique
+### Détection Contextuelle
+- Les zones comme "frais d'inscription" seront détectées comme hors contexte pour un service
+- L'utilisateur est averti AVANT la génération
+- Plus aucun texte incohérent sur l'affiche finale
 
-### Couleurs
-- **0% de couleur originale** : Remplacement systématique par la palette utilisateur
-- Harmonisation automatique avec le blanc si les couleurs clashent
-- Instructions explicites sur la procédure de remplacement zone par zone
+### Adaptation du Layout
+- Quand des zones sont supprimées, le contenu utilisateur est redistribué
+- Le design reste équilibré sans espaces vides
+- L'essence graphique du template est préservée
 
