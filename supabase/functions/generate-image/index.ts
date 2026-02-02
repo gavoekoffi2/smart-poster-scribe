@@ -193,512 +193,59 @@ function buildProfessionalPrompt({
 }): string {
   const instructions: string[] = [];
 
-  // ====== BLOC PRIORITAIRE ABSOLU - MODE ÉDITION/CLONAGE ======
+  // ====== MODE ÉDITION/CLONAGE (CONDENSÉ) ======
   if (isCloneMode || hasReferenceImage) {
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("██  🚨🚨🚨 INSTRUCTION PRIORITAIRE ABSOLUE - LIRE EN PREMIER 🚨🚨🚨  ██");
-    instructions.push("████████████████████████████████████████████████████████████████████████");
+    instructions.push("🚨 MODE ÉDITION: Tu MODIFIES l'image de référence, tu ne crées PAS de nouveau design.");
+    instructions.push("GARDER: composition, style, effets, mise en page IDENTIQUES au template.");
+    instructions.push("REMPLACER: textes→contenu client, visages→photos client (si fournis), logos→logos client.");
+    instructions.push("SUPPRIMER: éléments du template non remplacés par le client (ne pas inventer).");
     instructions.push("");
-    instructions.push("TU ES EN MODE: **ÉDITION/MODIFICATION D'IMAGE**");
-    instructions.push("Tu NE CRÉES PAS une nouvelle image. Tu ÉDITES l'image de référence fournie.");
-    instructions.push("");
-    instructions.push("┌─────────────────────────────────────────────────────────────────────┐");
-    instructions.push("│  CETTE IMAGE DE RÉFÉRENCE = TA BASE DE TRAVAIL                     │");
-    instructions.push("│  Tu dois la MODIFIER DIRECTEMENT, pas la recréer de zéro.          │");
-    instructions.push("│  Le résultat doit être VISUELLEMENT IDENTIQUE au template.         │");
-    instructions.push("└─────────────────────────────────────────────────────────────────────┘");
-    instructions.push("");
-    instructions.push("🔴 INTERDICTION ABSOLUE:");
-    instructions.push("   - NE PAS créer un nouveau design depuis zéro");
-    instructions.push("   - NE PAS changer la mise en page");
-    instructions.push("   - NE PAS modifier le style graphique (effets, ombres, textures)");
-    instructions.push("   - NE PAS réarranger les éléments décoratifs");
-    instructions.push("   - NE PAS inventer de nouveaux éléments visuels");
-    instructions.push("");
-    instructions.push("🟢 CE QUE TU FAIS:");
-    instructions.push("   - Tu GARDES exactement le même design visuel");
-    instructions.push("   - Tu REMPLACES les textes par ceux du client (mêmes emplacements)");
-    instructions.push("   - Tu REMPLACES les visages par ceux du client (si fournis)");
-    instructions.push("   - Tu REMPLACES les logos par ceux du client (si fournis)");
-    instructions.push("   - Tu SUPPRIMES les éléments non fournis (ne pas inventer)");
-    instructions.push("");
-    instructions.push("📊 COMPARAISON AVANT/APRÈS:");
-    instructions.push("   AVANT: Affiche originale avec contenu du template");
-    instructions.push("   APRÈS: MÊME AFFICHE visuellement, mais avec contenu du CLIENT");
-    instructions.push("   → Quelqu'un qui voit les deux doit penser: 'C'est la même affiche, juste personnalisée'");
-    instructions.push("");
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("");
-  }
-
-  // ====== RÔLE ET OBJECTIF PRINCIPAL ======
-  instructions.push("=== RÔLE ===");
-  if (isCloneMode || hasReferenceImage) {
-    instructions.push("Tu es un ÉDITEUR D'IMAGES professionnel. Ta spécialité: MODIFIER des affiches existantes en remplaçant uniquement le contenu textuel et visuel, SANS toucher au design.");
-    instructions.push("Tu travailles comme si tu avais Photoshop: tu sélectionnes les zones de texte, tu les effaces, tu retapes le nouveau texte au même endroit avec le même style.");
   } else {
-    instructions.push("Tu es un DIRECTEUR ARTISTIQUE et GRAPHISTE DE RENOMMÉE MONDIALE, expert en création d'affiches publicitaires EXCEPTIONNELLES pour l'Afrique francophone.");
-    instructions.push("Tu travailles pour les plus grandes marques et événements. Chaque création doit être SPECTACULAIRE et MÉMORABLE.");
-  }
-  instructions.push("");
-
-  // ====== MODE CRÉATION LIBRE - DESIGN PROFESSIONNEL AVANCÉ ======
-  if (!hasReferenceImage && !isCloneMode) {
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎨 CRÉATION LIBRE - NIVEAU DIRECTEUR ARTISTIQUE                      ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    // ====== MODE CRÉATION LIBRE (CONDENSÉ) ======
+    instructions.push("🎨 CRÉATION: Affiche publicitaire PREMIUM niveau agence internationale.");
+    instructions.push("TYPO: Titre BOLD spectaculaire (3D/dégradés/glow), hiérarchie claire.");
+    instructions.push("COMPOSITION: Règle des tiers, flux visuel, équilibre dynamique.");
+    instructions.push("COULEURS: Palette cohérente (3-4 couleurs), dégradés, contrastes forts.");
+    instructions.push("EFFETS: Lumières, particules, textures, ombres réalistes.");
+    instructions.push("PERSONNAGES: Africains authentiques, expressions engageantes.");
     instructions.push("");
-    
-    instructions.push("🌟 EXCELLENCE VISUELLE OBLIGATOIRE:");
-    instructions.push("Tu ne crées PAS une affiche basique. Tu crées une ŒUVRE PUBLICITAIRE digne");
-    instructions.push("d'une agence de communication internationale comme Publicis ou Ogilvy.");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("1. 🔤 TYPOGRAPHIE DE MAÎTRE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ TITRE PRINCIPAL: Police BOLD, DISPLAY, spectaculaire");
-    instructions.push("     - Effets 3D, ombres portées, reflets métalliques ou dorés");
-    instructions.push("     - Dégradés sophistiqués dans les lettres");
-    instructions.push("     - Contours lumineux (glow) ou effet néon si approprié");
-    instructions.push("     - Taille IMPOSANTE (occupe 20-35% de l'affiche)");
-    instructions.push("   ✓ SOUS-TITRES: Polices élégantes complémentaires");
-    instructions.push("     - Contraste de styles (sans-serif + script, bold + light)");
-    instructions.push("   ✓ DÉTAILS: Polices lisibles, tailles proportionnelles");
-    instructions.push("   ✓ JAMAIS de polices basiques comme Arial, Times, Calibri");
-    instructions.push("   ✓ Hiérarchie visuelle PARFAITE: œil guidé naturellement");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("2. 🎭 COMPOSITION DYNAMIQUE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ Utiliser la règle des tiers ou le nombre d'or");
-    instructions.push("   ✓ Points focaux clairement définis");
-    instructions.push("   ✓ Flux visuel qui guide le regard");
-    instructions.push("   ✓ Équilibre asymétrique dynamique (éviter la symétrie plate)");
-    instructions.push("   ✓ Espaces négatifs stratégiques pour respiration");
-    instructions.push("   ✓ Superposition de plans (avant-plan, milieu, arrière-plan)");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("3. 🌈 COULEURS ET AMBIANCE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ Palette harmonieuse et cohérente (max 3-4 couleurs principales)");
-    instructions.push("   ✓ Dégradés sophistiqués (pas de aplats plats)");
-    instructions.push("   ✓ Contrastes forts pour lisibilité et impact");
-    instructions.push("   ✓ Si palette utilisateur fournie: L'UTILISER OBLIGATOIREMENT");
-    instructions.push("   ✓ Sinon: Couleurs vibrantes, africaines, énergiques");
-    instructions.push("   ✓ Ambiance cohérente avec le sujet (festive, spirituelle, pro...)");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("4. ✨ EFFETS ET FINITIONS PREMIUM:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ Effets de lumière: rayons, halos, lens flares, bokeh");
-    instructions.push("   ✓ Particules flottantes (étoiles, confettis, poussière lumineuse)");
-    instructions.push("   ✓ Textures subtiles (grain, motifs africains stylisés)");
-    instructions.push("   ✓ Ombres réalistes et profondeur");
-    instructions.push("   ✓ Bordures ou cadres décoratifs si approprié");
-    instructions.push("   ✓ Éléments graphiques (formes géométriques, lignes dynamiques)");
-    instructions.push("   ✓ Effet de brillance ou métallique sur éléments clés");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("5. 👤 PERSONNAGES (si nécessaires):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ Africains authentiques, traits réalistes et beaux");
-    instructions.push("   ✓ Expressions dynamiques et engageantes");
-    instructions.push("   ✓ Vêtements appropriés au contexte (tenue traditionnelle, moderne, pro)");
-    instructions.push("   ✓ Éclairage professionnel (studio quality)");
-    instructions.push("   ✓ Intégration harmonieuse avec le fond");
-    instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("6. 🎯 STYLES SELON LE CONTEXTE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ÉGLISE/SPIRITUEL:");
-    instructions.push("     - Tons dorés, violets profonds, bleus célestes");
-    instructions.push("     - Rayons de lumière divine, nuages, étoiles");
-    instructions.push("     - Typographie majestueuse avec effets dorés");
-    instructions.push("   CONCERT/ÉVÉNEMENT:");
-    instructions.push("     - Couleurs vives, néons, effets disco/lumière");
-    instructions.push("     - Énergie dynamique, mouvement");
-    instructions.push("     - Police bold, moderne, impactante");
-    instructions.push("   RESTAURANT/FOOD:");
-    instructions.push("     - Couleurs chaudes (orange, rouge, jaune)");
-    instructions.push("     - Photos de plats appétissants");
-    instructions.push("     - Style gourmand et invitant");
-    instructions.push("   FORMATION/PRO:");
-    instructions.push("     - Couleurs corporate (bleu, vert, gris)");
-    instructions.push("     - Design épuré mais sophistiqué");
-    instructions.push("     - Crédibilité et professionnalisme");
-    instructions.push("   E-COMMERCE/PROMO:");
-    instructions.push("     - Badges promo, prix barrés, pourcentages");
-    instructions.push("     - Couleurs qui attirent l'œil (rouge, jaune)");
-    instructions.push("     - Urgence et action");
-    instructions.push("");
-    
-    instructions.push("❌ INTERDIT EN MODE CRÉATION LIBRE:");
-    instructions.push("   - Designs plats, basiques, sans effets");
-    instructions.push("   - Texte simple sans style typographique");
-    instructions.push("   - Fonds unis sans texture ni profondeur");
-    instructions.push("   - Compositions ennuyeuses et prévisibles");
-    instructions.push("   - Manque de hiérarchie visuelle");
-    instructions.push("   - Couleurs ternes ou mal assorties");
-    instructions.push("");
-    
-    // ====== INJECTION DES COMPÉTENCES GRAPHISTES EXPERTS ======
-    // Détection automatique du domaine à partir du prompt utilisateur
-    const detectedDomain = detectDomainFromPrompt(userPrompt);
-    console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
     
     // Injection des compétences spécifiques au domaine
+    const detectedDomain = detectDomainFromPrompt(userPrompt);
+    console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
     const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
     instructions.push(expertSkillsPrompt);
     instructions.push("");
   }
 
-  // ====== RÈGLE FONDAMENTALE: MODE MODIFICATION D'IMAGE ======
+  // ====== MODE MODIFICATION D'IMAGE (CONDENSÉ) ======
   if (hasReferenceImage || isCloneMode) {
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  ⚠️ MODE MODIFICATION D'IMAGE - RÈGLES STRICTES                       ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    instructions.push("⚠️ MODE MODIFICATION: Tu ÉDITES l'affiche de référence, pas de nouveau design.");
     instructions.push("");
-    instructions.push("🚨 MISSION CRITIQUE: Tu reçois une AFFICHE EXISTANTE. Tu dois la MODIFIER.");
-    instructions.push("   Tu ne crées PAS une nouvelle affiche. Tu MODIFIES celle-ci.");
-    instructions.push("   C'est un travail de PERSONNALISATION, pas de création.");
+    instructions.push("GARDER INTACT: mise en page, style graphique, effets, typographie, éléments décoratifs.");
+    instructions.push("REMPLACER: textes→client, visages→client (si fournis), logos→client, couleurs→palette client.");
+    instructions.push("SUPPRIMER: tout contenu du template non remplacé (logos, contacts, dates, noms originaux).");
     instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("CE QUE TU GARDES INTACT (NE TOUCHE PAS):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ La MISE EN PAGE exacte (positions de tous les éléments)");
-    instructions.push("   ✓ Le STYLE GRAPHIQUE (effets 3D, ombres, dégradés, textures)");
-    instructions.push("   ✓ La STRUCTURE (découpage des zones, proportions, marges)");
-    instructions.push("   ✓ Les ÉLÉMENTS DÉCORATIFS (formes, lignes, motifs, cadres)");
-    instructions.push("   ✓ Les EFFETS DE LUMIÈRE (halos, rayons, reflets, bokeh)");
-    instructions.push("   ✓ La TYPOGRAPHIE et ses effets (polices stylisées, 3D, glow)");
-    instructions.push("   ✓ L'AMBIANCE générale (couleurs dominantes, atmosphère)");
+    instructions.push("PALETTE: Si fournie, remplacer TOUTES les couleurs du template. Règle 60-30-10.");
+    instructions.push("OBJETS HORS CONTEXTE: Supprimer icônes spécifiques au domaine original (croix, diplôme, fourchette...).");
     instructions.push("");
-    
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("CE QUE TU MODIFIES (REMPLACE OU SUPPRIME):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ➤ TEXTES: Efface les textes originaux → Place les textes de l'utilisateur");
-    instructions.push("   ➤ COULEURS: Si palette fournie → Remplace TOUTES les couleurs");
-    instructions.push("   ➤ LOGOS: Efface les logos originaux → Place ceux de l'utilisateur (ou zone vide)");
-    instructions.push("   ➤ VISAGES: Efface les visages originaux → Place ceux de l'utilisateur (ou supprime)");
-    instructions.push("   ➤ CONTACTS: Efface tous les numéros/emails → Place ceux de l'utilisateur uniquement");
-    instructions.push("   ➤ DATES: Efface dates/horaires → Place ceux de l'utilisateur uniquement");
-    instructions.push("");
-    
-    instructions.push("🎯 RÉSULTAT ATTENDU:");
-    instructions.push("   L'affiche finale = La MÊME affiche visuellement, mais avec le contenu du client.");
-    instructions.push("   Un observateur doit voir le MÊME design, juste personnalisé.");
-    instructions.push("");
-    
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎨 HARMONISATION PROFESSIONNELLE DE LA PALETTE UTILISATEUR           ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-    instructions.push("");
-    instructions.push("⚠️ RÈGLE ABSOLUE: Utiliser UNIQUEMENT les couleurs fournies par l'utilisateur.");
-    instructions.push("   Les couleurs du template original doivent être TOTALEMENT REMPLACÉES.");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("SYSTÈME D'ATTRIBUTION DES COULEURS (Règle 60-30-10):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   • Couleur #1 (60%): DOMINANTE → Arrière-plan, grandes zones, fonds");
-    instructions.push("   • Couleur #2 (30%): SECONDAIRE → Titres principaux, accents forts");
-    instructions.push("   • Couleur #3 (10%): HIGHLIGHT → Détails, bordures, CTA, éléments clés");
-    instructions.push("   • Couleurs supplémentaires: Dégradés, variations, effets subtils");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("🚨 REMPLACEMENT TOTAL DES COULEURS - PROCÉDURE OBLIGATOIRE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   1. SCANNER toutes les zones colorées du template original");
-    instructions.push("   2. IDENTIFIER chaque couleur (fonds, textes, bordures, effets, ombres)");
-    instructions.push("   3. REMPLACER SYSTÉMATIQUEMENT par la palette utilisateur");
-    instructions.push("   4. VÉRIFIER qu'AUCUNE couleur originale ne reste visible");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("💡 SOLUTION UNIVERSELLE: LE BLANC COMME HARMONISATEUR");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   Si les couleurs ne s'harmonisent pas naturellement:");
-    instructions.push("   ✓ Bordure blanche (3-6px) autour du texte sur fond coloré");
-    instructions.push("   ✓ Zones blanches ou crème pour aérer le design");
-    instructions.push("   ✓ Séparateurs blancs entre zones de couleurs contrastées");
-    instructions.push("   ✓ Le BLANC passe avec TOUTES les couleurs");
-    instructions.push("");
-    instructions.push("❌ INTERDIT ABSOLUMENT:");
-    instructions.push("   • Laisser la MOINDRE couleur du template original");
-    instructions.push("   • Mélanger anciennes et nouvelles couleurs");
-    instructions.push("   • Avoir des zones où l'ancienne couleur transparaît");
-    instructions.push("   • Ignorer les petits détails (bordures, ombres, icônes)");
-    instructions.push("");
-    
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  ⚠️ RÈGLE ABSOLUE: ZÉRO CONTENU ORIGINAL SUR L'AFFICHE FINALE        ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-    instructions.push("");
-    instructions.push("🚨 COMPRENDRE LA MISSION:");
-    instructions.push("   Tu analyses l'INGÉNIERIE GRAPHIQUE du template (mise en page, effets,");
-    instructions.push("   typographie, compositions, style visuel) pour la REPRODUIRE avec");
-    instructions.push("   UNIQUEMENT les données du client. C'est un TRANSFERT DE COMPÉTENCES.");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("🧹 SUPPRESSION TOTALE - TOUT CE QUI N'EST PAS FOURNI DOIT DISPARAÎTRE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("");
-    instructions.push("❌ TEXTES (TOUS LES TYPES): Titres, sous-titres, slogans, accroches,");
-    instructions.push("   phrases secondaires → TOUT EFFACER et remplacer par le contenu client");
-    instructions.push("❌ LOGOS: Si l'utilisateur n'a PAS fourni de logo → AUCUN logo sur l'affiche");
-    instructions.push("❌ NUMÉROS: Ceux du template → EFFACER. Afficher UNIQUEMENT celui du client");
-    instructions.push("❌ DATES: Celles du template → EFFACER. Afficher UNIQUEMENT celles du client");
-    instructions.push("❌ LIEUX: Ceux du template → EFFACER. Afficher UNIQUEMENT celui du client");
-    instructions.push("❌ NOMS: Les personnes du template → EFFACER. Afficher UNIQUEMENT ceux du client");
-    instructions.push("❌ RÉSEAUX SOCIAUX: Ceux du template → EFFACER. Afficher UNIQUEMENT ceux du client");
-    instructions.push("❌ PRIX/TARIFS: Ceux du template → EFFACER. Afficher UNIQUEMENT ceux du client");
-    instructions.push("");
-    instructions.push("⚠️ CAS SPÉCIAL - ZONES SANS REMPLACEMENT:");
-    instructions.push("   Si une zone de texte du template n'a pas de contenu de remplacement");
-    instructions.push("   fourni par le client → LA ZONE DOIT ÊTRE VIDE/EFFACÉE");
-    instructions.push("   NE PAS laisser le texte original. NE PAS inventer du contenu.");
-    instructions.push("   Laisser la zone propre ou la remplir par un élément décoratif neutre.");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("🎯 CE QUE TU REPRODUIS (L'INGÉNIERIE GRAPHIQUE):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("✓ Le LAYOUT exact (positions des zones de texte, images, éléments)");
-    instructions.push("✓ Le STYLE typographique (polices stylisées, effets 3D, ombres, glow)");
-    instructions.push("✓ La COMPOSITION (équilibre, hiérarchie, points focaux)");
-    instructions.push("✓ Les EFFETS VISUELS (lumières, particules, dégradés, textures)");
-    instructions.push("✓ Les ÉLÉMENTS DÉCORATIFS (cadres, formes, motifs - sans contenu)");
-    instructions.push("✓ L'AMBIANCE générale (mais avec la palette client si fournie)");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("⛔ INTERDIT ABSOLUMENT:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("❌ Laisser le MOINDRE texte, numéro, nom, logo du template original");
-    instructions.push("❌ Inventer des informations que le client n'a pas fournies");
-    instructions.push("❌ Garder partiellement des éléments du template (ex: numéro tronqué)");
-    instructions.push("❌ Conserver un logo du template même 'discrètement'");
-    instructions.push("❌ Mélanger les informations du template avec celles du client");
-    instructions.push("❌ Laisser des slogans, sous-titres ou phrases d'accroche originaux");
-    instructions.push("");
-    instructions.push("🎯 RÉSULTAT FINAL:");
-    instructions.push("   L'affiche générée = DESIGN du template + CONTENU du client UNIQUEMENT");
-    instructions.push("   → Si quelqu'un regarde l'affiche, il ne doit voir AUCUNE trace");
-    instructions.push("   → de l'ancienne affiche, seulement les informations du nouveau client.");
-    instructions.push("");
-    
-    // ====== ADAPTATION INTELLIGENTE DU LAYOUT ======
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  📐 ADAPTATION INTELLIGENTE DU LAYOUT                                 ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-    instructions.push("");
-    instructions.push("🎯 SI DES ZONES SONT SUPPRIMÉES (pas de contenu de remplacement) :");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("1. REDISTRIBUTION DU CONTENU:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   • NE LAISSE PAS de zones vides visibles");
-    instructions.push("   • Répartis le contenu de l'utilisateur dans les zones restantes");
-    instructions.push("   • Agrandis les textes existants si besoin pour remplir l'espace");
-    instructions.push("   • Utilise des éléments décoratifs du style original pour combler");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("2. AJUSTEMENT DES FORMES:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   • Si un bandeau de texte est supprimé → Étendre le bandeau voisin");
-    instructions.push("   • Si une zone de prix est supprimée → Utiliser l'espace pour le titre");
-    instructions.push("   • Maintenir l'équilibre visuel du design");
-    instructions.push("   • Les formes décoratives peuvent être étendues/réduites");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("3. PRÉSERVER L'ESSENCE GRAPHIQUE:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ✓ Le STYLE graphique reste identique (effets, textures, ambiance)");
-    instructions.push("   ✓ La COMPOSITION générale reste reconnaissable");
-    instructions.push("   ✓ Seule la DISTRIBUTION des éléments s'adapte au contenu disponible");
-    instructions.push("");
-    instructions.push("❌ INTERDIT:");
-    instructions.push("   • Laisser des espaces vides flagrants");
-    instructions.push("   • Des bandeaux de texte vides");
-    instructions.push("   • Des zones où on devine qu'il manque quelque chose");
-    instructions.push("   • Un design déséquilibré à cause de suppressions");
-    instructions.push("");
-    
-    // ====== SECTION OBJETS/ICÔNES HORS CONTEXTE ======
-    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-    instructions.push("║  🎯 OBJETS ET ICÔNES - SUPPRESSION DES ÉLÉMENTS HORS CONTEXTE         ║");
-    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-    instructions.push("");
-    instructions.push("🚨 RÈGLE ABSOLUE: Les objets/icônes spécifiques au domaine original DOIVENT DISPARAÎTRE.");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("OBJETS À SUPPRIMER (si le domaine utilisateur ne correspond pas):");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   ❌ Église/Spirituel: croix, bible, colombe, bougie, autel, ange, chapelet");
-    instructions.push("   ❌ Formation/Éducation: diplôme, livre, tableau, chapeau universitaire, certificat");
-    instructions.push("   ❌ Restaurant: fourchette, couteau, cuillère, assiette, toque de chef, casserole");
-    instructions.push("   ❌ Musique: micro, note de musique, guitare, platine, DJ, casque audio");
-    instructions.push("   ❌ YouTube: bouton play, subscribe, icône abonnement, notification");
-    instructions.push("   ❌ Mode: cintre, mannequin, étiquette prix");
-    instructions.push("   ❌ Santé: stéthoscope, seringue, croix médicale, pilules");
-    instructions.push("   ❌ Sport: ballon, trophée, médaille, maillot");
-    instructions.push("   ❌ Immobilier: clé, plan, maison stylisée");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("PROCÉDURE DE REMPLACEMENT DES OBJETS:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   1. IDENTIFIER tous les objets/icônes spécifiques au domaine original");
-    instructions.push("   2. SUPPRIMER complètement ces éléments de l'image");
-    instructions.push("   3. REMPLACER l'espace par:");
-    instructions.push("      • Un élément décoratif NEUTRE (forme géométrique, effet de lumière)");
-    instructions.push("      • Un agrandissement d'un élément du client (logo, photo, texte)");
-    instructions.push("      • Une extension du fond/texture existant");
-    instructions.push("   4. NE JAMAIS laisser un espace vide à la place de l'objet supprimé");
-    instructions.push("");
-    
-    // ====== POLITIQUE ZÉRO ESPACE VIDE - RENFORCÉE ======
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("██  🚨 POLITIQUE ZÉRO ESPACE VIDE - APPLICATION STRICTE              ██");
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("");
-    instructions.push("⚠️ SI TU SUPPRIMES UNE ZONE (texte, objet, icône), TU DOIS COMBLER L'ESPACE.");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("TECHNIQUES DE COMBLEMENT OBLIGATOIRES:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   📌 OPTION 1 - EXTENSION:");
-    instructions.push("      • Étendre le bandeau/forme voisin(e) pour couvrir la zone");
-    instructions.push("      • Agrandir le texte du client pour occuper plus d'espace");
-    instructions.push("      • Élargir une photo ou un logo existant");
-    instructions.push("");
-    instructions.push("   📌 OPTION 2 - FUSION:");
-    instructions.push("      • Fusionner deux zones en une seule plus grande");
-    instructions.push("      • Combiner le fond avec la zone supprimée");
-    instructions.push("      • Étendre le fond uniforme sur toute la zone");
-    instructions.push("");
-    instructions.push("   📌 OPTION 3 - DÉCORATION:");
-    instructions.push("      • Ajouter un élément décoratif NEUTRE du style original (forme, motif)");
-    instructions.push("      • Étendre un effet de lumière ou de dégradé");
-    instructions.push("      • Utiliser un pattern/texture subtile cohérent avec le design");
-    instructions.push("");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("❌ CE QUI EST ABSOLUMENT INTERDIT:");
-    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    instructions.push("   • Un bandeau visible SANS texte dedans");
-    instructions.push("   • Une zone rectangulaire/circulaire vide");
-    instructions.push("   • Un espace blanc/noir flagrant là où il y avait du contenu");
-    instructions.push("   • Un layout déséquilibré avec des 'trous' visibles");
-    instructions.push("   • Un objet/icône du domaine original qui reste visible");
-    instructions.push("   • Une zone où on devine qu'il manquait quelque chose");
-    instructions.push("");
-    instructions.push("🎯 TEST VISUEL FINAL: Regarde ton affiche finale. Si tu vois:");
-    instructions.push("   - Une zone qui semble 'vide' ou 'incomplète' → CORRIGE-LA");
-    instructions.push("   - Un objet/icône qui ne correspond pas au contenu du client → SUPPRIME-LE");
-    instructions.push("   - Un déséquilibre visuel → REDISTRIBUE les éléments");
+    instructions.push("ZÉRO ESPACE VIDE: Si zone supprimée→étendre éléments voisins, agrandir texte client, ou décoration neutre.");
+    instructions.push("INTERDIT: bandeaux vides, espaces blancs flagrants, objets/textes du template original.");
     instructions.push("");
   }
-
-  // ====== RÈGLE SUR LE CONTENU UTILISATEUR ======
-  instructions.push("=== CONTENU À AFFICHER (ET RIEN D'AUTRE) ===");
-  instructions.push("⚠️ AFFICHER UNIQUEMENT ces informations fournies par l'utilisateur:");
-  instructions.push("- Titre → affiché en grand et lisible");
-  instructions.push("- Dates/Horaires → SI FOURNIS par l'utilisateur");
-  instructions.push("- Lieu/Adresse → SI FOURNI par l'utilisateur");
-  instructions.push("- Contact → SI FOURNI par l'utilisateur");
-  instructions.push("- Prix → SI FOURNIS par l'utilisateur");
-  instructions.push("- Orateurs/Artistes → SI FOURNIS par l'utilisateur");
-  instructions.push("");
-  instructions.push("❌ INTERDIT: Afficher des infos NON fournies par l'utilisateur");
-  instructions.push("❌ INTERDIT: Inventer ou conserver des infos du template original");
-  instructions.push("");
-
-  // ====== SPÉCIFICATIONS TECHNIQUES ======
-  instructions.push("=== SPÉCIFICATIONS TECHNIQUES ===");
-  instructions.push(`- Format: ${aspectRatio}`);
-  instructions.push("- Résolution: Haute qualité, détails nets");
-  instructions.push("- Typographie: Alignement parfait, hiérarchie claire");
-  instructions.push("- Pas de filigrane, mockup, ou cadre");
-  instructions.push("");
-
-  if (hasLogoImage) {
-    instructions.push("=== LOGO CLIENT ===");
-    instructions.push("⚠️ Reproduire le logo EXACTEMENT comme fourni, sans aucune modification.");
-    instructions.push("   Ne pas réinventer, recréer ou modifier le logo.");
-    instructions.push("");
-  }
-
-  if (hasContentImage) {
-    instructions.push("PHOTO PRINCIPALE: Utiliser l'image de contenu fournie comme visuel central.");
-    instructions.push("");
-  }
-
-  // ====== QUALITÉ AFRICAINE ======
-  instructions.push("=== STYLE ===");
-  instructions.push("- Personnages: Africains authentiques avec traits réalistes");
-  instructions.push("- Couleurs: UTILISER LA PALETTE FOURNIE (ou vibrantes si non fournie)");
-  instructions.push("- Texte: Français");
-  instructions.push("");
 
   // ====== CONTENU UTILISATEUR ======
-  instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-  instructions.push("║  CONTENU CLIENT À AFFICHER (REMPLACER LE TEXTE DU TEMPLATE)           ║");
-  instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+  instructions.push("=== CONTENU CLIENT ===");
+  instructions.push("Afficher UNIQUEMENT: titre, dates, lieu, contact, prix, orateurs (SI fournis).");
+  instructions.push("INTERDIT: inventer ou conserver infos du template original.");
+  instructions.push(`Format: ${aspectRatio} | Qualité: haute résolution | Texte: français`);
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni.");
+  if (hasContentImage) instructions.push("PHOTO: Utiliser l'image de contenu fournie.");
+  instructions.push("STYLE: Africains authentiques, palette fournie (ou vibrantes), effets premium.");
   instructions.push("");
+  instructions.push("=== DEMANDE CLIENT ===");
   instructions.push(userPrompt);
   instructions.push("");
-  instructions.push("═══════════════════════════════════════════════════════════════════════");
-  instructions.push("");
-  if (hasReferenceImage || isCloneMode) {
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("██  🚨 RAPPEL FINAL CRITIQUE - MODE ÉDITION D'IMAGE UNIQUEMENT 🚨      ██");
-    instructions.push("████████████████████████████████████████████████████████████████████████");
-    instructions.push("");
-    instructions.push("⚠️ RÉCAPITULATIF - TU FAIS UNE ÉDITION, PAS UNE CRÉATION:");
-    instructions.push("");
-    instructions.push("┌─────────────────────────────────────────────────────────────────────┐");
-    instructions.push("│  L'image de référence fournie = TON CANVAS DE TRAVAIL              │");
-    instructions.push("│  Tu MODIFIES cette image, tu ne crées PAS une nouvelle image.      │");
-    instructions.push("└─────────────────────────────────────────────────────────────────────┘");
-    instructions.push("");
-    instructions.push("✅ GARDER IDENTIQUE:");
-    instructions.push("   • La composition exacte (où sont placés les éléments)");
-    instructions.push("   • Le style graphique (effets 3D, ombres, lumières, textures)");
-    instructions.push("   • Les formes décoratives (cadres, lignes, motifs)");
-    instructions.push("   • La typographie stylisée (polices, effets sur le texte)");
-    instructions.push("   • L'ambiance générale (couleurs dominantes, atmosphère)");
-    instructions.push("");
-    instructions.push("🔄 REMPLACER UNIQUEMENT:");
-    instructions.push("   • Le texte du template → Par le texte du client ci-dessus");
-    instructions.push("   • Les visages du template → Par ceux du client (si fournis)");
-    instructions.push("   • Les logos du template → Par ceux du client (si fournis)");
-    instructions.push("   • Les couleurs → Par la palette du client (si fournie)");
-    instructions.push("");
-    instructions.push("❌ SUPPRIMER (si non fourni par le client):");
-    instructions.push("   • Logos originaux → Effacer la zone");
-    instructions.push("   • Numéros/emails originaux → Effacer complètement");
-    instructions.push("   • Dates/lieux originaux → Effacer complètement");
-    instructions.push("   • Noms de personnes originaux → Effacer");
-    instructions.push("");
-    instructions.push("📊 TEST DE VALIDATION:");
-    instructions.push("   Compare ton résultat à l'image de référence:");
-    instructions.push("   → La STRUCTURE doit être IDENTIQUE");
-    instructions.push("   → Le STYLE doit être IDENTIQUE");
-    instructions.push("   → Seul le CONTENU TEXTUEL/VISUEL change (celui du client)");
-    instructions.push("   → AUCUNE information du template original ne doit apparaître");
-    instructions.push("");
-    instructions.push("🎯 RAPPEL FINAL - CRÉATION LIBRE:");
-    instructions.push("   1. Design SPECTACULAIRE niveau agence internationale");
-    instructions.push("   2. Typographie STYLISÉE avec effets (3D, ombres, dégradés, glow)");
-    instructions.push("   3. Composition DYNAMIQUE et professionnelle");
-    instructions.push("   4. Effets visuels PREMIUM (lumières, particules, textures)");
-    instructions.push("   5. Afficher UNIQUEMENT les éléments listés ci-dessus");
-    instructions.push("   6. Si palette couleur fournie: L'UTILISER obligatoirement");
-    instructions.push("   7. INTERDIT: design basique, plat, ou amateur");
-  }
 
   return instructions.join("\n");
 }
