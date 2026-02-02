@@ -1,394 +1,301 @@
 
-# Plan : Application des Règles aux Créations Libres + Téléchargement Multi-Format
 
-## Contexte
+# Plan : Intégration des Standards Professionnels de Graphisme
 
-L'utilisateur a demandé 3 améliorations :
+## Analyse de la Demande
 
-1. **Appliquer toutes les règles aux créations libres** : Quand l'utilisateur n'a pas d'image de référence, le système sélectionne automatiquement un template. Les règles de détection contextuelle, remplacement de couleurs, suppression des objets hors contexte et adaptation du layout doivent s'appliquer à ces cas aussi.
+L'utilisateur a fourni un document exhaustif de **règles fondamentales du graphisme professionnel** qui doivent s'appliquer à TOUTES les affiches générées, peu importe le domaine. Ces règles couvrent :
 
-2. **Améliorer la qualité des affiches sans template** : S'inspirer de tous les templates de la base pour créer des designs professionnels avec typographie stylisée et layouts bien designés.
+- **7 Piliers du Design** : Hiérarchie visuelle, Contraste, Alignement, Répétition, Proportion, Mouvement, Espace blanc
+- **Standards Typographiques** : Sélection polices, tailles, espacement, alignement
+- **Systèmes de Grilles** : Grille 12 colonnes, Golden Ratio, Règle des tiers
+- **Théorie des Couleurs** : Règle 60-30-10, Psychologie des couleurs, Harmonies
+- **Standards Qualité** : Résolution, accessibilité WCAG, formats
+- **Checklist QA** : Vérifications avant finalisation
+- **Erreurs Fatales** : 15 interdictions absolues
 
-3. **Téléchargement automatique avec formats multiples** : Le téléchargement doit être direct (pas d'ouverture dans un nouvel onglet) et proposer PNG, JPEG et PDF.
+## Architecture Actuelle
 
----
-
-## Analyse Actuelle
-
-### Ce qui fonctionne
-- Le système sélectionne automatiquement un template si aucun n'est fourni (`isAutoSelectedTemplate = true`)
-- Les templates auto-sélectionnés sont traités comme du clonage (`isCloneMode = true`)
-- Le téléchargement est déjà automatique via blob (pas d'ouverture dans un nouvel onglet)
-
-### Ce qui manque
-- **Les Expert Skills ne sont PAS injectés en mode clone** : Les règles de typographie professionnelle, composition, et effets ne s'appliquent qu'en mode création libre pure
-- **Pas de détection contextuelle pour les templates auto-sélectionnés** : Les règles de suppression d'objets/textes hors contexte ne sont pas appliquées
-- **Pas de choix de format de téléchargement** : Seulement PNG actuellement
-- **Pas de support PDF** : Nécessite une conversion côté client
-
----
-
-## Solution Proposée
-
-### Volet 1 : Injecter les Expert Skills en Mode Clone
-
-Modifier `buildProfessionalPrompt` dans `generate-image/index.ts` pour :
-- Injecter les compétences expertes (typographie, composition, effets) AUSSI en mode clone
-- Appliquer les règles de qualité professionnelle à toutes les générations
-
-```text
-Actuel:
-┌─────────────────────────────────────┐
-│ MODE CLONE → Instructions clonage   │
-│ MODE LIBRE → Instructions création  │
-│              + Expert Skills        │
-└─────────────────────────────────────┘
-
-Nouveau:
-┌─────────────────────────────────────┐
-│ MODE CLONE → Instructions clonage   │
-│              + Expert Skills TYPO   │
-│ MODE LIBRE → Instructions création  │
-│              + Expert Skills        │
-└─────────────────────────────────────┘
+```
+generate-image/
+├── index.ts → Construit le prompt avec buildProfessionalPrompt()
+└── expertSkills.ts → Profils par domaine (Corporate, Surréaliste, Spirituel, Restaurant, YouTube)
+                    └── buildExpertSkillsPrompt() → Injecte les règles spécifiques
 ```
 
-### Volet 2 : Ajouter Menu de Téléchargement Multi-Format
+## Solution : Nouvelle Couche "Fondamentaux"
 
-Créer un composant `DownloadMenu` avec :
-- Bouton principal qui ouvre un menu déroulant
-- Options : PNG (haute qualité), JPEG (léger), PDF (impression)
-- Conversion côté client pour PDF (canvas to PDF)
+Je propose de créer un nouveau fichier `professionalStandards.ts` qui contiendra les règles UNIVERSELLES, et de les injecter AVANT les règles spécifiques par domaine.
 
-### Volet 3 : Améliorer les Instructions Clone pour Qualité Pro
+```text
+Flux actuel:
+[Prompt utilisateur] → [Règles domaine] → Génération
 
-Renforcer les instructions de clonage pour garantir :
-- Typographie stylisée (pas de texte brut)
-- Effets 3D, dégradés, glow sur les titres
-- Layouts avec courbes et formes professionnelles
+Nouveau flux:
+[Prompt utilisateur] → [FONDAMENTAUX GRAPHISME] → [Règles domaine] → Génération
+```
 
 ---
 
 ## Modifications Techniques
 
-### Fichier 1 : `supabase/functions/generate-image/index.ts`
+### Fichier 1 : Nouveau fichier `supabase/functions/generate-image/professionalStandards.ts`
 
-**Modification A** : Injecter les Expert Skills en mode clone aussi
+Ce fichier contiendra les règles fondamentales condensées (pour respecter la limite de caractères du prompt) :
 
 ```typescript
-// Dans buildProfessionalPrompt, ligne ~196
-if (isCloneMode || hasReferenceImage) {
-  instructions.push("🚨 MODE ÉDITION: Tu MODIFIES l'image de référence...");
-  // ... instructions clonage existantes ...
+// ============================================================================
+// STANDARDS PROFESSIONNELS DU GRAPHISME - RÈGLES FONDAMENTALES
+// ============================================================================
+// Ces règles UNIVERSELLES s'appliquent à TOUS les designs, tous domaines confondus
+// Inspiré des standards de l'industrie graphique professionnelle
+// ============================================================================
+
+export interface ProfessionalStandard {
+  id: string;
+  name: string;
+  rules: string[];
+}
+
+// Les 7 Piliers du Design - Version condensée
+export const DESIGN_PILLARS: ProfessionalStandard = {
+  id: "design_pillars",
+  name: "7 Piliers du Design",
+  rules: [
+    "HIÉRARCHIE: Élément principal 20-25% surface, secondaire 15-18%, tertiaire 8-12%",
+    "HIÉRARCHIE: Ratio taille entre niveaux 5:2:1 minimum, titre 2x plus grand que sous-titre",
+    "CONTRASTE: Ratio minimum 3:1 (taille), Bold (700-900) vs Light (300-400)",
+    "CONTRASTE: Différences DRAMATIQUES jamais subtiles - évident au premier coup d'œil",
+    "ALIGNEMENT: Grille 12 colonnes invisible, espacement multiples de 10px",
+    "ALIGNEMENT: Interligne 120-150% taille police, JAMAIS d'éléments flottants",
+    "RÉPÉTITION: Éléments similaires = style identique (taille, police, coins arrondis, ombres)",
+    "PROPORTION: Golden Ratio 1:1.618, division 60/40 ou 70/30, règle des tiers",
+    "MOUVEMENT: Parcours Z ou F, guide l'œil: Accroche→Titre→Sous-titre→Détails→CTA→Contact",
+    "ESPACE BLANC: 30-50% de la composition DOIT rester vide, marges min 5%",
+  ],
+};
+
+// Standards Typographiques - Version condensée
+export const TYPOGRAPHY_STANDARDS: ProfessionalStandard = {
+  id: "typography",
+  name: "Standards Typographiques",
+  rules: [
+    "MAX 2-3 polices: 1 titre (Sans-serif BOLD), 1 corps (Serif/Sans regular), 1 accent (Script)",
+    "INTERDITS: Comic Sans, Papyrus, polices fantaisie illisibles, 4+ polices",
+    "TAILLES: Titre 50-80pt, Sous-titre 24-36pt, Corps min 14pt, Footer 10-12pt",
+    "RATIO: Titre vs Sous-titre min 2:1, Sous-titre vs Corps min 1.5:1",
+    "MAJUSCULES: +5 à +10% espacement lettres obligatoire",
+    "LONGUEUR LIGNE: 40-60 caractères optimal, max 80, diviser si trop long",
+    "ALIGNEMENT: Corps texte TOUJOURS gauche, JAMAIS centrer paragraphes longs",
+  ],
+};
+
+// Règle des couleurs - Version condensée
+export const COLOR_STANDARDS: ProfessionalStandard = {
+  id: "colors",
+  name: "Standards Couleurs",
+  rules: [
+    "RÈGLE 60-30-10: Dominante 60%, Accent primaire 30%, Highlight 10%",
+    "MAX 3-5 couleurs totales (neutrales incluses), au-delà = chaos visuel",
+    "HARMONIES: Monochromatique, Analogique, Complémentaire, Triadique",
+    "CONTRASTES WCAG: Texte normal min 4.5:1, Texte large min 3:1",
+    "PSYCHOLOGIE: Rouge=urgence, Bleu=confiance, Vert=nature, Jaune=optimisme",
+    "PSYCHOLOGIE: Orange=énergie, Violet=luxe, Noir=élégance, Blanc=pureté",
+  ],
+};
+
+// Règles Images et Éléments - Version condensée
+export const IMAGE_STANDARDS: ProfessionalStandard = {
+  id: "images",
+  name: "Standards Images",
+  rules: [
+    "RÉSOLUTION: 300 DPI minimum impression, JAMAIS pixelisé ou flouté",
+    "PROPORTIONS: JAMAIS étirer une image, maintenir ratio original",
+    "PHOTOS: Haute qualité uniquement, regard vers contenu ou spectateur",
+    "COINS ARRONDIS: Cohérence 15-25px partout (moderne) ou 0px (classique)",
+    "OMBRES: Direction unique 135°, flou 15-30px, opacité 15-30%",
+    "BORDURES: Épaisseur cohérente 1-3px (fine) ou 4-6px (moyenne)",
+  ],
+};
+
+// Checklist Qualité - Version condensée
+export const QA_CHECKLIST: ProfessionalStandard = {
+  id: "qa",
+  name: "Checklist Qualité",
+  rules: [
+    "✓ Message compris en moins de 3 secondes ?",
+    "✓ Hiérarchie visuelle immédiatement claire ?",
+    "✓ 30-50% d'espace blanc respecté ?",
+    "✓ Tous éléments alignés sur grille invisible ?",
+    "✓ Maximum 3-4 couleurs utilisées ?",
+    "✓ Contraste texte/fond suffisant (4.5:1) ?",
+    "✓ Aucune image pixelisée ou étirée ?",
+    "✓ CTA clair et visible ?",
+  ],
+};
+
+// Erreurs Fatales - Version condensée
+export const FATAL_ERRORS: ProfessionalStandard = {
+  id: "errors",
+  name: "Erreurs Fatales Interdites",
+  rules: [
+    "🚫 JAMAIS étirer une image (distorsion)",
+    "🚫 JAMAIS 4+ polices différentes",
+    "🚫 JAMAIS texte < 14pt corps",
+    "🚫 JAMAIS contraste < 4.5:1 texte normal",
+    "🚫 JAMAIS < 30% espace blanc",
+    "🚫 JAMAIS images pixelisées ou floues",
+    "🚫 JAMAIS marges < 5%",
+    "🚫 JAMAIS centrer longs paragraphes",
+    "🚫 JAMAIS ombres directions différentes",
+    "🚫 JAMAIS éléments non-alignés sur grille",
+  ],
+};
+
+/**
+ * Génère le prompt des standards professionnels
+ * Version ULTRA-CONDENSÉE pour respecter les limites de tokens
+ */
+export function buildProfessionalStandardsPrompt(): string {
+  const lines: string[] = [];
   
-  // NOUVEAU: Injecter les compétences expertes AUSSI en mode clone
-  // pour garantir une qualité typographique professionnelle
-  const detectedDomain = detectDomainFromPrompt(userPrompt);
-  console.log(`Expert skills (clone mode): Domain "${detectedDomain}"`);
+  lines.push("═══ 🎓 STANDARDS GRAPHISTE PROFESSIONNEL (15+ ANS EXPÉRIENCE) ═══");
+  lines.push("");
   
-  // Extraire seulement les règles de typographie et effets du profil expert
-  const profile = getExpertProfileForDomain(detectedDomain);
-  instructions.push("");
-  instructions.push("━━━ 🎨 QUALITÉ TYPOGRAPHIQUE PROFESSIONNELLE ━━━");
-  profile.typography.forEach(rule => instructions.push(`   • ${rule}`));
-  instructions.push("");
-  instructions.push("━━━ ✨ EFFETS & FINITIONS PREMIUM ━━━");
-  profile.effects.slice(0, 5).forEach(rule => instructions.push(`   • ${rule}`));
-  instructions.push("");
-  instructions.push("⚠️ APPLIQUER ces règles au contenu de l'utilisateur, pas au template.");
+  // Piliers du design (sélection des plus critiques)
+  lines.push("【HIÉRARCHIE】Titre 2x+ sous-titre | Ratio 5:2:1 | Point d'entrée haut-gauche");
+  lines.push("【CONTRASTE】Dramatique, jamais subtil | Bold vs Light | Ratio 3:1 tailles");
+  lines.push("【ALIGNEMENT】Grille 12 colonnes | Espacement ×10px | Jamais flottant");
+  lines.push("【ESPACE BLANC】30-50% obligatoire | Marges ≥5% | Respiration visuelle");
+  lines.push("【PROPORTION】Golden Ratio 1:1.618 | Règle des tiers | 60/40 ou 70/30");
+  lines.push("");
+  
+  // Typographie critique
+  lines.push("【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux");
+  lines.push("【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement");
+  lines.push("");
+  
+  // Couleurs critique
+  lines.push("【COULEURS】Règle 60-30-10 | Max 3-5 couleurs | Contraste WCAG 4.5:1");
+  lines.push("");
+  
+  // Erreurs critiques (les plus importantes)
+  lines.push("【INTERDIT】Étirer images | 4+ polices | Texte <14pt | Marges <5% | Pas grille");
+  lines.push("");
+  
+  return lines.join("\n");
+}
+
+/**
+ * Version complète pour logs/debug uniquement
+ */
+export function getFullStandardsForDebug(): string {
+  const all = [
+    DESIGN_PILLARS,
+    TYPOGRAPHY_STANDARDS,
+    COLOR_STANDARDS,
+    IMAGE_STANDARDS,
+    QA_CHECKLIST,
+    FATAL_ERRORS,
+  ];
+  
+  return all.map(std => `\n${std.name}:\n${std.rules.join("\n")}`).join("\n");
 }
 ```
 
-**Modification B** : Ajouter des instructions spécifiques pour le rendu professionnel
+### Fichier 2 : Modification de `supabase/functions/generate-image/index.ts`
+
+Importer et injecter les standards professionnels au DÉBUT du prompt :
 
 ```typescript
-// Après les instructions de clonage
-instructions.push("━━━ 🎯 RENDU PROFESSIONNEL OBLIGATOIRE ━━━");
-instructions.push("TYPOGRAPHIE: Jamais de texte brut/basique. Toujours stylisé:");
-instructions.push("   • Titres avec effets 3D, dégradés, ou glow");
-instructions.push("   • Bordures/contours pour lisibilité");
-instructions.push("   • Hiérarchie visuelle claire (tailles variées)");
-instructions.push("LAYOUT: Formes organiques et courbes professionnelles:");
-instructions.push("   • Bandeaux avec coins arrondis ou formes dynamiques");
-instructions.push("   • Zones de texte avec fonds stylisés");
-instructions.push("   • Éléments décoratifs (lignes, motifs, particules)");
+// Ligne ~3 - Nouvel import
+import { buildProfessionalStandardsPrompt } from "./professionalStandards.ts";
+
+// Dans buildProfessionalPrompt(), après la déclaration de instructions[]
+// Ligne ~195, AVANT le mode édition/création
+
+// ====== STANDARDS PROFESSIONNELS UNIVERSELS ======
+const professionalStandards = buildProfessionalStandardsPrompt();
+instructions.push(professionalStandards);
 ```
 
-### Fichier 2 : `src/pages/AppPage.tsx`
+### Fichier 3 : Modification de `supabase/functions/generate-image/expertSkills.ts`
 
-**Modification A** : Remplacer le bouton de téléchargement par un menu déroulant
+Ajouter une référence aux standards professionnels dans le header de chaque profil :
 
 ```typescript
-// Importer les composants nécessaires
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// Dans buildExpertSkillsPrompt(), après le header
+// Ligne ~700
 
-// Nouvelle fonction handleDownloadWithFormat
-const handleDownloadWithFormat = async (format: 'png' | 'jpeg' | 'pdf') => {
-  const imageToDownload = generatedImage || selectedHistoryImage?.imageUrl;
-  const imageId = feedbackImageId || selectedHistoryImage?.id;
-  
-  if (!imageToDownload) return;
-  
-  try {
-    // Fetch the image as blob
-    const response = await fetch(imageToDownload, { mode: 'cors' });
-    const blob = await response.blob();
-    
-    if (format === 'pdf') {
-      // Convert to PDF using canvas
-      await downloadAsPdf(blob);
-    } else if (format === 'jpeg') {
-      // Convert PNG to JPEG for smaller file size
-      await downloadAsJpeg(blob);
-    } else {
-      // Download as PNG (original quality)
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `graphiste-gpt-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    }
-    
-    // Mark as downloaded
-    if (imageId) {
-      await markAsDownloaded({ id: imageId });
-    }
-    
-    toast.success(`Image téléchargée en ${format.toUpperCase()} !`);
-  } catch (error) {
-    console.error("Download error:", error);
-    toast.error("Erreur lors du téléchargement");
-  }
-};
-
-// Fonction pour télécharger en JPEG
-const downloadAsJpeg = async (pngBlob: Blob) => {
-  const img = new Image();
-  const blobUrl = URL.createObjectURL(pngBlob);
-  
-  return new Promise<void>((resolve, reject) => {
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      
-      if (ctx) {
-        // Fill with white background (JPEG doesn't support transparency)
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        
-        canvas.toBlob((jpegBlob) => {
-          if (jpegBlob) {
-            const jpegUrl = URL.createObjectURL(jpegBlob);
-            const link = document.createElement('a');
-            link.href = jpegUrl;
-            link.download = `graphiste-gpt-${Date.now()}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(jpegUrl);
-            resolve();
-          } else {
-            reject(new Error("Failed to convert to JPEG"));
-          }
-        }, 'image/jpeg', 0.92);
-      }
-      
-      URL.revokeObjectURL(blobUrl);
-    };
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = blobUrl;
-  });
-};
-
-// Fonction pour télécharger en PDF
-const downloadAsPdf = async (imageBlob: Blob) => {
-  const img = new Image();
-  const blobUrl = URL.createObjectURL(imageBlob);
-  
-  return new Promise<void>((resolve, reject) => {
-    img.onload = () => {
-      // Créer un canvas à la taille de l'image
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        
-        // Créer le PDF en utilisant une approche simple
-        // Calculer les dimensions en mm (A4 = 210x297mm, A3 = 297x420mm)
-        const aspectRatio = img.width / img.height;
-        let pageWidth = 210; // A4 width in mm
-        let pageHeight = pageWidth / aspectRatio;
-        
-        // Si trop haut, inverser la logique
-        if (pageHeight > 297) {
-          pageHeight = 297;
-          pageWidth = pageHeight * aspectRatio;
-        }
-        
-        // Utiliser jsPDF-like approach avec dataURL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-        
-        // Créer un PDF simple en utilisant une iframe pour l'impression
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>Graphiste GPT - Affiche</title>
-              <style>
-                @page { size: auto; margin: 0; }
-                body { margin: 0; padding: 0; }
-                img { 
-                  width: 100%; 
-                  height: auto; 
-                  max-width: 100vw;
-                  max-height: 100vh;
-                  object-fit: contain;
-                }
-              </style>
-            </head>
-            <body>
-              <img src="${dataUrl}" />
-              <script>
-                window.onload = function() {
-                  window.print();
-                  setTimeout(function() { window.close(); }, 100);
-                }
-              </script>
-            </body>
-            </html>
-          `);
-          printWindow.document.close();
-        }
-        
-        resolve();
-      }
-      
-      URL.revokeObjectURL(blobUrl);
-    };
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = blobUrl;
-  });
-};
-```
-
-**Modification B** : Remplacer le bouton par un DropdownMenu
-
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold">
-      <Download className="w-4 h-4 mr-2" />
-      Télécharger
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent align="end" className="w-48">
-    <DropdownMenuItem onClick={() => handleDownloadWithFormat('png')}>
-      <FileImage className="w-4 h-4 mr-2" />
-      PNG (Haute qualité)
-    </DropdownMenuItem>
-    <DropdownMenuItem onClick={() => handleDownloadWithFormat('jpeg')}>
-      <FileImage className="w-4 h-4 mr-2" />
-      JPEG (Fichier léger)
-    </DropdownMenuItem>
-    <DropdownMenuItem onClick={() => handleDownloadWithFormat('pdf')}>
-      <FileText className="w-4 h-4 mr-2" />
-      PDF (Impression)
-    </DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-### Fichier 3 : `supabase/functions/generate-image/expertSkills.ts`
-
-**Modification** : Exporter la fonction `getExpertProfileForDomain` pour l'utiliser dans index.ts
-
-```typescript
-// La fonction existe déjà, juste s'assurer qu'elle est exportée
-export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
-  // ... code existant ...
-}
+lines.push("⚠️ APPLIQUER EN PLUS: Les standards professionnels universels ci-dessus.");
+lines.push("Ces règles spécifiques au domaine COMPLÈTENT les fondamentaux.");
+lines.push("");
 ```
 
 ---
 
-## Flux Amélioré
+## Structure Finale du Prompt
 
+Après modifications, le prompt sera structuré ainsi :
+
+```text
+═══ 🎓 STANDARDS GRAPHISTE PROFESSIONNEL (15+ ANS EXPÉRIENCE) ═══
+
+【HIÉRARCHIE】Titre 2x+ sous-titre | Ratio 5:2:1 | Point d'entrée haut-gauche
+【CONTRASTE】Dramatique, jamais subtil | Bold vs Light | Ratio 3:1 tailles
+【ALIGNEMENT】Grille 12 colonnes | Espacement ×10px | Jamais flottant
+【ESPACE BLANC】30-50% obligatoire | Marges ≥5% | Respiration visuelle
+【PROPORTION】Golden Ratio 1:1.618 | Règle des tiers | 60/40 ou 70/30
+
+【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux
+【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement
+
+【COULEURS】Règle 60-30-10 | Max 3-5 couleurs | Contraste WCAG 4.5:1
+
+【INTERDIT】Étirer images | 4+ polices | Texte <14pt | Marges <5% | Pas grille
+
+--- [MODE ÉDITION ou CRÉATION selon contexte] ---
+
+╔═══════════════════════════════════════════════════════════════════════╗
+║  🎓 COMPÉTENCES GRAPHISTE EXPERT - [PROFIL DOMAINE]                   ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+[Règles spécifiques au domaine: composition, typo, couleurs, effets...]
+
+=== CONTENU CLIENT ===
+[Demande de l'utilisateur]
 ```
-Utilisateur sans image de référence:
-
-1. Écrit: "Affiche pour mon restaurant La Saveur, promo poulet 3000 FCFA"
-
-2. Système DÉTECTE:
-   - Domaine: restaurant
-   - Éléments: titre, prix, contact (si fourni)
-
-3. Système SÉLECTIONNE automatiquement un template restaurant
-   → isAutoSelectedTemplate = true
-   → isCloneMode = true
-
-4. GÉNÉRATION avec:
-   ✅ Instructions de clonage (garder layout, remplacer contenu)
-   ✅ Compétences Expert Restaurant (typographie élégante, effets vapeur...)
-   ✅ Détection contextuelle (si template mal adapté)
-   ✅ Règle 60-30-10 pour les couleurs
-   ✅ Zéro espace vide
-   ✅ Rendu professionnel obligatoire
-
-5. Téléchargement:
-   - Clic sur "Télécharger"
-   - Menu: PNG | JPEG | PDF
-   - Téléchargement direct (pas d'ouverture dans un onglet)
-```
 
 ---
 
-## Résumé des Modifications
+## Optimisation de la Taille
 
-| Fichier | Modification | Impact |
-|---------|--------------|--------|
-| `generate-image/index.ts` | Injecter Expert Skills en mode clone | Qualité pro pour toutes les générations |
-| `generate-image/expertSkills.ts` | Export de `getExpertProfileForDomain` | Accès aux profils depuis index.ts |
-| `AppPage.tsx` | Menu de téléchargement multi-format | PNG, JPEG, PDF disponibles |
-| `AppPage.tsx` | Fonctions de conversion | JPEG (via canvas), PDF (via print) |
+Le document original fait environ **15 000 caractères**. Pour respecter la limite de ~5000 caractères du prompt total, j'ai :
 
----
+1. **Condensé** les 7 piliers en 5 lignes ultra-denses avec notation `【】`
+2. **Fusionné** les règles similaires avec séparateurs `|`
+3. **Priorisé** les règles les plus critiques (impact maximal)
+4. **Supprimé** les explications détaillées (gardé uniquement les directives)
 
-## Considération Technique : PDF
-
-Pour le PDF, deux approches sont possibles :
-
-1. **Approche Print (implémentée)** : Ouvre une fenêtre avec l'image et déclenche l'impression. L'utilisateur peut "enregistrer en PDF" via le système d'impression.
-
-2. **Approche jsPDF (alternative)** : Nécessite l'ajout d'une dépendance `jspdf`. Plus propre mais ajoute ~200KB au bundle.
-
-L'approche Print est proposée car elle ne nécessite pas de dépendance supplémentaire et fonctionne sur tous les navigateurs.
+La version condensée fait environ **800 caractères** - suffisamment compact pour s'intégrer sans dépasser les limites.
 
 ---
 
-## Impact Attendu
+## Récapitulatif des Modifications
 
-### Qualité des Affiches
-- Typographie stylisée même en mode clone (effets 3D, glow, dégradés)
-- Layouts professionnels avec courbes et formes organiques
-- Compétences expertes appliquées à TOUTES les générations
+| Fichier | Action | Impact |
+|---------|--------|--------|
+| `professionalStandards.ts` | Créer | Nouveau fichier avec règles fondamentales |
+| `index.ts` | Modifier | Import + injection au début du prompt |
+| `expertSkills.ts` | Modifier | Référence aux standards dans profils |
 
-### Téléchargement
-- Téléchargement direct et automatique (pas d'ouverture d'onglet)
-- Choix du format : PNG, JPEG ou PDF
-- Conversion côté client (pas de charge serveur)
+---
+
+## Bénéfices Attendus
+
+- **Qualité constante** : Chaque affiche respecte les 7 piliers du design
+- **Professionnalisme** : Standards de l'industrie graphique appliqués systématiquement
+- **Cohérence** : Règles universelles + spécifiques par domaine
+- **Lisibilité** : Contrastes WCAG, tailles minimales, espacement optimal
+- **Harmonie** : Golden Ratio, règle des tiers, proportions équilibrées
+
