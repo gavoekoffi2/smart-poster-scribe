@@ -366,6 +366,132 @@ function simpleExtractInfo(text: string): ExtractedInfo {
   return extractedInfo;
 }
 
+// Interface pour les zones de texte du template
+interface TemplateTextZone {
+  type: string;
+  content: string;
+  position?: string;
+}
+
+// Vérifie quelles zones de texte du template n'ont pas de remplacement fourni par l'utilisateur
+function checkMissingTextZones(
+  templateZones: TemplateTextZone[],
+  userInfo: ExtractedInfo,
+  userMessage: string
+): TemplateTextZone[] {
+  const missing: TemplateTextZone[] = [];
+  const lowerMessage = userMessage.toLowerCase();
+  
+  for (const zone of templateZones) {
+    // Ignorer les zones illisibles ou vides
+    if (!zone.content || zone.content === "[illisible]" || zone.content.trim() === "") {
+      continue;
+    }
+    
+    // Vérifier si l'utilisateur a fourni un remplacement pour ce type de zone
+    let hasReplacement = false;
+    
+    switch (zone.type) {
+      case "title":
+        hasReplacement = !!(userInfo.title && userInfo.title.trim().length > 0);
+        break;
+      case "subtitle":
+      case "slogan":
+      case "tagline":
+        // Ces zones sont couvertes par le titre, description ou additionalDetails
+        hasReplacement = !!(
+          userInfo.title ||
+          userInfo.additionalDetails ||
+          lowerMessage.includes("sous-titre") ||
+          lowerMessage.includes("slogan")
+        );
+        break;
+      case "date":
+      case "time":
+        hasReplacement = !!(userInfo.dates && userInfo.dates.trim().length > 0);
+        break;
+      case "location":
+        hasReplacement = !!(userInfo.location && userInfo.location.trim().length > 0);
+        break;
+      case "contact":
+        hasReplacement = !!(userInfo.contact && userInfo.contact.trim().length > 0);
+        break;
+      case "price":
+        hasReplacement = !!(userInfo.prices && userInfo.prices.trim().length > 0);
+        break;
+      case "speaker":
+        hasReplacement = !!(
+          userInfo.speakers ||
+          lowerMessage.includes("orateur") ||
+          lowerMessage.includes("artiste") ||
+          lowerMessage.includes("invité") ||
+          lowerMessage.includes("pasteur") ||
+          lowerMessage.includes("évêque") ||
+          lowerMessage.includes("bishop")
+        );
+        break;
+      case "organizer":
+        hasReplacement = !!(
+          userInfo.organizer ||
+          lowerMessage.includes("organisateur") ||
+          lowerMessage.includes("organisé par") ||
+          lowerMessage.includes("présenté par")
+        );
+        break;
+      case "social":
+        // Les réseaux sociaux sont optionnels, on les ignore si pas fournis
+        hasReplacement = true;
+        break;
+      default:
+        // Pour les autres types, vérifier si mentionné dans additionalDetails ou le message
+        hasReplacement = !!(
+          userInfo.additionalDetails ||
+          lowerMessage.includes(zone.content.toLowerCase().slice(0, 10))
+        );
+    }
+    
+    if (!hasReplacement) {
+      missing.push(zone);
+    }
+  }
+  
+  return missing;
+}
+
+// Construit le message pour demander confirmation des zones manquantes
+function buildMissingZonesQuestion(missingZones: TemplateTextZone[]): string {
+  let message = `⚠️ **Attention !** J'ai remarqué que l'affiche originale contient des éléments que vous n'avez pas fournis :\n\n`;
+  
+  // Regrouper par type pour un affichage plus clair
+  const typeLabels: Record<string, string> = {
+    title: "Titre",
+    subtitle: "Sous-titre",
+    slogan: "Slogan/Accroche",
+    tagline: "Phrase d'accroche",
+    date: "Date",
+    time: "Heure",
+    location: "Lieu/Adresse",
+    contact: "Contact",
+    price: "Prix/Tarif",
+    speaker: "Orateur/Artiste",
+    organizer: "Organisateur",
+    social: "Réseaux sociaux",
+    other: "Autre texte",
+  };
+  
+  for (const zone of missingZones) {
+    const label = typeLabels[zone.type] || zone.type;
+    const content = zone.content.length > 50 ? zone.content.slice(0, 50) + "..." : zone.content;
+    message += `• **${label}**: "${content}"\n`;
+  }
+  
+  message += `\n📌 **Que souhaitez-vous faire ?**\n`;
+  message += `- **Fournir** les informations manquantes (écrivez-les ci-dessous)\n`;
+  message += `- **Supprimer** ces zones de l'affiche finale (tapez "supprimer" ou "continuer sans")\n`;
+  
+  return message;
+}
+
 interface CloneTemplateData {
   id: string;
   imageUrl: string;
@@ -1354,7 +1480,32 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             extractedInfo = simpleExtractInfo(content);
           }
           
-          // Stocker les infos et passer à la sélection des couleurs
+          // ========== VÉRIFICATION DES ZONES MANQUANTES ==========
+          // Comparer les zones de texte du template avec ce que l'utilisateur a fourni
+          const templateAnalysis = conversationStateRef.current.templateAnalysis;
+          const templateTextZones = templateAnalysis?.textZones || [];
+          
+          if (templateTextZones.length > 0) {
+            const missingZones = checkMissingTextZones(templateTextZones, extractedInfo, content);
+            
+            if (missingZones.length > 0) {
+              // Stocker les infos déjà collectées et les zones manquantes
+              setConversationState(prev => ({
+                ...prev,
+                step: "confirm_missing_zones",
+                extractedInfo: extractedInfo,
+                description: content,
+                missingTextZones: missingZones,
+              }));
+              
+              // Construire le message listant les zones manquantes
+              const missingMessage = buildMissingZonesQuestion(missingZones);
+              addMessage("assistant", missingMessage);
+              return;
+            }
+          }
+          
+          // Pas de zones manquantes, passer directement aux couleurs
           setConversationState(prev => ({
             ...prev,
             step: "colors",
@@ -1379,6 +1530,80 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           }));
           
           addMessage("assistant", "Parfait ! 🎨 Choisissez une palette de couleurs pour votre affiche :");
+        }
+        return;
+      }
+      
+      // Handle confirmation of missing zones - user provides additional info or confirms deletion
+      if (step === "confirm_missing_zones") {
+        const lowerContent = content.toLowerCase().trim();
+        const isDelete = ["supprimer", "supprime", "effacer", "efface", "enlever", "enlève", "retirer", "retire", "sans", "pas besoin", "non", "continuer sans", "passer"].some(w => lowerContent.includes(w));
+        
+        if (isDelete) {
+          // L'utilisateur veut supprimer les zones manquantes
+          setConversationState(prev => ({
+            ...prev,
+            step: "colors",
+            // Marquer que les zones manquantes doivent être effacées
+            zonesToDelete: prev.missingTextZones || [],
+          }));
+          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées de l'affiche. 🎨 Choisissez maintenant une palette de couleurs :");
+        } else {
+          // L'utilisateur fournit des informations supplémentaires
+          // Analyser le nouveau contenu et fusionner avec les infos existantes
+          addLoadingMessage();
+          setIsProcessing(true);
+          
+          try {
+            const { data } = await supabase.functions.invoke("analyze-request", {
+              body: { userText: content },
+            });
+            
+            removeLoadingMessage();
+            setIsProcessing(false);
+            
+            let additionalInfo: ExtractedInfo = {};
+            if (data?.success && data.analysis?.extractedInfo) {
+              additionalInfo = data.analysis.extractedInfo;
+            } else {
+              additionalInfo = simpleExtractInfo(content);
+            }
+            
+            // Fusionner avec les infos existantes
+            const mergedInfo = {
+              ...conversationStateRef.current.extractedInfo,
+              ...additionalInfo,
+              additionalDetails: [
+                conversationStateRef.current.extractedInfo?.additionalDetails,
+                content
+              ].filter(Boolean).join(". "),
+            };
+            
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
+              extractedInfo: mergedInfo,
+              description: [prev.description, content].filter(Boolean).join("\n"),
+            }));
+            
+            addMessage("assistant", "Merci pour ces informations ! 🎨 Choisissez maintenant une palette de couleurs :");
+          } catch (err) {
+            removeLoadingMessage();
+            setIsProcessing(false);
+            
+            // Fusionner manuellement
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
+              extractedInfo: {
+                ...prev.extractedInfo,
+                additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
+              },
+              description: [prev.description, content].filter(Boolean).join("\n"),
+            }));
+            
+            addMessage("assistant", "Informations ajoutées ! 🎨 Choisissez une palette de couleurs :");
+          }
         }
         return;
       }

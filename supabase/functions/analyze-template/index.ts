@@ -264,9 +264,11 @@ function getDefaultAnalysis(domain?: string): TemplateAnalysisResult {
   };
 }
 
-// Prompt OPTIMISÉ pour l'analyse rapide des templates (version simplifiée pour la vitesse)
+// Prompt OPTIMISÉ pour l'analyse EXHAUSTIVE des templates - extraction de TOUS les textes
 function getEnhancedAnalysisPrompt(): string {
-  return `Tu es un expert graphiste. Analyse RAPIDEMENT cette affiche publicitaire.
+  return `Tu es un expert graphiste. Analyse cette affiche publicitaire de manière EXHAUSTIVE.
+
+🎯 MISSION CRITIQUE: Extraire le contenu EXACT de CHAQUE zone de texte visible.
 
 RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
@@ -275,7 +277,7 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
     "peopleCount": [nombre de personnes visibles],
     "peopleDescriptions": ["description courte de chaque personne"],
     "logoCount": [nombre de logos],
-    "logoPositions": ["position de chaque logo"],
+    "logoPositions": ["position de chaque logo: top-left, top-center, top-right, middle-left, center, middle-right, bottom-left, bottom-center, bottom-right"],
     "hasPhoneNumber": true/false,
     "hasEmail": true/false,
     "hasAddress": true/false,
@@ -285,26 +287,101 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
     "hasSocialIcons": true/false,
     "socialPlatforms": ["nom des plateformes visibles"],
     "productCount": [nombre de produits],
-    "textZones": [{"type": "title/subtitle/date/contact/price/other", "content": "texte détecté"}]
+    "textZones": [
+      {
+        "type": "title",
+        "content": "[TEXTE EXACT du titre principal - copier mot pour mot]",
+        "position": "position sur l'affiche"
+      },
+      {
+        "type": "subtitle",
+        "content": "[TEXTE EXACT du sous-titre ou slogan - copier mot pour mot]",
+        "position": "position"
+      },
+      {
+        "type": "date",
+        "content": "[DATE EXACTE visible - ex: '15 JANVIER 2025']",
+        "position": "position"
+      },
+      {
+        "type": "time",
+        "content": "[HEURE EXACTE visible - ex: 'À PARTIR DE 20H']",
+        "position": "position"
+      },
+      {
+        "type": "location",
+        "content": "[LIEU/ADRESSE EXACT - copier mot pour mot]",
+        "position": "position"
+      },
+      {
+        "type": "contact",
+        "content": "[NUMÉRO/EMAIL EXACT - ex: '+237 6XX XX XX XX']",
+        "position": "position"
+      },
+      {
+        "type": "price",
+        "content": "[PRIX EXACT - ex: '5000 FCFA']",
+        "position": "position"
+      },
+      {
+        "type": "speaker",
+        "content": "[NOM EXACT de l'orateur/artiste/invité]",
+        "position": "position"
+      },
+      {
+        "type": "slogan",
+        "content": "[SLOGAN ou phrase d'accroche EXACTE]",
+        "position": "position"
+      },
+      {
+        "type": "tagline",
+        "content": "[Phrase secondaire, accroche marketing]",
+        "position": "position"
+      },
+      {
+        "type": "organizer",
+        "content": "[Nom de l'organisateur/église/entreprise]",
+        "position": "position"
+      },
+      {
+        "type": "social",
+        "content": "[Handles réseaux sociaux - ex: '@moncompte']",
+        "position": "position"
+      },
+      {
+        "type": "other",
+        "content": "[Tout autre texte visible non catégorisé]",
+        "position": "position"
+      }
+    ]
   },
   "requiredQuestions": [],
-  "templateDescription": "Description courte du style et layout",
-  "suggestedPrompt": "Instruction courte pour reproduire ce design"
-}`;
+  "templateDescription": "Description du style visuel et de la mise en page",
+  "suggestedPrompt": "Instruction pour reproduire ce design"
 }
 
-// Prompt OPTIMISÉ pour l'analyse de miniatures YouTube (version rapide)
+⚠️ RÈGLES CRITIQUES POUR textZones:
+1. Lister CHAQUE zone de texte visible, même les petites
+2. Copier le contenu EXACT (mot pour mot, chiffre pour chiffre)
+3. Ne pas inventer - si tu ne peux pas lire, mettre "[illisible]"
+4. Inclure les accroches, slogans, phrases secondaires (type "slogan" ou "tagline")
+5. Positions valides: top-left, top-center, top-right, middle-left, center, middle-right, bottom-left, bottom-center, bottom-right`;
+}
+
+// Prompt OPTIMISÉ pour l'analyse EXHAUSTIVE de miniatures YouTube
 function getYouTubeAnalysisPrompt(): string {
-  return `Tu es un expert en miniatures YouTube. Analyse RAPIDEMENT cette miniature.
+  return `Tu es un expert en miniatures YouTube. Analyse cette miniature de manière EXHAUSTIVE.
+
+🎯 MISSION: Extraire le contenu EXACT de CHAQUE élément textuel visible.
 
 RÉPONDS EN JSON STRICT (pas de texte avant/après):
 
 {
   "detectedElements": {
-    "peopleCount": 1,
-    "peopleDescriptions": ["description du créateur"],
-    "logoCount": 0,
-    "logoPositions": [],
+    "peopleCount": [nombre de personnes],
+    "peopleDescriptions": ["description détaillée de chaque personne: pose, expression, vêtements"],
+    "logoCount": [nombre de logos],
+    "logoPositions": ["position de chaque logo"],
     "hasPhoneNumber": false,
     "hasEmail": false,
     "hasAddress": false,
@@ -313,23 +390,49 @@ RÉPONDS EN JSON STRICT (pas de texte avant/après):
     "hasPrice": false,
     "hasSocialIcons": false,
     "socialPlatforms": [],
-    "productCount": 0,
-    "textZones": [{"type": "title", "content": "texte principal"}],
+    "productCount": [nombre d'objets/produits],
+    "textZones": [
+      {
+        "type": "title",
+        "content": "[TEXTE PRINCIPAL EXACT de la miniature]",
+        "position": "position"
+      },
+      {
+        "type": "subtitle",
+        "content": "[TEXTE SECONDAIRE EXACT si présent]",
+        "position": "position"
+      },
+      {
+        "type": "tagline",
+        "content": "[Accroche ou phrase choc]",
+        "position": "position"
+      },
+      {
+        "type": "other",
+        "content": "[Tout autre texte visible]",
+        "position": "position"
+      }
+    ],
     "hasExpressiveFace": true/false,
-    "faceExpression": "surprise/joie/concentration",
+    "faceExpression": "surprise/joie/concentration/choc/excitation",
     "hasText": true/false,
     "hasSymbolicObjects": true/false,
-    "objects": ["argent", "téléphone", etc.]
+    "objects": ["liste des objets symboliques: argent, téléphone, voiture, etc."]
   },
   "youtubeAnalysis": {
     "viralScore": "élevé/moyen/faible",
-    "mainColorScheme": ["#couleur1", "#couleur2"],
-    "saturationLevel": "hyper-saturée/normale",
-    "compositionStyle": "centré/asymétrique",
-    "suggestedStagingOptions": ["option1", "option2"]
+    "mainColorScheme": ["#couleur1", "#couleur2", "#couleur3"],
+    "saturationLevel": "hyper-saturée/saturée/normale",
+    "compositionStyle": "centré/asymétrique/rule-of-thirds",
+    "suggestedStagingOptions": ["option de mise en scène 1", "option 2", "option 3"]
   },
   "requiredQuestions": [],
-  "templateDescription": "Description courte du style",
-  "suggestedPrompt": "Instruction pour reproduire"
-}`;
+  "templateDescription": "Description détaillée du style visuel",
+  "suggestedPrompt": "Instructions pour reproduire ce style de miniature"
+}
+
+⚠️ RÈGLES POUR textZones:
+1. Copier le texte EXACTEMENT comme affiché
+2. Inclure TOUS les textes visibles, même petits
+3. Spécifier la position de chaque texte`;
 }
