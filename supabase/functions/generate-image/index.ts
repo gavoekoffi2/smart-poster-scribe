@@ -518,28 +518,24 @@ serve(async (req) => {
     
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      // Créer un client avec le token de l'utilisateur pour vérifier son identité
-      const userSupabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      });
       
-      // Utiliser getClaims pour valider le JWT (plus fiable que getUser)
-      const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token);
-      
-      if (!claimsError && claimsData?.claims?.sub) {
-        userId = claimsData.claims.sub as string;
-        console.log("Authenticated user via claims:", userId);
-      } else {
-        // Fallback vers getUser si getClaims échoue
-        console.log("getClaims failed, trying getUser:", claimsError?.message);
+      try {
+        // Créer un client avec le token de l'utilisateur pour vérifier son identité
+        const userSupabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey, {
+          global: { headers: { Authorization: `Bearer ${token}` } }
+        });
+        
+        // Utiliser getUser pour valider le JWT
         const { data: { user }, error: authError } = await userSupabase.auth.getUser();
         
         if (!authError && user) {
           userId = user.id;
-          console.log("Authenticated user via getUser:", userId);
+          console.log("Authenticated user:", userId);
         } else {
           console.log("Auth error or no user:", authError?.message);
         }
+      } catch (authException) {
+        console.error("Auth exception:", authException);
       }
     }
 
