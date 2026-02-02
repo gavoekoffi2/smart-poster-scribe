@@ -193,12 +193,29 @@ function buildProfessionalPrompt({
 }): string {
   const instructions: string[] = [];
 
-  // ====== MODE ÉDITION/CLONAGE (CONDENSÉ) ======
+  // Détecter le domaine pour les compétences expertes
+  const detectedDomain = detectDomainFromPrompt(userPrompt);
+  console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+
+  // ====== MODE ÉDITION/CLONAGE (AVEC EXPERT SKILLS) ======
   if (isCloneMode || hasReferenceImage) {
     instructions.push("🚨 MODE ÉDITION: Tu MODIFIES l'image de référence, tu ne crées PAS de nouveau design.");
     instructions.push("GARDER: composition, style, effets, mise en page IDENTIQUES au template.");
     instructions.push("REMPLACER: textes→contenu client, visages→photos client (si fournis), logos→logos client.");
     instructions.push("SUPPRIMER: éléments du template non remplacés par le client (ne pas inventer).");
+    instructions.push("");
+    
+    // NOUVEAU: Injecter les compétences expertes AUSSI en mode clone
+    instructions.push("━━━ 🎨 QUALITÉ TYPOGRAPHIQUE PROFESSIONNELLE ━━━");
+    instructions.push("TYPOGRAPHIE: Jamais de texte brut/basique. Toujours stylisé:");
+    instructions.push("   • Titres avec effets 3D, dégradés, glow ou ombres portées");
+    instructions.push("   • Bordures/contours colorés pour lisibilité maximale");
+    instructions.push("   • Hiérarchie visuelle claire (tailles variées, graisses différentes)");
+    instructions.push("LAYOUT: Formes organiques et courbes professionnelles:");
+    instructions.push("   • Bandeaux avec coins arrondis ou formes dynamiques");
+    instructions.push("   • Zones de texte avec fonds stylisés (dégradés, overlays)");
+    instructions.push("   • Éléments décoratifs (lignes, motifs, particules)");
+    instructions.push("⚠️ APPLIQUER ces règles au contenu de l'utilisateur, pas au template.");
     instructions.push("");
   } else {
     // ====== MODE CRÉATION LIBRE (CONDENSÉ) ======
@@ -210,9 +227,7 @@ function buildProfessionalPrompt({
     instructions.push("PERSONNAGES: Africains authentiques, expressions engageantes.");
     instructions.push("");
     
-    // Injection des compétences spécifiques au domaine
-    const detectedDomain = detectDomainFromPrompt(userPrompt);
-    console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+    // Injection des compétences spécifiques au domaine (mode création libre)
     const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
     instructions.push(expertSkillsPrompt);
     instructions.push("");
