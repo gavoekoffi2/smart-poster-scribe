@@ -22,6 +22,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDomainQuestions, getNextQuestion, domainHasQuestions, DomainQuestion } from "@/config/domainQuestions";
+import { detectContextMismatch, getDomainLabel as getContextDomainLabel } from "@/utils/contextDetection";
 
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
@@ -1480,12 +1481,35 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             extractedInfo = simpleExtractInfo(content);
           }
           
-          // ========== VÉRIFICATION DES ZONES MANQUANTES ==========
-          // Comparer les zones de texte du template avec ce que l'utilisateur a fourni
+          // ========== VÉRIFICATION DES INCOHÉRENCES CONTEXTUELLES ==========
+          // Détecter si des zones du template ne correspondent pas au domaine de l'utilisateur
           const templateAnalysis = conversationStateRef.current.templateAnalysis;
           const templateTextZones = templateAnalysis?.textZones || [];
+          const userDomain = conversationStateRef.current.domain;
           
-          if (templateTextZones.length > 0) {
+          if (templateTextZones.length > 0 && userDomain) {
+            // D'abord vérifier les incohérences contextuelles
+            const { mismatchedZones, message: mismatchMessage } = detectContextMismatch(
+              templateTextZones as TemplateTextZone[],
+              userDomain,
+              content
+            );
+            
+            if (mismatchedZones.length > 0) {
+              // Stocker les zones incohérentes et demander confirmation
+              setConversationState(prev => ({
+                ...prev,
+                step: "confirm_context_mismatch",
+                contextMismatchZones: mismatchedZones,
+                extractedInfo: extractedInfo,
+                description: content,
+              }));
+              
+              addMessage("assistant", mismatchMessage);
+              return;
+            }
+            
+            // Ensuite vérifier les zones manquantes (sans incohérence contextuelle)
             const missingZones = checkMissingTextZones(templateTextZones, extractedInfo, content);
             
             if (missingZones.length > 0) {
@@ -1505,7 +1529,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             }
           }
           
-          // Pas de zones manquantes, passer directement aux couleurs
+          // Pas de zones manquantes ni incohérences, passer directement aux couleurs
           setConversationState(prev => ({
             ...prev,
             step: "colors",
@@ -1530,6 +1554,84 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           }));
           
           addMessage("assistant", "Parfait ! 🎨 Choisissez une palette de couleurs pour votre affiche :");
+        }
+        return;
+      }
+      
+      // Handle confirmation of context mismatch - zones that don't match the user's domain
+      if (step === "confirm_context_mismatch") {
+        const lowerContent = content.toLowerCase().trim();
+        const isDelete = ["supprimer", "supprime", "effacer", "efface", "enlever", "enlève", "retirer", "retire", "oui", "yes", "ok", "d'accord"].some(w => lowerContent.includes(w));
+        
+        if (isDelete) {
+          // L'utilisateur veut supprimer les zones hors contexte
+          const contextMismatchZones = conversationStateRef.current.contextMismatchZones || [];
+          const existingZonesToDelete = conversationStateRef.current.zonesToDelete || [];
+          
+          setConversationState(prev => ({
+            ...prev,
+            step: "colors",
+            // Ajouter les zones hors contexte à la liste des zones à effacer
+            zonesToDelete: [...existingZonesToDelete, ...contextMismatchZones],
+          }));
+          addMessage("assistant", "Compris ! Ces zones hors contexte seront supprimées de l'affiche et le layout sera adapté. 🎨 Choisissez maintenant une palette de couleurs :");
+        } else {
+          // L'utilisateur fournit des remplacements pour les zones hors contexte
+          addLoadingMessage();
+          setIsProcessing(true);
+          
+          try {
+            const { data } = await supabase.functions.invoke("analyze-request", {
+              body: { userText: content },
+            });
+            
+            removeLoadingMessage();
+            setIsProcessing(false);
+            
+            let additionalInfo: ExtractedInfo = {};
+            if (data?.success && data.analysis?.extractedInfo) {
+              additionalInfo = data.analysis.extractedInfo;
+            } else {
+              additionalInfo = simpleExtractInfo(content);
+            }
+            
+            // Fusionner avec les infos existantes
+            const mergedInfo = {
+              ...conversationStateRef.current.extractedInfo,
+              ...additionalInfo,
+              additionalDetails: [
+                conversationStateRef.current.extractedInfo?.additionalDetails,
+                content
+              ].filter(Boolean).join(". "),
+            };
+            
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
+              extractedInfo: mergedInfo,
+              description: [prev.description, content].filter(Boolean).join("\n"),
+              // Effacer les zones hors contexte car l'utilisateur a fourni des remplacements
+              contextMismatchZones: [],
+            }));
+            
+            addMessage("assistant", "Merci pour ces remplacements ! 🎨 Choisissez maintenant une palette de couleurs :");
+          } catch (err) {
+            removeLoadingMessage();
+            setIsProcessing(false);
+            
+            // Fusionner manuellement
+            setConversationState(prev => ({
+              ...prev,
+              step: "colors",
+              extractedInfo: {
+                ...prev.extractedInfo,
+                additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
+              },
+              description: [prev.description, content].filter(Boolean).join("\n"),
+            }));
+            
+            addMessage("assistant", "Informations ajoutées ! 🎨 Choisissez une palette de couleurs :");
+          }
         }
         return;
       }

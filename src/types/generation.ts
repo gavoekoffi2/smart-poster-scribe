@@ -359,7 +359,8 @@ export interface ConversationState {
     | "template_questions" // Questions personnalisées basées sur le template
     | "clone_gathering" // Collecte des informations en un seul message pour le clonage
     | "missing_elements" // Questions sur les éléments manquants (photos, logos, etc.)
-    | "confirm_missing_zones"; // Confirmation des zones de texte manquantes
+    | "confirm_missing_zones" // Confirmation des zones de texte manquantes
+    | "confirm_context_mismatch"; // Confirmation des zones hors contexte (ex: frais d'inscription sur affiche de service)
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
@@ -406,4 +407,6 @@ export interface ConversationState {
   missingTextZones?: Array<{ type: string; content: string; position?: string }>;
   // Zones qui doivent être explicitement supprimées de l'affiche finale
   zonesToDelete?: Array<{ type: string; content: string; position?: string }>;
+  // Zones hors contexte détectées (ex: frais d'inscription sur une affiche de service)
+  contextMismatchZones?: Array<{ type: string; content: string; position?: string }>;
 }

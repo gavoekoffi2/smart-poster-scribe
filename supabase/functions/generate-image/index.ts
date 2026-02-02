@@ -490,6 +490,43 @@ function buildProfessionalPrompt({
     instructions.push("   → Si quelqu'un regarde l'affiche, il ne doit voir AUCUNE trace");
     instructions.push("   → de l'ancienne affiche, seulement les informations du nouveau client.");
     instructions.push("");
+    
+    // ====== ADAPTATION INTELLIGENTE DU LAYOUT ======
+    instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
+    instructions.push("║  📐 ADAPTATION INTELLIGENTE DU LAYOUT                                 ║");
+    instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
+    instructions.push("");
+    instructions.push("🎯 SI DES ZONES SONT SUPPRIMÉES (pas de contenu de remplacement) :");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("1. REDISTRIBUTION DU CONTENU:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   • NE LAISSE PAS de zones vides visibles");
+    instructions.push("   • Répartis le contenu de l'utilisateur dans les zones restantes");
+    instructions.push("   • Agrandis les textes existants si besoin pour remplir l'espace");
+    instructions.push("   • Utilise des éléments décoratifs du style original pour combler");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("2. AJUSTEMENT DES FORMES:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   • Si un bandeau de texte est supprimé → Étendre le bandeau voisin");
+    instructions.push("   • Si une zone de prix est supprimée → Utiliser l'espace pour le titre");
+    instructions.push("   • Maintenir l'équilibre visuel du design");
+    instructions.push("   • Les formes décoratives peuvent être étendues/réduites");
+    instructions.push("");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("3. PRÉSERVER L'ESSENCE GRAPHIQUE:");
+    instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    instructions.push("   ✓ Le STYLE graphique reste identique (effets, textures, ambiance)");
+    instructions.push("   ✓ La COMPOSITION générale reste reconnaissable");
+    instructions.push("   ✓ Seule la DISTRIBUTION des éléments s'adapte au contenu disponible");
+    instructions.push("");
+    instructions.push("❌ INTERDIT:");
+    instructions.push("   • Laisser des espaces vides flagrants");
+    instructions.push("   • Des bandeaux de texte vides");
+    instructions.push("   • Des zones où on devine qu'il manque quelque chose");
+    instructions.push("   • Un design déséquilibré à cause de suppressions");
+    instructions.push("");
   }
 
   // ====== RÈGLE SUR LE CONTENU UTILISATEUR ======
