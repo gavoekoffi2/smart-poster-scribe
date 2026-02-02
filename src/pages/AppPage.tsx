@@ -23,7 +23,13 @@ import { VisualEditor } from "@/components/editor/VisualEditor";
 import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { GeneratedImage, AspectRatio } from "@/types/generation";
 import { toast } from "sonner";
 interface CreditError {
@@ -233,40 +239,136 @@ export default function AppPage() {
     }
   };
 
-  const handleDownload = async () => {
+  // Fonction pour télécharger en JPEG
+  const downloadAsJpeg = async (pngBlob: Blob): Promise<void> => {
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(pngBlob);
+    
+    return new Promise<void>((resolve, reject) => {
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          
+          canvas.toBlob((jpegBlob) => {
+            if (jpegBlob) {
+              const jpegUrl = URL.createObjectURL(jpegBlob);
+              const link = document.createElement('a');
+              link.href = jpegUrl;
+              link.download = `graphiste-gpt-${Date.now()}.jpg`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(jpegUrl);
+              resolve();
+            } else {
+              reject(new Error("Failed to convert to JPEG"));
+            }
+          }, 'image/jpeg', 0.92);
+        }
+        
+        URL.revokeObjectURL(blobUrl);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = blobUrl;
+    });
+  };
+
+  // Fonction pour télécharger en PDF (via impression)
+  const downloadAsPdf = async (imageBlob: Blob): Promise<void> => {
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(imageBlob);
+    
+    return new Promise<void>((resolve, reject) => {
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+          
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            printWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Graphiste GPT - Affiche</title>
+                <style>
+                  @page { size: auto; margin: 0; }
+                  body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                  img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataUrl}" />
+                <script>
+                  window.onload = function() {
+                    setTimeout(function() { window.print(); }, 300);
+                  }
+                </script>
+              </body>
+              </html>
+            `);
+            printWindow.document.close();
+          }
+          resolve();
+        }
+        URL.revokeObjectURL(blobUrl);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = blobUrl;
+    });
+  };
+
+  const handleDownloadWithFormat = async (format: 'png' | 'jpeg' | 'pdf') => {
     const imageToDownload = generatedImage || selectedHistoryImage?.imageUrl;
     const imageId = feedbackImageId || selectedHistoryImage?.id;
     
-    if (imageToDownload) {
-      try {
-        // Fetch the image as blob to force download (prevents opening in new tab)
-        const response = await fetch(imageToDownload, { mode: 'cors' });
-        const blob = await response.blob();
+    if (!imageToDownload) return;
+    
+    try {
+      const response = await fetch(imageToDownload, { mode: 'cors' });
+      const blob = await response.blob();
+      
+      if (format === 'pdf') {
+        await downloadAsPdf(blob);
+        toast.success("Impression PDF ouverte !");
+      } else if (format === 'jpeg') {
+        await downloadAsJpeg(blob);
+        toast.success("Image téléchargée en JPEG !");
+      } else {
         const blobUrl = URL.createObjectURL(blob);
-        
         const link = document.createElement("a");
         link.href = blobUrl;
         link.download = `graphiste-gpt-${Date.now()}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        // Clean up blob URL
         URL.revokeObjectURL(blobUrl);
-        
-        // Marquer l'image comme téléchargée (pour le showcase)
-        if (imageId) {
-          await markAsDownloaded({ id: imageId });
-        }
-        
-        toast.success("Image téléchargée !");
-      } catch (error) {
-        console.error("Download error:", error);
-        // Fallback: open in new tab if fetch fails
-        window.open(imageToDownload, "_blank");
-        toast.info("L'image s'ouvre dans un nouvel onglet");
+        toast.success("Image téléchargée en PNG !");
       }
+      
+      if (imageId) {
+        await markAsDownloaded({ id: imageId });
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Erreur lors du téléchargement");
     }
+  };
+
+  const handleDownload = async () => {
+    await handleDownloadWithFormat('png');
   };
 
   const { step } = conversationState;
@@ -729,15 +831,32 @@ export default function AppPage() {
                         <Pencil className="w-4 h-4 mr-2" />
                         Éditer
                       </Button>
-                      <Button 
-                        onClick={handleDownload} 
-                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Télécharger
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Télécharger
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleDownloadWithFormat('png')}>
+                            <FileImage className="w-4 h-4 mr-2" />
+                            PNG (Haute qualité)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadWithFormat('jpeg')}>
+                            <FileImage className="w-4 h-4 mr-2" />
+                            JPEG (Fichier léger)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownloadWithFormat('pdf')}>
+                            <FileText className="w-4 h-4 mr-2" />
+                            PDF (Impression)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    
                     {/* Inline Feedback Widget */}
                     {feedbackImageId && (
                       <InlineFeedbackWidget 
