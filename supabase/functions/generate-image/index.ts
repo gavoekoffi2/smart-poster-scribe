@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectDomainFromPrompt, buildExpertSkillsPrompt } from "./expertSkills.ts";
+import { buildProfessionalStandardsPrompt } from "./professionalStandards.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,6 +193,11 @@ function buildProfessionalPrompt({
   isCloneMode?: boolean;
 }): string {
   const instructions: string[] = [];
+
+  // ====== STANDARDS PROFESSIONNELS UNIVERSELS ======
+  // Ces règles fondamentales s'appliquent à TOUS les designs
+  const professionalStandards = buildProfessionalStandardsPrompt();
+  instructions.push(professionalStandards);
 
   // Détecter le domaine pour les compétences expertes
   const detectedDomain = detectDomainFromPrompt(userPrompt);
