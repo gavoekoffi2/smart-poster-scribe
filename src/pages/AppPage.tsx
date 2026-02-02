@@ -337,14 +337,90 @@ export default function AppPage() {
     if (!imageToDownload) return;
     
     try {
-      const response = await fetch(imageToDownload, { mode: 'cors' });
-      const blob = await response.blob();
+      // Essayer d'abord avec fetch + blob
+      let blob: Blob | null = null;
+      
+      try {
+        const response = await fetch(imageToDownload, { 
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Accept': 'image/*'
+          }
+        });
+        if (response.ok) {
+          blob = await response.blob();
+        }
+      } catch (fetchError) {
+        console.log("Direct fetch failed, trying alternative method:", fetchError);
+      }
+      
+      // Si fetch a échoué ou CORS bloqué, utiliser une approche alternative
+      if (!blob) {
+        // Créer un canvas avec l'image pour contourner CORS
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              
+              if (ctx) {
+                // Fond blanc pour JPEG
+                if (format === 'jpeg') {
+                  ctx.fillStyle = '#FFFFFF';
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob((canvasBlob) => {
+                  if (canvasBlob) {
+                    blob = canvasBlob;
+                    resolve();
+                  } else {
+                    reject(new Error("Canvas to blob failed"));
+                  }
+                }, format === 'jpeg' ? 'image/jpeg' : 'image/png', 0.92);
+              } else {
+                reject(new Error("No canvas context"));
+              }
+            } catch (canvasError) {
+              reject(canvasError);
+            }
+          };
+          img.onerror = () => reject(new Error("Image load failed"));
+          img.src = imageToDownload;
+        });
+      }
+      
+      if (!blob) {
+        // Dernier recours: ouvrir dans un nouvel onglet
+        window.open(imageToDownload, '_blank');
+        toast.info("Image ouverte dans un nouvel onglet. Clic droit → Enregistrer l'image.");
+        return;
+      }
       
       if (format === 'pdf') {
         await downloadAsPdf(blob);
         toast.success("Impression PDF ouverte !");
       } else if (format === 'jpeg') {
-        await downloadAsJpeg(blob);
+        // Si le blob n'est pas déjà JPEG, convertir
+        if (blob.type !== 'image/jpeg') {
+          await downloadAsJpeg(blob);
+        } else {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = `graphiste-gpt-${Date.now()}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }
         toast.success("Image téléchargée en JPEG !");
       } else {
         const blobUrl = URL.createObjectURL(blob);
@@ -363,7 +439,9 @@ export default function AppPage() {
       }
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Erreur lors du téléchargement");
+      // Fallback final: ouvrir dans un nouvel onglet
+      window.open(imageToDownload, '_blank');
+      toast.info("Image ouverte dans un nouvel onglet. Clic droit → Enregistrer l'image.");
     }
   };
 
