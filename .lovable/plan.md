@@ -1,352 +1,394 @@
 
+# Plan : Application des Règles aux Créations Libres + Téléchargement Multi-Format
 
-# Plan : Détection des Objets/Icônes Hors Contexte et Renforcement des Layouts
+## Contexte
 
-## Problèmes Identifiés
+L'utilisateur a demandé 3 améliorations :
 
-L'utilisateur a relevé deux problèmes persistants :
+1. **Appliquer toutes les règles aux créations libres** : Quand l'utilisateur n'a pas d'image de référence, le système sélectionne automatiquement un template. Les règles de détection contextuelle, remplacement de couleurs, suppression des objets hors contexte et adaptation du layout doivent s'appliquer à ces cas aussi.
 
-### 1. Objets/Icônes Hors Contexte Non Supprimés
-- Quand un utilisateur utilise un template d'un domaine différent, les **objets et icônes** spécifiques à ce domaine restent sur l'affiche finale
-- Exemples : icônes de formation (diplôme, livre) sur une affiche de service, icônes d'église (croix, bible) sur une affiche restaurant
-- La détection actuelle (`detectContextMismatch`) ne gère que les **zones de texte**, pas les éléments visuels
+2. **Améliorer la qualité des affiches sans template** : S'inspirer de tous les templates de la base pour créer des designs professionnels avec typographie stylisée et layouts bien designés.
 
-### 2. Layouts Vides Persistants
-- Malgré les instructions existantes, certains bandeaux restent visibles mais vides
-- L'adaptation du layout ne fonctionne pas assez bien quand des zones sont supprimées
+3. **Téléchargement automatique avec formats multiples** : Le téléchargement doit être direct (pas d'ouverture dans un nouvel onglet) et proposer PNG, JPEG et PDF.
 
 ---
 
-## Solution en 3 Volets
+## Analyse Actuelle
 
-### Volet 1 : Extraction des Objets/Icônes dans l'Analyse
+### Ce qui fonctionne
+- Le système sélectionne automatiquement un template si aucun n'est fourni (`isAutoSelectedTemplate = true`)
+- Les templates auto-sélectionnés sont traités comme du clonage (`isCloneMode = true`)
+- Le téléchargement est déjà automatique via blob (pas d'ouverture dans un nouvel onglet)
 
-Modifier `analyze-template/index.ts` pour extraire les objets et icônes détectés sur le template :
-- Icônes de réseaux sociaux
-- Symboles spécifiques au domaine (croix, bible, diplôme, fourchette, etc.)
-- Éléments décoratifs contextuels (billets, téléphones, voitures pour YouTube)
+### Ce qui manque
+- **Les Expert Skills ne sont PAS injectés en mode clone** : Les règles de typographie professionnelle, composition, et effets ne s'appliquent qu'en mode création libre pure
+- **Pas de détection contextuelle pour les templates auto-sélectionnés** : Les règles de suppression d'objets/textes hors contexte ne sont pas appliquées
+- **Pas de choix de format de téléchargement** : Seulement PNG actuellement
+- **Pas de support PDF** : Nécessite une conversion côté client
 
-### Volet 2 : Étendre la Détection d'Incohérence aux Objets
+---
 
-Modifier `contextDetection.ts` pour inclure une matrice de pertinence **Objet/Icône ↔ Domaine** :
-- Exemples : "croix" → church uniquement, "diplôme" → formation/education, "fourchette" → restaurant
+## Solution Proposée
 
-Si des objets détectés ne correspondent pas au domaine de l'utilisateur, les signaler et proposer leur suppression.
+### Volet 1 : Injecter les Expert Skills en Mode Clone
 
-### Volet 3 : Instructions de Layout Plus Strictes
+Modifier `buildProfessionalPrompt` dans `generate-image/index.ts` pour :
+- Injecter les compétences expertes (typographie, composition, effets) AUSSI en mode clone
+- Appliquer les règles de qualité professionnelle à toutes les générations
 
-Renforcer les instructions dans `generate-image/index.ts` avec une section dédiée aux objets hors contexte et une politique "Zéro Espace Vide" plus explicite.
+```text
+Actuel:
+┌─────────────────────────────────────┐
+│ MODE CLONE → Instructions clonage   │
+│ MODE LIBRE → Instructions création  │
+│              + Expert Skills        │
+└─────────────────────────────────────┘
+
+Nouveau:
+┌─────────────────────────────────────┐
+│ MODE CLONE → Instructions clonage   │
+│              + Expert Skills TYPO   │
+│ MODE LIBRE → Instructions création  │
+│              + Expert Skills        │
+└─────────────────────────────────────┘
+```
+
+### Volet 2 : Ajouter Menu de Téléchargement Multi-Format
+
+Créer un composant `DownloadMenu` avec :
+- Bouton principal qui ouvre un menu déroulant
+- Options : PNG (haute qualité), JPEG (léger), PDF (impression)
+- Conversion côté client pour PDF (canvas to PDF)
+
+### Volet 3 : Améliorer les Instructions Clone pour Qualité Pro
+
+Renforcer les instructions de clonage pour garantir :
+- Typographie stylisée (pas de texte brut)
+- Effets 3D, dégradés, glow sur les titres
+- Layouts avec courbes et formes professionnelles
 
 ---
 
 ## Modifications Techniques
 
-### Fichier 1 : `supabase/functions/analyze-template/index.ts`
+### Fichier 1 : `supabase/functions/generate-image/index.ts`
 
-**Modification A** : Enrichir `DetectedElements` avec les objets/icônes
-
-Ajouter dans l'interface et le prompt d'analyse :
+**Modification A** : Injecter les Expert Skills en mode clone aussi
 
 ```typescript
-// Ajout dans DetectedElements
-decorativeElements?: {
-  icons: string[];       // Liste des icônes détectées (croix, diplôme, fourchette...)
-  symbols: string[];     // Symboles spécifiques (euro, FCFA, %, etc.)
-  domainSpecificItems: string[]; // Objets liés au domaine (bible, micro, assiette...)
-}[];
-```
-
-**Modification B** : Mettre à jour le prompt pour extraire ces éléments
-
-Ajouter dans `getEnhancedAnalysisPrompt()` :
-
-```json
-"decorativeElements": {
-  "icons": ["croix", "bible", "micro", "diplôme", "livre", "fourchette", "couteau"],
-  "symbols": ["€", "FCFA", "%", "★"],
-  "domainSpecificItems": ["chaire", "autel", "tableau noir", "assiette", "verre"]
+// Dans buildProfessionalPrompt, ligne ~196
+if (isCloneMode || hasReferenceImage) {
+  instructions.push("🚨 MODE ÉDITION: Tu MODIFIES l'image de référence...");
+  // ... instructions clonage existantes ...
+  
+  // NOUVEAU: Injecter les compétences expertes AUSSI en mode clone
+  // pour garantir une qualité typographique professionnelle
+  const detectedDomain = detectDomainFromPrompt(userPrompt);
+  console.log(`Expert skills (clone mode): Domain "${detectedDomain}"`);
+  
+  // Extraire seulement les règles de typographie et effets du profil expert
+  const profile = getExpertProfileForDomain(detectedDomain);
+  instructions.push("");
+  instructions.push("━━━ 🎨 QUALITÉ TYPOGRAPHIQUE PROFESSIONNELLE ━━━");
+  profile.typography.forEach(rule => instructions.push(`   • ${rule}`));
+  instructions.push("");
+  instructions.push("━━━ ✨ EFFETS & FINITIONS PREMIUM ━━━");
+  profile.effects.slice(0, 5).forEach(rule => instructions.push(`   • ${rule}`));
+  instructions.push("");
+  instructions.push("⚠️ APPLIQUER ces règles au contenu de l'utilisateur, pas au template.");
 }
 ```
 
-### Fichier 2 : `src/utils/contextDetection.ts`
-
-**Modification A** : Ajouter une interface pour les objets du template
+**Modification B** : Ajouter des instructions spécifiques pour le rendu professionnel
 
 ```typescript
-export interface TemplateDecorativeElement {
-  type: "icon" | "symbol" | "object";
-  name: string;
-  position?: string;
-}
+// Après les instructions de clonage
+instructions.push("━━━ 🎯 RENDU PROFESSIONNEL OBLIGATOIRE ━━━");
+instructions.push("TYPOGRAPHIE: Jamais de texte brut/basique. Toujours stylisé:");
+instructions.push("   • Titres avec effets 3D, dégradés, ou glow");
+instructions.push("   • Bordures/contours pour lisibilité");
+instructions.push("   • Hiérarchie visuelle claire (tailles variées)");
+instructions.push("LAYOUT: Formes organiques et courbes professionnelles:");
+instructions.push("   • Bandeaux avec coins arrondis ou formes dynamiques");
+instructions.push("   • Zones de texte avec fonds stylisés");
+instructions.push("   • Éléments décoratifs (lignes, motifs, particules)");
 ```
 
-**Modification B** : Créer la matrice de pertinence Objet ↔ Domaine
+### Fichier 2 : `src/pages/AppPage.tsx`
+
+**Modification A** : Remplacer le bouton de téléchargement par un menu déroulant
 
 ```typescript
-const OBJECT_DOMAIN_RELEVANCE: Record<string, Domain[]> = {
-  // Objets universels (peuvent apparaître partout)
-  "étoile": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
-  "flèche": ["church", "event", "formation", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "youtube", "education", "other"],
+// Importer les composants nécessaires
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Nouvelle fonction handleDownloadWithFormat
+const handleDownloadWithFormat = async (format: 'png' | 'jpeg' | 'pdf') => {
+  const imageToDownload = generatedImage || selectedHistoryImage?.imageUrl;
+  const imageId = feedbackImageId || selectedHistoryImage?.id;
   
-  // Objets église/spirituel
-  "croix": ["church"],
-  "bible": ["church"],
-  "colombe": ["church"],
-  "bougie": ["church", "event"],
-  "prière": ["church"],
-  "autel": ["church"],
-  "chaire": ["church"],
+  if (!imageToDownload) return;
   
-  // Objets formation/éducation
-  "diplôme": ["formation", "education"],
-  "livre": ["formation", "education", "church"],
-  "tableau": ["formation", "education"],
-  "crayon": ["formation", "education"],
-  "chapeau universitaire": ["formation", "education"],
-  "certificat": ["formation", "education"],
+  try {
+    // Fetch the image as blob
+    const response = await fetch(imageToDownload, { mode: 'cors' });
+    const blob = await response.blob();
+    
+    if (format === 'pdf') {
+      // Convert to PDF using canvas
+      await downloadAsPdf(blob);
+    } else if (format === 'jpeg') {
+      // Convert PNG to JPEG for smaller file size
+      await downloadAsJpeg(blob);
+    } else {
+      // Download as PNG (original quality)
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `graphiste-gpt-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }
+    
+    // Mark as downloaded
+    if (imageId) {
+      await markAsDownloaded({ id: imageId });
+    }
+    
+    toast.success(`Image téléchargée en ${format.toUpperCase()} !`);
+  } catch (error) {
+    console.error("Download error:", error);
+    toast.error("Erreur lors du téléchargement");
+  }
+};
+
+// Fonction pour télécharger en JPEG
+const downloadAsJpeg = async (pngBlob: Blob) => {
+  const img = new Image();
+  const blobUrl = URL.createObjectURL(pngBlob);
   
-  // Objets restaurant
-  "fourchette": ["restaurant"],
-  "couteau": ["restaurant"],
-  "cuillère": ["restaurant"],
-  "assiette": ["restaurant"],
-  "verre": ["restaurant", "event"],
-  "chef": ["restaurant"],
-  "toque": ["restaurant"],
+  return new Promise<void>((resolve, reject) => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill with white background (JPEG doesn't support transparency)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((jpegBlob) => {
+          if (jpegBlob) {
+            const jpegUrl = URL.createObjectURL(jpegBlob);
+            const link = document.createElement('a');
+            link.href = jpegUrl;
+            link.download = `graphiste-gpt-${Date.now()}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(jpegUrl);
+            resolve();
+          } else {
+            reject(new Error("Failed to convert to JPEG"));
+          }
+        }, 'image/jpeg', 0.92);
+      }
+      
+      URL.revokeObjectURL(blobUrl);
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = blobUrl;
+  });
+};
+
+// Fonction pour télécharger en PDF
+const downloadAsPdf = async (imageBlob: Blob) => {
+  const img = new Image();
+  const blobUrl = URL.createObjectURL(imageBlob);
   
-  // Objets musique/événement
-  "micro": ["music", "event", "church"],
-  "note de musique": ["music"],
-  "guitare": ["music"],
-  "platine": ["music"],
-  "casque": ["music", "technology"],
-  
-  // Objets YouTube/Tech
-  "play button": ["youtube"],
-  "bouton play": ["youtube"],
-  "subscribe": ["youtube"],
-  "abonner": ["youtube"],
-  "téléphone": ["youtube", "technology", "other"],
-  "billets": ["youtube", "fashion", "other"],
-  "argent": ["youtube", "fashion", "realestate", "other"],
-  
-  // Objets mode/commerce
-  "vêtement": ["fashion"],
-  "sac": ["fashion"],
-  "chaussure": ["fashion"],
-  "étiquette prix": ["fashion", "restaurant", "other"],
-  
-  // Objets santé
-  "stéthoscope": ["health"],
-  "coeur": ["health", "church", "event"],
-  "médicament": ["health"],
-  "croix médicale": ["health"],
-  
-  // Objets immobilier
-  "maison": ["realestate"],
-  "clé": ["realestate"],
-  "plan": ["realestate"],
-  
-  // Objets sport
-  "ballon": ["sport"],
-  "trophée": ["sport", "event"],
-  "médaille": ["sport", "formation"],
+  return new Promise<void>((resolve, reject) => {
+    img.onload = () => {
+      // Créer un canvas à la taille de l'image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        
+        // Créer le PDF en utilisant une approche simple
+        // Calculer les dimensions en mm (A4 = 210x297mm, A3 = 297x420mm)
+        const aspectRatio = img.width / img.height;
+        let pageWidth = 210; // A4 width in mm
+        let pageHeight = pageWidth / aspectRatio;
+        
+        // Si trop haut, inverser la logique
+        if (pageHeight > 297) {
+          pageHeight = 297;
+          pageWidth = pageHeight * aspectRatio;
+        }
+        
+        // Utiliser jsPDF-like approach avec dataURL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        
+        // Créer un PDF simple en utilisant une iframe pour l'impression
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Graphiste GPT - Affiche</title>
+              <style>
+                @page { size: auto; margin: 0; }
+                body { margin: 0; padding: 0; }
+                img { 
+                  width: 100%; 
+                  height: auto; 
+                  max-width: 100vw;
+                  max-height: 100vh;
+                  object-fit: contain;
+                }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" />
+              <script>
+                window.onload = function() {
+                  window.print();
+                  setTimeout(function() { window.close(); }, 100);
+                }
+              </script>
+            </body>
+            </html>
+          `);
+          printWindow.document.close();
+        }
+        
+        resolve();
+      }
+      
+      URL.revokeObjectURL(blobUrl);
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = blobUrl;
+  });
 };
 ```
 
-**Modification C** : Créer `detectObjectMismatch`
+**Modification B** : Remplacer le bouton par un DropdownMenu
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-medium glow-gold">
+      <Download className="w-4 h-4 mr-2" />
+      Télécharger
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent align="end" className="w-48">
+    <DropdownMenuItem onClick={() => handleDownloadWithFormat('png')}>
+      <FileImage className="w-4 h-4 mr-2" />
+      PNG (Haute qualité)
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => handleDownloadWithFormat('jpeg')}>
+      <FileImage className="w-4 h-4 mr-2" />
+      JPEG (Fichier léger)
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => handleDownloadWithFormat('pdf')}>
+      <FileText className="w-4 h-4 mr-2" />
+      PDF (Impression)
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+### Fichier 3 : `supabase/functions/generate-image/expertSkills.ts`
+
+**Modification** : Exporter la fonction `getExpertProfileForDomain` pour l'utiliser dans index.ts
 
 ```typescript
-export function detectObjectMismatch(
-  decorativeElements: TemplateDecorativeElement[],
-  userDomain: Domain | undefined
-): { mismatchedObjects: TemplateDecorativeElement[]; message: string } {
-  if (!userDomain || !decorativeElements?.length) {
-    return { mismatchedObjects: [], message: "" };
-  }
-  
-  const mismatchedObjects: TemplateDecorativeElement[] = [];
-  
-  for (const element of decorativeElements) {
-    const relevantDomains = OBJECT_DOMAIN_RELEVANCE[element.name.toLowerCase()] || [];
-    
-    // Si l'objet a des domaines spécifiques ET que le domaine utilisateur n'en fait pas partie
-    if (relevantDomains.length > 0 && !relevantDomains.includes(userDomain)) {
-      mismatchedObjects.push(element);
-    }
-  }
-  
-  if (mismatchedObjects.length === 0) {
-    return { mismatchedObjects: [], message: "" };
-  }
-  
-  let message = `⚠️ **Objets/Icônes hors contexte détectés !**\n\n`;
-  message += `Ces éléments visuels ne correspondent pas à votre ${getDomainLabel(userDomain)} :\n\n`;
-  
-  for (const obj of mismatchedObjects) {
-    message += `• ${obj.type === "icon" ? "Icône" : "Objet"}: "${obj.name}"\n`;
-  }
-  
-  message += `\n📌 **Ces éléments seront automatiquement supprimés** et remplacés par des éléments appropriés ou laissés vides.\n`;
-  message += `Tapez "ok" pour continuer.`;
-  
-  return { mismatchedObjects, message };
+// La fonction existe déjà, juste s'assurer qu'elle est exportée
+export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
+  // ... code existant ...
 }
 ```
-
-### Fichier 3 : `src/types/generation.ts`
-
-**Modification** : Ajouter les nouveaux champs dans `TemplateAnalysisDetail` et `ConversationState`
-
-```typescript
-export interface TemplateAnalysisDetail {
-  // ... existants ...
-  decorativeElements?: {
-    icons: string[];
-    symbols: string[];
-    domainSpecificItems: string[];
-  };
-}
-
-export interface ConversationState {
-  // ... existants ...
-  mismatchedObjects?: Array<{ type: string; name: string; position?: string }>;
-}
-```
-
-### Fichier 4 : `supabase/functions/generate-image/index.ts`
-
-**Modification A** : Ajouter une section sur les objets/icônes hors contexte
-
-```typescript
-// Après les instructions de couleur
-instructions.push("╔═══════════════════════════════════════════════════════════════════════╗");
-instructions.push("║  🎯 OBJETS ET ICÔNES - SUPPRESSION DES ÉLÉMENTS HORS CONTEXTE         ║");
-instructions.push("╚═══════════════════════════════════════════════════════════════════════╝");
-instructions.push("");
-instructions.push("🚨 RÈGLE ABSOLUE: Les objets/icônes spécifiques au domaine original DOIVENT DISPARAÎTRE.");
-instructions.push("");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("OBJETS À SUPPRIMER (si le domaine ne correspond pas):");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("   ❌ Église: croix, bible, colombe, bougie, autel");
-instructions.push("   ❌ Formation: diplôme, livre, tableau, chapeau universitaire");
-instructions.push("   ❌ Restaurant: fourchette, couteau, assiette, toque de chef");
-instructions.push("   ❌ Musique: micro, note de musique, guitare, platine");
-instructions.push("   ❌ YouTube: bouton play, subscribe, icône abonnement");
-instructions.push("");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("PROCÉDURE DE REMPLACEMENT:");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("   1. IDENTIFIER les icônes/objets spécifiques au domaine original");
-instructions.push("   2. SUPPRIMER complètement ces éléments");
-instructions.push("   3. REMPLACER par:");
-instructions.push("      • Un élément décoratif neutre (forme géométrique, effet de lumière)");
-instructions.push("      • Un agrandissement d'un élément existant du client (logo, texte)");
-instructions.push("      • Un fond harmonieux qui comble l'espace");
-instructions.push("");
-```
-
-**Modification B** : Renforcer les instructions de layout "Zéro Espace Vide"
-
-```typescript
-instructions.push("████████████████████████████████████████████████████████████████████████");
-instructions.push("██  🚨 POLITIQUE ZÉRO ESPACE VIDE - APPLICATION STRICTE              ██");
-instructions.push("████████████████████████████████████████████████████████████████████████");
-instructions.push("");
-instructions.push("⚠️ SI TU SUPPRIMES UNE ZONE (texte, objet, icône), TU DOIS COMBLER L'ESPACE.");
-instructions.push("");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("TECHNIQUES DE COMBLEMENT OBLIGATOIRES:");
-instructions.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-instructions.push("   📌 OPTION 1 - EXTENSION:");
-instructions.push("      • Étendre le bandeau/forme voisin(e) pour couvrir la zone");
-instructions.push("      • Agrandir le texte du client pour occuper plus d'espace");
-instructions.push("      • Élargir une photo ou un logo existant");
-instructions.push("");
-instructions.push("   📌 OPTION 2 - FUSION:");
-instructions.push("      • Fusionner deux zones en une seule plus grande");
-instructions.push("      • Combiner le fond avec la zone supprimée");
-instructions.push("");
-instructions.push("   📌 OPTION 3 - DÉCORATION:");
-instructions.push("      • Ajouter un élément décoratif du style original (forme, motif)");
-instructions.push("      • Étendre un effet de lumière ou de dégradé");
-instructions.push("      • Utiliser un pattern/texture subtile");
-instructions.push("");
-instructions.push("❌ CE QUI EST ABSOLUMENT INTERDIT:");
-instructions.push("   • Un bandeau visible SANS texte");
-instructions.push("   • Une zone rectangulaire vide");
-instructions.push("   • Un espace blanc flagrant là où il y avait du contenu");
-instructions.push("   • Un layout déséquilibré avec des 'trous'");
-instructions.push("");
-instructions.push("🎯 TEST VISUEL: Regarde ton affiche finale. Si tu vois une zone qui semble");
-instructions.push("   'vide' ou 'incomplète', CORRIGE-LA avant de valider.");
-instructions.push("");
-```
-
-### Fichier 5 : `src/hooks/useConversation.ts`
-
-**Modification** : Intégrer la détection d'objets dans le flux
-
-Après l'analyse du template, stocker les éléments décoratifs détectés et vérifier les incohérences avec le domaine utilisateur. Mettre à jour l'état pour inclure `mismatchedObjects` si nécessaire.
 
 ---
 
-## Flux Utilisateur Amélioré
+## Flux Amélioré
 
 ```
-1. Utilisateur clique "S'inspirer" sur un template de FORMATION
-   (contient: diplôme, livre, tableau)
-   
-2. Système analyse → Détecte:
-   - Textes: titre, dates, frais d'inscription, certificat
-   - Objets: diplôme, livre, tableau
-   
-3. Utilisateur écrit:
-   "Affiche pour mon salon de coiffure La Joie"
-   → Domaine détecté: "other" (service)
-   
-4. Système DÉTECTE les incohérences:
-   - Textes hors contexte: "frais d'inscription", "certificat"
-   - Objets hors contexte: "diplôme", "livre", "tableau"
-   
-5. Système INFORME (ou supprime automatiquement):
-   "⚠️ J'ai détecté des éléments de formation sur cette affiche:
-   - Textes: 'frais d'inscription', 'certificat'
-   - Objets: diplôme, livre
-   
-   Ces éléments seront supprimés et l'espace sera adapté.
-   Tapez 'ok' pour continuer."
-   
-6. Génération avec instructions explicites:
-   - SUPPRIMER: diplôme, livre, tableau, frais d'inscription
-   - COMBLER: étendre le logo du client, agrandir le titre
-   - RÉSULTAT: Affiche équilibrée SANS éléments de formation
+Utilisateur sans image de référence:
+
+1. Écrit: "Affiche pour mon restaurant La Saveur, promo poulet 3000 FCFA"
+
+2. Système DÉTECTE:
+   - Domaine: restaurant
+   - Éléments: titre, prix, contact (si fourni)
+
+3. Système SÉLECTIONNE automatiquement un template restaurant
+   → isAutoSelectedTemplate = true
+   → isCloneMode = true
+
+4. GÉNÉRATION avec:
+   ✅ Instructions de clonage (garder layout, remplacer contenu)
+   ✅ Compétences Expert Restaurant (typographie élégante, effets vapeur...)
+   ✅ Détection contextuelle (si template mal adapté)
+   ✅ Règle 60-30-10 pour les couleurs
+   ✅ Zéro espace vide
+   ✅ Rendu professionnel obligatoire
+
+5. Téléchargement:
+   - Clic sur "Télécharger"
+   - Menu: PNG | JPEG | PDF
+   - Téléchargement direct (pas d'ouverture dans un onglet)
 ```
 
 ---
 
 ## Résumé des Modifications
 
-| Fichier | Modification | Lignes estimées |
-|---------|--------------|-----------------|
-| `analyze-template/index.ts` | Extraction des objets/icônes | ~40 lignes |
-| `contextDetection.ts` | Matrice objet ↔ domaine + fonction detection | ~120 lignes |
-| `generate-image/index.ts` | Instructions objets + Zéro Espace Vide renforcé | ~60 lignes |
-| `types/generation.ts` | Nouveaux champs decorativeElements | ~10 lignes |
-| `useConversation.ts` | Intégration détection objets | ~30 lignes |
+| Fichier | Modification | Impact |
+|---------|--------------|--------|
+| `generate-image/index.ts` | Injecter Expert Skills en mode clone | Qualité pro pour toutes les générations |
+| `generate-image/expertSkills.ts` | Export de `getExpertProfileForDomain` | Accès aux profils depuis index.ts |
+| `AppPage.tsx` | Menu de téléchargement multi-format | PNG, JPEG, PDF disponibles |
+| `AppPage.tsx` | Fonctions de conversion | JPEG (via canvas), PDF (via print) |
+
+---
+
+## Considération Technique : PDF
+
+Pour le PDF, deux approches sont possibles :
+
+1. **Approche Print (implémentée)** : Ouvre une fenêtre avec l'image et déclenche l'impression. L'utilisateur peut "enregistrer en PDF" via le système d'impression.
+
+2. **Approche jsPDF (alternative)** : Nécessite l'ajout d'une dépendance `jspdf`. Plus propre mais ajoute ~200KB au bundle.
+
+L'approche Print est proposée car elle ne nécessite pas de dépendance supplémentaire et fonctionne sur tous les navigateurs.
 
 ---
 
 ## Impact Attendu
 
-### Objets/Icônes
-- Les icônes spécifiques au domaine original (croix, diplôme, fourchette) seront identifiées
-- Elles seront soit supprimées automatiquement, soit signalées à l'utilisateur
-- Le prompt de génération inclura des instructions explicites de suppression
+### Qualité des Affiches
+- Typographie stylisée même en mode clone (effets 3D, glow, dégradés)
+- Layouts professionnels avec courbes et formes organiques
+- Compétences expertes appliquées à TOUTES les générations
 
-### Layouts
-- Les instructions de comblement sont plus précises et obligatoires
-- Trois techniques de comblement sont proposées à l'IA
-- Un test visuel final est demandé avant validation
-
+### Téléchargement
+- Téléchargement direct et automatique (pas d'ouverture d'onglet)
+- Choix du format : PNG, JPEG ou PDF
+- Conversion côté client (pas de charge serveur)
