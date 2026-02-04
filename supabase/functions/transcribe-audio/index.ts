@@ -50,6 +50,14 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Bytez API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requêtes atteinte, veuillez patienter quelques secondes." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: "Erreur de transcription. Veuillez réessayer." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
