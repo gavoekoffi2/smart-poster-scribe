@@ -1,301 +1,217 @@
 
+# Plan : Ajout de la Saisie Vocale avec Bytez (Whisper)
 
-# Plan : Intégration des Standards Professionnels de Graphisme
+## Objectif
 
-## Analyse de la Demande
+Ajouter un bouton microphone à côté du champ de saisie permettant aux utilisateurs de **parler au lieu de taper**. L'audio sera envoyé à l'API Bytez qui utilise Whisper pour transcrire.
 
-L'utilisateur a fourni un document exhaustif de **règles fondamentales du graphisme professionnel** qui doivent s'appliquer à TOUTES les affiches générées, peu importe le domaine. Ces règles couvrent :
-
-- **7 Piliers du Design** : Hiérarchie visuelle, Contraste, Alignement, Répétition, Proportion, Mouvement, Espace blanc
-- **Standards Typographiques** : Sélection polices, tailles, espacement, alignement
-- **Systèmes de Grilles** : Grille 12 colonnes, Golden Ratio, Règle des tiers
-- **Théorie des Couleurs** : Règle 60-30-10, Psychologie des couleurs, Harmonies
-- **Standards Qualité** : Résolution, accessibilité WCAG, formats
-- **Checklist QA** : Vérifications avant finalisation
-- **Erreurs Fatales** : 15 interdictions absolues
-
-## Architecture Actuelle
-
-```
-generate-image/
-├── index.ts → Construit le prompt avec buildProfessionalPrompt()
-└── expertSkills.ts → Profils par domaine (Corporate, Surréaliste, Spirituel, Restaurant, YouTube)
-                    └── buildExpertSkillsPrompt() → Injecte les règles spécifiques
-```
-
-## Solution : Nouvelle Couche "Fondamentaux"
-
-Je propose de créer un nouveau fichier `professionalStandards.ts` qui contiendra les règles UNIVERSELLES, et de les injecter AVANT les règles spécifiques par domaine.
+## Flux Utilisateur
 
 ```text
-Flux actuel:
-[Prompt utilisateur] → [Règles domaine] → Génération
-
-Nouveau flux:
-[Prompt utilisateur] → [FONDAMENTAUX GRAPHISME] → [Règles domaine] → Génération
+[Clic sur 🎤] → [Permission micro] → [Enregistrement] → [Clic pour arrêter] → [Envoi à Bytez] → [Texte transcrit dans le champ]
 ```
 
----
-
-## Modifications Techniques
-
-### Fichier 1 : Nouveau fichier `supabase/functions/generate-image/professionalStandards.ts`
-
-Ce fichier contiendra les règles fondamentales condensées (pour respecter la limite de caractères du prompt) :
-
-```typescript
-// ============================================================================
-// STANDARDS PROFESSIONNELS DU GRAPHISME - RÈGLES FONDAMENTALES
-// ============================================================================
-// Ces règles UNIVERSELLES s'appliquent à TOUS les designs, tous domaines confondus
-// Inspiré des standards de l'industrie graphique professionnelle
-// ============================================================================
-
-export interface ProfessionalStandard {
-  id: string;
-  name: string;
-  rules: string[];
-}
-
-// Les 7 Piliers du Design - Version condensée
-export const DESIGN_PILLARS: ProfessionalStandard = {
-  id: "design_pillars",
-  name: "7 Piliers du Design",
-  rules: [
-    "HIÉRARCHIE: Élément principal 20-25% surface, secondaire 15-18%, tertiaire 8-12%",
-    "HIÉRARCHIE: Ratio taille entre niveaux 5:2:1 minimum, titre 2x plus grand que sous-titre",
-    "CONTRASTE: Ratio minimum 3:1 (taille), Bold (700-900) vs Light (300-400)",
-    "CONTRASTE: Différences DRAMATIQUES jamais subtiles - évident au premier coup d'œil",
-    "ALIGNEMENT: Grille 12 colonnes invisible, espacement multiples de 10px",
-    "ALIGNEMENT: Interligne 120-150% taille police, JAMAIS d'éléments flottants",
-    "RÉPÉTITION: Éléments similaires = style identique (taille, police, coins arrondis, ombres)",
-    "PROPORTION: Golden Ratio 1:1.618, division 60/40 ou 70/30, règle des tiers",
-    "MOUVEMENT: Parcours Z ou F, guide l'œil: Accroche→Titre→Sous-titre→Détails→CTA→Contact",
-    "ESPACE BLANC: 30-50% de la composition DOIT rester vide, marges min 5%",
-  ],
-};
-
-// Standards Typographiques - Version condensée
-export const TYPOGRAPHY_STANDARDS: ProfessionalStandard = {
-  id: "typography",
-  name: "Standards Typographiques",
-  rules: [
-    "MAX 2-3 polices: 1 titre (Sans-serif BOLD), 1 corps (Serif/Sans regular), 1 accent (Script)",
-    "INTERDITS: Comic Sans, Papyrus, polices fantaisie illisibles, 4+ polices",
-    "TAILLES: Titre 50-80pt, Sous-titre 24-36pt, Corps min 14pt, Footer 10-12pt",
-    "RATIO: Titre vs Sous-titre min 2:1, Sous-titre vs Corps min 1.5:1",
-    "MAJUSCULES: +5 à +10% espacement lettres obligatoire",
-    "LONGUEUR LIGNE: 40-60 caractères optimal, max 80, diviser si trop long",
-    "ALIGNEMENT: Corps texte TOUJOURS gauche, JAMAIS centrer paragraphes longs",
-  ],
-};
-
-// Règle des couleurs - Version condensée
-export const COLOR_STANDARDS: ProfessionalStandard = {
-  id: "colors",
-  name: "Standards Couleurs",
-  rules: [
-    "RÈGLE 60-30-10: Dominante 60%, Accent primaire 30%, Highlight 10%",
-    "MAX 3-5 couleurs totales (neutrales incluses), au-delà = chaos visuel",
-    "HARMONIES: Monochromatique, Analogique, Complémentaire, Triadique",
-    "CONTRASTES WCAG: Texte normal min 4.5:1, Texte large min 3:1",
-    "PSYCHOLOGIE: Rouge=urgence, Bleu=confiance, Vert=nature, Jaune=optimisme",
-    "PSYCHOLOGIE: Orange=énergie, Violet=luxe, Noir=élégance, Blanc=pureté",
-  ],
-};
-
-// Règles Images et Éléments - Version condensée
-export const IMAGE_STANDARDS: ProfessionalStandard = {
-  id: "images",
-  name: "Standards Images",
-  rules: [
-    "RÉSOLUTION: 300 DPI minimum impression, JAMAIS pixelisé ou flouté",
-    "PROPORTIONS: JAMAIS étirer une image, maintenir ratio original",
-    "PHOTOS: Haute qualité uniquement, regard vers contenu ou spectateur",
-    "COINS ARRONDIS: Cohérence 15-25px partout (moderne) ou 0px (classique)",
-    "OMBRES: Direction unique 135°, flou 15-30px, opacité 15-30%",
-    "BORDURES: Épaisseur cohérente 1-3px (fine) ou 4-6px (moyenne)",
-  ],
-};
-
-// Checklist Qualité - Version condensée
-export const QA_CHECKLIST: ProfessionalStandard = {
-  id: "qa",
-  name: "Checklist Qualité",
-  rules: [
-    "✓ Message compris en moins de 3 secondes ?",
-    "✓ Hiérarchie visuelle immédiatement claire ?",
-    "✓ 30-50% d'espace blanc respecté ?",
-    "✓ Tous éléments alignés sur grille invisible ?",
-    "✓ Maximum 3-4 couleurs utilisées ?",
-    "✓ Contraste texte/fond suffisant (4.5:1) ?",
-    "✓ Aucune image pixelisée ou étirée ?",
-    "✓ CTA clair et visible ?",
-  ],
-};
-
-// Erreurs Fatales - Version condensée
-export const FATAL_ERRORS: ProfessionalStandard = {
-  id: "errors",
-  name: "Erreurs Fatales Interdites",
-  rules: [
-    "🚫 JAMAIS étirer une image (distorsion)",
-    "🚫 JAMAIS 4+ polices différentes",
-    "🚫 JAMAIS texte < 14pt corps",
-    "🚫 JAMAIS contraste < 4.5:1 texte normal",
-    "🚫 JAMAIS < 30% espace blanc",
-    "🚫 JAMAIS images pixelisées ou floues",
-    "🚫 JAMAIS marges < 5%",
-    "🚫 JAMAIS centrer longs paragraphes",
-    "🚫 JAMAIS ombres directions différentes",
-    "🚫 JAMAIS éléments non-alignés sur grille",
-  ],
-};
-
-/**
- * Génère le prompt des standards professionnels
- * Version ULTRA-CONDENSÉE pour respecter les limites de tokens
- */
-export function buildProfessionalStandardsPrompt(): string {
-  const lines: string[] = [];
-  
-  lines.push("═══ 🎓 STANDARDS GRAPHISTE PROFESSIONNEL (15+ ANS EXPÉRIENCE) ═══");
-  lines.push("");
-  
-  // Piliers du design (sélection des plus critiques)
-  lines.push("【HIÉRARCHIE】Titre 2x+ sous-titre | Ratio 5:2:1 | Point d'entrée haut-gauche");
-  lines.push("【CONTRASTE】Dramatique, jamais subtil | Bold vs Light | Ratio 3:1 tailles");
-  lines.push("【ALIGNEMENT】Grille 12 colonnes | Espacement ×10px | Jamais flottant");
-  lines.push("【ESPACE BLANC】30-50% obligatoire | Marges ≥5% | Respiration visuelle");
-  lines.push("【PROPORTION】Golden Ratio 1:1.618 | Règle des tiers | 60/40 ou 70/30");
-  lines.push("");
-  
-  // Typographie critique
-  lines.push("【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux");
-  lines.push("【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement");
-  lines.push("");
-  
-  // Couleurs critique
-  lines.push("【COULEURS】Règle 60-30-10 | Max 3-5 couleurs | Contraste WCAG 4.5:1");
-  lines.push("");
-  
-  // Erreurs critiques (les plus importantes)
-  lines.push("【INTERDIT】Étirer images | 4+ polices | Texte <14pt | Marges <5% | Pas grille");
-  lines.push("");
-  
-  return lines.join("\n");
-}
-
-/**
- * Version complète pour logs/debug uniquement
- */
-export function getFullStandardsForDebug(): string {
-  const all = [
-    DESIGN_PILLARS,
-    TYPOGRAPHY_STANDARDS,
-    COLOR_STANDARDS,
-    IMAGE_STANDARDS,
-    QA_CHECKLIST,
-    FATAL_ERRORS,
-  ];
-  
-  return all.map(std => `\n${std.name}:\n${std.rules.join("\n")}`).join("\n");
-}
-```
-
-### Fichier 2 : Modification de `supabase/functions/generate-image/index.ts`
-
-Importer et injecter les standards professionnels au DÉBUT du prompt :
-
-```typescript
-// Ligne ~3 - Nouvel import
-import { buildProfessionalStandardsPrompt } from "./professionalStandards.ts";
-
-// Dans buildProfessionalPrompt(), après la déclaration de instructions[]
-// Ligne ~195, AVANT le mode édition/création
-
-// ====== STANDARDS PROFESSIONNELS UNIVERSELS ======
-const professionalStandards = buildProfessionalStandardsPrompt();
-instructions.push(professionalStandards);
-```
-
-### Fichier 3 : Modification de `supabase/functions/generate-image/expertSkills.ts`
-
-Ajouter une référence aux standards professionnels dans le header de chaque profil :
-
-```typescript
-// Dans buildExpertSkillsPrompt(), après le header
-// Ligne ~700
-
-lines.push("⚠️ APPLIQUER EN PLUS: Les standards professionnels universels ci-dessus.");
-lines.push("Ces règles spécifiques au domaine COMPLÈTENT les fondamentaux.");
-lines.push("");
-```
-
----
-
-## Structure Finale du Prompt
-
-Après modifications, le prompt sera structuré ainsi :
+## Architecture Technique
 
 ```text
-═══ 🎓 STANDARDS GRAPHISTE PROFESSIONNEL (15+ ANS EXPÉRIENCE) ═══
+┌─────────────────────────────────────────────────────────────────┐
+│  FRONTEND (Navigateur)                                          │
+│                                                                  │
+│  ┌──────────────────┐    ┌──────────────────────────────────┐  │
+│  │ VoiceInputButton │───▶│ Enregistre audio via MediaRecorder│  │
+│  │     (🎤)         │    │ Convertit en base64               │  │
+│  └──────────────────┘    └──────────────────────────────────┘  │
+│            │                                                    │
+│            ▼                                                    │
+│  ┌──────────────────┐                                          │
+│  │ Appel Edge Func  │                                          │
+│  │ transcribe-audio │                                          │
+│  └──────────────────┘                                          │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  EDGE FUNCTION (transcribe-audio)                               │
+│                                                                  │
+│  ┌──────────────────┐    ┌──────────────────────────────────┐  │
+│  │ Reçoit base64    │───▶│ Appelle API Bytez               │  │
+│  │ audio            │    │ POST https://api.bytez.com/...  │  │
+│  └──────────────────┘    └──────────────────────────────────┘  │
+│                                    │                            │
+│                                    ▼                            │
+│                          ┌──────────────────────────────────┐  │
+│                          │ Retourne transcription text      │  │
+│                          └──────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  API BYTEZ                                                      │
+│                                                                  │
+│  Endpoint: https://api.bytez.com/models/v2/openai/whisper-large-v3│
+│  Headers: Authorization: 3cc20df1aa1aa401ea5ea270e3b1bdba      │
+│  Body: { "base64": "data:audio/webm;base64,..." }              │
+│                                                                  │
+│  Response: { "output": "Texte transcrit ici..." }              │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-【HIÉRARCHIE】Titre 2x+ sous-titre | Ratio 5:2:1 | Point d'entrée haut-gauche
-【CONTRASTE】Dramatique, jamais subtil | Bold vs Light | Ratio 3:1 tailles
-【ALIGNEMENT】Grille 12 colonnes | Espacement ×10px | Jamais flottant
-【ESPACE BLANC】30-50% obligatoire | Marges ≥5% | Respiration visuelle
-【PROPORTION】Golden Ratio 1:1.618 | Règle des tiers | 60/40 ou 70/30
+## Fichiers à Créer/Modifier
 
-【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux
-【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement
+| Fichier | Action | Description |
+|---------|--------|-------------|
+| `supabase/functions/transcribe-audio/index.ts` | **Créer** | Edge Function qui appelle l'API Bytez |
+| `src/components/chat/VoiceInputButton.tsx` | **Créer** | Composant bouton microphone |
+| `src/pages/AppPage.tsx` | **Modifier** | Intégrer le bouton dans la zone de saisie |
+| Secrets | **Ajouter** | `BYTEZ_API_KEY` |
 
-【COULEURS】Règle 60-30-10 | Max 3-5 couleurs | Contraste WCAG 4.5:1
+---
 
-【INTERDIT】Étirer images | 4+ polices | Texte <14pt | Marges <5% | Pas grille
+## Détails Techniques
 
---- [MODE ÉDITION ou CRÉATION selon contexte] ---
+### 1. Edge Function : `transcribe-audio/index.ts`
 
-╔═══════════════════════════════════════════════════════════════════════╗
-║  🎓 COMPÉTENCES GRAPHISTE EXPERT - [PROFIL DOMAINE]                   ║
-╚═══════════════════════════════════════════════════════════════════════╝
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-[Règles spécifiques au domaine: composition, typo, couleurs, effets...]
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, ...",
+};
 
-=== CONTENU CLIENT ===
-[Demande de l'utilisateur]
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { audioBase64 } = await req.json();
+    const BYTEZ_API_KEY = Deno.env.get("BYTEZ_API_KEY");
+    
+    if (!BYTEZ_API_KEY) {
+      throw new Error("BYTEZ_API_KEY not configured");
+    }
+
+    console.log("Sending audio to Bytez Whisper API...");
+
+    const response = await fetch(
+      "https://api.bytez.com/models/v2/openai/whisper-large-v3",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": BYTEZ_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          base64: audioBase64,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Bytez API error:", response.status, errorText);
+      throw new Error(`Bytez API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Transcription result:", data.output);
+
+    return new Response(
+      JSON.stringify({ text: data.output }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Transcription error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+```
+
+### 2. Composant : `VoiceInputButton.tsx`
+
+```typescript
+// États du bouton
+type RecordingState = "idle" | "recording" | "processing";
+
+// Fonctionnalités
+- Demande permission microphone au premier clic
+- Enregistre l'audio via MediaRecorder API (format webm)
+- Affiche états visuels (🎤 gris → 🎤 rouge pulsant → ⏳ chargement)
+- Convertit l'audio en base64
+- Appelle l'Edge Function
+- Transmet le texte transcrit au parent via onTranscript callback
+```
+
+### 3. Modification AppPage.tsx (lignes ~697-713)
+
+```tsx
+// Avant
+<div className="flex gap-3">
+  <Input ... />
+  <Button onClick={handleSend} ...>
+    <Send className="w-4 h-4" />
+  </Button>
+</div>
+
+// Après
+<div className="flex gap-3">
+  <Input ... />
+  <VoiceInputButton
+    onTranscript={(text) => setInputValue(prev => 
+      prev ? `${prev} ${text}` : text
+    )}
+    disabled={isProcessing}
+  />
+  <Button onClick={handleSend} ...>
+    <Send className="w-4 h-4" />
+  </Button>
+</div>
 ```
 
 ---
 
-## Optimisation de la Taille
+## Comportement UX
 
-Le document original fait environ **15 000 caractères**. Pour respecter la limite de ~5000 caractères du prompt total, j'ai :
-
-1. **Condensé** les 7 piliers en 5 lignes ultra-denses avec notation `【】`
-2. **Fusionné** les règles similaires avec séparateurs `|`
-3. **Priorisé** les règles les plus critiques (impact maximal)
-4. **Supprimé** les explications détaillées (gardé uniquement les directives)
-
-La version condensée fait environ **800 caractères** - suffisamment compact pour s'intégrer sans dépasser les limites.
-
----
-
-## Récapitulatif des Modifications
-
-| Fichier | Action | Impact |
-|---------|--------|--------|
-| `professionalStandards.ts` | Créer | Nouveau fichier avec règles fondamentales |
-| `index.ts` | Modifier | Import + injection au début du prompt |
-| `expertSkills.ts` | Modifier | Référence aux standards dans profils |
+| État | Icône | Couleur | Action |
+|------|-------|---------|--------|
+| Inactif | 🎤 Mic | Gris | Clic démarre l'enregistrement |
+| Enregistrement | 🎤 Mic | Rouge pulsant | Clic arrête et envoie |
+| Traitement | ⏳ Loader | Orange | Attente transcription |
+| Succès | 🎤 Mic | Vert flash | Texte ajouté au champ |
+| Erreur | 🎤 Mic | Rouge | Toast d'erreur affiché |
 
 ---
 
-## Bénéfices Attendus
+## Gestion des Erreurs
 
-- **Qualité constante** : Chaque affiche respecte les 7 piliers du design
-- **Professionnalisme** : Standards de l'industrie graphique appliqués systématiquement
-- **Cohérence** : Règles universelles + spécifiques par domaine
-- **Lisibilité** : Contrastes WCAG, tailles minimales, espacement optimal
-- **Harmonie** : Golden Ratio, règle des tiers, proportions équilibrées
+| Erreur | Message utilisateur |
+|--------|---------------------|
+| Permission micro refusée | "Veuillez autoriser l'accès au microphone dans les paramètres de votre navigateur" |
+| Échec API Bytez | "Erreur de transcription. Veuillez réessayer." |
+| Audio trop court | "L'enregistrement est trop court. Parlez plus longtemps." |
+| Navigateur non supporté | "Votre navigateur ne supporte pas l'enregistrement audio" |
 
+---
+
+## Configuration Secret
+
+Le secret `BYTEZ_API_KEY` sera ajouté avec la valeur :
+```
+3cc20df1aa1aa401ea5ea270e3b1bdba
+```
+
+---
+
+## Avantages de cette approche
+
+| Aspect | Détail |
+|--------|--------|
+| Simplicité | Pas de bibliothèque externe côté client |
+| Sécurité | Clé API stockée côté serveur uniquement |
+| Compatibilité | MediaRecorder supporté par tous les navigateurs modernes |
+| Qualité | Whisper Large V3 = excellente précision française |
+| Coût | Via votre compte Bytez existant |
