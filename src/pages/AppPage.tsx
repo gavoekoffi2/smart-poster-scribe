@@ -25,6 +25,7 @@ import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown } from "lucide-react";
+import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -702,6 +703,10 @@ export default function AppPage() {
                     onKeyPress={handleKeyPress}
                     disabled={isProcessing}
                     className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
+                  />
+                  <VoiceInputButton
+                    onTranscript={(text) => setInputValue(prev => prev ? `${prev} ${text}` : text)}
+                    disabled={isProcessing}
                   />
                   <Button 
                     onClick={handleSend} 
