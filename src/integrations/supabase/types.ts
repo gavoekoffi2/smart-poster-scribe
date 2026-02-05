@@ -99,6 +99,7 @@ export type Database = {
           prompt: string
           reference_image_url: string | null
           resolution: string
+          showcase_order: number | null
           user_id: string | null
           user_rating: number | null
         }
@@ -118,6 +119,7 @@ export type Database = {
           prompt: string
           reference_image_url?: string | null
           resolution: string
+          showcase_order?: number | null
           user_id?: string | null
           user_rating?: number | null
         }
@@ -137,6 +139,7 @@ export type Database = {
           prompt?: string
           reference_image_url?: string | null
           resolution?: string
+          showcase_order?: number | null
           user_id?: string | null
           user_rating?: number | null
         }
