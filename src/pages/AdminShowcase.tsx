@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, EyeOff, Trash2, Star, Image, RefreshCw } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Trash2, Star, Image, RefreshCw, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ interface ShowcaseImage {
   is_showcase: boolean;
   is_downloaded: boolean | null;
   user_rating: number | null;
+  showcase_order: number;
 }
 
 export default function AdminShowcase() {
@@ -39,11 +40,12 @@ export default function AdminShowcase() {
 
   const fetchImages = async () => {
     try {
-      // Fetch showcase images
+      // Fetch showcase images ordered by showcase_order
       const { data: showcaseData, error: showcaseError } = await supabase
         .from("generated_images")
-        .select("id, image_url, prompt, domain, created_at, is_showcase, is_downloaded, user_rating")
+        .select("id, image_url, prompt, domain, created_at, is_showcase, is_downloaded, user_rating, showcase_order")
         .eq("is_showcase", true)
+        .order("showcase_order", { ascending: true })
         .order("created_at", { ascending: false });
 
       if (showcaseError) throw showcaseError;
@@ -52,7 +54,7 @@ export default function AdminShowcase() {
       // Fetch all recent images (for adding to showcase)
       const { data: allData, error: allError } = await supabase
         .from("generated_images")
-        .select("id, image_url, prompt, domain, created_at, is_showcase, is_downloaded, user_rating")
+        .select("id, image_url, prompt, domain, created_at, is_showcase, is_downloaded, user_rating, showcase_order")
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -68,9 +70,10 @@ export default function AdminShowcase() {
 
   const handleToggleShowcase = async (id: string, currentState: boolean) => {
     try {
+      const newOrder = currentState ? 0 : images.length;
       const { error } = await supabase
         .from("generated_images")
-        .update({ is_showcase: !currentState })
+        .update({ is_showcase: !currentState, showcase_order: newOrder })
         .eq("id", id);
 
       if (error) throw error;
@@ -82,13 +85,13 @@ export default function AdminShowcase() {
           : prev
       );
       setAllImages(prev => 
-        prev.map(img => img.id === id ? { ...img, is_showcase: !currentState } : img)
+        prev.map(img => img.id === id ? { ...img, is_showcase: !currentState, showcase_order: newOrder } : img)
       );
 
       if (!currentState) {
         const addedImage = allImages.find(img => img.id === id);
         if (addedImage) {
-          setImages(prev => [{ ...addedImage, is_showcase: true }, ...prev]);
+          setImages(prev => [...prev, { ...addedImage, is_showcase: true, showcase_order: newOrder }]);
         }
       }
 
@@ -96,6 +99,60 @@ export default function AdminShowcase() {
     } catch (err) {
       console.error("Error toggling showcase:", err);
       toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const handleMoveUp = async (index: number) => {
+    if (index === 0) return;
+    
+    const newImages = [...images];
+    const temp = newImages[index];
+    newImages[index] = newImages[index - 1];
+    newImages[index - 1] = temp;
+    
+    // Update orders
+    newImages[index].showcase_order = index;
+    newImages[index - 1].showcase_order = index - 1;
+    
+    setImages(newImages);
+    
+    try {
+      await Promise.all([
+        supabase.from("generated_images").update({ showcase_order: index }).eq("id", newImages[index].id),
+        supabase.from("generated_images").update({ showcase_order: index - 1 }).eq("id", newImages[index - 1].id),
+      ]);
+      toast.success("Ordre mis à jour");
+    } catch (err) {
+      console.error("Error updating order:", err);
+      toast.error("Erreur lors de la mise à jour de l'ordre");
+      fetchImages(); // Refresh on error
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index === images.length - 1) return;
+    
+    const newImages = [...images];
+    const temp = newImages[index];
+    newImages[index] = newImages[index + 1];
+    newImages[index + 1] = temp;
+    
+    // Update orders
+    newImages[index].showcase_order = index;
+    newImages[index + 1].showcase_order = index + 1;
+    
+    setImages(newImages);
+    
+    try {
+      await Promise.all([
+        supabase.from("generated_images").update({ showcase_order: index }).eq("id", newImages[index].id),
+        supabase.from("generated_images").update({ showcase_order: index + 1 }).eq("id", newImages[index + 1].id),
+      ]);
+      toast.success("Ordre mis à jour");
+    } catch (err) {
+      console.error("Error updating order:", err);
+      toast.error("Erreur lors de la mise à jour de l'ordre");
+      fetchImages();
     }
   };
 
@@ -181,7 +238,7 @@ export default function AdminShowcase() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-yellow-500">
+              <div className="text-2xl font-bold text-primary">
                 {allImages.filter(i => i.user_rating && i.user_rating >= 4).length}
               </div>
               <p className="text-sm text-muted-foreground">Bien notées (4+)</p>
@@ -217,7 +274,7 @@ export default function AdminShowcase() {
 
         {/* Images Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {displayedImages.map((image) => (
+          {displayedImages.map((image, index) => (
             <div
               key={image.id}
               className={`group relative rounded-xl overflow-hidden border-2 transition-all ${
@@ -235,28 +292,25 @@ export default function AdminShowcase() {
                 />
               </div>
 
+              {/* Order number for showcase tab */}
+              {activeTab === "showcase" && (
+                <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                  {index + 1}
+                </div>
+              )}
+
               {/* Badges */}
-              <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+              <div className="absolute top-2 right-2 flex flex-wrap gap-1">
                 <Badge variant="secondary" className="text-xs">
                   {getDomainLabel(image.domain)}
                 </Badge>
                 {image.user_rating && (
                   <Badge variant="outline" className="text-xs bg-background/80 gap-1">
-                    <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    <Star className="h-3 w-3 fill-primary text-primary" />
                     {image.user_rating}
                   </Badge>
                 )}
               </div>
-
-              {/* Showcase badge */}
-              {image.is_showcase && (
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-primary text-primary-foreground text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
-                    Visible
-                  </Badge>
-                </div>
-              )}
 
               {/* Overlay with actions */}
               <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -264,6 +318,31 @@ export default function AdminShowcase() {
                   <p className="text-xs text-foreground line-clamp-2">
                     {image.prompt?.slice(0, 80)}...
                   </p>
+                  
+                  {/* Order controls for showcase */}
+                  {activeTab === "showcase" && (
+                    <div className="flex gap-1 justify-center mb-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleMoveUp(index)}
+                        disabled={index === 0}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleMoveDown(index)}
+                        disabled={index === images.length - 1}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2">
                     <Button
                       size="sm"

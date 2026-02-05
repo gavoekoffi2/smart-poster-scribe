@@ -29,8 +29,9 @@ export function ShowcaseSection() {
       // OU les anciennes images showcase (rétrocompatibilité)
       const { data, error } = await supabase
         .from("generated_images")
-        .select("id, image_url, prompt, domain, created_at, is_downloaded, user_rating")
+        .select("id, image_url, prompt, domain, created_at, is_downloaded, user_rating, showcase_order")
         .eq("is_showcase", true)
+        .order("showcase_order", { ascending: true })
         .order("created_at", { ascending: false })
         .limit(30); // Fetch more to filter
 
