@@ -26,255 +26,26 @@ export function ImagePreview({ image, isGenerating }: ImagePreviewProps) {
     toast.info(`Préparation du téléchargement ${format.toUpperCase()}...`);
 
     try {
-      // Fetch the image as blob
-      const response = await fetch(image.imageUrl);
-      if (!response.ok) throw new Error("Échec du téléchargement de l'image");
-      
-      const blob = await response.blob();
-
-      if (format === "pdf") {
-        // Create PDF with the image
-        await downloadAsPdf(blob, image.id);
-      } else {
-        // Convert to desired format and download
-        await downloadAsImage(blob, format, image.id);
-      }
-
+      await downloadWithCanvas(image.imageUrl, format, image.id);
       toast.success(`Image téléchargée en ${format.toUpperCase()}`);
     } catch (error) {
       console.error("Download failed:", error);
-      
-      // Fallback: try with canvas for CORS issues
-      try {
-        await downloadWithCanvasFallback(image.imageUrl, format, image.id);
-        toast.success(`Image téléchargée en ${format.toUpperCase()}`);
-      } catch (fallbackError) {
-        console.error("Fallback download failed:", fallbackError);
-        toast.error("Échec du téléchargement. Réessayez.");
-      }
+      toast.error("Échec du téléchargement. Réessayez.");
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const downloadAsImage = async (blob: Blob, format: "png" | "jpeg", imageId: string) => {
-    // Create an image from the blob to convert format if needed
-    const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
-    
-    return new Promise<void>((resolve, reject) => {
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Canvas context not available"));
-          return;
-        }
-        
-        // For JPEG, fill with white background (no transparency)
-        if (format === "jpeg") {
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        
-        ctx.drawImage(img, 0, 0);
-        
-        const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
-        const quality = format === "jpeg" ? 0.95 : undefined;
-        
-        canvas.toBlob(
-          (outputBlob) => {
-            if (!outputBlob) {
-              reject(new Error("Failed to create blob"));
-              return;
-            }
-            
-            triggerDownload(outputBlob, `prographiste-${imageId}.${format}`);
-            URL.revokeObjectURL(blobUrl);
-            resolve();
-          },
-          mimeType,
-          quality
-        );
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(blobUrl);
-        reject(new Error("Failed to load image"));
-      };
-      
-      img.crossOrigin = "anonymous";
-      img.src = blobUrl;
-    });
-  };
-
-  const downloadAsPdf = async (blob: Blob, imageId: string) => {
-    // Create image from blob
-    const img = new Image();
-    const blobUrl = URL.createObjectURL(blob);
-    
-    return new Promise<void>((resolve, reject) => {
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Canvas context not available"));
-          return;
-        }
-        
-        ctx.drawImage(img, 0, 0);
-        
-        // Create PDF using print-to-PDF approach with iframe
-        const dataUrl = canvas.toDataURL("image/png");
-        
-        // Create a hidden iframe for PDF generation
-        const iframe = document.createElement("iframe");
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "0";
-        iframe.style.height = "0";
-        iframe.style.border = "none";
-        document.body.appendChild(iframe);
-        
-        const iframeDoc = iframe.contentWindow?.document;
-        if (!iframeDoc) {
-          document.body.removeChild(iframe);
-          // Fallback: create simple PDF blob
-          createSimplePdfAndDownload(dataUrl, imageId)
-            .then(resolve)
-            .catch(reject);
-          return;
-        }
-        
-        // Write HTML content with the image
-        iframeDoc.open();
-        iframeDoc.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>ProGraphiste - ${imageId}</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              @page { size: auto; margin: 0; }
-              @media print {
-                body { margin: 0; }
-                img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-              }
-              body {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                background: white;
-              }
-              img {
-                max-width: 100%;
-                max-height: 100vh;
-                object-fit: contain;
-              }
-            </style>
-          </head>
-          <body>
-            <img src="${dataUrl}" alt="ProGraphiste Image" />
-          </body>
-          </html>
-        `);
-        iframeDoc.close();
-        
-        // Wait for image to load in iframe then print
-        setTimeout(() => {
-          try {
-            iframe.contentWindow?.print();
-          } catch (e) {
-            console.error("Print failed:", e);
-          }
-          
-          // Clean up after a delay
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(blobUrl);
-            resolve();
-          }, 1000);
-        }, 500);
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(blobUrl);
-        reject(new Error("Failed to load image for PDF"));
-      };
-      
-      img.crossOrigin = "anonymous";
-      img.src = blobUrl;
-    });
-  };
-
-  const createSimplePdfAndDownload = async (dataUrl: string, imageId: string): Promise<void> => {
-    // Simple fallback: create a basic PDF with embedded image
-    // This creates a minimal PDF structure
-    const img = new Image();
-    
-    return new Promise((resolve, reject) => {
-      img.onload = () => {
-        const width = img.naturalWidth;
-        const height = img.naturalHeight;
-        
-        // Create a simple HTML page and use print dialog
-        const printWindow = window.open("", "_blank", "width=1,height=1");
-        if (!printWindow) {
-          reject(new Error("Popup blocked"));
-          return;
-        }
-        
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>ProGraphiste - ${imageId}</title>
-            <style>
-              @page { size: ${width}px ${height}px; margin: 0; }
-              body { margin: 0; display: flex; justify-content: center; align-items: center; }
-              img { width: 100%; height: auto; }
-            </style>
-          </head>
-          <body>
-            <img src="${dataUrl}" />
-            <script>
-              window.onload = function() {
-                setTimeout(function() {
-                  window.print();
-                  window.close();
-                }, 100);
-              };
-            </script>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        resolve();
-      };
-      
-      img.onerror = () => reject(new Error("Image load failed"));
-      img.src = dataUrl;
-    });
-  };
-
-  const downloadWithCanvasFallback = async (
+  const downloadWithCanvas = async (
     imageUrl: string,
     format: "png" | "jpeg" | "pdf",
     imageId: string
-  ) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    
-    return new Promise<void>((resolve, reject) => {
-      img.onload = async () => {
+  ): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
@@ -285,7 +56,8 @@ export function ImagePreview({ image, isGenerating }: ImagePreviewProps) {
           return;
         }
         
-        if (format === "jpeg") {
+        // For JPEG and PDF, fill with white background
+        if (format === "jpeg" || format === "pdf") {
           ctx.fillStyle = "#FFFFFF";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
@@ -293,11 +65,13 @@ export function ImagePreview({ image, isGenerating }: ImagePreviewProps) {
         ctx.drawImage(img, 0, 0);
         
         if (format === "pdf") {
-          const dataUrl = canvas.toDataURL("image/png");
-          await createSimplePdfAndDownload(dataUrl, imageId);
-          resolve();
+          createPdfFromCanvas(canvas, imageId)
+            .then(resolve)
+            .catch(reject);
         } else {
           const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
+          const quality = format === "jpeg" ? 0.95 : undefined;
+          
           canvas.toBlob(
             (blob) => {
               if (!blob) {
@@ -308,13 +82,126 @@ export function ImagePreview({ image, isGenerating }: ImagePreviewProps) {
               resolve();
             },
             mimeType,
-            0.95
+            quality
           );
         }
       };
       
-      img.onerror = () => reject(new Error("Image load failed"));
+      img.onerror = () => {
+        reject(new Error("Image load failed"));
+      };
+      
       img.src = imageUrl;
+    });
+  };
+
+  const createPdfFromCanvas = async (canvas: HTMLCanvasElement, imageId: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("PDF blob creation failed"));
+          return;
+        }
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        const base64Data = dataUrl.split(",")[1];
+        
+        // Decode base64 to binary
+        const binaryString = atob(base64Data);
+        const imageBytes: number[] = [];
+        for (let i = 0; i < binaryString.length; i++) {
+          imageBytes.push(binaryString.charCodeAt(i));
+        }
+        
+        // Build PDF
+        const pdfParts: (string | number[])[] = [];
+        let offset = 0;
+        const xref: number[] = [];
+        
+        const addString = (s: string) => {
+          pdfParts.push(s);
+          offset += s.length;
+        };
+        
+        const addBinary = (bytes: number[]) => {
+          pdfParts.push(bytes);
+          offset += bytes.length;
+        };
+        
+        // PDF sizing
+        const maxWidth = 595;
+        const maxHeight = 842;
+        const scaleX = maxWidth / width;
+        const scaleY = maxHeight / height;
+        const scale = Math.min(scaleX, scaleY, 1);
+        const pdfWidth = Math.round(width * scale);
+        const pdfHeight = Math.round(height * scale);
+        const offsetX = Math.round((maxWidth - pdfWidth) / 2);
+        const offsetY = Math.round((maxHeight - pdfHeight) / 2);
+        
+        // Header
+        addString("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+        
+        // Catalog
+        xref.push(offset);
+        addString("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        
+        // Pages
+        xref.push(offset);
+        addString("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        
+        // Page
+        xref.push(offset);
+        addString(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${maxWidth} ${maxHeight}] /Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj\n`);
+        
+        // Content stream
+        const contentStream = `q ${pdfWidth} 0 0 ${pdfHeight} ${offsetX} ${offsetY} cm /Im1 Do Q`;
+        xref.push(offset);
+        addString(`4 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream\nendobj\n`);
+        
+        // Image XObject
+        xref.push(offset);
+        addString(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`);
+        addBinary(imageBytes);
+        addString("\nendstream\nendobj\n");
+        
+        // Xref table
+        const xrefOffset = offset;
+        addString("xref\n0 6\n0000000000 65535 f \n");
+        for (const pos of xref) {
+          addString(`${pos.toString().padStart(10, "0")} 00000 n \n`);
+        }
+        
+        // Trailer
+        addString(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+        
+        // Combine to final bytes
+        let totalLength = 0;
+        for (const part of pdfParts) {
+          totalLength += typeof part === "string" ? part.length : part.length;
+        }
+        
+        const result = new Uint8Array(totalLength);
+        let pos = 0;
+        for (const part of pdfParts) {
+          if (typeof part === "string") {
+            for (let i = 0; i < part.length; i++) {
+              result[pos++] = part.charCodeAt(i);
+            }
+          } else {
+            for (let i = 0; i < part.length; i++) {
+              result[pos++] = part[i];
+            }
+          }
+        }
+        
+        const pdfBlob = new Blob([result], { type: "application/pdf" });
+        triggerDownload(pdfBlob, `prographiste-${imageId}.pdf`);
+        resolve();
+      }, "image/jpeg", 0.95);
     });
   };
 
