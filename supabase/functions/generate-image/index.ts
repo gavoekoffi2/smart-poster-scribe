@@ -224,16 +224,76 @@ function buildProfessionalPrompt({
     instructions.push("⚠️ APPLIQUER ces règles au contenu de l'utilisateur, pas au template.");
     instructions.push("");
   } else {
-    // ====== MODE CRÉATION LIBRE (CONDENSÉ) ======
-    instructions.push("🎨 CRÉATION: Affiche publicitaire PREMIUM niveau agence internationale.");
-    instructions.push("TYPO: Titre BOLD spectaculaire (3D/dégradés/glow), hiérarchie claire.");
-    instructions.push("COMPOSITION: Règle des tiers, flux visuel, équilibre dynamique.");
-    instructions.push("COULEURS: Palette cohérente (3-4 couleurs), dégradés, contrastes forts.");
-    instructions.push("EFFETS: Lumières, particules, textures, ombres réalistes.");
-    instructions.push("PERSONNAGES: Africains authentiques, expressions engageantes.");
+    // ====== MODE CRÉATION LIBRE - NIVEAU GRAPHISTE PRO 15+ ANS ======
+    instructions.push("🎨 Tu es un GRAPHISTE PROFESSIONNEL avec 15+ ans d'expérience.");
+    instructions.push("Tu crées une affiche publicitaire PREMIUM niveau AGENCE INTERNATIONALE.");
+    instructions.push("Le client paie cher pour un design qui rivalise avec les meilleures agences.");
     instructions.push("");
     
-    // Injection des compétences spécifiques au domaine (mode création libre)
+    // TYPOGRAPHIE PROFESSIONNELLE AVANCÉE
+    instructions.push("━━━ TYPOGRAPHIE OBLIGATOIRE (JAMAIS DE TEXTE BRUT/BASIQUE) ━━━");
+    instructions.push("• Titre principal: MASSIF, Bold/ExtraBold, avec OBLIGATOIREMENT un des effets:");
+    instructions.push("  - Effet 3D métallique (or, chrome, argent) avec extrusion et ombre portée");
+    instructions.push("  - Dégradé de couleurs vives dans les lettres (2-3 couleurs)");
+    instructions.push("  - Glow lumineux/néon autour des lettres (2-4px, couleur vive)");
+    instructions.push("  - Contour stroke coloré épais (3-5px) avec remplissage contrasté");
+    instructions.push("  - Ombres portées dramatiques multiples ou drop shadow 3D");
+    instructions.push("• Sous-titres: Semi-bold avec effet plus subtil (dégradé ou ombre légère)");
+    instructions.push("• Texte intégré dans la scène: peut passer derrière/devant les personnages");
+    instructions.push("• Hiérarchie: Titre 2.5x+ sous-titre, 3 niveaux minimum de tailles");
+    instructions.push("• INTERDIT: texte plat, basique, sans effet, sans style, monotone");
+    instructions.push("");
+    
+    // LAYOUT ET COMPOSITION PROFESSIONNELLE
+    instructions.push("━━━ LAYOUT ORGANIQUE ET COURBES PROFESSIONNELLES ━━━");
+    instructions.push("• Composition DYNAMIQUE avec formes organiques (pas de rectangles plats)");
+    instructions.push("• Bandeaux avec coins TRÈS arrondis ou formes ondulées/dynamiques");
+    instructions.push("• Zones de texte sur fonds stylisés: dégradés, overlays semi-transparents");
+    instructions.push("• Formes courbes, arcs, vagues comme éléments de séparation et décoration");
+    instructions.push("• Éléments décoratifs riches: lignes dynamiques, motifs géométriques, particules");
+    instructions.push("• Plans de profondeur: arrière-plan flouté → éléments 3D → personnages → texte");
+    instructions.push("• Asymétrie maîtrisée: composition 60/40 ou 70/30, JAMAIS centré ennuyeux");
+    instructions.push("• Overlay de couleur sur les zones de fond (20-40% opacité)");
+    instructions.push("");
+    
+    // EFFETS ET FINITIONS PREMIUM
+    instructions.push("━━━ EFFETS PREMIUM OBLIGATOIRES ━━━");
+    instructions.push("• Éclairage dramatique avec source lumineuse identifiable");
+    instructions.push("• Rim light (contour lumineux) autour des personnages sur fond sombre");
+    instructions.push("• Particules flottantes: confettis, étincelles, poussière lumineuse, bokeh");
+    instructions.push("• Lens flares et rayons lumineux subtils");
+    instructions.push("• Ombres portées réalistes et cohérentes (direction unique 135°)");
+    instructions.push("• Textures de fond: grain subtil, motifs géométriques, dégradés complexes");
+    instructions.push("• Color grading cinématique unifié sur toute l'image");
+    instructions.push("• Vignettage léger (10-20%) pour concentrer l'attention");
+    instructions.push("");
+    
+    // COULEURS ET PALETTE
+    instructions.push("━━━ PALETTE DE COULEURS PREMIUM ━━━");
+    instructions.push("• 3-4 couleurs max (règle 60-30-10 stricte)");
+    instructions.push("• Dégradés audacieux (2-3 couleurs) sur les fonds et éléments");
+    instructions.push("• Contrastes DRAMATIQUES: jamais subtils, évidents au premier regard");
+    instructions.push("• Couleurs vibrantes et saturées (+20-30% saturation)");
+    instructions.push("• Si palette utilisateur fournie: l'utiliser EXCLUSIVEMENT");
+    instructions.push("");
+    
+    // PERSONNAGES ET PHOTOS
+    instructions.push("━━━ PERSONNAGES ━━━");
+    instructions.push("• Africains authentiques, expressions engageantes et dynamiques");
+    instructions.push("• Détourage professionnel, éclairage studio ou dramatique");
+    instructions.push("• Posés sur règle des tiers (pas centrés)");
+    instructions.push("");
+    
+    // RÈGLE ABSOLUE: CONTENU UTILISATEUR UNIQUEMENT
+    instructions.push("🚨 RÈGLE CRITIQUE: ZÉRO INFORMATION INVENTÉE 🚨");
+    instructions.push("• AFFICHER UNIQUEMENT les informations fournies par le client");
+    instructions.push("• Si le client n'a PAS fourni: titre, date, lieu, prix, contact, nom d'orateur → NE PAS L'INVENTER");
+    instructions.push("• AUCUN texte placeholder, lorem ipsum, ou information fictive");
+    instructions.push("• Si peu d'infos: agrandir les éléments existants, ajouter plus de design/décoration");
+    instructions.push("• Mieux vaut un design avec peu de texte mais spectaculaire que du faux contenu");
+    instructions.push("");
+    
+    // Injection des compétences spécifiques au domaine
     const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
     instructions.push(expertSkillsPrompt);
     instructions.push("");
@@ -256,13 +316,13 @@ function buildProfessionalPrompt({
   }
 
   // ====== CONTENU UTILISATEUR ======
-  instructions.push("=== CONTENU CLIENT ===");
-  instructions.push("Afficher UNIQUEMENT: titre, dates, lieu, contact, prix, orateurs (SI fournis).");
-  instructions.push("INTERDIT: inventer ou conserver infos du template original.");
+  instructions.push("=== CONTENU CLIENT (SEULE SOURCE DE VÉRITÉ) ===");
+  instructions.push("🚨 UNIQUEMENT les informations CI-DESSOUS doivent apparaître sur l'affiche.");
+  instructions.push("🚨 INTERDIT d'inventer: noms, dates, lieux, prix, contacts, orateurs, entreprises.");
+  instructions.push("🚨 Si une info n'est PAS dans la demande client → elle N'EXISTE PAS.");
   instructions.push(`Format: ${aspectRatio} | Qualité: haute résolution | Texte: français`);
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni.");
-  if (hasContentImage) instructions.push("PHOTO: Utiliser l'image de contenu fournie.");
-  instructions.push("STYLE: Africains authentiques, palette fournie (ou vibrantes), effets premium.");
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni, sans modification.");
+  if (hasContentImage) instructions.push("PHOTO: Utiliser l'image de contenu fournie telle quelle.");
   instructions.push("");
   instructions.push("=== DEMANDE CLIENT ===");
   instructions.push(userPrompt);
