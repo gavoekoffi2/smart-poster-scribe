@@ -146,7 +146,7 @@ function YouTubeMarqueeRow({
   speed?: number;
 }) {
   const navigate = useNavigate();
-  const duplicatedImages = [...images, ...images, ...images, ...images];
+  const duplicatedImages = [...images, ...images];
 
   const handleInspire = async (e: React.MouseEvent, imageUrl: string) => {
     e.stopPropagation();
