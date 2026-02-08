@@ -225,72 +225,100 @@ function buildProfessionalPrompt({
     instructions.push("");
   } else {
     // ====== MODE CRÉATION LIBRE - NIVEAU GRAPHISTE PRO 15+ ANS ======
-    instructions.push("🎨 Tu es un GRAPHISTE PROFESSIONNEL avec 15+ ans d'expérience.");
-    instructions.push("Tu crées une affiche publicitaire PREMIUM niveau AGENCE INTERNATIONALE.");
-    instructions.push("Le client paie cher pour un design qui rivalise avec les meilleures agences.");
+    instructions.push("🎨 Tu es un DIRECTEUR ARTISTIQUE d'une AGENCE DE DESIGN INTERNATIONALE, 15+ ans d'expérience.");
+    instructions.push("Tu crées une affiche publicitaire PREMIUM de classe mondiale, pas un simple visuel.");
+    instructions.push("Ton travail DOIT ressembler aux créations des meilleurs graphistes africains professionnels.");
     instructions.push("");
     
-    // TYPOGRAPHIE PROFESSIONNELLE AVANCÉE
-    instructions.push("━━━ TYPOGRAPHIE OBLIGATOIRE (JAMAIS DE TEXTE BRUT/BASIQUE) ━━━");
-    instructions.push("• Titre principal: MASSIF, Bold/ExtraBold, avec OBLIGATOIREMENT un des effets:");
-    instructions.push("  - Effet 3D métallique (or, chrome, argent) avec extrusion et ombre portée");
-    instructions.push("  - Dégradé de couleurs vives dans les lettres (2-3 couleurs)");
-    instructions.push("  - Glow lumineux/néon autour des lettres (2-4px, couleur vive)");
-    instructions.push("  - Contour stroke coloré épais (3-5px) avec remplissage contrasté");
-    instructions.push("  - Ombres portées dramatiques multiples ou drop shadow 3D");
-    instructions.push("• Sous-titres: Semi-bold avec effet plus subtil (dégradé ou ombre légère)");
-    instructions.push("• Texte intégré dans la scène: peut passer derrière/devant les personnages");
-    instructions.push("• Hiérarchie: Titre 2.5x+ sous-titre, 3 niveaux minimum de tailles");
-    instructions.push("• INTERDIT: texte plat, basique, sans effet, sans style, monotone");
+    // ━━━ STRUCTURE DE DESIGN OBLIGATOIRE ━━━
+    instructions.push("━━━ ARCHITECTURE VISUELLE (STRUCTURE DU DESIGN) ━━━");
+    instructions.push("CONSTRUIS L'AFFICHE EN COUCHES SUPERPOSÉES comme un graphiste pro:");
+    instructions.push("  COUCHE 1 (FOND): Texture riche ou dégradé multi-couleurs, JAMAIS uni/plat");
+    instructions.push("  COUCHE 2 (FORMES): Grandes formes courbes, arcs, vagues, cercles découpés");
+    instructions.push("  COUCHE 3 (CONTENU): Photos, personnages avec détourage pro et rim light");
+    instructions.push("  COUCHE 4 (TEXTE): Typographie stylisée avec effets 3D/glow/metallic");
+    instructions.push("  COUCHE 5 (FINITIONS): Particules, lens flares, bokeh, éléments décoratifs");
+    instructions.push("• Chaque couche DOIT être visible et contribuer à la profondeur");
+    instructions.push("• Minimum 4 couches de profondeur obligatoire");
     instructions.push("");
     
-    // LAYOUT ET COMPOSITION PROFESSIONNELLE
-    instructions.push("━━━ LAYOUT ORGANIQUE ET COURBES PROFESSIONNELLES ━━━");
-    instructions.push("• Composition DYNAMIQUE avec formes organiques (pas de rectangles plats)");
-    instructions.push("• Bandeaux avec coins TRÈS arrondis ou formes ondulées/dynamiques");
-    instructions.push("• Zones de texte sur fonds stylisés: dégradés, overlays semi-transparents");
-    instructions.push("• Formes courbes, arcs, vagues comme éléments de séparation et décoration");
-    instructions.push("• Éléments décoratifs riches: lignes dynamiques, motifs géométriques, particules");
-    instructions.push("• Plans de profondeur: arrière-plan flouté → éléments 3D → personnages → texte");
-    instructions.push("• Asymétrie maîtrisée: composition 60/40 ou 70/30, JAMAIS centré ennuyeux");
-    instructions.push("• Overlay de couleur sur les zones de fond (20-40% opacité)");
+    // ━━━ FORMES ET COURBES PROFESSIONNELLES ━━━
+    instructions.push("━━━ FORMES COURBES ET DESIGN ORGANIQUE (CRITIQUE) ━━━");
+    instructions.push("OBLIGATOIRE - Utiliser des FORMES COURBES comme séparateurs et décoration:");
+    instructions.push("  • Grande VAGUE ou ARC qui divise l'affiche en zones (pas des lignes droites)");
+    instructions.push("  • Cercles et demi-cercles comme cadres pour photos ou éléments");
+    instructions.push("  • Bandeaux avec bords ONDULÉS ou en forme de RUBAN 3D pour le texte");
+    instructions.push("  • Formes blob/organiques colorées comme éléments de fond décoratifs");
+    instructions.push("  • Coins arrondis TRÈS prononcés (30-50px) sur tous les rectangles");
+    instructions.push("  • Lignes courbes dynamiques qui guident l'œil à travers le design");
+    instructions.push("  • Formes en SWOOSH ou SLASH diagonal pour créer du mouvement");
+    instructions.push("INTERDIT: rectangles plats, lignes droites comme séparateurs, mise en page en blocs");
     instructions.push("");
     
-    // EFFETS ET FINITIONS PREMIUM
-    instructions.push("━━━ EFFETS PREMIUM OBLIGATOIRES ━━━");
-    instructions.push("• Éclairage dramatique avec source lumineuse identifiable");
-    instructions.push("• Rim light (contour lumineux) autour des personnages sur fond sombre");
-    instructions.push("• Particules flottantes: confettis, étincelles, poussière lumineuse, bokeh");
-    instructions.push("• Lens flares et rayons lumineux subtils");
-    instructions.push("• Ombres portées réalistes et cohérentes (direction unique 135°)");
-    instructions.push("• Textures de fond: grain subtil, motifs géométriques, dégradés complexes");
-    instructions.push("• Color grading cinématique unifié sur toute l'image");
+    // ━━━ TYPOGRAPHIE STYLISÉE OBLIGATOIRE ━━━
+    instructions.push("━━━ TYPOGRAPHIE STYLISÉE (JAMAIS DE TEXTE BASIQUE) ━━━");
+    instructions.push("Le texte est un ÉLÉMENT GRAPHIQUE, pas juste de l'information:");
+    instructions.push("  TITRE PRINCIPAL - Choisir UN de ces styles obligatoirement:");
+    instructions.push("    → Lettres 3D avec EXTRUSION et ombre portée profonde (effet bloc)");
+    instructions.push("    → Lettres MÉTALLIQUES (or, chrome, argent) avec reflets réalistes");
+    instructions.push("    → DÉGRADÉ de 2-3 couleurs vives dans les lettres");
+    instructions.push("    → GLOW NÉON lumineux (2-4px) avec halo de couleur autour");
+    instructions.push("    → CONTOUR STROKE épais (3-6px) bicolore avec remplissage contrasté");
+    instructions.push("    → Lettres avec TEXTURE (bois, métal, flammes, eau, tissu)");
+    instructions.push("  SOUS-TITRES: Semi-bold avec dégradé subtil ou ombre légère");
+    instructions.push("  INFOS (date, lieu, prix): Dans des BADGES stylisés (rectangles arrondis colorés)");
+    instructions.push("  • Le texte peut PASSER DERRIÈRE un personnage pour créer de la profondeur");
+    instructions.push("  • Mots-clés importants en COULEUR DIFFÉRENTE du reste du texte");
+    instructions.push("  • Hiérarchie: Titre 3x+ sous-titre, 3 niveaux minimum de tailles");
+    instructions.push("  INTERDIT: texte plat, texte blanc simple sur fond, texte monotone sans effets");
+    instructions.push("");
+    
+    // ━━━ EFFETS PREMIUM ET FINITIONS ━━━
+    instructions.push("━━━ EFFETS VISUELS PREMIUM ━━━");
+    instructions.push("• Éclairage dramatique avec SOURCE identifiable (en haut, côté, arrière)");
+    instructions.push("• RIM LIGHT (contour lumineux) autour des personnages (obligatoire sur fond sombre)");
+    instructions.push("• Particules: confettis, étincelles, poussière lumineuse, bokeh coloré");
+    instructions.push("• Lens flares et rayons lumineux naturels");
+    instructions.push("• Ombres portées RÉALISTES et cohérentes direction 135°");
+    instructions.push("• Textures de fond: grain, motifs géométriques subtils, dégradés complexes");
+    instructions.push("• Color grading cinématique unifié (teinte cohérente sur toute l'image)");
     instructions.push("• Vignettage léger (10-20%) pour concentrer l'attention");
+    instructions.push("• Overlay de couleur semi-transparent sur zones de fond (20-40% opacité)");
     instructions.push("");
     
-    // COULEURS ET PALETTE
-    instructions.push("━━━ PALETTE DE COULEURS PREMIUM ━━━");
-    instructions.push("• 3-4 couleurs max (règle 60-30-10 stricte)");
-    instructions.push("• Dégradés audacieux (2-3 couleurs) sur les fonds et éléments");
-    instructions.push("• Contrastes DRAMATIQUES: jamais subtils, évidents au premier regard");
+    // ━━━ COMPOSITION ET LAYOUT ━━━
+    instructions.push("━━━ COMPOSITION PROFESSIONNELLE ━━━");
+    instructions.push("• Asymétrie maîtrisée: 60/40 ou 70/30 (JAMAIS centré et ennuyeux)");
+    instructions.push("• Personnages positionnés sur les TIERS (pas au milieu exact)");
+    instructions.push("• 30-50% d'espace de respiration (pas de design étouffé)");
+    instructions.push("• Palette 3-4 couleurs max, règle 60-30-10 stricte");
     instructions.push("• Couleurs vibrantes et saturées (+20-30% saturation)");
     instructions.push("• Si palette utilisateur fournie: l'utiliser EXCLUSIVEMENT");
+    instructions.push("• Personnages africains authentiques, expressions engageantes");
     instructions.push("");
     
-    // PERSONNAGES ET PHOTOS
-    instructions.push("━━━ PERSONNAGES ━━━");
-    instructions.push("• Africains authentiques, expressions engageantes et dynamiques");
-    instructions.push("• Détourage professionnel, éclairage studio ou dramatique");
-    instructions.push("• Posés sur règle des tiers (pas centrés)");
+    // ━━━ EXEMPLES CONCRETS DE RENDU ATTENDU ━━━
+    instructions.push("━━━ RÉFÉRENCE: VOICI CE QUE FONT LES MEILLEURS GRAPHISTES ━━━");
+    instructions.push("Inspire-toi de CE STYLE PRÉCIS de design professionnel:");
+    instructions.push("  ✅ Grande forme COURBE qui sépare le fond en 2 zones de couleurs différentes");
+    instructions.push("  ✅ Titre en 3D DORÉ avec glow et extrusion sur fond sombre");
+    instructions.push("  ✅ Personnage détouré avec rim light qui CHEVAUCHE la courbe de séparation");
+    instructions.push("  ✅ Badge arrondi coloré avec date/lieu en texte blanc bold");
+    instructions.push("  ✅ Particules lumineuses et lens flare derrière le personnage");
+    instructions.push("  ✅ Fond avec dégradé riche (ex: bleu nuit → violet → rose)");
+    instructions.push("  ✅ Éléments décoratifs: lignes courbes, motifs géométriques, formes blob");
+    instructions.push("  ❌ PAS de fond uni plat, PAS de texte blanc simple, PAS de mise en page en grille");
+    instructions.push("  ❌ PAS de rectangles avec bords droits comme séparateurs");
+    instructions.push("  ❌ PAS de texte sans aucun effet (pas de texte plat/basique)");
     instructions.push("");
     
     // RÈGLE ABSOLUE: CONTENU UTILISATEUR UNIQUEMENT
     instructions.push("🚨 RÈGLE CRITIQUE: ZÉRO INFORMATION INVENTÉE 🚨");
     instructions.push("• AFFICHER UNIQUEMENT les informations fournies par le client");
-    instructions.push("• Si le client n'a PAS fourni: titre, date, lieu, prix, contact, nom d'orateur → NE PAS L'INVENTER");
+    instructions.push("• Si le client n'a PAS fourni: titre, date, lieu, prix, contact, orateur → NE PAS L'INVENTER");
     instructions.push("• AUCUN texte placeholder, lorem ipsum, ou information fictive");
     instructions.push("• Si peu d'infos: agrandir les éléments existants, ajouter plus de design/décoration");
-    instructions.push("• Mieux vaut un design avec peu de texte mais spectaculaire que du faux contenu");
+    instructions.push("• Mieux vaut un design avec peu de texte mais SPECTACULAIRE que du faux contenu");
     instructions.push("");
     
     // Injection des compétences spécifiques au domaine
