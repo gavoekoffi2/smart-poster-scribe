@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -19,7 +20,8 @@ import {
   Upload,
   X,
   Check,
-  Pencil
+  Pencil,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,7 @@ export default function AccountPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isLoading: authLoading, signOut } = useAuth();
+  const { hasPermission, isLoading: adminLoading } = useAdmin();
   const { subscription, transactions, refreshSubscription } = useSubscription();
   const { 
     profile, 
@@ -276,6 +279,17 @@ export default function AccountPage() {
 
           {/* Actions */}
           <div className="flex gap-2">
+            {!adminLoading && hasPermission('view_dashboard') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/dashboard")}
+                className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

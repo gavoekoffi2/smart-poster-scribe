@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useAdmin, AppRole } from "@/hooks/useAdmin";
-import { Button } from "@/components/ui/button";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,23 +13,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  LayoutDashboard,
   Users,
   Image,
   Palette,
-  LogOut,
-  ChevronRight,
-  Loader2,
-  Shield,
   Calendar,
   TrendingUp,
   Upload,
   Settings,
-  Crown,
-  UserCog,
-  MessageSquare,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardStats {
   totalImages: number;
@@ -39,6 +36,8 @@ interface DashboardStats {
   totalTemplates: number;
   imagesThisMonth: number;
   usersThisMonth: number;
+  totalFeedbacks: number;
+  averageRating: number;
 }
 
 interface RecentImage {
@@ -46,23 +45,21 @@ interface RecentImage {
   prompt: string;
   created_at: string;
   domain: string | null;
+  image_url: string;
+  is_showcase: boolean | null;
 }
 
 interface RecentUser {
   id: string;
   full_name: string | null;
   created_at: string;
+  company_name: string | null;
 }
-
-type AdminSection = 'dashboard' | 'images' | 'users' | 'designers' | 'templates' | 'roles' | 'subscriptions' | 'marquee' | 'showcase' | 'feedback';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, isLoading: authLoading, signOut } = useAuth();
-  const { userRole, isLoading: roleLoading, hasPermission, getRoleLabel, isSuperAdmin, isAdmin } = useAdmin();
-  
-  const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
+  const { hasPermission } = useAdmin();
+
   const [stats, setStats] = useState<DashboardStats>({
     totalImages: 0,
     totalUsers: 0,
@@ -70,26 +67,15 @@ export default function AdminDashboard() {
     totalTemplates: 0,
     imagesThisMonth: 0,
     usersThisMonth: 0,
+    totalFeedbacks: 0,
+    averageRating: 0,
   });
   const [recentImages, setRecentImages] = useState<RecentImage[]>([]);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !roleLoading) {
-      if (!user) {
-        navigate("/auth", { state: { redirectTo: "/admin/dashboard" } });
-        return;
-      }
-      
-      if (!userRole || !hasPermission('view_dashboard')) {
-        toast.error("Accès refusé - Vous n'avez pas les permissions nécessaires");
-        navigate("/");
-        return;
-      }
-      
-      fetchDashboardData();
-    }
-  }, [user, authLoading, roleLoading, userRole, navigate, hasPermission]);
+    fetchDashboardData();
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -105,6 +91,7 @@ export default function AdminDashboard() {
         templatesResult,
         recentImagesResult,
         recentUsersResult,
+        feedbackResult,
       ] = await Promise.all([
         supabase.from("generated_images").select("id", { count: "exact", head: true }),
         supabase.from("generated_images").select("id", { count: "exact", head: true }).gte("created_at", monthStart),
@@ -112,9 +99,13 @@ export default function AdminDashboard() {
         supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", monthStart),
         supabase.from("partner_designers").select("id", { count: "exact", head: true }),
         supabase.from("reference_templates").select("id", { count: "exact", head: true }),
-        supabase.from("generated_images").select("id, prompt, created_at, domain").order("created_at", { ascending: false }).limit(10),
-        supabase.from("profiles").select("id, full_name, created_at").order("created_at", { ascending: false }).limit(10),
+        supabase.from("generated_images").select("id, prompt, created_at, domain, image_url, is_showcase").order("created_at", { ascending: false }).limit(10),
+        supabase.from("profiles").select("id, full_name, created_at, company_name").order("created_at", { ascending: false }).limit(10),
+        supabase.from("generation_feedback").select("rating"),
       ]);
+
+      const ratings = feedbackResult.data || [];
+      const avgRating = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length : 0;
 
       setStats({
         totalImages: imagesResult.count || 0,
@@ -123,6 +114,8 @@ export default function AdminDashboard() {
         totalTemplates: templatesResult.count || 0,
         imagesThisMonth: imagesMonthResult.count || 0,
         usersThisMonth: usersMonthResult.count || 0,
+        totalFeedbacks: ratings.length,
+        averageRating: Math.round(avgRating * 10) / 10,
       });
 
       setRecentImages(recentImagesResult.data || []);
@@ -133,285 +126,242 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
+  const toggleShowcase = async (imageId: string, currentValue: boolean | null) => {
+    try {
+      const { error } = await supabase
+        .from("generated_images")
+        .update({ is_showcase: !currentValue })
+        .eq("id", imageId);
+
+      if (error) throw error;
+      toast.success(currentValue ? "Retiré du showcase" : "Ajouté au showcase");
+      fetchDashboardData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de la mise à jour");
+    }
   };
-
-  if (authLoading || roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!userRole || !hasPermission('view_dashboard')) {
-    return null;
-  }
-
-  const getRoleIcon = () => {
-    if (isSuperAdmin) return <Crown className="w-4 h-4 text-yellow-500" />;
-    if (isAdmin) return <Shield className="w-4 h-4 text-primary" />;
-    return <UserCog className="w-4 h-4 text-muted-foreground" />;
-  };
-
-  const navItems = [
-    { id: 'dashboard' as const, label: "Vue d'ensemble", icon: LayoutDashboard, permission: 'view_dashboard' },
-    { id: 'templates' as const, label: "Templates", icon: Image, permission: 'manage_templates', route: '/admin/templates' },
-    { id: 'marquee' as const, label: "Marquee", icon: Palette, permission: 'manage_templates', route: '/admin/marquee' },
-    { id: 'showcase' as const, label: "Showcase", icon: Palette, permission: 'manage_templates', route: '/admin/showcase' },
-    { id: 'feedback' as const, label: "Feedbacks", icon: MessageSquare, permission: 'view_dashboard', route: '/admin/feedback' },
-    { id: 'subscriptions' as const, label: "Abonnements", icon: Crown, permission: 'manage_users', route: '/admin/subscriptions' },
-    { id: 'images' as const, label: "Affiches", icon: Palette, permission: 'view_dashboard' },
-    { id: 'users' as const, label: "Utilisateurs", icon: Users, permission: 'manage_users' },
-    { id: 'designers' as const, label: "Graphistes", icon: Palette, permission: 'manage_designers' },
-    { id: 'roles' as const, label: "Rôles", icon: Shield, permission: 'manage_admins' },
-  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 flex flex-col">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            {getRoleIcon()}
-          </div>
-          <div>
-            <h1 className="font-display font-bold text-foreground">Admin</h1>
-            <p className="text-xs text-muted-foreground">{getRoleLabel(userRole)}</p>
-          </div>
-        </div>
-
-        <nav className="space-y-2 flex-1">
-          {navItems.map(item => {
-            if (!hasPermission(item.permission)) return null;
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            
-              return (
-                <Button
-                  key={item.id}
-                  variant="ghost"
-                  className={`w-full justify-start gap-3 ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => {
-                    if ('route' in item && item.route) {
-                      navigate(item.route);
-                    } else {
-                      setActiveSection(item.id);
-                    }
-                  }}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                </Button>
-              );
-            })}
-        </nav>
-
-        <div className="space-y-2 pt-4 border-t border-border">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate("/")}
-          >
-            <ChevronRight className="w-4 h-4" />
-            Retour au site
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-3"
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-4 h-4" />
-            Déconnexion
-          </Button>
-        </div>
+    <AdminLayout requiredPermission="view_dashboard">
+      <div className="mb-8">
+        <h2 className="text-3xl font-display font-bold text-foreground">
+          Tableau de bord
+        </h2>
+        <p className="text-muted-foreground">
+          Bienvenue, voici un aperçu de votre plateforme
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="ml-64 p-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-display font-bold text-foreground">
-            Tableau de bord
-          </h2>
-          <p className="text-muted-foreground">
-            Bienvenue, voici un aperçu de votre plateforme
-          </p>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-card/60 border-border/40 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/showcase")}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Affiches créées
+            </CardTitle>
+            <Image className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-foreground">{stats.totalImages}</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <TrendingUp className="w-3 h-3 text-green-500" />
+              +{stats.imagesThisMonth} ce mois
+            </p>
+          </CardContent>
+        </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Affiches créées
-              </CardTitle>
-              <Image className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{stats.totalImages}</div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <TrendingUp className="w-3 h-3 text-green-500" />
-                +{stats.imagesThisMonth} ce mois
-              </p>
-            </CardContent>
-          </Card>
+        <Card className="bg-card/60 border-border/40 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/subscriptions")}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Utilisateurs
+            </CardTitle>
+            <Users className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-foreground">{stats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <TrendingUp className="w-3 h-3 text-green-500" />
+              +{stats.usersThisMonth} ce mois
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Utilisateurs
-              </CardTitle>
-              <Users className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <TrendingUp className="w-3 h-3 text-green-500" />
-                +{stats.usersThisMonth} ce mois
-              </p>
-            </CardContent>
-          </Card>
+        <Card className="bg-card/60 border-border/40 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/designers")}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Graphistes partenaires
+            </CardTitle>
+            <Palette className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-foreground">{stats.totalDesigners}</div>
+            <p className="text-xs text-muted-foreground">inscrits sur la plateforme</p>
+          </CardContent>
+        </Card>
 
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Graphistes partenaires
-              </CardTitle>
-              <Palette className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{stats.totalDesigners}</div>
-              <p className="text-xs text-muted-foreground">inscrits sur la plateforme</p>
-            </CardContent>
-          </Card>
+        <Card className="bg-card/60 border-border/40 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/feedback")}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Feedbacks
+            </CardTitle>
+            <Star className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-foreground">{stats.totalFeedbacks}</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+              {stats.averageRating}/5 note moyenne
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Templates
-              </CardTitle>
-              <Calendar className="w-4 h-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{stats.totalTemplates}</div>
-              <p className="text-xs text-muted-foreground">disponibles</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        {hasPermission('manage_templates') && (
-          <Card className="bg-card/60 border-border/40 mb-8">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium text-foreground">
-                Actions rapides
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex gap-4">
-              <Button 
-                onClick={() => navigate("/admin/templates")}
-                className="bg-gradient-to-r from-primary to-accent"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Ajouter un template
+      {/* Quick Actions */}
+      {hasPermission("manage_templates") && (
+        <Card className="bg-card/60 border-border/40 mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-foreground">
+              Actions rapides
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button onClick={() => navigate("/admin/templates")} className="bg-gradient-to-r from-primary to-accent">
+              <Upload className="w-4 h-4 mr-2" />
+              Ajouter un template
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/admin/marquee")}>
+              <Palette className="w-4 h-4 mr-2" />
+              Gérer le marquee
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/admin/showcase")}>
+              <Eye className="w-4 h-4 mr-2" />
+              Gérer le showcase
+            </Button>
+            {hasPermission("manage_users") && (
+              <Button variant="outline" onClick={() => navigate("/admin/subscriptions")}>
+                <Settings className="w-4 h-4 mr-2" />
+                Gérer les abonnements
               </Button>
-              {hasPermission('manage_settings') && (
-                <Button variant="outline">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Paramètres
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Images */}
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium text-foreground flex items-center justify-between">
-                Affiches récentes
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Images */}
+        <Card className="bg-card/60 border-border/40">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-foreground flex items-center justify-between">
+              Affiches récentes
+              <Button variant="ghost" size="sm" onClick={() => navigate("/admin/showcase")}>
+                Tout voir <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aperçu</TableHead>
+                  <TableHead>Prompt</TableHead>
+                  <TableHead>Domaine</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentImages.length === 0 ? (
                   <TableRow>
-                    <TableHead>Prompt</TableHead>
-                    <TableHead>Domaine</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      Aucune affiche créée
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentImages.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        Aucune affiche créée
+                ) : (
+                  recentImages.slice(0, 5).map((image) => (
+                    <TableRow key={image.id}>
+                      <TableCell>
+                        <img
+                          src={image.image_url}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    recentImages.map((image) => (
-                      <TableRow key={image.id}>
-                        <TableCell className="max-w-[200px] truncate">
-                          {image.prompt}
-                        </TableCell>
-                        <TableCell className="capitalize">
+                      <TableCell className="max-w-[150px] truncate text-sm">
+                        {image.prompt}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize text-xs">
                           {image.domain || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(image.created_at).toLocaleDateString("fr-FR")}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Recent Users */}
-          <Card className="bg-card/60 border-border/40">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium text-foreground flex items-center justify-between">
-                Utilisateurs récents
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Date d'inscription</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={2} className="text-center text-muted-foreground">
-                        Aucun utilisateur inscrit
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => toggleShowcase(image.id, image.is_showcase)}
+                          title={image.is_showcase ? "Retirer du showcase" : "Ajouter au showcase"}
+                        >
+                          {image.is_showcase ? (
+                            <Eye className="w-4 h-4 text-primary" />
+                          ) : (
+                            <EyeOff className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    recentUsers.map((profile) => (
-                      <TableRow key={profile.id}>
-                        <TableCell>{profile.full_name || "Sans nom"}</TableCell>
-                        <TableCell>
-                          {new Date(profile.created_at).toLocaleDateString("fr-FR")}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Recent Users */}
+        <Card className="bg-card/60 border-border/40">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-foreground flex items-center justify-between">
+              Utilisateurs récents
+              <Button variant="ghost" size="sm" onClick={() => navigate("/admin/subscriptions")}>
+                Tout voir <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Entreprise</TableHead>
+                  <TableHead>Date d'inscription</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      Aucun utilisateur inscrit
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentUsers.map((profile) => (
+                    <TableRow key={profile.id}>
+                      <TableCell className="font-medium">{profile.full_name || "Sans nom"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {profile.company_name || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {new Date(profile.created_at).toLocaleDateString("fr-FR")}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
