@@ -192,91 +192,58 @@ function buildProfessionalPrompt({
   aspectRatio: string;
   isCloneMode?: boolean;
 }): string {
-  const instructions: string[] = [];
-
-  // ====== STANDARDS PROFESSIONNELS UNIVERSELS ======
-  const professionalStandards = buildProfessionalStandardsPrompt();
-  instructions.push(professionalStandards);
-
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
 
-  // ====== MODE CLONE / ÉDITION (avec ou sans référence utilisateur) ======
+  // ====== MODE CLONE (avec référence) : prompt ULTRA-COURT et DOMINANT ======
   if (isCloneMode || hasReferenceImage) {
-    instructions.push("══════════════════════════════════════════════");
-    instructions.push("🚨🚨🚨 MODE RADICAL: ÉDITION/MODIFICATION DIRECTE DE L'IMAGE 🚨🚨🚨");
-    instructions.push("══════════════════════════════════════════════");
-    instructions.push("");
-    instructions.push("Tu es un ÉDITEUR D'IMAGE. Tu NE CRÉES PAS de nouveau design.");
-    instructions.push("Tu MODIFIES l'image de référence fournie comme si tu utilisais Photoshop.");
-    instructions.push("");
-    instructions.push("━━━ CE QUE TU DOIS GARDER IDENTIQUE (NE PAS TOUCHER) ━━━");
-    instructions.push("• La COMPOSITION EXACTE (positions, tailles, proportions de chaque zone)");
-    instructions.push("• Le LAYOUT (disposition des blocs, colonnes, sections)");
-    instructions.push("• Les FORMES (courbes, cercles, bandeaux, séparateurs, cadres)");
-    instructions.push("• Les EFFETS GRAPHIQUES (dégradés, ombres, glow, 3D, particules)");
-    instructions.push("• Le STYLE TYPOGRAPHIQUE (taille relative, graisse, effets sur le texte)");
-    instructions.push("• Les ÉLÉMENTS DÉCORATIFS (motifs, lignes, ornements)");
-    instructions.push("• La PROFONDEUR et les COUCHES visuelles");
-    instructions.push("• L'ARCHITECTURE VISUELLE GLOBALE = copie à 95% de l'original");
-    instructions.push("");
-    instructions.push("━━━ CE QUE TU DOIS REMPLACER ━━━");
-    instructions.push("• TEXTES: Remplacer CHAQUE texte du template par le contenu du client");
-    instructions.push("• VISAGES/PERSONNES: Si le client fournit des photos, remplacer les personnes");
-    instructions.push("• LOGOS: Remplacer par les logos du client (si fournis)");
-    instructions.push("• COULEURS: UNIQUEMENT si le client fournit une palette de couleurs");
-    instructions.push("");
-    instructions.push("━━━ RÈGLES DE COULEURS (CRITIQUE) ━━━");
-    instructions.push("• Si palette utilisateur fournie: appliquer selon 60-30-10");
-    instructions.push("• Si PAS de palette: GARDER les couleurs originales du template");
-    instructions.push("• FOND BLANC PRIVILÉGIÉ: En cas de doute, utiliser blanc/crème comme fond");
-    instructions.push("• ÉVITER les fonds trop colorés qui écrasent le contenu");
-    instructions.push("• Le BLANC est un harmonisateur universel: l'utiliser pour séparer les couleurs");
-    instructions.push("• Si plusieurs couleurs vives: les séparer par du blanc/gris clair");
-    instructions.push("• Pas de fonds criards, pas de dégradés agressifs de couleurs vives");
-    instructions.push("");
-    instructions.push("━━━ CE QUE TU DOIS SUPPRIMER ━━━");
-    instructions.push("• Tout texte/info du template original non remplacé par le client");
-    instructions.push("• Logos originaux du template (sauf si le client les garde)");
-    instructions.push("• Contacts, noms, dates du template original");
-    instructions.push("• Objets/icônes spécifiques au domaine original si hors contexte");
-    instructions.push("");
-    instructions.push("━━━ ZÉRO ESPACE VIDE ━━━");
-    instructions.push("• Si une zone est supprimée: étendre les éléments voisins");
-    instructions.push("• Agrandir le texte du client ou ajouter des décorations neutres");
-    instructions.push("• JAMAIS de zones blanches vides ou de trous dans le design");
-    instructions.push("");
-    instructions.push("━━━ RÉSULTAT ATTENDU ━━━");
-    instructions.push("• L'affiche finale DOIT être visuellement IDENTIQUE au template");
-    instructions.push("• Seuls les CONTENUS (textes, photos, logos) changent");
-    instructions.push("• Un observateur doit voir que c'est le MÊME design, personnalisé");
-    instructions.push("• Fidélité au template: 90-95% (seul le contenu diffère)");
-    instructions.push("");
-  } else {
-    // Ce cas ne devrait plus arriver car le mode libre sélectionne un template auto
-    // Mais au cas où, on garde des instructions de création libre minimales
-    instructions.push("🎨 DIRECTEUR ARTISTIQUE - Crée une affiche PREMIUM professionnelle.");
-    instructions.push("FOND: Privilégier blanc/crème ou fond très clair. Éviter les couleurs vives en fond.");
-    instructions.push("STYLE: S'inspirer du style des graphistes professionnels africains.");
-    instructions.push("");
-    
-    const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
-    instructions.push(expertSkillsPrompt);
-    instructions.push("");
+    const lines: string[] = [];
+    lines.push("YOU ARE A PHOTOSHOP OPERATOR. You are NOT creating a new design.");
+    lines.push("You MUST edit the reference image provided. The output must look 95% identical to the reference.");
+    lines.push("");
+    lines.push("KEEP IDENTICAL: exact layout, composition, shapes, curves, decorative elements, effects, depth layers, typography style, background structure.");
+    lines.push("ONLY REPLACE: text content → client text below. Photos/faces → client photos if provided. Logos → client logos if provided.");
+    lines.push("COLORS: If client provides a palette, apply it (60-30-10 rule). Otherwise KEEP original template colors.");
+    lines.push("REMOVE: all original template text/names/dates/contacts not replaced by client data. Remove out-of-context icons.");
+    lines.push("NO EMPTY SPACES: if you remove something, extend neighboring elements to fill the gap.");
+    lines.push("ZERO INVENTED INFO: never add names, dates, prices, phone numbers not provided by the client.");
+    lines.push("BACKGROUND: prefer white/neutral if template has white bg. Keep original bg style if colored.");
+    lines.push("");
+    lines.push("CRITICAL: The final poster must be the SAME DESIGN as the reference, just personalized with client info.");
+    lines.push("An observer comparing both images must immediately recognize it's the same template.");
+    lines.push("");
+    if (hasContentImage) {
+      lines.push("CONTENT IMAGE: Use the provided photo exactly as-is. Place it in the same position as the subject/photo in the reference template. The photo must match the context of the poster (e.g. a pastor for a church poster, a chef for a restaurant poster, an artist for a concert poster).");
+      lines.push("");
+    }
+    if (hasLogoImage) {
+      lines.push("LOGO: Reproduce the provided logo EXACTLY as-is, do not modify it.");
+      lines.push("");
+    }
+    lines.push(`Output: ${aspectRatio} | High resolution | Text language: French`);
+    lines.push("");
+    lines.push("=== CLIENT CONTENT (ONLY SOURCE OF TRUTH) ===");
+    lines.push(userPrompt);
+    return lines.join("\n");
   }
 
-  // ====== CONTENU UTILISATEUR ======
-  instructions.push("=== CONTENU CLIENT (SEULE SOURCE DE VÉRITÉ) ===");
-  instructions.push("🚨 UNIQUEMENT les informations CI-DESSOUS doivent apparaître.");
-  instructions.push("🚨 INTERDIT d'inventer: noms, dates, lieux, prix, contacts.");
-  instructions.push(`Format: ${aspectRatio} | Qualité: haute résolution | Texte: français`);
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni.");
-  if (hasContentImage) instructions.push("PHOTO: Utiliser l'image de contenu fournie telle quelle.");
+  // ====== MODE LIBRE (sans référence, rare car auto-select) ======
+  const instructions: string[] = [];
+  const professionalStandards = buildProfessionalStandardsPrompt();
+  instructions.push(professionalStandards);
+  instructions.push("🎨 Create a PREMIUM professional poster inspired by top African graphic designers.");
+  instructions.push("BACKGROUND: Prefer white/cream or very light backgrounds. Avoid overly colorful backgrounds.");
   instructions.push("");
-  instructions.push("=== DEMANDE CLIENT ===");
+  const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
+  instructions.push(expertSkillsPrompt);
+  instructions.push("");
+  instructions.push("=== CLIENT CONTENT (ONLY SOURCE OF TRUTH) ===");
+  instructions.push("🚨 ONLY the information below must appear. NEVER invent names, dates, places, prices, contacts.");
+  instructions.push(`Output: ${aspectRatio} | High resolution | Text language: French`);
+  if (hasLogoImage) instructions.push("LOGO: Reproduce EXACTLY as provided.");
+  if (hasContentImage) instructions.push("PHOTO: Use the provided content image as-is, matching the poster context.");
+  instructions.push("");
   instructions.push(userPrompt);
-  instructions.push("");
-
   return instructions.join("\n");
 }
 
