@@ -195,161 +195,82 @@ function buildProfessionalPrompt({
   const instructions: string[] = [];
 
   // ====== STANDARDS PROFESSIONNELS UNIVERSELS ======
-  // Ces règles fondamentales s'appliquent à TOUS les designs
   const professionalStandards = buildProfessionalStandardsPrompt();
   instructions.push(professionalStandards);
 
-  // Détecter le domaine pour les compétences expertes
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
 
-  // ====== MODE ÉDITION/CLONAGE (AVEC EXPERT SKILLS) ======
+  // ====== MODE CLONE / ÉDITION (avec ou sans référence utilisateur) ======
   if (isCloneMode || hasReferenceImage) {
-    instructions.push("🚨 MODE ÉDITION: Tu MODIFIES l'image de référence, tu ne crées PAS de nouveau design.");
-    instructions.push("GARDER: composition, style, effets, mise en page IDENTIQUES au template.");
-    instructions.push("REMPLACER: textes→contenu client, visages→photos client (si fournis), logos→logos client.");
-    instructions.push("SUPPRIMER: éléments du template non remplacés par le client (ne pas inventer).");
+    instructions.push("══════════════════════════════════════════════");
+    instructions.push("🚨🚨🚨 MODE RADICAL: ÉDITION/MODIFICATION DIRECTE DE L'IMAGE 🚨🚨🚨");
+    instructions.push("══════════════════════════════════════════════");
     instructions.push("");
-    
-    // NOUVEAU: Injecter les compétences expertes AUSSI en mode clone
-    instructions.push("━━━ 🎨 QUALITÉ TYPOGRAPHIQUE PROFESSIONNELLE ━━━");
-    instructions.push("TYPOGRAPHIE: Jamais de texte brut/basique. Toujours stylisé:");
-    instructions.push("   • Titres avec effets 3D, dégradés, glow ou ombres portées");
-    instructions.push("   • Bordures/contours colorés pour lisibilité maximale");
-    instructions.push("   • Hiérarchie visuelle claire (tailles variées, graisses différentes)");
-    instructions.push("LAYOUT: Formes organiques et courbes professionnelles:");
-    instructions.push("   • Bandeaux avec coins arrondis ou formes dynamiques");
-    instructions.push("   • Zones de texte avec fonds stylisés (dégradés, overlays)");
-    instructions.push("   • Éléments décoratifs (lignes, motifs, particules)");
-    instructions.push("⚠️ APPLIQUER ces règles au contenu de l'utilisateur, pas au template.");
+    instructions.push("Tu es un ÉDITEUR D'IMAGE. Tu NE CRÉES PAS de nouveau design.");
+    instructions.push("Tu MODIFIES l'image de référence fournie comme si tu utilisais Photoshop.");
+    instructions.push("");
+    instructions.push("━━━ CE QUE TU DOIS GARDER IDENTIQUE (NE PAS TOUCHER) ━━━");
+    instructions.push("• La COMPOSITION EXACTE (positions, tailles, proportions de chaque zone)");
+    instructions.push("• Le LAYOUT (disposition des blocs, colonnes, sections)");
+    instructions.push("• Les FORMES (courbes, cercles, bandeaux, séparateurs, cadres)");
+    instructions.push("• Les EFFETS GRAPHIQUES (dégradés, ombres, glow, 3D, particules)");
+    instructions.push("• Le STYLE TYPOGRAPHIQUE (taille relative, graisse, effets sur le texte)");
+    instructions.push("• Les ÉLÉMENTS DÉCORATIFS (motifs, lignes, ornements)");
+    instructions.push("• La PROFONDEUR et les COUCHES visuelles");
+    instructions.push("• L'ARCHITECTURE VISUELLE GLOBALE = copie à 95% de l'original");
+    instructions.push("");
+    instructions.push("━━━ CE QUE TU DOIS REMPLACER ━━━");
+    instructions.push("• TEXTES: Remplacer CHAQUE texte du template par le contenu du client");
+    instructions.push("• VISAGES/PERSONNES: Si le client fournit des photos, remplacer les personnes");
+    instructions.push("• LOGOS: Remplacer par les logos du client (si fournis)");
+    instructions.push("• COULEURS: UNIQUEMENT si le client fournit une palette de couleurs");
+    instructions.push("");
+    instructions.push("━━━ RÈGLES DE COULEURS (CRITIQUE) ━━━");
+    instructions.push("• Si palette utilisateur fournie: appliquer selon 60-30-10");
+    instructions.push("• Si PAS de palette: GARDER les couleurs originales du template");
+    instructions.push("• FOND BLANC PRIVILÉGIÉ: En cas de doute, utiliser blanc/crème comme fond");
+    instructions.push("• ÉVITER les fonds trop colorés qui écrasent le contenu");
+    instructions.push("• Le BLANC est un harmonisateur universel: l'utiliser pour séparer les couleurs");
+    instructions.push("• Si plusieurs couleurs vives: les séparer par du blanc/gris clair");
+    instructions.push("• Pas de fonds criards, pas de dégradés agressifs de couleurs vives");
+    instructions.push("");
+    instructions.push("━━━ CE QUE TU DOIS SUPPRIMER ━━━");
+    instructions.push("• Tout texte/info du template original non remplacé par le client");
+    instructions.push("• Logos originaux du template (sauf si le client les garde)");
+    instructions.push("• Contacts, noms, dates du template original");
+    instructions.push("• Objets/icônes spécifiques au domaine original si hors contexte");
+    instructions.push("");
+    instructions.push("━━━ ZÉRO ESPACE VIDE ━━━");
+    instructions.push("• Si une zone est supprimée: étendre les éléments voisins");
+    instructions.push("• Agrandir le texte du client ou ajouter des décorations neutres");
+    instructions.push("• JAMAIS de zones blanches vides ou de trous dans le design");
+    instructions.push("");
+    instructions.push("━━━ RÉSULTAT ATTENDU ━━━");
+    instructions.push("• L'affiche finale DOIT être visuellement IDENTIQUE au template");
+    instructions.push("• Seuls les CONTENUS (textes, photos, logos) changent");
+    instructions.push("• Un observateur doit voir que c'est le MÊME design, personnalisé");
+    instructions.push("• Fidélité au template: 90-95% (seul le contenu diffère)");
     instructions.push("");
   } else {
-    // ====== MODE CRÉATION LIBRE - NIVEAU GRAPHISTE PRO 15+ ANS ======
-    instructions.push("🎨 Tu es un DIRECTEUR ARTISTIQUE d'une AGENCE DE DESIGN INTERNATIONALE, 15+ ans d'expérience.");
-    instructions.push("Tu crées une affiche publicitaire PREMIUM de classe mondiale, pas un simple visuel.");
-    instructions.push("Ton travail DOIT ressembler aux créations des meilleurs graphistes africains professionnels.");
+    // Ce cas ne devrait plus arriver car le mode libre sélectionne un template auto
+    // Mais au cas où, on garde des instructions de création libre minimales
+    instructions.push("🎨 DIRECTEUR ARTISTIQUE - Crée une affiche PREMIUM professionnelle.");
+    instructions.push("FOND: Privilégier blanc/crème ou fond très clair. Éviter les couleurs vives en fond.");
+    instructions.push("STYLE: S'inspirer du style des graphistes professionnels africains.");
     instructions.push("");
     
-    // ━━━ STRUCTURE DE DESIGN OBLIGATOIRE ━━━
-    instructions.push("━━━ ARCHITECTURE VISUELLE (STRUCTURE DU DESIGN) ━━━");
-    instructions.push("CONSTRUIS L'AFFICHE EN COUCHES SUPERPOSÉES comme un graphiste pro:");
-    instructions.push("  COUCHE 1 (FOND): Texture riche ou dégradé multi-couleurs, JAMAIS uni/plat");
-    instructions.push("  COUCHE 2 (FORMES): Grandes formes courbes, arcs, vagues, cercles découpés");
-    instructions.push("  COUCHE 3 (CONTENU): Photos, personnages avec détourage pro et rim light");
-    instructions.push("  COUCHE 4 (TEXTE): Typographie stylisée avec effets 3D/glow/metallic");
-    instructions.push("  COUCHE 5 (FINITIONS): Particules, lens flares, bokeh, éléments décoratifs");
-    instructions.push("• Chaque couche DOIT être visible et contribuer à la profondeur");
-    instructions.push("• Minimum 4 couches de profondeur obligatoire");
-    instructions.push("");
-    
-    // ━━━ FORMES ET COURBES PROFESSIONNELLES ━━━
-    instructions.push("━━━ FORMES COURBES ET DESIGN ORGANIQUE (CRITIQUE) ━━━");
-    instructions.push("OBLIGATOIRE - Utiliser des FORMES COURBES comme séparateurs et décoration:");
-    instructions.push("  • Grande VAGUE ou ARC qui divise l'affiche en zones (pas des lignes droites)");
-    instructions.push("  • Cercles et demi-cercles comme cadres pour photos ou éléments");
-    instructions.push("  • Bandeaux avec bords ONDULÉS ou en forme de RUBAN 3D pour le texte");
-    instructions.push("  • Formes blob/organiques colorées comme éléments de fond décoratifs");
-    instructions.push("  • Coins arrondis TRÈS prononcés (30-50px) sur tous les rectangles");
-    instructions.push("  • Lignes courbes dynamiques qui guident l'œil à travers le design");
-    instructions.push("  • Formes en SWOOSH ou SLASH diagonal pour créer du mouvement");
-    instructions.push("INTERDIT: rectangles plats, lignes droites comme séparateurs, mise en page en blocs");
-    instructions.push("");
-    
-    // ━━━ TYPOGRAPHIE STYLISÉE OBLIGATOIRE ━━━
-    instructions.push("━━━ TYPOGRAPHIE STYLISÉE (JAMAIS DE TEXTE BASIQUE) ━━━");
-    instructions.push("Le texte est un ÉLÉMENT GRAPHIQUE, pas juste de l'information:");
-    instructions.push("  TITRE PRINCIPAL - Choisir UN de ces styles obligatoirement:");
-    instructions.push("    → Lettres 3D avec EXTRUSION et ombre portée profonde (effet bloc)");
-    instructions.push("    → Lettres MÉTALLIQUES (or, chrome, argent) avec reflets réalistes");
-    instructions.push("    → DÉGRADÉ de 2-3 couleurs vives dans les lettres");
-    instructions.push("    → GLOW NÉON lumineux (2-4px) avec halo de couleur autour");
-    instructions.push("    → CONTOUR STROKE épais (3-6px) bicolore avec remplissage contrasté");
-    instructions.push("    → Lettres avec TEXTURE (bois, métal, flammes, eau, tissu)");
-    instructions.push("  SOUS-TITRES: Semi-bold avec dégradé subtil ou ombre légère");
-    instructions.push("  INFOS (date, lieu, prix): Dans des BADGES stylisés (rectangles arrondis colorés)");
-    instructions.push("  • Le texte peut PASSER DERRIÈRE un personnage pour créer de la profondeur");
-    instructions.push("  • Mots-clés importants en COULEUR DIFFÉRENTE du reste du texte");
-    instructions.push("  • Hiérarchie: Titre 3x+ sous-titre, 3 niveaux minimum de tailles");
-    instructions.push("  INTERDIT: texte plat, texte blanc simple sur fond, texte monotone sans effets");
-    instructions.push("");
-    
-    // ━━━ EFFETS PREMIUM ET FINITIONS ━━━
-    instructions.push("━━━ EFFETS VISUELS PREMIUM ━━━");
-    instructions.push("• Éclairage dramatique avec SOURCE identifiable (en haut, côté, arrière)");
-    instructions.push("• RIM LIGHT (contour lumineux) autour des personnages (obligatoire sur fond sombre)");
-    instructions.push("• Particules: confettis, étincelles, poussière lumineuse, bokeh coloré");
-    instructions.push("• Lens flares et rayons lumineux naturels");
-    instructions.push("• Ombres portées RÉALISTES et cohérentes direction 135°");
-    instructions.push("• Textures de fond: grain, motifs géométriques subtils, dégradés complexes");
-    instructions.push("• Color grading cinématique unifié (teinte cohérente sur toute l'image)");
-    instructions.push("• Vignettage léger (10-20%) pour concentrer l'attention");
-    instructions.push("• Overlay de couleur semi-transparent sur zones de fond (20-40% opacité)");
-    instructions.push("");
-    
-    // ━━━ COMPOSITION ET LAYOUT ━━━
-    instructions.push("━━━ COMPOSITION PROFESSIONNELLE ━━━");
-    instructions.push("• Asymétrie maîtrisée: 60/40 ou 70/30 (JAMAIS centré et ennuyeux)");
-    instructions.push("• Personnages positionnés sur les TIERS (pas au milieu exact)");
-    instructions.push("• 30-50% d'espace de respiration (pas de design étouffé)");
-    instructions.push("• Palette 3-4 couleurs max, règle 60-30-10 stricte");
-    instructions.push("• Couleurs vibrantes et saturées (+20-30% saturation)");
-    instructions.push("• Si palette utilisateur fournie: l'utiliser EXCLUSIVEMENT");
-    instructions.push("• Personnages africains authentiques, expressions engageantes");
-    instructions.push("");
-    
-    // ━━━ EXEMPLES CONCRETS DE RENDU ATTENDU ━━━
-    instructions.push("━━━ RÉFÉRENCE: VOICI CE QUE FONT LES MEILLEURS GRAPHISTES ━━━");
-    instructions.push("Inspire-toi de CE STYLE PRÉCIS de design professionnel:");
-    instructions.push("  ✅ Grande forme COURBE qui sépare le fond en 2 zones de couleurs différentes");
-    instructions.push("  ✅ Titre en 3D DORÉ avec glow et extrusion sur fond sombre");
-    instructions.push("  ✅ Personnage détouré avec rim light qui CHEVAUCHE la courbe de séparation");
-    instructions.push("  ✅ Badge arrondi coloré avec date/lieu en texte blanc bold");
-    instructions.push("  ✅ Particules lumineuses et lens flare derrière le personnage");
-    instructions.push("  ✅ Fond avec dégradé riche (ex: bleu nuit → violet → rose)");
-    instructions.push("  ✅ Éléments décoratifs: lignes courbes, motifs géométriques, formes blob");
-    instructions.push("  ❌ PAS de fond uni plat, PAS de texte blanc simple, PAS de mise en page en grille");
-    instructions.push("  ❌ PAS de rectangles avec bords droits comme séparateurs");
-    instructions.push("  ❌ PAS de texte sans aucun effet (pas de texte plat/basique)");
-    instructions.push("");
-    
-    // RÈGLE ABSOLUE: CONTENU UTILISATEUR UNIQUEMENT
-    instructions.push("🚨 RÈGLE CRITIQUE: ZÉRO INFORMATION INVENTÉE 🚨");
-    instructions.push("• AFFICHER UNIQUEMENT les informations fournies par le client");
-    instructions.push("• Si le client n'a PAS fourni: titre, date, lieu, prix, contact, orateur → NE PAS L'INVENTER");
-    instructions.push("• AUCUN texte placeholder, lorem ipsum, ou information fictive");
-    instructions.push("• Si peu d'infos: agrandir les éléments existants, ajouter plus de design/décoration");
-    instructions.push("• Mieux vaut un design avec peu de texte mais SPECTACULAIRE que du faux contenu");
-    instructions.push("");
-    
-    // Injection des compétences spécifiques au domaine
     const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
     instructions.push(expertSkillsPrompt);
     instructions.push("");
   }
 
-  // ====== MODE MODIFICATION D'IMAGE (CONDENSÉ) ======
-  if (hasReferenceImage || isCloneMode) {
-    instructions.push("⚠️ MODE MODIFICATION: Tu ÉDITES l'affiche de référence, pas de nouveau design.");
-    instructions.push("");
-    instructions.push("GARDER INTACT: mise en page, style graphique, effets, typographie, éléments décoratifs.");
-    instructions.push("REMPLACER: textes→client, visages→client (si fournis), logos→client, couleurs→palette client.");
-    instructions.push("SUPPRIMER: tout contenu du template non remplacé (logos, contacts, dates, noms originaux).");
-    instructions.push("");
-    instructions.push("PALETTE: Si fournie, remplacer TOUTES les couleurs du template. Règle 60-30-10.");
-    instructions.push("OBJETS HORS CONTEXTE: Supprimer icônes spécifiques au domaine original (croix, diplôme, fourchette...).");
-    instructions.push("");
-    instructions.push("ZÉRO ESPACE VIDE: Si zone supprimée→étendre éléments voisins, agrandir texte client, ou décoration neutre.");
-    instructions.push("INTERDIT: bandeaux vides, espaces blancs flagrants, objets/textes du template original.");
-    instructions.push("");
-  }
-
   // ====== CONTENU UTILISATEUR ======
   instructions.push("=== CONTENU CLIENT (SEULE SOURCE DE VÉRITÉ) ===");
-  instructions.push("🚨 UNIQUEMENT les informations CI-DESSOUS doivent apparaître sur l'affiche.");
-  instructions.push("🚨 INTERDIT d'inventer: noms, dates, lieux, prix, contacts, orateurs, entreprises.");
-  instructions.push("🚨 Si une info n'est PAS dans la demande client → elle N'EXISTE PAS.");
+  instructions.push("🚨 UNIQUEMENT les informations CI-DESSOUS doivent apparaître.");
+  instructions.push("🚨 INTERDIT d'inventer: noms, dates, lieux, prix, contacts.");
   instructions.push(`Format: ${aspectRatio} | Qualité: haute résolution | Texte: français`);
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni, sans modification.");
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT comme fourni.");
   if (hasContentImage) instructions.push("PHOTO: Utiliser l'image de contenu fournie telle quelle.");
   instructions.push("");
   instructions.push("=== DEMANDE CLIENT ===");
