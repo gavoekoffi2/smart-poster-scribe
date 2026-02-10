@@ -195,54 +195,67 @@ function buildProfessionalPrompt({
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
 
-  // ====== MODE CLONE (avec référence) : prompt ULTRA-COURT et DOMINANT ======
+  // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    lines.push("YOU ARE A PHOTOSHOP OPERATOR. You are NOT creating a new design.");
-    lines.push("You MUST edit the reference image provided. The output must look 95% identical to the reference.");
+    lines.push("ROLE: Expert en Design Graphique specialise dans la personnalisation d'affiches publicitaires professionnelles.");
+    lines.push("OBJECTIF: Transformer l'Affiche de Reference en Affiche Finale personnalisee.");
     lines.push("");
-    lines.push("KEEP IDENTICAL: exact layout, composition, shapes, curves, decorative elements, effects, depth layers, typography style, background structure.");
-    lines.push("ONLY REPLACE: text content → client text below. Photos/faces → client photos if provided. Logos → client logos if provided.");
-    lines.push("COLORS: If client provides a palette, apply it (60-30-10 rule). Otherwise KEEP original template colors.");
-    lines.push("REMOVE: all original template text/names/dates/contacts not replaced by client data. Remove out-of-context icons.");
-    lines.push("NO EMPTY SPACES: if you remove something, extend neighboring elements to fill the gap.");
-    lines.push("ZERO INVENTED INFO: never add names, dates, prices, phone numbers not provided by the client.");
-    lines.push("BACKGROUND: prefer white/neutral if template has white bg. Keep original bg style if colored.");
+    lines.push("FIDELITE 95%: Conserver rigoureusement la structure, composition, courbes, formes, effets de profondeur, elements decoratifs, style typographique et structure du fond de la reference.");
+    lines.push("REMPLACER: texte → donnees client ci-dessous | photos/visages → photos client si fournies | logos → logos client si fournis.");
     lines.push("");
-    lines.push("CRITICAL: The final poster must be the SAME DESIGN as the reference, just personalized with client info.");
-    lines.push("An observer comparing both images must immediately recognize it's the same template.");
+    lines.push("SUPPRESSION INTELLIGENTE: Si une info presente sur la reference n'est PAS fournie par le client (date, telephone, email, site web, adresse, prix), SUPPRIMER totalement l'element + ses icones/decorations associees. Aucun espace vide, aucun texte par defaut, aucun Lorem Ipsum. Etendre les elements voisins pour combler le vide.");
+    lines.push("");
+    lines.push("ADAPTATION DOMAINE: Si le domaine de la reference differe de celui du client, adapter les icones et visuels thematiques (ex: livre→fourchette, micro→stethoscope) tout en gardant la structure professionnelle initiale.");
+    lines.push("");
+    lines.push("DIVERSITE: Par defaut, toutes les personnes representees doivent etre d'origine africaine, sauf si le client specifie explicitement une autre origine.");
+    lines.push("");
+    lines.push("TOUCHE CREATIVE SUBTILE: Ajouter de legers effets de lumiere, textures fines, finitions premium pour rendre l'affiche unique SANS denaturer la structure ni le style choisi.");
+    lines.push("");
+    lines.push("TEXTE: 100% lisible, zero faute d'orthographe, typographie adaptee au secteur d'activite. Polices integrees au design.");
+    lines.push("COULEURS: Palette client en regle 60-30-10 si fournie. Sinon garder les couleurs originales de la reference.");
+    lines.push("FOND: Preferer blanc/neutre/creme. Si fond colore dans la reference, le conserver. Eviter les fonds trop charges.");
+    lines.push("ZERO INFO INVENTEE: JAMAIS de noms, dates, prix, numeros, contacts fictifs. Uniquement les donnees client.");
+    lines.push("");
+    lines.push("RESULTAT ATTENDU: Un observateur comparant les deux images doit immediatement reconnaitre le meme template. Design final percu comme haut de gamme (premium).");
     lines.push("");
     if (hasContentImage) {
-      lines.push("CONTENT IMAGE: Use the provided photo exactly as-is. Place it in the same position as the subject/photo in the reference template. The photo must match the context of the poster (e.g. a pastor for a church poster, a chef for a restaurant poster, an artist for a concert poster).");
+      lines.push("PHOTO CONTENU: Utiliser la photo fournie telle quelle. La placer dans la meme position que le sujet/photo de la reference. La photo doit correspondre au contexte de l'affiche (ex: pasteur pour eglise, chef pour restaurant, artiste pour concert).");
       lines.push("");
     }
     if (hasLogoImage) {
-      lines.push("LOGO: Reproduce the provided logo EXACTLY as-is, do not modify it.");
+      lines.push("LOGO: Reproduire le logo fourni EXACTEMENT tel quel, sans modification.");
       lines.push("");
     }
-    lines.push(`Output: ${aspectRatio} | High resolution | Text language: French`);
+    lines.push(`Format: ${aspectRatio} | Haute resolution | Langue du texte: Francais`);
     lines.push("");
-    lines.push("=== CLIENT CONTENT (ONLY SOURCE OF TRUTH) ===");
+    lines.push("=== DONNEES CLIENT (SEULE SOURCE DE VERITE) ===");
     lines.push(userPrompt);
     return lines.join("\n");
   }
 
-  // ====== MODE LIBRE (sans référence, rare car auto-select) ======
+  // ====== MODE LIBRE (Cas C) : Creation unique inspiree des standards ======
   const instructions: string[] = [];
-  const professionalStandards = buildProfessionalStandardsPrompt();
-  instructions.push(professionalStandards);
-  instructions.push("🎨 Create a PREMIUM professional poster inspired by top African graphic designers.");
-  instructions.push("BACKGROUND: Prefer white/cream or very light backgrounds. Avoid overly colorful backgrounds.");
+  instructions.push("ROLE: Expert en Design Graphique de haut niveau. Generer une affiche publicitaire finale professionnelle.");
+  instructions.push("");
+  instructions.push("LOGIQUE: Aucune reference directe. Synthetiser un design unique et professionnel inspire des standards esthetiques africains: equilibrage des masses, contrastes, typographies modernes.");
   instructions.push("");
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
   instructions.push("");
-  instructions.push("=== CLIENT CONTENT (ONLY SOURCE OF TRUTH) ===");
-  instructions.push("🚨 ONLY the information below must appear. NEVER invent names, dates, places, prices, contacts.");
-  instructions.push(`Output: ${aspectRatio} | High resolution | Text language: French`);
-  if (hasLogoImage) instructions.push("LOGO: Reproduce EXACTLY as provided.");
-  if (hasContentImage) instructions.push("PHOTO: Use the provided content image as-is, matching the poster context.");
+  instructions.push("SUPPRESSION INTELLIGENTE: N'afficher QUE les informations fournies par le client. Aucun texte fictif, aucun placeholder.");
+  instructions.push("DIVERSITE: Personnes d'origine africaine par defaut sauf mention contraire.");
+  instructions.push("TOUCHE CREATIVE: Effets de lumiere, textures subtiles, finitions premium. Design haut de gamme.");
+  instructions.push("TEXTE: 100% lisible, zero faute, typographie adaptee au secteur.");
+  instructions.push("COULEURS: Palette client en 60-30-10 si fournie. Sinon, palette professionnelle harmonieuse.");
+  instructions.push("FOND: Preferer blanc/creme/neutre. Eviter les fonds surcharges.");
+  instructions.push("ZERO INFO INVENTEE: JAMAIS de noms, dates, prix, contacts fictifs.");
   instructions.push("");
+  instructions.push(`Format: ${aspectRatio} | Haute resolution | Langue du texte: Francais`);
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT tel que fourni.");
+  if (hasContentImage) instructions.push("PHOTO: Utiliser la photo fournie telle quelle, en coherence avec le contexte de l'affiche.");
+  instructions.push("");
+  instructions.push("=== DONNEES CLIENT (SEULE SOURCE DE VERITE) ===");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
