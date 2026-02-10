@@ -1,217 +1,59 @@
 
-# Plan : Ajout de la Saisie Vocale avec Bytez (Whisper)
+## Plan : Integration des prompts systeme experts dans le moteur de generation
 
-## Objectif
+### Objectif
+Fusionner intelligemment les deux prompts systeme fournis par l'utilisateur dans la fonction `buildProfessionalPrompt` du fichier `supabase/functions/generate-image/index.ts`, pour renforcer la qualite des generations (clone et libre).
 
-Ajouter un bouton microphone à côté du champ de saisie permettant aux utilisateurs de **parler au lieu de taper**. L'audio sera envoyé à l'API Bytez qui utilise Whisper pour transcrire.
+### Analyse de l'existant
+Le prompt actuel (lignes 180-248) a deja une bonne base mais manque de precision sur :
+- La **suppression intelligente** des elements non fournis (dates, telephones, etc.)
+- L'**adaptation de domaine** quand le template est d'un domaine different de celui de l'utilisateur
+- La **diversite par defaut** (personnes d'origine africaine)
+- La **touche creative subtile** sans denaturer la structure
+- Le **processus de secours** (Cas A / B / C) pour la creation libre
 
-## Flux Utilisateur
+### Changements prevus
 
+**Fichier : `supabase/functions/generate-image/index.ts`**
+
+Remplacement de la fonction `buildProfessionalPrompt` (lignes 180-248) avec un prompt fusionne qui integre les deux prompts systeme :
+
+#### Mode Clone (avec reference ou template auto-selectionne)
+Le prompt sera restructure pour inclure les regles suivantes, de facon concise pour respecter la limite de tokens :
+
+1. **Role** : Expert en Design Graphique specialise dans la personnalisation d'affiches
+2. **Fidelite 95%** : Conserver rigoureusement structure, composition, courbes, effets
+3. **Suppression intelligente** : Si une info du template n'est pas fournie par l'utilisateur, supprimer l'element ET ses icones/decorations associees. Zero espace vide, zero texte par defaut
+4. **Adaptation de domaine** : Si le domaine du template differe de celui de l'utilisateur, adapter les icones/visuels thematiques (ex: livre vers fourchette) tout en gardant la structure
+5. **Diversite par defaut** : Toutes les personnes representees doivent etre d'origine africaine sauf mention contraire explicite
+6. **Touche personnelle subtile** : Ajouter de legers effets (lumiere, textures, finitions premium) pour rendre l'affiche unique sans briser la structure
+7. **Rendu texte** : Texte 100% lisible, sans fautes, typographie adaptee au secteur
+8. **Zero info inventee** : Jamais de noms/dates/prix fictifs
+
+#### Mode Libre (sans reference, fallback)
+Le prompt integrera la hierarchie de reference :
+- Cas B : Template thematique le plus proche (deja implemente via auto-selection)
+- Cas C : Si aucun template ne correspond, synthese d'un design unique inspire des standards esthetiques de la base
+- Memes regles de suppression, diversite et touche creative
+
+### Details techniques
+
+La fonction passera de ~70 lignes a environ le meme volume, mais avec un contenu beaucoup plus cible et professionnel. Le prompt restera sous 3000 caracteres pour eviter les erreurs 500 de l'API Kie AI.
+
+Regles condensees dans le prompt clone :
 ```text
-[Clic sur 🎤] → [Permission micro] → [Enregistrement] → [Clic pour arrêter] → [Envoi à Bytez] → [Texte transcrit dans le champ]
+ROLE: Expert Design Graphique - Personnalisation d'affiches professionnelles.
+FIDELITE: 95% identique a la reference (layout, courbes, effets, profondeur).
+REMPLACER: texte → donnees client | photos → photos client | logos → logos client.
+SUPPRIMER: tout element dont l'info n'est PAS fournie (date, telephone, email, site web, adresse) + icones/decorations associees. Aucun espace vide, aucun texte par defaut.
+ADAPTATION DOMAINE: si domaine template ≠ domaine client, adapter icones thematiques (ex: livre→fourchette) en gardant la structure.
+DIVERSITE: personnes d'origine africaine par defaut sauf mention contraire.
+TOUCHE CREATIVE: effets de lumiere subtils, textures fines, finitions premium. Ne pas denaturer la structure.
+TEXTE: 100% lisible, zero faute, typographie adaptee au secteur.
+COULEURS: palette client en 60-30-10 si fournie, sinon garder couleurs originales.
+FOND: preferer blanc/neutre. Si fond colore, respecter regles de design.
+ZERO INFO INVENTEE: jamais de noms/dates/prix/contacts fictifs.
 ```
 
-## Architecture Technique
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  FRONTEND (Navigateur)                                          │
-│                                                                  │
-│  ┌──────────────────┐    ┌──────────────────────────────────┐  │
-│  │ VoiceInputButton │───▶│ Enregistre audio via MediaRecorder│  │
-│  │     (🎤)         │    │ Convertit en base64               │  │
-│  └──────────────────┘    └──────────────────────────────────┘  │
-│            │                                                    │
-│            ▼                                                    │
-│  ┌──────────────────┐                                          │
-│  │ Appel Edge Func  │                                          │
-│  │ transcribe-audio │                                          │
-│  └──────────────────┘                                          │
-└─────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  EDGE FUNCTION (transcribe-audio)                               │
-│                                                                  │
-│  ┌──────────────────┐    ┌──────────────────────────────────┐  │
-│  │ Reçoit base64    │───▶│ Appelle API Bytez               │  │
-│  │ audio            │    │ POST https://api.bytez.com/...  │  │
-│  └──────────────────┘    └──────────────────────────────────┘  │
-│                                    │                            │
-│                                    ▼                            │
-│                          ┌──────────────────────────────────┐  │
-│                          │ Retourne transcription text      │  │
-│                          └──────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  API BYTEZ                                                      │
-│                                                                  │
-│  Endpoint: https://api.bytez.com/models/v2/openai/whisper-large-v3│
-│  Headers: Authorization: 3cc20df1aa1aa401ea5ea270e3b1bdba      │
-│  Body: { "base64": "data:audio/webm;base64,..." }              │
-│                                                                  │
-│  Response: { "output": "Texte transcrit ici..." }              │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Fichiers à Créer/Modifier
-
-| Fichier | Action | Description |
-|---------|--------|-------------|
-| `supabase/functions/transcribe-audio/index.ts` | **Créer** | Edge Function qui appelle l'API Bytez |
-| `src/components/chat/VoiceInputButton.tsx` | **Créer** | Composant bouton microphone |
-| `src/pages/AppPage.tsx` | **Modifier** | Intégrer le bouton dans la zone de saisie |
-| Secrets | **Ajouter** | `BYTEZ_API_KEY` |
-
----
-
-## Détails Techniques
-
-### 1. Edge Function : `transcribe-audio/index.ts`
-
-```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, ...",
-};
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const { audioBase64 } = await req.json();
-    const BYTEZ_API_KEY = Deno.env.get("BYTEZ_API_KEY");
-    
-    if (!BYTEZ_API_KEY) {
-      throw new Error("BYTEZ_API_KEY not configured");
-    }
-
-    console.log("Sending audio to Bytez Whisper API...");
-
-    const response = await fetch(
-      "https://api.bytez.com/models/v2/openai/whisper-large-v3",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": BYTEZ_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          base64: audioBase64,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Bytez API error:", response.status, errorText);
-      throw new Error(`Bytez API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Transcription result:", data.output);
-
-    return new Response(
-      JSON.stringify({ text: data.output }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Transcription error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
-```
-
-### 2. Composant : `VoiceInputButton.tsx`
-
-```typescript
-// États du bouton
-type RecordingState = "idle" | "recording" | "processing";
-
-// Fonctionnalités
-- Demande permission microphone au premier clic
-- Enregistre l'audio via MediaRecorder API (format webm)
-- Affiche états visuels (🎤 gris → 🎤 rouge pulsant → ⏳ chargement)
-- Convertit l'audio en base64
-- Appelle l'Edge Function
-- Transmet le texte transcrit au parent via onTranscript callback
-```
-
-### 3. Modification AppPage.tsx (lignes ~697-713)
-
-```tsx
-// Avant
-<div className="flex gap-3">
-  <Input ... />
-  <Button onClick={handleSend} ...>
-    <Send className="w-4 h-4" />
-  </Button>
-</div>
-
-// Après
-<div className="flex gap-3">
-  <Input ... />
-  <VoiceInputButton
-    onTranscript={(text) => setInputValue(prev => 
-      prev ? `${prev} ${text}` : text
-    )}
-    disabled={isProcessing}
-  />
-  <Button onClick={handleSend} ...>
-    <Send className="w-4 h-4" />
-  </Button>
-</div>
-```
-
----
-
-## Comportement UX
-
-| État | Icône | Couleur | Action |
-|------|-------|---------|--------|
-| Inactif | 🎤 Mic | Gris | Clic démarre l'enregistrement |
-| Enregistrement | 🎤 Mic | Rouge pulsant | Clic arrête et envoie |
-| Traitement | ⏳ Loader | Orange | Attente transcription |
-| Succès | 🎤 Mic | Vert flash | Texte ajouté au champ |
-| Erreur | 🎤 Mic | Rouge | Toast d'erreur affiché |
-
----
-
-## Gestion des Erreurs
-
-| Erreur | Message utilisateur |
-|--------|---------------------|
-| Permission micro refusée | "Veuillez autoriser l'accès au microphone dans les paramètres de votre navigateur" |
-| Échec API Bytez | "Erreur de transcription. Veuillez réessayer." |
-| Audio trop court | "L'enregistrement est trop court. Parlez plus longtemps." |
-| Navigateur non supporté | "Votre navigateur ne supporte pas l'enregistrement audio" |
-
----
-
-## Configuration Secret
-
-Le secret `BYTEZ_API_KEY` sera ajouté avec la valeur :
-```
-3cc20df1aa1aa401ea5ea270e3b1bdba
-```
-
----
-
-## Avantages de cette approche
-
-| Aspect | Détail |
-|--------|--------|
-| Simplicité | Pas de bibliothèque externe côté client |
-| Sécurité | Clé API stockée côté serveur uniquement |
-| Compatibilité | MediaRecorder supporté par tous les navigateurs modernes |
-| Qualité | Whisper Large V3 = excellente précision française |
-| Coût | Via votre compte Bytez existant |
+### Deploiement
+La fonction `generate-image` sera redeployee automatiquement apres modification.
