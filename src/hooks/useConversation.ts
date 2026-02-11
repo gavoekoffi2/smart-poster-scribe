@@ -281,8 +281,51 @@ function buildPrompt(state: ConversationState) {
     lines.push("");
   }
 
-  // ====== SECTION 5: PERSONNAGES ======
-  if (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter) {
+  // ====== SECTION 5: YOUTUBE THUMBNAIL SPECIFICS ======
+  if (domain === "youtube") {
+    lines.push("╔══════════════════════════════════════════════════════════════╗");
+    lines.push("║  🎬 MINIATURE YOUTUBE - RÈGLES SPÉCIFIQUES                    ║");
+    lines.push("╚══════════════════════════════════════════════════════════════╝");
+    lines.push("");
+    lines.push("FORMAT: 16:9 obligatoire (1280x720 ou 1920x1080).");
+    lines.push("VISAGE: Expression virale marquée (30-50% de la surface). Regard caméra.");
+    
+    // Titre vidéo
+    const videoTitle = state.domainQuestionState?.collectedTexts?.video_title;
+    if (videoTitle) {
+      lines.push(`THÈME VIDÉO: "${videoTitle}" → adapter TOUS les éléments visuels à ce thème.`);
+    }
+    
+    // Photo propre ou IA
+    const hasOwnImage = state.domainQuestionState?.answeredQuestions?.has_own_image;
+    if (!hasOwnImage) {
+      lines.push("VISAGE IA: Générer un visage expressif d'origine africaine correspondant au thème.");
+      lines.push("Expression virale: surprise/choc si argent/gains, confiance si coaching/formation, excitation si lifestyle.");
+    }
+    
+    // Éléments spécifiques
+    const specificElements = state.domainQuestionState?.collectedTexts?.specific_elements;
+    if (specificElements && specificElements.toLowerCase() !== "passer") {
+      lines.push(`ÉLÉMENTS SPÉCIFIQUES: ${specificElements}`);
+    }
+    
+    // Texte sur miniature
+    const wantsText = state.domainQuestionState?.answeredQuestions?.wants_text;
+    const thumbnailText = state.domainQuestionState?.collectedTexts?.wants_text;
+    if (wantsText && thumbnailText) {
+      lines.push(`TEXTE MINIATURE: "${thumbnailText}" (typographie MASSIVE, max 5 mots, très lisible).`);
+    } else {
+      lines.push("TEXTE: PAS de texte sur la miniature. 100% visuel.");
+    }
+    
+    lines.push("COULEURS: Hyper-saturées (+30-50%), contrastes forts.");
+    lines.push("RÉFÉRENCE: Si miniature de référence fournie, reproduire le STYLE et la COMPOSITION mais adapter au thème du client.");
+    lines.push("ADAPTATION: Remplacer icônes/objets non pertinents par des éléments correspondant au thème vidéo.");
+    lines.push("");
+  }
+
+  // ====== SECTION 6: PERSONNAGES ======
+  if (domain !== "youtube" && (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter)) {
     lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
     lines.push("");
   }
@@ -1006,7 +1049,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         
         // Déterminer le format et la résolution
         const formatPreset = state.formatPreset;
-        const aspectRatio = formatPreset?.aspectRatio || "3:4";
+        // YouTube: forcer 16:9
+        const aspectRatio = state.domain === "youtube" ? "16:9" : (formatPreset?.aspectRatio || "3:4");
         // Utiliser la résolution choisie par l'utilisateur, défaut à 1K (économique pour tous)
         const resolution: Resolution = formatPreset?.resolution || "1K";
         
@@ -1768,7 +1812,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           // Store extracted info
           const detectedDomain = analysis.suggestedDomain as Domain | null;
-          const validDomains: Domain[] = ["church", "event", "education", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "formation", "other"];
+          const validDomains: Domain[] = ["church", "event", "education", "restaurant", "fashion", "music", "sport", "technology", "health", "realestate", "formation", "youtube", "other"];
           const isValidDomain = detectedDomain && validDomains.includes(detectedDomain);
           
           // Build response based on what was understood
@@ -1784,16 +1828,40 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           // If domain detected, skip domain selection
           if (isValidDomain) {
-            // SIMPLIFICATION: Aller TOUJOURS directement à reference
-            // L'IA a déjà extrait tout ce dont on a besoin, pas de questions supplémentaires
-            setConversationState((prev) => ({
-              ...prev,
-              step: "reference",
-              domain: detectedDomain,
-              extractedInfo: analysis.extractedInfo,
-              missingInfo: [],
-            }));
-            response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+            // YouTube: route vers les questions spécifiques (titre, photo, éléments, texte)
+            if (detectedDomain === "youtube") {
+              setConversationState((prev) => ({
+                ...prev,
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: [],
+              }));
+              // Déclencher les questions YouTube via domain_questions
+              const questions = getDomainQuestions("youtube");
+              if (questions.length > 0) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "domain_questions",
+                  domainQuestionState: {
+                    currentQuestionId: questions[0].id,
+                    answeredQuestions: {},
+                    collectedImages: {},
+                    collectedTexts: {},
+                  },
+                }));
+                response += "\n\n" + questions[0].question;
+              }
+            } else {
+              // SIMPLIFICATION: Aller TOUJOURS directement à reference
+              setConversationState((prev) => ({
+                ...prev,
+                step: "reference",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: [],
+              }));
+              response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+            }
           } else {
             // Domain not detected, ask user to select
             setConversationState((prev) => ({
@@ -1954,6 +2022,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               }, 250);
             } else {
               // All questions answered, go to reference
+              const isYouTube = domain === "youtube";
+              const refMessage = isYouTube
+                ? "Parfait ! 🎬 Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer' pour que je crée un design original."
+                : "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
               setConversationState((prev) => ({
                 ...prev,
                 step: "reference",
@@ -1964,7 +2036,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
                 },
               }));
               setTimeout(() => {
-                addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+                addMessage("assistant", refMessage);
               }, 250);
             }
           }
@@ -1999,6 +2071,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               addMessage("assistant", nextQuestion.question);
             }, 250);
           } else {
+            const isYouTube = domain === "youtube";
+            const refMessage = isYouTube
+              ? "Parfait ! 🎬 Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer' pour que je crée un design original."
+              : "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
             setConversationState((prev) => ({
               ...prev,
               step: "reference",
@@ -2010,7 +2086,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               },
             }));
             setTimeout(() => {
-              addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+              addMessage("assistant", refMessage);
             }, 250);
           }
         }
@@ -2380,6 +2456,24 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               "Souhaitez-vous qu'un personnage mette en valeur votre produit sur l'affiche ? (Par exemple : quelqu'un qui tient le produit, l'utilise, le porte...)"
             );
           }, 250);
+        } else if (domain === "youtube") {
+          // YouTube: lancer les questions spécifiques
+          const questions = getDomainQuestions("youtube");
+          if (questions.length > 0) {
+            setConversationState((prev) => ({
+              ...prev,
+              step: "domain_questions",
+              domainQuestionState: {
+                currentQuestionId: questions[0].id,
+                answeredQuestions: {},
+                collectedImages: {},
+                collectedTexts: {},
+              },
+            }));
+            setTimeout(() => {
+              addMessage("assistant", questions[0].question);
+            }, 250);
+          }
         } else {
           setConversationState((prev) => ({ ...prev, step: "reference" }));
           setTimeout(() => {
@@ -2534,6 +2628,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       }, 250);
     } else {
       // Toutes les questions terminées, aller à l'étape référence
+      const isYouTube = domain === "youtube";
+      const refMessage = isYouTube
+        ? "Parfait ! 🎬 Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer' pour que je crée un design original."
+        : "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
       setConversationState((prev) => ({
         ...prev,
         step: "reference",
@@ -2544,7 +2642,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         },
       }));
       setTimeout(() => {
-        addMessage("assistant", "Parfait ! Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+        addMessage("assistant", refMessage);
       }, 250);
     }
   }, [addMessage]);
