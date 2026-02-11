@@ -198,7 +198,7 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
     ]
   },
 
-  // YouTube - flux complet pour miniatures virales
+  // YouTube - flux simplifié pour miniatures virales
   youtube: {
     domain: "youtube",
     label: "Miniature YouTube",
@@ -207,7 +207,7 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
       // Q1: Titre de la vidéo (OBLIGATOIRE)
       {
         id: "video_title",
-        question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à choisir les meilleurs éléments visuels et le texte percutant.",
+        question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à créer une miniature qui correspond parfaitement à votre contenu.",
         type: "text",
         required: true,
         priority: 1,
@@ -221,10 +221,10 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
           }
         }
       },
-      // Q2: Photo propre ou générée ?
+      // Q2: Photo propre ou générée par IA ?
       {
         id: "has_own_image",
-        question: "📸 **Voulez-vous utiliser votre propre photo pour la miniature ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez une photo de vous (idéalement gros plan avec expression marquée)\n• **Non** : L'IA générera un visage adapté à votre contenu",
+        question: "📸 **Voulez-vous utiliser votre propre photo pour la miniature ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez votre photo (gros plan avec expression marquée)\n• **Non** : L'IA générera automatiquement un visage expressif adapté au thème de votre vidéo",
         type: "boolean",
         required: true,
         priority: 2,
@@ -238,76 +238,40 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
           }
         }
       },
-      // Q3: Préférences de mise en scène (NOUVEAU)
+      // Q3: Éléments spécifiques à ajouter (optionnel)
       {
-        id: "scene_preference",
-        question: "🎭 **Comment souhaitez-vous la mise en scène ?** (optionnel)\n\nExemples de ce que vous pouvez demander :\n• \"Je tiens un billet de 100€ dans la main\"\n• \"Mon logo flotte à côté de ma tête\"\n• \"Des pièces d'or tombent autour de moi\"\n• \"Je pointe vers le texte\"\n• \"Je montre mon téléphone avec l'écran visible\"\n\n💡 Tapez \"passer\" si vous n'avez pas de préférence.",
+        id: "specific_elements",
+        question: "🎨 **Voulez-vous ajouter des éléments spécifiques sur la miniature ?** (optionnel)\n\nExemples :\n• \"Des billets d'argent qui volent\"\n• \"Mon logo à côté de ma tête\"\n• \"Un téléphone avec l'écran visible\"\n• \"Des flammes en arrière-plan\"\n\n💡 Tapez \"passer\" si vous n'avez pas de préférence.",
         type: "text",
         required: false,
         priority: 3,
         followUp: {
           condition: "any",
-          nextStep: "scene_collected",
+          nextStep: "elements_collected",
           textInput: {
-            label: "Mise en scène souhaitée",
-            placeholder: "Ex: Je tiens une liasse de billets, des symboles d'argent flottent autour de moi",
+            label: "Éléments spécifiques",
+            placeholder: "Ex: Des billets d'argent, mon logo flottant, des emojis de feu",
             multiline: true
           }
         }
       },
-      // Q4: Origine (si génération IA)
+      // Q4: Texte sur la miniature ?
       {
-        id: "subject_ethnicity",
-        question: "🌍 **Quelle origine pour la personne à générer ?**\n\n• Africain(e)\n• Caucasien(ne)\n• Asiatique\n• Autre",
-        type: "choice",
-        choices: ["Africain(e)", "Caucasien(ne)", "Asiatique", "Autre"],
-        required: false,
-        priority: 4
-      },
-      // Q5: Âge (si génération IA)
-      {
-        id: "subject_age",
-        question: "👤 **Quel âge approximatif pour la personne ?**\n\n• Jeune (18-30 ans)\n• Adulte (30-50 ans)\n• Senior (50+ ans)",
-        type: "choice",
-        choices: ["Jeune (18-30 ans)", "Adulte (30-50 ans)", "Senior (50+ ans)"],
-        required: false,
-        priority: 5
-      },
-      // Q6: Expression faciale
-      {
-        id: "desired_expression",
-        question: "😮 **Quelle expression faciale souhaitez-vous ?**\n\n• 😮 Surprise / Choc (le plus viral)\n• 🤔 Concentration\n• 😊 Joie / Excitation\n• 😎 Confiance",
-        type: "choice",
-        choices: ["Surprise / Choc", "Concentration", "Joie / Excitation", "Confiance"],
-        required: false,
-        priority: 6
-      },
-      // Q7: Logo
-      {
-        id: "has_logo",
-        question: "🏷️ **Voulez-vous ajouter votre logo sur la miniature ?**\n\nBeaucoup de créateurs ajoutent leur logo pour renforcer leur marque personnelle.",
+        id: "wants_text",
+        question: "✍️ **Voulez-vous du texte sur la miniature ?**\n\n💡 **Conseil pro** : Les meilleures miniatures YouTube ont **très peu ou pas de texte**. Le visage et les éléments visuels suffisent souvent.\n\n• **Oui** : Indiquez le texte souhaité (3-5 mots max recommandé)\n• **Non** : Pas de texte, miniature 100% visuelle (recommandé)",
         type: "boolean",
         required: false,
-        priority: 7,
+        priority: 4,
         followUp: {
           condition: "yes",
-          nextStep: "youtube_logo",
-          imageUpload: {
-            multiple: true,
-            label: "Vos logos",
-            hint: "Vous pouvez ajouter plusieurs logos"
+          nextStep: "text_collected",
+          textInput: {
+            label: "Texte de la miniature",
+            placeholder: "Ex: INCROYABLE ! ou 10 000€ (3-5 mots max)",
+            multiline: false
           }
         }
       },
-      // Q8: Position du logo
-      {
-        id: "logo_position",
-        question: "📍 **Où souhaitez-vous placer le logo ?**\n\n↖ Haut gauche | ↗ Haut droite\n◉ Centre (dans les mains/flottant)\n↙ Bas gauche | ↘ Bas droite\n\n💡 Conseil : Le coin inférieur droit est le plus populaire car il n'interfère pas avec le visage.",
-        type: "choice",
-        choices: ["Haut gauche", "Haut droite", "Centre (dans les mains)", "Bas gauche", "Bas droite"],
-        required: false,
-        priority: 8
-      }
     ]
   },
 };
