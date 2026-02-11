@@ -38,8 +38,8 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
       return { main: "Gratuit", sub: "Pour commencer" };
     }
     return {
-      main: `${fcfa.toLocaleString("fr-FR")} FCFA`,
-      sub: `(~$${usd} USD/mois)`,
+      main: `$${usd} USD/mois`,
+      sub: `(${fcfa.toLocaleString("fr-FR")} FCFA)`,
     };
   };
 
