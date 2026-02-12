@@ -898,6 +898,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     
     message += `📝 **Pour personnaliser votre miniature :**\n\n`;
     message += `• 🎬 **Titre de votre vidéo** (obligatoire)\n`;
+    message += `• 🔄 **Éléments à remplacer** sur la miniature de référence\n`;
+    message += `• 📸 **Photo de la personne** (ou je génère un visage expressif)\n`;
+    message += `• 🏷️ **Logos/icônes** à ajouter (YouTube, TikTok, etc.)\n`;
+    message += `• Tout autre détail important\n\n`;
+    message += `💡 **Important** : Tout ce que vous ne fournissez pas sera **adapté automatiquement** au thème de votre vidéo.\n`;
+    message += `💡 Envoyez vos **photos** et **logos** après avoir fourni vos informations.`;
     message += `• 📸 **Votre photo** (envoyez-la) OU dites "générer" pour que l'IA crée un visage\n`;
     message += `• 🎭 **Mise en scène souhaitée** (ex: "je tiens des billets", "mon logo flotte à côté")\n`;
     message += `• 🏷️ **Logo(s)** à ajouter (si applicable)\n\n`;
@@ -2862,28 +2868,53 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
   const handleColorsConfirm = useCallback(
     (colors: string[]) => {
+      const domain = conversationStateRef.current.domain;
       addMessage("user", `Couleurs : ${colors.join(", ")}`);
-      setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: colors }));
-      setTimeout(() => {
-        addMessage(
-          "assistant",
-          "Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
-        );
-      }, 250);
+      
+      if (domain === "youtube") {
+        // YouTube: skip logo, go directly to content_image (photo principale)
+        setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: colors }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "📸 **Photo principale de la miniature**\n\nEnvoyez la **photo de la personne** qui sera sur la miniature, ou cliquez sur 'Générer automatiquement' pour que l'IA crée un visage expressif adapté à votre vidéo."
+          );
+        }, 250);
+      } else {
+        setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: colors }));
+        setTimeout(() => {
+          addMessage(
+            "assistant",
+            "Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
+          );
+        }, 250);
+      }
     },
     [addMessage]
   );
 
   // Handler pour passer l'étape des couleurs
   const handleColorsSkip = useCallback(() => {
+    const domain = conversationStateRef.current.domain;
     addMessage("user", "Sans palette de couleurs");
-    setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: undefined }));
-    setTimeout(() => {
-      addMessage(
-        "assistant",
-        "D'accord, je conserverai les couleurs du style original. 🎨\n\nSouhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
-      );
-    }, 250);
+    
+    if (domain === "youtube") {
+      setConversationState((prev) => ({ ...prev, step: "content_image", colorPalette: undefined }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "📸 **Photo principale de la miniature**\n\nEnvoyez la **photo de la personne** qui sera sur la miniature, ou cliquez sur 'Générer automatiquement' pour que l'IA crée un visage expressif adapté à votre vidéo."
+        );
+      }, 250);
+    } else {
+      setConversationState((prev) => ({ ...prev, step: "logo", colorPalette: undefined }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "D'accord, je conserverai les couleurs du style original. 🎨\n\nSouhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'."
+        );
+      }, 250);
+    }
   }, [addMessage]);
 
   const handleLogoImage = useCallback(
@@ -2956,7 +2987,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
   const handleContentImage = useCallback(
     (imageDataUrl: string) => {
-      addMessage("user", "Image de contenu envoyée", imageDataUrl);
+      const domain = conversationStateRef.current.domain;
+      addMessage("user", domain === "youtube" ? "Photo principale envoyée" : "Image de contenu envoyée", imageDataUrl);
 
       setConversationState((prev) => ({
         ...prev,
@@ -2967,13 +2999,18 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       }));
 
       setTimeout(() => {
-        addMessage("assistant", "Image principale ajoutée ! ✨\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ? Vous pouvez en ajouter autant que vous voulez.");
+        if (domain === "youtube") {
+          addMessage("assistant", "Photo principale ajoutée ! ✨\n\nAjoutez maintenant des **images secondaires** : logos de plateformes (YouTube, TikTok...), icônes, ou tout élément visuel à placer sur la miniature. Pour chaque image, vous pourrez indiquer où et comment la positionner.");
+        } else {
+          addMessage("assistant", "Image principale ajoutée ! ✨\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ? Vous pouvez en ajouter autant que vous voulez.");
+        }
       }, 250);
     },
     [addMessage]
   );
 
   const handleSkipContentImage = useCallback(() => {
+    const domain = conversationStateRef.current.domain;
     addMessage("user", "Générer l'image automatiquement");
 
     setConversationState((prev) => ({
@@ -2984,10 +3021,17 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     }));
 
     setTimeout(() => {
-      addMessage(
-        "assistant",
-        "D'accord, l'image principale sera générée automatiquement.\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ?"
-      );
+      if (domain === "youtube") {
+        addMessage(
+          "assistant",
+          "L'IA va générer un visage expressif adapté au thème de votre vidéo. 🎭\n\nAjoutez des images secondaires (logos, icônes) si vous le souhaitez."
+        );
+      } else {
+        addMessage(
+          "assistant",
+          "D'accord, l'image principale sera générée automatiquement.\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ?"
+        );
+      }
     }, 250);
   }, [addMessage]);
 
