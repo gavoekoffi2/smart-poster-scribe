@@ -1,59 +1,81 @@
 
-## Plan : Integration des prompts systeme experts dans le moteur de generation
 
-### Objectif
-Fusionner intelligemment les deux prompts systeme fournis par l'utilisateur dans la fonction `buildProfessionalPrompt` du fichier `supabase/functions/generate-image/index.ts`, pour renforcer la qualite des generations (clone et libre).
+## Plan : Mise a jour des prix + Flux YouTube miniature specifique
 
-### Analyse de l'existant
-Le prompt actuel (lignes 180-248) a deja une bonne base mais manque de precision sur :
-- La **suppression intelligente** des elements non fournis (dates, telephones, etc.)
-- L'**adaptation de domaine** quand le template est d'un domaine different de celui de l'utilisateur
-- La **diversite par defaut** (personnes d'origine africaine)
-- La **touche creative subtile** sans denaturer la structure
-- Le **processus de secours** (Cas A / B / C) pour la creation libre
+### Partie 1 : Correction des prix sur la landing page
 
-### Changements prevus
+**Probleme** : Le composant `PricingSection.tsx` (page d'accueil) contient des prix codes en dur avec les anciens tarifs (9 900 FCFA pour Pro, 29 900 FCFA pour Business). La base de donnees a ete mise a jour (Pro: 5 000 FCFA / $8, Business: 15 000 FCFA / $25), mais la landing page n'a pas ete synchronisee.
 
-**Fichier : `supabase/functions/generate-image/index.ts`**
+**Solution** : Mettre a jour les prix hardcodes dans `src/components/landing/PricingSection.tsx` :
 
-Remplacement de la fonction `buildProfessionalPrompt` (lignes 180-248) avec un prompt fusionne qui integre les deux prompts systeme :
+- **Free** : Reste a `0` mais afficher `$0 USD` + `(0 FCFA)` pour la coherence
+- **Pro** : Changer de `9 900 FCFA` a `$8 USD/mois (5 000 FCFA)`
+- **Business** : Changer de `29 900 FCFA` a `$25 USD/mois (15 000 FCFA)`
+- Adapter le format d'affichage pour montrer le dollar en premier, FCFA entre parentheses (comme dans PlanCard.tsx)
 
-#### Mode Clone (avec reference ou template auto-selectionne)
-Le prompt sera restructure pour inclure les regles suivantes, de facon concise pour respecter la limite de tokens :
+**Fichier** : `src/components/landing/PricingSection.tsx` (lignes 9-67 : tableau `plans`)
 
-1. **Role** : Expert en Design Graphique specialise dans la personnalisation d'affiches
-2. **Fidelite 95%** : Conserver rigoureusement structure, composition, courbes, effets
-3. **Suppression intelligente** : Si une info du template n'est pas fournie par l'utilisateur, supprimer l'element ET ses icones/decorations associees. Zero espace vide, zero texte par defaut
-4. **Adaptation de domaine** : Si le domaine du template differe de celui de l'utilisateur, adapter les icones/visuels thematiques (ex: livre vers fourchette) tout en gardant la structure
-5. **Diversite par defaut** : Toutes les personnes representees doivent etre d'origine africaine sauf mention contraire explicite
-6. **Touche personnelle subtile** : Ajouter de legers effets (lumiere, textures, finitions premium) pour rendre l'affiche unique sans briser la structure
-7. **Rendu texte** : Texte 100% lisible, sans fautes, typographie adaptee au secteur
-8. **Zero info inventee** : Jamais de noms/dates/prix fictifs
+---
 
-#### Mode Libre (sans reference, fallback)
-Le prompt integrera la hierarchie de reference :
-- Cas B : Template thematique le plus proche (deja implemente via auto-selection)
-- Cas C : Si aucun template ne correspond, synthese d'un design unique inspire des standards esthetiques de la base
-- Memes regles de suppression, diversite et touche creative
+### Partie 2 : Flux specifique YouTube (miniatures)
+
+**Probleme actuel** : Apres les 4 questions YouTube (titre, photo, elements, texte), le flux enchaine sur les etapes classiques d'affiche : couleurs, logo, image de contenu, images secondaires, format. Or pour une miniature YouTube, demander un logo ou une image de contenu separee n'a pas de sens. L'utilisateur veut plutot :
+- Fournir sa **photo principale** (ou laisser l'IA generer un visage)
+- Ajouter des **images secondaires** (logos de plateformes, icones) avec instructions de positionnement
+- Fournir une **miniature de reference** optionnelle
+- Ne PAS se faire demander un logo d'entreprise classique
+
+**Solution** : Creer un chemin alternatif pour YouTube dans le flux de conversation. Apres les questions YouTube, au lieu d'aller vers `reference > style_preferences > colors > logo > content_image > secondary_images > format`, le flux sera :
+
+```text
+Questions YouTube (4 questions existantes)
+  |
+  v
+Reference (miniature de reference) -- deja en place
+  |
+  v
+Colors (palette optionnelle) -- garder, utile
+  |
+  v
+[SKIP LOGO pour YouTube] --> content_image (photo principale)
+  |
+  v
+secondary_images (logos/icones avec instructions)
+  |
+  v
+format (force 16:9 pour YouTube)
+```
+
+**Changements dans `src/hooks/useConversation.ts`** :
+
+1. **`handleColorsConfirm` et `handleColorsSkip`** (lignes ~2863-2887) : Apres la selection des couleurs, si le domaine est `youtube`, sauter l'etape logo et aller directement a `content_image` avec un message adapte :
+   - "Envoyez la **photo de la personne** qui sera sur la miniature, ou cliquez sur 'Generer automatiquement' pour que l'IA cree un visage expressif adapte a votre video."
+
+2. **`handleSkipLogo`** (ligne ~2945) : Pas de changement necessaire car on saute cette etape pour YouTube.
+
+3. **`handleContentImage`** (ligne ~2957) : Si YouTube, adapter le message pour les images secondaires :
+   - "Photo principale ajoutee ! Ajoutez maintenant des **images secondaires** : logos de plateformes (YouTube, TikTok...), icones, ou tout element visuel a placer sur la miniature. Pour chaque image, vous pourrez indiquer ou et comment la positionner."
+
+4. **`handleSkipContentImage`** (ligne ~2976) : Si YouTube, adapter le message :
+   - "L'IA va generer un visage expressif adapte au theme de votre video. Ajoutez des images secondaires (logos, icones) si vous le souhaitez."
+
+5. **Messages dans les etapes secondaires** : Adapter les labels quand le domaine est YouTube pour parler de "miniature" plutot que d'"affiche".
+
+6. **Mode clone YouTube** (`buildYouTubeCloneIntroMessage`, ligne ~871) : Quand l'utilisateur clique "S'inspirer" sur une miniature YouTube, le message d'intro demandera specifiquement :
+   - Le titre de la video
+   - Les elements a remplacer sur la miniature de reference
+   - La photo de la personne (ou generation IA)
+   - Les logos/icones a ajouter
+
+**Fichiers modifies** :
+- `src/components/landing/PricingSection.tsx` : Mise a jour des prix
+- `src/hooks/useConversation.ts` : Logique conditionnelle YouTube pour sauter le logo et adapter les messages
 
 ### Details techniques
 
-La fonction passera de ~70 lignes a environ le meme volume, mais avec un contenu beaucoup plus cible et professionnel. Le prompt restera sous 3000 caracteres pour eviter les erreurs 500 de l'API Kie AI.
+Les modifications dans `useConversation.ts` sont ciblees et non destructives :
+- Ajout de conditions `if (domain === "youtube")` dans 4 handlers existants
+- Pas de nouveaux etats de conversation (on reutilise `content_image` et `secondary_images`)
+- Le format 16:9 est deja force pour YouTube (ligne 1053)
+- Les questions YouTube existantes dans `domainQuestions.ts` restent inchangees
 
-Regles condensees dans le prompt clone :
-```text
-ROLE: Expert Design Graphique - Personnalisation d'affiches professionnelles.
-FIDELITE: 95% identique a la reference (layout, courbes, effets, profondeur).
-REMPLACER: texte → donnees client | photos → photos client | logos → logos client.
-SUPPRIMER: tout element dont l'info n'est PAS fournie (date, telephone, email, site web, adresse) + icones/decorations associees. Aucun espace vide, aucun texte par defaut.
-ADAPTATION DOMAINE: si domaine template ≠ domaine client, adapter icones thematiques (ex: livre→fourchette) en gardant la structure.
-DIVERSITE: personnes d'origine africaine par defaut sauf mention contraire.
-TOUCHE CREATIVE: effets de lumiere subtils, textures fines, finitions premium. Ne pas denaturer la structure.
-TEXTE: 100% lisible, zero faute, typographie adaptee au secteur.
-COULEURS: palette client en 60-30-10 si fournie, sinon garder couleurs originales.
-FOND: preferer blanc/neutre. Si fond colore, respecter regles de design.
-ZERO INFO INVENTEE: jamais de noms/dates/prix/contacts fictifs.
-```
-
-### Deploiement
-La fonction `generate-image` sera redeployee automatiquement apres modification.
