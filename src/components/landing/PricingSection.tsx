@@ -9,8 +9,9 @@ import { toast } from "sonner";
 const plans = [
   {
     name: "Essai gratuit",
-    price: "0",
-    currency: "FCFA",
+    price: "$0",
+    currency: "USD",
+    priceSub: "(0 FCFA)",
     period: "",
     description: "Testez la plateforme avec 5 crédits offerts",
     icon: Zap,
@@ -27,8 +28,9 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "9 900",
-    currency: "FCFA",
+    price: "$8",
+    currency: "USD",
+    priceSub: "(5 000 FCFA)",
     period: "/mois",
     description: "Pour les professionnels et créateurs",
     icon: Crown,
@@ -46,8 +48,9 @@ const plans = [
   },
   {
     name: "Business",
-    price: "29 900",
-    currency: "FCFA",
+    price: "$25",
+    currency: "USD",
+    priceSub: "(15 000 FCFA)",
     period: "/mois",
     description: "Pour les équipes et agences",
     icon: Building2,
@@ -224,10 +227,14 @@ Message envoyé depuis Graphiste GPT`;
                 <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.currency}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.currency}{plan.period}</span>
+                  </div>
+                  {plan.priceSub && (
+                    <span className="text-sm text-muted-foreground">{plan.priceSub}</span>
+                  )}
                 </div>
 
                 {/* Features */}
