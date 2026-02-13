@@ -25,30 +25,18 @@ export function ShowcaseSection() {
 
   const fetchShowcaseImages = async () => {
     try {
-      // Nouvelle logique: afficher seulement les images téléchargées avec bonne note (>=4)
-      // OU les anciennes images showcase (rétrocompatibilité)
+      // Afficher les images marquées showcase, triées par ordre puis date
       const { data, error } = await supabase
         .from("generated_images")
-        .select("id, image_url, prompt, domain, created_at, is_downloaded, user_rating, showcase_order")
+        .select("id, image_url, prompt, domain, created_at")
         .eq("is_showcase", true)
         .order("showcase_order", { ascending: true })
         .order("created_at", { ascending: false })
-        .limit(30); // Fetch more to filter
+        .limit(12);
 
       if (error) throw error;
       
-      // Filtrer: soit anciennes images (sans is_downloaded/user_rating définis)
-      // soit nouvelles images téléchargées avec bonne note
-      const filteredImages = (data || []).filter(img => {
-        // Anciennes images: is_downloaded est null/undefined - les garder
-        if (img.is_downloaded === null || img.is_downloaded === undefined) {
-          return true;
-        }
-        // Nouvelles images: doivent être téléchargées ET avoir une bonne note (4 ou 5)
-        return img.is_downloaded === true && (img.user_rating === null || img.user_rating >= 4);
-      }).slice(0, 12);
-      
-      setImages(filteredImages);
+      setImages(data || []);
     } catch (err) {
       console.error("Error fetching showcase images:", err);
     } finally {
