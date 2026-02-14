@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectDomainFromPrompt, buildExpertSkillsPrompt } from "./expertSkills.ts";
-import { buildProfessionalStandardsPrompt } from "./professionalStandards.ts";
+// professionalStandards no longer injected into prompt to stay within API limits
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -219,9 +219,9 @@ function buildProfessionalPrompt({
   instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle unique.");
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
-  instructions.push("TYPO DESIGNEE: Titre avec effets 3D/metallique/degrade/relief spectaculaires. Sous-titres stylises. Ombres epaisses, contours, glow. Zero texte plat.");
-  instructions.push("LAYOUT PRO: Courbes, vagues, arcs, bandeaux obliques, rubans 3D, superposition couches, separateurs decoratifs, textures grain, effets lumiere.");
-  instructions.push("Uniquement infos client. Personnes africaines par defaut. Texte lisible, zero faute. Couleurs client 60-30-10 si fournies. Zero info inventee.");
+  instructions.push("TYPO DESIGNEE: Titre avec effets 3D/metallique/degrade/relief. Ombres, contours, glow. Zero texte plat.");
+  instructions.push("LAYOUT PRO: Courbes, vagues, bandeaux obliques, rubans 3D, superposition couches.");
+  instructions.push("Infos client uniquement. Africains par defaut. Texte lisible, zero faute. Couleurs 60-30-10.");
   if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT.");
   if (hasContentImage) instructions.push("PHOTO: Utiliser telle quelle.");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
@@ -1010,13 +1010,20 @@ serve(async (req) => {
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
-    console.log("Scene preference included:", scenePreference ? "yes" : "no");
-    console.log("Secondary images instructions included:", secondaryImageInstructions ? "yes" : "no");
-    console.log("Domain:", domain || "not specified");
+    
+    // Safety: truncate prompt if it exceeds API limit (keep user data at the end)
+    const MAX_SAFE_PROMPT = 4500;
+    let finalPrompt = professionalPrompt;
+    if (finalPrompt.length > MAX_SAFE_PROMPT) {
+      console.warn(`Prompt too long (${finalPrompt.length}), truncating to ${MAX_SAFE_PROMPT}`);
+      finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+    }
+    
+    console.log("Final prompt length:", finalPrompt.length);
 
     const taskId = await createTask(
       KIE_API_KEY,
-      professionalPrompt,
+      finalPrompt,
       imageInputs,
       aspectRatio,
       resolution,

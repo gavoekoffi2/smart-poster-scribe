@@ -687,61 +687,16 @@ export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
 }
 
 /**
- * Génère les instructions condensées pour injection dans le prompt
+ * Génère les instructions ULTRA-CONDENSÉES pour injection dans le prompt
+ * IMPORTANT: Doit rester sous 400 caractères pour éviter le dépassement API
  */
 export function buildExpertSkillsPrompt(domain: string): string {
   const profile = getExpertProfileForDomain(domain);
   
-  const lines: string[] = [];
+  // Extraire seulement les 2 règles les plus critiques de chaque section
+  const comp = profile.composition.slice(0, 2).join("; ");
+  const typo = profile.typography.slice(0, 2).join("; ");
+  const colors = profile.colorHarmonization.slice(0, 3).join("; ");
   
-  lines.push("");
-  lines.push("╔═══════════════════════════════════════════════════════════════════════╗");
-  lines.push(`║  🎓 COMPÉTENCES GRAPHISTE EXPERT - ${profile.name.toUpperCase().padEnd(30)}  ║`);
-  lines.push("╚═══════════════════════════════════════════════════════════════════════╝");
-  lines.push("");
-  lines.push("⚠️ APPLIQUER EN PLUS: Les standards professionnels universels ci-dessus.");
-  lines.push("Ces règles spécifiques au domaine COMPLÈTENT les fondamentaux (7 piliers, typo, couleurs).");
-  lines.push("");
-  
-  // NOUVEAU: Guide de style visuel en premier (exemples concrets)
-  if (profile.referenceStyleGuide && profile.referenceStyleGuide.length > 0) {
-    lines.push("━━━ 🎯 GUIDE DE STYLE VISUEL (NIVEAU DE QUALITÉ ATTENDU) ━━━");
-    profile.referenceStyleGuide.forEach(rule => lines.push(`   ${rule}`));
-    lines.push("");
-  }
-  
-  lines.push("━━━ COMPOSITION ━━━");
-  profile.composition.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ TYPOGRAPHIE ━━━");
-  profile.typography.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ SYSTÈME COLORIMÉTRIQUE ━━━");
-  profile.colorSystem.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  // Nouvelle section: Harmonisation des couleurs utilisateur
-  lines.push("━━━ 🎨 HARMONISATION DES COULEURS UTILISATEUR ━━━");
-  profile.colorHarmonization.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ ÉLÉMENTS VISUELS ━━━");
-  profile.visualElements.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ EFFETS & FINITIONS ━━━");
-  profile.effects.forEach(rule => lines.push(`   • ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ PRINCIPES À RESPECTER ━━━");
-  profile.principles.forEach(rule => lines.push(`   ✓ ${rule}`));
-  lines.push("");
-  
-  lines.push("━━━ ERREURS À ÉVITER ABSOLUMENT ━━━");
-  profile.errors.forEach(rule => lines.push(`   ❌ ${rule}`));
-  lines.push("");
-  
-  return lines.join("\n");
+  return `[${profile.name}] Composition: ${comp}. Typo: ${typo}. Couleurs: ${colors}.`;
 }
