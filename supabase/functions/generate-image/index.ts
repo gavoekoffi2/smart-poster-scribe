@@ -198,86 +198,34 @@ function buildProfessionalPrompt({
   // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    lines.push("ROLE: Expert en Design Graphique specialise dans la personnalisation d'affiches publicitaires professionnelles.");
-    lines.push("OBJECTIF: Transformer l'Affiche de Reference en Affiche Finale personnalisee.");
-    lines.push("");
-    lines.push("FIDELITE 95%: Conserver rigoureusement la structure, composition, courbes, formes, effets de profondeur, elements decoratifs, style typographique EXACT et structure du fond de la reference.");
-    lines.push("REMPLACER: texte → donnees client ci-dessous | photos/visages → photos client si fournies | logos → logos client si fournis.");
-    lines.push("");
-    lines.push("SUPPRESSION INTELLIGENTE: Si une info presente sur la reference n'est PAS fournie par le client (date, telephone, email, site web, adresse, prix), SUPPRIMER totalement l'element + ses icones/decorations associees. Aucun espace vide, aucun texte par defaut, aucun Lorem Ipsum. Etendre les elements voisins pour combler le vide.");
-    lines.push("");
-    lines.push("ADAPTATION DOMAINE: Si le domaine de la reference differe de celui du client, adapter les icones et visuels thematiques (ex: livre→fourchette, micro→stethoscope) tout en gardant la structure professionnelle initiale.");
-    lines.push("");
-    lines.push("DIVERSITE: Par defaut, toutes les personnes representees doivent etre d'origine africaine, sauf si le client specifie explicitement une autre origine.");
-    lines.push("");
-    lines.push("═══ TYPOGRAPHIE DESIGNÉE (CRITIQUE - PAS DE TEXTE BASIQUE) ═══");
-    lines.push("REPRODUIRE EXACTEMENT le style typographique de la reference: memes effets (3D, ombre portee, glow, metallique, degrade, contours, relief).");
-    lines.push("CHAQUE TEXTE doit etre DESIGNE comme un element graphique a part entiere, pas juste du texte pose sur l'image.");
-    lines.push("TECHNIQUES OBLIGATOIRES: Ombres portees epaisses (4-8px) | Contours/strokes contrastants (2-4px) | Effets 3D/extrusion | Degrades dans les lettres | Glow/lueur | Textures metalliques/or/chrome | Relief en biseau.");
-    lines.push("HIERARCHIE TYPOGRAPHIQUE DRAMATIQUE: Le titre principal doit DOMINER visuellement avec des effets spectaculaires. Les sous-titres avec effets plus subtils mais toujours designes. Les details restent lisibles mais stylises.");
-    lines.push("INTERDIT: Texte plat sans aucun effet | Texte simplement pose sur fond uni | Police par defaut sans stylisation | Texte qui ressemble a du Word/PowerPoint.");
-    lines.push("");
-    lines.push("═══ LAYOUT & FORMES PROFESSIONNELLES ═══");
-    lines.push("COURBES & FORMES: Integrer des formes organiques (courbes, vagues, arcs, cercles decoratifs) qui structurent la composition et donnent du dynamisme.");
-    lines.push("BANDEAUX DESIGNES: Les zones de texte doivent avoir des fonds shapes (bandeaux obliques, rubans 3D, formes geometriques avec coins arrondis, bandes diagonales).");
-    lines.push("SEPARATEURS VISUELS: Utiliser des lignes decoratives, ornements, filets avec motifs, pas de simples traits droits.");
-    lines.push("PROFONDEUR: Superposition de couches (layers) avec transparences, ombres et effets de profondeur entre les elements.");
-    lines.push("FINITIONS PREMIUM: Ajouts subtils de textures (grain, bruit, motifs geometriques legers), effets de lumiere, reflets, particules decoratives.");
-    lines.push("");
-    lines.push("TOUCHE CREATIVE SUBTILE: Ajouter de legers effets de lumiere, textures fines, finitions premium pour rendre l'affiche unique SANS denaturer la structure ni le style choisi.");
-    lines.push("");
-    lines.push("TEXTE: 100% lisible, zero faute d'orthographe, typographie DESIGNEE adaptee au secteur d'activite. Polices integrees au design avec effets visuels.");
-    lines.push("COULEURS: Palette client en regle 60-30-10 si fournie. Sinon garder les couleurs originales de la reference.");
-    lines.push("FOND: Preferer blanc/neutre/creme. Si fond colore dans la reference, le conserver. Eviter les fonds trop charges.");
-    lines.push("ZERO INFO INVENTEE: JAMAIS de noms, dates, prix, numeros, contacts fictifs. Uniquement les donnees client.");
-    lines.push("");
-    lines.push("RESULTAT ATTENDU: Un observateur comparant les deux images doit immediatement reconnaitre le meme template. Design final percu comme haut de gamme (premium).");
-    lines.push("");
-    if (hasContentImage) {
-      lines.push("PHOTO CONTENU: Utiliser la photo fournie telle quelle. La placer dans la meme position que le sujet/photo de la reference. La photo doit correspondre au contexte de l'affiche (ex: pasteur pour eglise, chef pour restaurant, artiste pour concert).");
-      lines.push("");
-    }
-    if (hasLogoImage) {
-      lines.push("LOGO: Reproduire le logo fourni EXACTEMENT tel quel, sans modification.");
-      lines.push("");
-    }
-    lines.push(`Format: ${aspectRatio} | Haute resolution | Langue du texte: Francais`);
-    lines.push("");
-    lines.push("=== DONNEES CLIENT (SEULE SOURCE DE VERITE) ===");
+    lines.push("Expert Design Graphique: Personnaliser l'affiche de reference.");
+    lines.push("FIDELITE 95%: Garder structure, composition, courbes, formes, fond, style typo EXACT.");
+    lines.push("REMPLACER: texte→client | photos→client si fournies | logos→client si fournis.");
+    lines.push("SUPPRESSION: Info absente du client→supprimer element+icones. Zero placeholder.");
+    lines.push("ADAPTATION: Domaine different→adapter icones thematiques, garder structure.");
+    lines.push("TYPO DESIGNEE: Reproduire style typo de reference (3D, ombres, glow, degrade, contours, relief). Titre=effets spectaculaires. Zero texte plat/basique.");
+    lines.push("LAYOUT PRO: Courbes, vagues, bandeaux obliques, rubans 3D, superposition couches, separateurs decoratifs, textures grain, effets lumiere.");
+    lines.push("Personnes africaines par defaut. Texte 100% lisible, zero faute. Couleurs client 60-30-10 si fournies sinon garder reference. Zero info inventee.");
+    if (hasContentImage) lines.push("PHOTO: Utiliser telle quelle, meme position que reference.");
+    if (hasLogoImage) lines.push("LOGO: Reproduire EXACTEMENT.");
+    lines.push(`Format:${aspectRatio}|HD|Francais`);
+    lines.push("=== DONNEES CLIENT ===");
     lines.push(userPrompt);
     return lines.join("\n");
   }
 
-  // ====== MODE LIBRE (Cas C) : Creation unique inspiree des standards ======
+  // ====== MODE LIBRE (Cas C) ======
   const instructions: string[] = [];
-  instructions.push("ROLE: Expert en Design Graphique de haut niveau. Generer une affiche publicitaire finale professionnelle.");
-  instructions.push("");
-  instructions.push("LOGIQUE: Aucune reference directe. Synthetiser un design unique et professionnel inspire des standards esthetiques africains: equilibrage des masses, contrastes, typographies modernes.");
-  instructions.push("");
+  instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle unique.");
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
-  instructions.push("");
-  instructions.push("═══ TYPOGRAPHIE DESIGNÉE (CRITIQUE - PAS DE TEXTE BASIQUE) ═══");
-  instructions.push("CHAQUE TEXTE doit etre DESIGNE comme un element graphique, pas juste du texte pose sur l'image.");
-  instructions.push("TECHNIQUES OBLIGATOIRES: Ombres portees epaisses (4-8px) | Contours/strokes contrastants (2-4px) | Effets 3D/extrusion | Degrades dans les lettres | Glow/lueur | Textures metalliques/or/chrome.");
-  instructions.push("Le titre principal doit DOMINER avec des effets spectaculaires (3D, metallique, degrade, relief). Les sous-titres avec effets plus subtils. Zero texte plat/basique.");
-  instructions.push("");
-  instructions.push("═══ LAYOUT & FORMES PROFESSIONNELLES ═══");
-  instructions.push("Integrer des COURBES, VAGUES, ARCS et formes organiques qui structurent la composition. Bandeaux obliques, rubans 3D, formes geometriques designees pour les zones de texte.");
-  instructions.push("Superposition de couches avec transparences et ombres. Separateurs decoratifs, ornements, filets avec motifs. Textures subtiles (grain, motifs geometriques legers), effets de lumiere, particules.");
-  instructions.push("");
-  instructions.push("SUPPRESSION INTELLIGENTE: N'afficher QUE les informations fournies par le client. Aucun texte fictif, aucun placeholder.");
-  instructions.push("DIVERSITE: Personnes d'origine africaine par defaut sauf mention contraire.");
-  instructions.push("TEXTE: 100% lisible, zero faute, typographie DESIGNEE avec effets visuels adaptes au secteur.");
-  instructions.push("COULEURS: Palette client en 60-30-10 si fournie. Sinon, palette professionnelle harmonieuse.");
-  instructions.push("FOND: Preferer blanc/creme/neutre. Eviter les fonds surcharges.");
-  instructions.push("ZERO INFO INVENTEE: JAMAIS de noms, dates, prix, contacts fictifs.");
-  instructions.push("");
-  instructions.push(`Format: ${aspectRatio} | Haute resolution | Langue du texte: Francais`);
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT tel que fourni.");
-  if (hasContentImage) instructions.push("PHOTO: Utiliser la photo fournie telle quelle, en coherence avec le contexte de l'affiche.");
-  instructions.push("");
-  instructions.push("=== DONNEES CLIENT (SEULE SOURCE DE VERITE) ===");
+  instructions.push("TYPO DESIGNEE: Titre avec effets 3D/metallique/degrade/relief spectaculaires. Sous-titres stylises. Ombres epaisses, contours, glow. Zero texte plat.");
+  instructions.push("LAYOUT PRO: Courbes, vagues, arcs, bandeaux obliques, rubans 3D, superposition couches, separateurs decoratifs, textures grain, effets lumiere.");
+  instructions.push("Uniquement infos client. Personnes africaines par defaut. Texte lisible, zero faute. Couleurs client 60-30-10 si fournies. Zero info inventee.");
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT.");
+  if (hasContentImage) instructions.push("PHOTO: Utiliser telle quelle.");
+  instructions.push(`Format:${aspectRatio}|HD|Francais`);
+  instructions.push("=== DONNEES CLIENT ===");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
