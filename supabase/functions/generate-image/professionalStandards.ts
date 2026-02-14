@@ -127,6 +127,8 @@ export function buildProfessionalStandardsPrompt(): string {
   // Typographie critique
   lines.push("【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux");
   lines.push("【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement");
+  lines.push("【TYPO DESIGN】JAMAIS de texte plat/basique | Titres avec effets 3D, ombres épaisses, contours, dégradés, glow ou metallic | Texte = élément graphique designé");
+  lines.push("【LAYOUT PRO】Courbes, vagues, arcs, formes organiques pour structurer | Bandeaux obliques, rubans 3D | Séparateurs décoratifs | Superposition de couches avec profondeur");
   lines.push("");
   
   // Couleurs critique
