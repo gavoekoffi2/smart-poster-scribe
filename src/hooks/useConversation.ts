@@ -2975,13 +2975,24 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
   const handleSkipLogo = useCallback(() => {
     const logosCount = conversationStateRef.current.logos?.length || 0;
+    const domain = conversationStateRef.current.domain;
+    const hasSpeakers = !!(conversationStateRef.current.mainSpeaker?.name || (conversationStateRef.current.guests && conversationStateRef.current.guests.length > 0));
+    const isSpeakerDomain = domain && SPEAKER_DOMAINS.includes(domain);
+    
     addMessage("user", logosCount > 0 ? "Continuer sans autre logo" : "Passer le logo");
     setConversationState((prev) => ({ ...prev, step: "content_image" }));
     setTimeout(() => {
-      addMessage(
-        "assistant",
-        "Avez-vous une image à intégrer dans l'affiche (produit, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
-      );
+      if (isSpeakerDomain && hasSpeakers) {
+        addMessage(
+          "assistant",
+          "Vous avez déjà fourni les photos des orateurs/intervenants. 📸\n\nSouhaitez-vous ajouter une **image supplémentaire** (produit, lieu, décoration) ? Sinon, cliquez sur 'Générer automatiquement' pour passer."
+        );
+      } else {
+        addMessage(
+          "assistant",
+          "Avez-vous une image à intégrer dans l'affiche (produit, photo) ? Envoyez-la, ou cliquez sur 'Générer automatiquement'."
+        );
+      }
     }, 250);
   }, [addMessage]);
 
