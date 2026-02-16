@@ -198,18 +198,18 @@ function buildProfessionalPrompt({
   // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    lines.push("Expert Design Graphique: Personnaliser l'affiche de reference.");
-    lines.push("FIDELITE 95%: Garder structure, composition, courbes, formes, fond, style typo EXACT.");
-    lines.push("REMPLACER: texte→client | photos→client si fournies | logos→client si fournis.");
-    lines.push("SUPPRESSION: Info absente du client→supprimer element+icones. Zero placeholder.");
-    lines.push("ADAPTATION: Domaine different→adapter icones thematiques, garder structure.");
-    lines.push("TYPO DESIGNEE: Reproduire style typo de reference (3D, ombres, glow, degrade, contours, relief). Titre=effets spectaculaires. Zero texte plat/basique.");
-    lines.push("LAYOUT PRO: Courbes, vagues, bandeaux obliques, rubans 3D, superposition couches, separateurs decoratifs, textures grain, effets lumiere.");
-    lines.push("Personnes africaines par defaut. Texte 100% lisible, zero faute. Couleurs client 60-30-10 si fournies sinon garder reference. Zero info inventee.");
-    if (hasContentImage) lines.push("PHOTO: Utiliser telle quelle, meme position que reference.");
-    if (hasLogoImage) lines.push("LOGO: Reproduire EXACTEMENT.");
+    lines.push("MISSION: Tu recois une affiche de reference. Tu dois produire une COPIE QUASI-IDENTIQUE de cette affiche. NE CHANGE RIEN au design.");
+    lines.push("REGLE ABSOLUE: Le fond, les formes, les courbes, les couleurs, la mise en page, la composition, les effets, les textures, les ombres = IDENTIQUES a la reference.");
+    lines.push("TEXTE: Remplace UNIQUEMENT le texte par les infos du client. Garde le MEME style typographique (police, taille, effets 3D, ombres, glow, couleur, position).");
+    lines.push("PHOTOS: Si le client fournit une photo, remplace la photo de la reference par celle du client a la MEME position et MEME taille.");
+    lines.push("LOGOS: Si le client fournit un logo, remplace le logo de la reference. Sinon SUPPRIME le logo.");
+    lines.push("SUPPRESSION: Tout element de la reference dont le client n'a PAS fourni l'equivalent (date, telephone, adresse, logo, photo) doit etre SUPPRIME proprement sans laisser de vide.");
+    lines.push("INTERDIT: Ne change PAS le fond. Ne change PAS les formes decoratives. Ne change PAS la structure. Ne REINVENTE PAS le design. COPIE le design exact.");
+    if (hasContentImage) lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference.");
+    if (hasLogoImage) lines.push("LOGO CLIENT: Reproduire EXACTEMENT le logo fourni.");
+    lines.push("Personnes africaines par defaut. Zero info inventee. Zero placeholder.");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
-    lines.push("=== DONNEES CLIENT ===");
+    lines.push("=== INFOS CLIENT A APPLIQUER ===");
     lines.push(userPrompt);
     return lines.join("\n");
   }
