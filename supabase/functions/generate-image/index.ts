@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { detectDomainFromPrompt, buildExpertSkillsPrompt } from "./expertSkills.ts";
+import { detectDomainFromPrompt, buildExpertSkillsPrompt, getRandomTypographyStyle } from "./expertSkills.ts";
 // professionalStandards no longer injected into prompt to stay within API limits
 
 const corsHeaders = {
@@ -219,7 +219,7 @@ function buildProfessionalPrompt({
   instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle unique.");
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
-  instructions.push("TYPO DESIGNEE: Titre avec effets 3D/metallique/degrade/relief. Ombres, contours, glow. Zero texte plat.");
+  instructions.push(`TYPO DESIGNEE: ${getRandomTypographyStyle()}. Zero texte plat.`);
   instructions.push("LAYOUT PRO: Courbes, vagues, bandeaux obliques, rubans 3D, superposition couches.");
   instructions.push("Infos client uniquement. Africains par defaut. Texte lisible, zero faute. Couleurs 60-30-10.");
   if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT.");

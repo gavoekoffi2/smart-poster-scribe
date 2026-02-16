@@ -687,6 +687,27 @@ export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
 }
 
 /**
+ * Styles typographiques variés pour le mode libre
+ * Sélection aléatoire à chaque génération pour éviter la répétitivité
+ */
+const TYPOGRAPHY_STYLES = [
+  "Titre 3D métallique chrome avec reflets et ombres portées épaisses",
+  "Titre néon lumineux avec glow intense et halo coloré",
+  "Titre rétro vintage avec textures usées et serif classique",
+  "Titre calligraphie élégante avec traits fluides et dorures",
+  "Titre grunge texturisé avec effet béton, peinture écaillée",
+  "Titre dégradé multicolore bold avec contours épais contrastés",
+  "Titre ombre longue flat design avec couleurs vives et géométrie",
+  "Titre brush peinture manuscrit avec éclaboussures dynamiques",
+  "Titre gravure classique avec empattements forts et lignes fines",
+  "Titre futuriste holographique avec reflets arc-en-ciel et glow",
+];
+
+export function getRandomTypographyStyle(): string {
+  return TYPOGRAPHY_STYLES[Math.floor(Math.random() * TYPOGRAPHY_STYLES.length)];
+}
+
+/**
  * Génère les instructions ULTRA-CONDENSÉES pour injection dans le prompt
  * IMPORTANT: Doit rester sous 400 caractères pour éviter le dépassement API
  */
