@@ -67,11 +67,23 @@ export default function AccountPage() {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle payment success redirect
+  // Handle payment redirect from Moneroo (paymentId, paymentStatus params)
   useEffect(() => {
-    if (searchParams.get("payment") === "success") {
-      toast.success("Paiement réussi ! Votre abonnement est maintenant actif.");
+    const paymentStatus = searchParams.get("paymentStatus") || searchParams.get("payment");
+    const paymentId = searchParams.get("paymentId");
+
+    if (paymentStatus === "success" || paymentStatus === "successful") {
+      toast.success("Paiement réussi ! Votre abonnement sera activé sous peu.");
       refreshSubscription();
+      // Poll subscription for a few seconds in case webhook hasn't fired yet
+      const interval = setInterval(() => refreshSubscription(), 3000);
+      setTimeout(() => clearInterval(interval), 15000);
+      window.history.replaceState({}, "", "/account");
+    } else if (paymentStatus === "failed") {
+      toast.error("Le paiement a échoué. Veuillez réessayer.");
+      window.history.replaceState({}, "", "/account");
+    } else if (paymentStatus === "cancelled") {
+      toast.info("Paiement annulé.");
       window.history.replaceState({}, "", "/account");
     }
   }, [searchParams, refreshSubscription]);

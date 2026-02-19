@@ -29,31 +29,73 @@ interface MonerooWebhookPayload {
   };
 }
 
+/**
+ * Verify HMAC-SHA256 signature from Moneroo
+ */
+async function verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const computedHex = Array.from(new Uint8Array(sig))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return computedHex === signature;
+  } catch (e) {
+    console.error("Signature verification error:", e);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const MONEROO_SECRET_KEY = Deno.env.get("MONEROO_SECRET_KEY");
-    if (!MONEROO_SECRET_KEY) {
-      throw new Error("MONEROO_SECRET_KEY non configurée");
-    }
-
+    const MONEROO_WEBHOOK_SECRET = Deno.env.get("MONEROO_WEBHOOK_SECRET");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Variables Supabase non configurées");
     }
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get and verify signature (if Moneroo provides one)
+    // Read raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Verify HMAC signature if secret is configured
     const signature = req.headers.get("x-moneroo-signature");
-    console.log("Webhook received with signature:", signature ? "present" : "absent");
+    if (MONEROO_WEBHOOK_SECRET) {
+      if (!signature) {
+        console.error("Missing webhook signature");
+        return new Response(JSON.stringify({ error: "Signature manquante" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const isValid = await verifySignature(rawBody, signature, MONEROO_WEBHOOK_SECRET);
+      if (!isValid) {
+        console.error("Invalid webhook signature");
+        return new Response(JSON.stringify({ error: "Signature invalide" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.log("✅ Webhook signature verified");
+    } else {
+      console.warn("⚠️ MONEROO_WEBHOOK_SECRET not set, skipping signature verification");
+    }
 
-    const payload = await req.json() as MonerooWebhookPayload;
+    const payload = JSON.parse(rawBody) as MonerooWebhookPayload;
     console.log("Webhook payload:", JSON.stringify(payload, null, 2));
 
     const { event, data } = payload;
@@ -69,8 +111,8 @@ serve(async (req) => {
       throw new Error("Métadonnées manquantes");
     }
 
-    // Handle payment success
-    if (event === "payment.successful" || data.status === "successful") {
+    // Handle payment success (Moneroo uses "payment.success")
+    if (event === "payment.success" || event === "payment.successful" || data.status === "success") {
       console.log(`Payment successful for user ${user_id}, plan ${plan_slug}`);
 
       // Get plan details for credits
@@ -113,7 +155,6 @@ serve(async (req) => {
       periodEnd.setMonth(periodEnd.getMonth() + 1);
 
       if (existingSubscription) {
-        // Update existing subscription
         const { error: subUpdateError } = await supabase
           .from("user_subscriptions")
           .update({
@@ -133,7 +174,6 @@ serve(async (req) => {
           throw new Error("Erreur mise à jour abonnement");
         }
       } else {
-        // Create new subscription
         const { error: subCreateError } = await supabase
           .from("user_subscriptions")
           .insert({
@@ -167,7 +207,7 @@ serve(async (req) => {
         console.error("Error recording credit transaction:", creditError);
       }
 
-      console.log(`Subscription activated for user ${user_id} with ${plan.credits_per_month} credits`);
+      console.log(`✅ Subscription activated for user ${user_id} with ${plan.credits_per_month} credits`);
 
       return new Response(
         JSON.stringify({ success: true, message: "Abonnement activé" }),
@@ -205,7 +245,6 @@ serve(async (req) => {
         })
         .eq("id", transaction_id);
 
-      // Optionally downgrade to free plan
       const { data: freePlan } = await supabase
         .from("subscription_plans")
         .select("id")
@@ -230,7 +269,7 @@ serve(async (req) => {
       );
     }
 
-    // Unknown event - just acknowledge
+    // Unknown event
     console.log(`Unknown event: ${event}`);
     return new Response(
       JSON.stringify({ success: true, message: "Événement reçu" }),
