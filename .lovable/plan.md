@@ -1,63 +1,85 @@
 
 
-## Plan : Variete typographique + Flux evenements optimise + Flux YouTube simplifie
+# Integration de FedaPay en remplacement de Moneroo
 
-### Partie 1 : Variete typographique en mode libre
+## Objectif
+Remplacer l'integration Moneroo (qui ne fonctionne pas) par FedaPay Checkout.js pour les paiements d'abonnements.
 
-**Probleme** : En mode libre (sans reference), le prompt injecte toujours la meme directive "effets 3D/metallique/degrade/relief" pour la typographie, ce qui donne des affiches au look repetitif.
+## Approche
+FedaPay Checkout.js est un SDK **cote client** : le formulaire de paiement s'ouvre directement dans le navigateur sans passer par une edge function pour initialiser le paiement. C'est plus simple et plus fiable.
 
-**Solution** : Creer un systeme de styles typographiques varies dans `expertSkills.ts` et en selectionner un aleatoirement a chaque generation.
+## Etapes
 
-**Fichier** : `supabase/functions/generate-image/expertSkills.ts`
-- Ajouter un tableau de 8-10 styles typographiques distincts (ex: 3D metallique, neon lumineux, retro vintage, calligraphie elegante, grunge texturise, degrade multicolore, ombre longue flat, brush/peinture, gravure classique, futuriste holographique)
-- Exporter une fonction `getRandomTypographyStyle()` qui retourne un style aleatoire
-- Chaque style = une instruction courte (~60 chars) decrivant le rendu typographique
+### 1. Ajouter le script FedaPay au projet
+- Ajouter le script `https://cdn.fedapay.com/checkout.js?v=1.1.7` dans `index.html`
+- Ajouter les types TypeScript pour `FedaPay` global
 
-**Fichier** : `supabase/functions/generate-image/index.ts`
-- Dans `buildProfessionalPrompt` (mode libre, ligne ~222), remplacer la ligne statique "TYPO DESIGNEE: Titre avec effets 3D/metallique/degrade/relief..." par un appel a `getRandomTypographyStyle()` pour varier le rendu a chaque generation
+### 2. Demander la cle API publique FedaPay
+- Comme c'est une cle **publique**, elle sera stockee directement dans le code (pas besoin de secret)
 
----
+### 3. Modifier le hook `useSubscription.ts`
+- Remplacer la methode `initializePayment` qui appelle l'edge function Moneroo par une nouvelle methode `openFedaPayCheckout` qui ouvre le widget FedaPay directement cote client
+- Le widget FedaPay recevra : montant (FCFA), description, email/nom du client, et les metadata (user_id, plan_slug)
+- Utiliser le callback `onComplete` pour detecter le succes/echec du paiement
 
-### Partie 2 : Flux evenements - content_image optionnel apres orateurs
+### 4. Creer une edge function `fedapay-webhook`
+- Recevra les notifications de FedaPay lorsqu'un paiement est confirme
+- Verifiera la signature du webhook
+- Activera l'abonnement dans la base de donnees (meme logique que le webhook Moneroo actuel)
 
-**Probleme** : Pour les domaines a orateurs (church, event, music, formation, education), apres avoir collecte l'orateur principal + invites, le flux enchaine sur reference > colors > logo > content_image. Or les orateurs SONT deja les images de contenu, donc demander une "image de contenu" en plus est redondant.
+### 5. Mettre a jour les composants de paiement
+- `src/components/landing/PricingSection.tsx` : utiliser la nouvelle methode FedaPay
+- `src/pages/PricingPage.tsx` : meme mise a jour + changer la mention "Moneroo" par "FedaPay"
+- `src/pages/AccountPage.tsx` : adapter la logique de retour apres paiement
 
-**Solution** : Quand le domaine est dans `SPEAKER_DOMAINS` et que des orateurs/invites ont ete fournis, rendre l'etape `content_image` optionnelle avec un message adapte.
+### 6. Autoriser le domaine
+- Vous devrez autoriser le domaine `graphiste-gpt.lovable.app` dans votre dashboard FedaPay (menu Applications > Nom de domaine a autoriser)
 
-**Fichier** : `src/hooks/useConversation.ts`
+## Flux de paiement
 
-1. **`handleSkipLogo` (ligne ~2976)** : Si le domaine est un `SPEAKER_DOMAIN` ET que `mainSpeaker` ou `guests` existent, adapter le message :
-   - "Vous avez deja fourni les photos des orateurs/intervenants. Souhaitez-vous ajouter une **image supplementaire** (produit, lieu, decoration) ? Sinon, cliquez sur 'Passer'."
-   - Cela rend l'etape clairement optionnelle
+```text
+Utilisateur clique "S'abonner"
+       |
+       v
+Widget FedaPay s'ouvre (modal dans la page)
+       |
+       v
+Utilisateur paie (Mobile Money, carte, etc.)
+       |
+       v
+Callback onComplete cote client --> affiche confirmation
+       |
+       v
+Webhook FedaPay --> edge function --> active l'abonnement en BDD
+```
 
-2. **`handleSkipContentImage` (ligne ~3012)** : Le comportement existant (passer aux images secondaires) reste correct, pas de changement necessaire.
+## Details techniques
 
-3. **Aussi dans `handleColorsConfirm`/`handleColorsSkip`** : Meme adaptation quand on passe a l'etape logo - si SPEAKER_DOMAIN avec orateurs fournis, adapter le message content_image.
+### Script Checkout.js
+Le SDK FedaPay sera charge dans `index.html` et utilise via `window.FedaPay` dans React.
 
----
+### Parametres du widget
+- `public_key` : cle publique live
+- `transaction.amount` : prix en FCFA du plan
+- `transaction.description` : "Abonnement Pro - Graphiste GPT"
+- `transaction.custom_metadata` : `{ user_id, plan_slug, transaction_id }`
+- `customer.email`, `customer.firstname`, `customer.lastname`
+- `environment` : "live"
+- `onComplete` : callback pour gerer le resultat
 
-### Partie 3 : Flux YouTube simplifie
+### Edge function webhook
+- Recevra les evenements de paiement de FedaPay
+- Mettra a jour `payment_transactions` et `user_subscriptions`
+- La cle API secrete FedaPay sera stockee comme secret pour verifier les webhooks
 
-**Probleme** : Le flux YouTube demande encore des etapes inutiles pour une miniature. Une fois les 4 questions YouTube repondues, il devrait aller directement a la photo principale + images secondaires, sans passer par les etapes classiques d'affiche.
+### Fichiers modifies
+- `index.html` (ajout script CDN)
+- `src/hooks/useSubscription.ts` (nouvelle methode FedaPay)
+- `src/components/landing/PricingSection.tsx` (utiliser FedaPay)
+- `src/pages/PricingPage.tsx` (utiliser FedaPay + texte)
+- `supabase/functions/fedapay-webhook/index.ts` (nouveau)
+- `supabase/config.toml` (ajouter config webhook)
 
-**Etat actuel** : Le skip du logo pour YouTube est deja en place (handleColorsConfirm/Skip). Mais le flux passe encore par reference > style_preferences > colors avant d'arriver a content_image.
-
-**Solution** : Pas de changement structurel majeur necessaire ici - le flux YouTube existant fonctionne deja (les 4 questions YouTube > reference > colors > skip logo > content_image > secondary_images). Le skip du logo est deja implemente. Verifier que le flux est coherent et que les messages sont adaptes au contexte "miniature".
-
-Verification rapide dans le code : le flux YouTube saute bien le logo apres les couleurs (lignes 2874 et 2901). Les messages pour content_image et secondary_images sont deja adaptes pour YouTube (lignes 2880, 3002-3003, 3024-3027). Ce point est donc deja couvert.
-
----
-
-### Details techniques
-
-**Fichiers modifies** :
-- `supabase/functions/generate-image/expertSkills.ts` : Ajout du tableau de styles typographiques + fonction `getRandomTypographyStyle()`
-- `supabase/functions/generate-image/index.ts` : Utilisation du style aleatoire dans le mode libre
-- `src/hooks/useConversation.ts` : Adaptation du message content_image pour les domaines a orateurs (3-4 lignes de condition)
-
-**Impact** :
-- Zero changement dans la structure des etapes de conversation
-- Zero nouveau state
-- Les modifications sont purement au niveau des messages affiches et du prompt envoye a l'API
-- Redeploy de la edge function `generate-image` necessaire
-
+### Pre-requis utilisateur
+- Fournir la cle API publique FedaPay
+- Autoriser les domaines `graphiste-gpt.lovable.app` et `id-preview--77936a58-9c4e-49a8-b961-36b92c5edab2.lovable.app` dans le dashboard FedaPay
