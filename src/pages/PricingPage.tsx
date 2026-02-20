@@ -11,7 +11,7 @@ import { Scene3D } from "@/components/landing/Scene3D";
 export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { plans, subscription, isProcessingPayment, initializePayment } = useSubscription();
+  const { plans, subscription, isProcessingPayment, openFedaPayCheckout } = useSubscription();
 
   const handleSubscribe = async (planSlug: string) => {
     console.log("[Pricing] Subscribe clicked for plan:", planSlug);
@@ -36,23 +36,12 @@ export default function PricingPage() {
     }
 
     try {
-      console.log("[Pricing] User authenticated, initializing payment...");
-      toast.loading("Préparation du paiement...", { id: "payment-init" });
+      console.log("[Pricing] User authenticated, opening FedaPay checkout...");
+      toast.loading("Ouverture du paiement...", { id: "payment-init" });
       
-      const checkoutUrl = await initializePayment(planSlug);
+      await openFedaPayCheckout(planSlug);
       
       toast.dismiss("payment-init");
-      
-      if (checkoutUrl) {
-        console.log("[Pricing] Redirecting to checkout:", checkoutUrl);
-        toast.success("Redirection vers le paiement...");
-        // Small delay to show the success message
-        setTimeout(() => {
-          window.location.href = checkoutUrl;
-        }, 500);
-      } else {
-        toast.error("Impossible d'obtenir le lien de paiement");
-      }
     } catch (error) {
       toast.dismiss("payment-init");
       console.error("[Pricing] Payment error:", error);
@@ -74,7 +63,7 @@ export default function PricingPage() {
     },
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "Sécurisé par Moneroo",
+      title: "Sécurisé par FedaPay",
       description: "Vos paiements sont protégés par une technologie de pointe",
     },
   ];
@@ -237,7 +226,7 @@ export default function PricingPage() {
                 ))}
               </div>
               <p className="mt-6 text-sm text-muted-foreground">
-                Paiements sécurisés par <span className="text-primary font-medium">Moneroo</span>
+                Paiements sécurisés par <span className="text-primary font-medium">FedaPay</span>
               </p>
             </motion.div>
           </div>

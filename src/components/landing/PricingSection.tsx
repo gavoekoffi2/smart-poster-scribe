@@ -72,7 +72,7 @@ const plans = [
 export function PricingSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isProcessingPayment, initializePayment } = useSubscription();
+  const { isProcessingPayment, openFedaPayCheckout } = useSubscription();
 
   const handleSubscribe = async (planSlug: string) => {
     console.log("[PricingSection] Subscribe clicked for plan:", planSlug);
@@ -97,17 +97,9 @@ export function PricingSection() {
     }
 
     try {
-      toast.loading("Préparation du paiement...", { id: "payment-init" });
-
-      const checkoutUrl = await initializePayment(planSlug);
-
+      toast.loading("Ouverture du paiement...", { id: "payment-init" });
+      await openFedaPayCheckout(planSlug);
       toast.dismiss("payment-init");
-
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      } else {
-        toast.error("Impossible d'obtenir le lien de paiement.");
-      }
     } catch (err) {
       toast.dismiss("payment-init");
       toast.error(err instanceof Error ? err.message : "Erreur lors de l'initialisation du paiement");
