@@ -67,7 +67,7 @@ export default function AccountPage() {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle payment redirect from Moneroo (paymentId, paymentStatus params)
+  // Handle payment redirect (paymentStatus params)
   useEffect(() => {
     const paymentStatus = searchParams.get("paymentStatus") || searchParams.get("payment");
     const paymentId = searchParams.get("paymentId");

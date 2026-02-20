@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+const FEDAPAY_PUBLIC_KEY = "pk_live_PkAah-Uc8DIy5pj0gQDx0w9d";
+
 export interface SubscriptionPlan {
   id: string;
   name: string;
@@ -48,7 +50,6 @@ export function useSubscription() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
 
-  // Fetch all active plans
   const fetchPlans = useCallback(async () => {
     const { data, error } = await supabase
       .from("subscription_plans")
@@ -65,7 +66,6 @@ export function useSubscription() {
     }
   }, []);
 
-  // Fetch user subscription
   const fetchSubscription = useCallback(async () => {
     if (!user) {
       setSubscription(null);
@@ -74,10 +74,7 @@ export function useSubscription() {
 
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .select(`
-        *,
-        plan:subscription_plans(*)
-      `)
+      .select(`*, plan:subscription_plans(*)`)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -93,12 +90,10 @@ export function useSubscription() {
       };
       setSubscription(typedSubscription);
     } else if (!data) {
-      // User has no subscription - will be created on first generation
       setSubscription(null);
     }
   }, [user]);
 
-  // Fetch credit transactions
   const fetchTransactions = useCallback(async () => {
     if (!user) {
       setTransactions([]);
@@ -117,68 +112,131 @@ export function useSubscription() {
     }
   }, [user]);
 
-  // Initialize payment for a plan
-  const initializePayment = useCallback(async (planSlug: string): Promise<string | null> => {
+  // Open FedaPay Checkout widget
+  const openFedaPayCheckout = useCallback(async (planSlug: string) => {
     if (!user) {
       throw new Error("Vous devez être connecté pour souscrire");
     }
 
+    if (!window.FedaPay) {
+      throw new Error("Le module de paiement n'est pas chargé. Veuillez rafraîchir la page.");
+    }
+
+    // Find the plan
+    const plan = plans.find(p => p.slug === planSlug);
+    if (!plan) {
+      throw new Error("Plan introuvable");
+    }
+
+    if (plan.slug === "free") {
+      throw new Error("Le plan gratuit ne nécessite pas de paiement");
+    }
+
     setIsProcessingPayment(true);
-    console.log("[Payment] Initializing payment for plan:", planSlug);
+    console.log("[FedaPay] Opening checkout for plan:", planSlug);
 
     try {
-      // Get the current session token
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error("Session expirée. Veuillez vous reconnecter.");
+      // Get user profile for name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+
+      const fullName = profile?.full_name || "Client";
+      const nameParts = fullName.split(" ");
+      const firstName = nameParts[0] || "Client";
+      const lastName = nameParts.slice(1).join(" ") || "Graphiste GPT";
+
+      // Create payment transaction record first
+      const { data: transaction, error: txError } = await supabase
+        .from("payment_transactions")
+        .insert({
+          user_id: user.id,
+          plan_id: plan.id,
+          amount_fcfa: plan.price_fcfa,
+          amount_usd: plan.price_usd,
+          status: "pending",
+          metadata: { plan_slug: planSlug }
+        })
+        .select()
+        .single();
+
+      if (txError || !transaction) {
+        throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
       }
 
-      console.log("[Payment] Session valid, calling create-payment edge function...");
+      console.log("[FedaPay] Transaction created:", transaction.id);
 
-      const { data, error } = await supabase.functions.invoke("create-payment", {
-        body: {
-          planSlug,
-          returnUrl: `${window.location.origin}/account?payment=success`,
+      // Open FedaPay widget
+      window.FedaPay.init({
+        public_key: FEDAPAY_PUBLIC_KEY,
+        transaction: {
+          amount: plan.price_fcfa,
+          description: `Abonnement ${plan.name} - Graphiste GPT`,
+          custom_metadata: {
+            user_id: user.id,
+            plan_id: plan.id,
+            plan_slug: planSlug,
+            transaction_id: transaction.id,
+          },
         },
-      });
+        customer: {
+          email: user.email || "",
+          firstname: firstName,
+          lastname: lastName,
+        },
+        environment: "live",
+        onComplete: async (response) => {
+          console.log("[FedaPay] Payment complete:", response);
+          
+          if (response.reason === "CHECKOUT_COMPLETE" || response.transaction?.status === "approved") {
+            // Update local transaction
+            await supabase
+              .from("payment_transactions")
+              .update({
+                status: "success",
+                moneroo_payment_id: String(response.transaction?.id || ""),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", transaction.id);
 
-      console.log("[Payment] Edge function response:", { data, error });
+            // Poll subscription to check webhook activation
+            const pollInterval = setInterval(() => fetchSubscription(), 3000);
+            setTimeout(() => clearInterval(pollInterval), 20000);
+            
+            // Refresh subscription immediately
+            await fetchSubscription();
+          } else {
+            await supabase
+              .from("payment_transactions")
+              .update({
+                status: "failed",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", transaction.id);
+          }
+          
+          setIsProcessingPayment(false);
+        },
+        onClose: () => {
+          console.log("[FedaPay] Widget closed");
+          setIsProcessingPayment(false);
+        },
+      }).open();
 
-      if (error) {
-        console.error("[Payment] Edge function error:", error);
-        throw new Error(error.message || "Erreur de connexion au serveur de paiement");
-      }
-
-      if (!data) {
-        throw new Error("Aucune réponse du serveur de paiement");
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || "Erreur lors de l'initialisation du paiement");
-      }
-
-      if (!data.checkoutUrl) {
-        throw new Error("URL de paiement non reçue");
-      }
-
-      console.log("[Payment] Checkout URL received:", data.checkoutUrl);
-      return data.checkoutUrl;
     } catch (err) {
-      console.error("[Payment] Error:", err);
-      throw err;
-    } finally {
+      console.error("[FedaPay] Error:", err);
       setIsProcessingPayment(false);
+      throw err;
     }
-  }, [user]);
+  }, [user, plans, fetchSubscription]);
 
-  // Get remaining credits/generations
   const getRemainingCredits = useCallback(() => {
     if (!subscription) {
       return { credits: 0, freeRemaining: 5, isFree: true };
     }
-
     const isFree = subscription.plan?.slug === "free";
-    
     return {
       credits: subscription.credits_remaining,
       freeRemaining: isFree ? Math.max(0, 5 - subscription.free_generations_used) : 0,
@@ -186,26 +244,14 @@ export function useSubscription() {
     };
   }, [subscription]);
 
-  // Check if user can generate with given resolution
   const canGenerate = useCallback((resolution: string) => {
-    if (!subscription) {
-      // No subscription = free tier
-      return resolution === "1K";
-    }
-
+    if (!subscription) return resolution === "1K";
     const isFree = subscription.plan?.slug === "free";
-    
-    if (isFree) {
-      // Free tier: only 1K, max 5 per month
-      return resolution === "1K" && subscription.free_generations_used < 5;
-    }
-
-    // Paid tiers: check credits
+    if (isFree) return resolution === "1K" && subscription.free_generations_used < 5;
     const creditsNeeded = resolution === "1K" ? 1 : resolution === "2K" ? 2 : 4;
     return subscription.credits_remaining >= creditsNeeded;
   }, [subscription]);
 
-  // Get credits needed for a resolution
   const getCreditsNeeded = useCallback((resolution: string) => {
     switch (resolution) {
       case "1K": return 1;
@@ -215,26 +261,20 @@ export function useSubscription() {
     }
   }, []);
 
-  // Initial load - only once when user is available
   useEffect(() => {
     if (hasFetchedInitial) return;
-    
     const loadData = async () => {
       setIsLoading(true);
       await fetchPlans();
-      
       if (user) {
         await Promise.all([fetchSubscription(), fetchTransactions()]);
       }
-      
       setIsLoading(false);
       setHasFetchedInitial(true);
     };
-
     loadData();
   }, [user, hasFetchedInitial, fetchPlans, fetchSubscription, fetchTransactions]);
 
-  // Reset when user changes (logout/login)
   useEffect(() => {
     if (!user) {
       setSubscription(null);
@@ -249,7 +289,7 @@ export function useSubscription() {
     transactions,
     isLoading,
     isProcessingPayment,
-    initializePayment,
+    openFedaPayCheckout,
     getRemainingCredits,
     canGenerate,
     getCreditsNeeded,

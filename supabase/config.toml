@@ -18,5 +18,8 @@ verify_jwt = false
 [functions.moneroo-webhook]
 verify_jwt = false
 
+[functions.fedapay-webhook]
+verify_jwt = false
+
 [functions.transcribe-audio]
 verify_jwt = false
