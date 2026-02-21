@@ -1,85 +1,59 @@
 
 
-# Integration de FedaPay en remplacement de Moneroo
+## Mise a jour des plans tarifaires
 
-## Objectif
-Remplacer l'integration Moneroo (qui ne fonctionne pas) par FedaPay Checkout.js pour les paiements d'abonnements.
+### Changements demandes
 
-## Approche
-FedaPay Checkout.js est un SDK **cote client** : le formulaire de paiement s'ouvre directement dans le navigateur sans passer par une edge function pour initialiser le paiement. C'est plus simple et plus fiable.
+| Plan | Prix | Credits | Affiches |
+|------|------|---------|----------|
+| Essai gratuit | $0 (0 FCFA) | 5 (bonus unique) | ~2 |
+| Populaire | $7 (~3 900 FCFA) | 10 | ~5 |
+| Business | $17 (~9 900 FCFA) | 24 | ~12 |
 
-## Etapes
+Nouveau systeme de credits : **1 affiche = 2 credits** (uniforme, quelle que soit la resolution).
+Le plan "Entreprise" est supprime. Le plan "Pro" est renomme "Populaire".
 
-### 1. Ajouter le script FedaPay au projet
-- Ajouter le script `https://cdn.fedapay.com/checkout.js?v=1.1.7` dans `index.html`
-- Ajouter les types TypeScript pour `FedaPay` global
+---
 
-### 2. Demander la cle API publique FedaPay
-- Comme c'est une cle **publique**, elle sera stockee directement dans le code (pas besoin de secret)
+### Details techniques
 
-### 3. Modifier le hook `useSubscription.ts`
-- Remplacer la methode `initializePayment` qui appelle l'edge function Moneroo par une nouvelle methode `openFedaPayCheckout` qui ouvre le widget FedaPay directement cote client
-- Le widget FedaPay recevra : montant (FCFA), description, email/nom du client, et les metadata (user_id, plan_slug)
-- Utiliser le callback `onComplete` pour detecter le succes/echec du paiement
+#### 1. Migration base de donnees
 
-### 4. Creer une edge function `fedapay-webhook`
-- Recevra les notifications de FedaPay lorsqu'un paiement est confirme
-- Verifiera la signature du webhook
-- Activera l'abonnement dans la base de donnees (meme logique que le webhook Moneroo actuel)
+- **Mettre a jour** les 3 plans existants dans `subscription_plans` :
+  - `free` : garder tel quel (0$ / 0 FCFA, 0 credits_per_month) mais mettre a jour les features
+  - `pro` : renommer en "Populaire", prix 7$ / 3900 FCFA, 10 credits/mois, mettre a jour features
+  - `business` : prix 17$ / 9900 FCFA, 24 credits/mois, mettre a jour features
+- **Desactiver** le plan `enterprise` (`is_active = false`)
+- **Mettre a jour la fonction `check_and_debit_credits`** : remplacer le calcul variable (1K=1, 2K=2, 4K=4) par un cout fixe de **2 credits par affiche**, quelle que soit la resolution. Le plan gratuit consommera aussi 2 credits par affiche (donc ~2 affiches avec 5 credits).
 
-### 5. Mettre a jour les composants de paiement
-- `src/components/landing/PricingSection.tsx` : utiliser la nouvelle methode FedaPay
-- `src/pages/PricingPage.tsx` : meme mise a jour + changer la mention "Moneroo" par "FedaPay"
-- `src/pages/AccountPage.tsx` : adapter la logique de retour apres paiement
+#### 2. Mise a jour du hook `useSubscription.ts`
 
-### 6. Autoriser le domaine
-- Vous devrez autoriser le domaine `graphiste-gpt.lovable.app` dans votre dashboard FedaPay (menu Applications > Nom de domaine a autoriser)
+- `getCreditsNeeded()` : retourner toujours **2** au lieu du systeme variable par resolution
+- `canGenerate()` : adapter pour utiliser 2 credits fixes
+- `getRemainingCredits()` : ajuster le calcul pour le plan gratuit (5 credits, ~2 affiches)
 
-## Flux de paiement
+#### 3. Mise a jour de l'UI Landing (`PricingSection.tsx`)
 
-```text
-Utilisateur clique "S'abonner"
-       |
-       v
-Widget FedaPay s'ouvre (modal dans la page)
-       |
-       v
-Utilisateur paie (Mobile Money, carte, etc.)
-       |
-       v
-Callback onComplete cote client --> affiche confirmation
-       |
-       v
-Webhook FedaPay --> edge function --> active l'abonnement en BDD
-```
+- Remplacer les 3 plans codes en dur par les nouveaux (Essai, Populaire, Business)
+- Nouveaux prix, features et CTA ("Tester gratuitement", "Acheter maintenant")
+- Mettre a jour la section "Consommation des credits" : afficher "1 affiche = 2 credits"
+- Retirer le plan Enterprise
 
-## Details techniques
+#### 4. Mise a jour de `PricingPage.tsx`
 
-### Script Checkout.js
-Le SDK FedaPay sera charge dans `index.html` et utilise via `window.FedaPay` dans React.
+- Grille de 3 colonnes au lieu de 4
+- Mettre a jour la section "Comment fonctionnent les credits" pour refleter le nouveau systeme (1 affiche = 2 credits)
+- Adapter la FAQ (retirer la reference "5 affiches par mois" -> "5 credits d'essai, soit ~2 affiches")
 
-### Parametres du widget
-- `public_key` : cle publique live
-- `transaction.amount` : prix en FCFA du plan
-- `transaction.description` : "Abonnement Pro - Graphiste GPT"
-- `transaction.custom_metadata` : `{ user_id, plan_slug, transaction_id }`
-- `customer.email`, `customer.firstname`, `customer.lastname`
-- `environment` : "live"
-- `onComplete` : callback pour gerer le resultat
+#### 5. Mise a jour du `PlanCard.tsx`
 
-### Edge function webhook
-- Recevra les evenements de paiement de FedaPay
-- Mettra a jour `payment_transactions` et `user_subscriptions`
-- La cle API secrete FedaPay sera stockee comme secret pour verifier les webhooks
+- Adapter l'affichage des credits : montrer "X credits / 1 affiche = 2 credits / ~Y affiches"
+- Retirer les references au slug `enterprise`
+- Changer le CTA "S'abonner maintenant" en "Acheter maintenant" pour les plans payants
 
-### Fichiers modifies
-- `index.html` (ajout script CDN)
-- `src/hooks/useSubscription.ts` (nouvelle methode FedaPay)
-- `src/components/landing/PricingSection.tsx` (utiliser FedaPay)
-- `src/pages/PricingPage.tsx` (utiliser FedaPay + texte)
-- `supabase/functions/fedapay-webhook/index.ts` (nouveau)
-- `supabase/config.toml` (ajouter config webhook)
+#### 6. Mise a jour du `CreditBalance.tsx`
 
-### Pre-requis utilisateur
-- Fournir la cle API publique FedaPay
-- Autoriser les domaines `graphiste-gpt.lovable.app` et `id-preview--77936a58-9c4e-49a8-b961-36b92c5edab2.lovable.app` dans le dashboard FedaPay
+- Ajuster l'affichage : "sur 5 credits" pour le plan gratuit, credits corrects pour les autres
+- Retirer la reference "5 affiches" -> "~2 affiches"
+- Mettre a jour la ligne info resolution ("1 affiche = 2 credits")
+
