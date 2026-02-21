@@ -146,7 +146,7 @@ export default function PricingPage() {
         {/* Pricing Cards */}
         <section className="pb-20 px-4">
           <div className="container mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {plans.map((plan, index) => (
                 <PlanCard
                   key={plan.id}
@@ -174,30 +174,29 @@ export default function PricingPage() {
                 Comment fonctionnent les <span className="gradient-text">crédits</span> ?
               </h2>
               <p className="text-muted-foreground">
-                La consommation de crédits dépend de la résolution choisie
+                Simple : <span className="text-primary font-medium">1 affiche = 2 crédits</span>, quelle que soit la résolution
               </p>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { resolution: "1K", credits: 1, use: "Réseaux sociaux", desc: "Facebook, Instagram, WhatsApp" },
-                { resolution: "2K", credits: 2, use: "HD réseaux sociaux", desc: "Stories, publications haute qualité" },
-                { resolution: "4K", credits: 4, use: "Impression", desc: "Flyers, affiches, bannières print" },
+                { plan: "Essai", credits: 5, posters: "~2", desc: "Bonus unique offert" },
+                { plan: "Populaire", credits: 10, posters: "~5", desc: "$7/mois (≈ 3 900 FCFA)" },
+                { plan: "Business", credits: "24+", posters: "12+", desc: "À partir de $17/mois, ajustable" },
               ].map((item, index) => (
                 <motion.div
-                  key={item.resolution}
+                  key={item.plan}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                   viewport={{ once: true }}
                   className="p-6 rounded-2xl bg-card/60 border border-border/50 text-center"
                 >
-                  <div className="text-4xl font-bold gradient-text mb-2">{item.resolution}</div>
+                  <div className="text-2xl font-bold gradient-text mb-2">{item.plan}</div>
                   <div className="text-lg font-semibold text-foreground mb-1">
-                    {item.credits} crédit{item.credits > 1 ? "s" : ""}
+                    {item.credits} crédits → {item.posters} affiches
                   </div>
-                  <div className="text-sm text-muted-foreground mb-2">{item.use}</div>
-                  <div className="text-xs text-muted-foreground/70">{item.desc}</div>
+                  <div className="text-sm text-muted-foreground">{item.desc}</div>
                 </motion.div>
               ))}
             </div>
@@ -256,7 +255,7 @@ export default function PricingPage() {
                 },
                 {
                   q: "Le plan gratuit est-il vraiment sans engagement ?",
-                  a: "Absolument ! Créez jusqu'à 5 affiches par mois gratuitement, sans carte bancaire requise.",
+                  a: "Absolument ! Vous recevez 5 crédits d'essai (≈ 2 affiches), sans carte bancaire requise.",
                 },
                 {
                   q: "Comment fonctionne le filigrane sur le plan gratuit ?",
