@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import type { SubscriptionPlan } from "@/hooks/useSubscription";
 
@@ -16,34 +18,47 @@ const planIcons: Record<string, React.ReactNode> = {
   free: <Zap className="w-6 h-6" />,
   pro: <Sparkles className="w-6 h-6" />,
   business: <Crown className="w-6 h-6" />,
-  enterprise: <Building2 className="w-6 h-6" />,
 };
 
 const planColors: Record<string, string> = {
   free: "from-muted to-muted/50",
   pro: "from-primary to-accent",
   business: "from-amber-500 to-orange-600",
-  enterprise: "from-violet-500 to-purple-600",
 };
 
-export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }: PlanCardProps) {
-  const isEnterprise = plan.slug === "enterprise";
-  const isFree = plan.slug === "free";
+const BASE_BUSINESS_POSTERS = 12;
+const BASE_BUSINESS_PRICE_USD = 17;
+const BASE_BUSINESS_PRICE_FCFA = 9900;
+const PRICE_PER_POSTER_USD = BASE_BUSINESS_PRICE_USD / BASE_BUSINESS_POSTERS;
+const PRICE_PER_POSTER_FCFA = BASE_BUSINESS_PRICE_FCFA / BASE_BUSINESS_POSTERS;
+const MAX_POSTERS = 50;
 
-  const formatPrice = (fcfa: number, usd: number) => {
-    if (fcfa === 0 && !isFree) {
-      return { main: "Sur mesure", sub: "Contactez-nous" };
-    }
+export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }: PlanCardProps) {
+  const isFree = plan.slug === "free";
+  const isBusiness = plan.slug === "business";
+  const [businessPosters, setBusinessPosters] = useState(BASE_BUSINESS_POSTERS);
+
+  const businessPriceUSD = Math.round(businessPosters * PRICE_PER_POSTER_USD);
+  const businessPriceFCFA = Math.round(businessPosters * PRICE_PER_POSTER_FCFA);
+  const businessCredits = businessPosters * 2;
+
+  const formatPrice = () => {
     if (isFree) {
       return { main: "Gratuit", sub: "Pour commencer" };
     }
+    if (isBusiness) {
+      return {
+        main: `$${businessPriceUSD}/mois`,
+        sub: `(≈ ${businessPriceFCFA.toLocaleString("fr-FR")} FCFA)`,
+      };
+    }
     return {
-      main: `$${usd} USD/mois`,
-      sub: `(${fcfa.toLocaleString("fr-FR")} FCFA)`,
+      main: `$${plan.price_usd}/mois`,
+      sub: `(≈ ${plan.price_fcfa.toLocaleString("fr-FR")} FCFA)`,
     };
   };
 
-  const price = formatPrice(plan.price_fcfa, plan.price_usd);
+  const price = formatPrice();
 
   return (
     <motion.div
@@ -56,7 +71,6 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
         plan.is_popular && "lg:-mt-4 lg:mb-4"
       )}
     >
-      {/* Popular badge */}
       {plan.is_popular && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
           <motion.div
@@ -79,7 +93,6 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           "group-hover:-translate-y-2"
         )}
       >
-        {/* Gradient overlay */}
         <div
           className={cn(
             "absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500",
@@ -87,7 +100,6 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           )}
         />
 
-        {/* 3D floating effect on hover */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
           <div className="absolute top-10 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-10 left-10 w-24 h-24 bg-accent/10 rounded-full blur-2xl animate-pulse delay-300" />
@@ -117,34 +129,46 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           </div>
 
           {/* Credits info */}
-          {!isEnterprise && !isFree && (
+          {isBusiness ? (
+            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground">Nombre d'affiches</span>
+                <span className="text-xl font-bold text-primary">{businessPosters}</span>
+              </div>
+              <Slider
+                value={[businessPosters]}
+                onValueChange={(v) => setBusinessPosters(v[0])}
+                min={12}
+                max={MAX_POSTERS}
+                step={1}
+                className="mb-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>12</span>
+                <span>{MAX_POSTERS}</span>
+              </div>
+              <div className="mt-2 text-xs text-center text-muted-foreground">
+                {businessCredits} crédits • 1 affiche = 2 crédits
+              </div>
+            </div>
+          ) : !isFree ? (
             <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Crédits mensuels</span>
+                <span className="text-sm text-muted-foreground">Crédits</span>
                 <span className="text-xl font-bold text-primary">{plan.credits_per_month}</span>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                1 crédit = 1K · 2 crédits = 2K · 4 crédits = 4K
+                1 affiche = 2 crédits ≈ {Math.floor(plan.credits_per_month / 2)} affiches
               </div>
             </div>
-          )}
-
-          {isFree && (
+          ) : (
             <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Affiches gratuites</span>
-                <span className="text-xl font-bold text-primary">5/mois</span>
+                <span className="text-sm text-muted-foreground">Crédits offerts</span>
+                <span className="text-xl font-bold text-primary">5</span>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                Résolution 1K uniquement
-              </div>
-            </div>
-          )}
-
-          {isEnterprise && (
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-600/10 border border-violet-500/30">
-              <div className="text-center text-sm text-foreground">
-                Crédits <span className="font-bold text-violet-400">illimités</span>
+                1 affiche = 2 crédits ≈ 2 affiches (bonus unique)
               </div>
             </div>
           )}
@@ -176,22 +200,20 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
               "w-full h-12 text-base font-semibold rounded-xl transition-all duration-300",
               plan.is_popular
                 ? "bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/30"
-                : isEnterprise
-                  ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:shadow-lg hover:shadow-violet-500/30"
-                  : isFree
-                    ? "bg-muted hover:bg-muted/80 text-foreground"
+                : isFree
+                  ? "bg-muted hover:bg-muted/80 text-foreground"
+                  : isBusiness
+                    ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:opacity-90"
                     : "bg-card border border-primary/50 text-primary hover:bg-primary/10"
             )}
           >
             {isCurrentPlan ? (
               "Plan actuel"
-            ) : isEnterprise ? (
-              "Contactez-nous"
             ) : isFree ? (
-              "Commencer gratuitement"
+              "Tester gratuitement"
             ) : (
               <>
-                S'abonner maintenant
+                Acheter maintenant
                 <Sparkles className="w-4 h-4 ml-2" />
               </>
             )}

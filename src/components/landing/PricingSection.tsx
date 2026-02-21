@@ -1,95 +1,36 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 
-const plans = [
-  {
-    name: "Essai gratuit",
-    price: "$0",
-    currency: "USD",
-    priceSub: "(0 FCFA)",
-    period: "",
-    description: "Testez la plateforme avec 5 crédits offerts",
-    icon: Zap,
-    slug: "free",
-    features: [
-      "5 crédits offerts (bonus unique)",
-      "Résolution 1K uniquement",
-      "Filigrane inclus",
-      "Accès aux templates de base",
-    ],
-    cta: "Tester gratuitement",
-    popular: false,
-    gradient: "from-muted to-muted/50",
-  },
-  {
-    name: "Pro",
-    price: "$8",
-    currency: "USD",
-    priceSub: "(5 000 FCFA)",
-    period: "/mois",
-    description: "Pour les professionnels et créateurs",
-    icon: Crown,
-    slug: "pro",
-    features: [
-      "50 crédits par mois",
-      "Toutes résolutions (1K, 2K, 4K)",
-      "Sans filigrane",
-      "Accès à tous les templates",
-      "Support prioritaire",
-    ],
-    cta: "S'abonner maintenant",
-    popular: true,
-    gradient: "from-primary to-accent",
-  },
-  {
-    name: "Business",
-    price: "$25",
-    currency: "USD",
-    priceSub: "(15 000 FCFA)",
-    period: "/mois",
-    description: "Pour les équipes et agences",
-    icon: Building2,
-    slug: "business",
-    features: [
-      "200 crédits par mois",
-      "Toutes résolutions (1K, 2K, 4K)",
-      "Sans filigrane",
-      "Tous les templates premium",
-      "Support dédié 24/7",
-      "API access",
-    ],
-    cta: "S'abonner maintenant",
-    popular: false,
-    gradient: "from-accent to-primary",
-  },
-];
+const BASE_BUSINESS_POSTERS = 12;
+const BASE_BUSINESS_PRICE_USD = 17;
+const BASE_BUSINESS_PRICE_FCFA = 9900;
+const PRICE_PER_POSTER_USD = BASE_BUSINESS_PRICE_USD / BASE_BUSINESS_POSTERS;
+const PRICE_PER_POSTER_FCFA = BASE_BUSINESS_PRICE_FCFA / BASE_BUSINESS_POSTERS;
+const MAX_POSTERS = 50;
 
 export function PricingSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isProcessingPayment, openFedaPayCheckout } = useSubscription();
+  const [businessPosters, setBusinessPosters] = useState(BASE_BUSINESS_POSTERS);
+
+  const businessPriceUSD = Math.round(businessPosters * PRICE_PER_POSTER_USD);
+  const businessPriceFCFA = Math.round(businessPosters * PRICE_PER_POSTER_FCFA);
+  const businessCredits = businessPosters * 2;
 
   const handleSubscribe = async (planSlug: string) => {
-    console.log("[PricingSection] Subscribe clicked for plan:", planSlug);
-
-    // Free plan - go to auth page
     if (planSlug === "free") {
       navigate("/auth");
       return;
     }
 
-    // Enterprise - contact
-    if (planSlug === "enterprise") {
-      toast.info("Veuillez nous contacter pour le plan Entreprise.");
-      return;
-    }
-
-    // Must be logged in for paid plans
     if (!user) {
       toast.info("Veuillez vous connecter pour souscrire à un abonnement.");
       navigate("/auth");
@@ -105,6 +46,48 @@ export function PricingSection() {
       toast.error(err instanceof Error ? err.message : "Erreur lors de l'initialisation du paiement");
     }
   };
+
+  const plans = [
+    {
+      name: "Essai gratuit",
+      price: "$0",
+      priceSub: "(0 FCFA)",
+      period: "",
+      description: "Testez la création d'affiches",
+      icon: Zap,
+      slug: "free",
+      features: [
+        "5 crédits offerts (bonus unique)",
+        "1 affiche = 2 crédits ≈ 2 affiches",
+        "Résolution 1K uniquement",
+        "Filigrane inclus",
+        "Accès aux templates de base",
+      ],
+      cta: "Tester gratuitement",
+      popular: false,
+      gradient: "from-muted to-muted/50",
+    },
+    {
+      name: "Populaire",
+      price: "$7",
+      priceSub: "(≈ 3 900 FCFA)",
+      period: "/mois",
+      description: "Pour les créateurs d'affiches",
+      icon: Crown,
+      slug: "pro",
+      features: [
+        "10 crédits",
+        "1 affiche = 2 crédits ≈ 5 affiches",
+        "Toutes les résolutions (1K, 2K, 4K)",
+        "Sans filigrane",
+        "Accès à tous les templates",
+        "Téléchargement immédiat",
+      ],
+      cta: "Acheter maintenant",
+      popular: true,
+      gradient: "from-primary to-accent",
+    },
+  ];
 
   return (
     <section id="pricing" className="py-24 px-4 relative overflow-hidden">
@@ -148,6 +131,7 @@ export function PricingSection() {
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {/* Free & Popular plans */}
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             return (
@@ -163,34 +147,27 @@ export function PricingSection() {
                     : "bg-card/60 backdrop-blur-sm border border-border/50"
                 }`}
               >
-                {/* Popular badge */}
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold shadow-lg">
                     Le plus populaire
                   </div>
                 )}
 
-                {/* Icon */}
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.gradient} flex items-center justify-center mb-6`}>
                   <Icon className="w-7 h-7 text-white" />
                 </div>
 
-                {/* Plan name */}
                 <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
                 <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
 
-                {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.currency}{plan.period}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
                   </div>
-                  {plan.priceSub && (
-                    <span className="text-sm text-muted-foreground">{plan.priceSub}</span>
-                  )}
+                  <span className="text-sm text-muted-foreground">{plan.priceSub}</span>
                 </div>
 
-                {/* Features */}
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
@@ -202,7 +179,6 @@ export function PricingSection() {
                   ))}
                 </ul>
 
-                {/* CTA */}
                 <Button
                   onClick={() => handleSubscribe(plan.slug)}
                   disabled={isProcessingPayment}
@@ -217,6 +193,80 @@ export function PricingSection() {
               </motion.div>
             );
           })}
+
+          {/* Business plan with slider */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="relative rounded-3xl p-8 bg-card/60 backdrop-blur-sm border border-border/50"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mb-6">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+
+            <h3 className="text-2xl font-bold text-foreground mb-2">Business</h3>
+            <p className="text-muted-foreground text-sm mb-6">Pour les équipes et agences</p>
+
+            {/* Dynamic price */}
+            <div className="mb-4">
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-bold text-foreground">${businessPriceUSD}</span>
+                <span className="text-muted-foreground">/mois</span>
+              </div>
+              <span className="text-sm text-muted-foreground">(≈ {businessPriceFCFA.toLocaleString("fr-FR")} FCFA)</span>
+            </div>
+
+            {/* Poster slider */}
+            <div className="mb-6 p-4 rounded-2xl bg-muted/50 border border-border/50">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground">Nombre d'affiches</span>
+                <span className="text-2xl font-bold text-primary">{businessPosters}</span>
+              </div>
+              <Slider
+                value={[businessPosters]}
+                onValueChange={(v) => setBusinessPosters(v[0])}
+                min={12}
+                max={MAX_POSTERS}
+                step={1}
+                className="mb-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>12 affiches</span>
+                <span>{MAX_POSTERS} affiches</span>
+              </div>
+              <div className="mt-2 text-xs text-center text-muted-foreground">
+                {businessCredits} crédits • 1 affiche = 2 crédits
+              </div>
+            </div>
+
+            <ul className="space-y-3 mb-8">
+              {[
+                `${businessCredits} crédits (≈ ${businessPosters} affiches)`,
+                "Toutes les résolutions (1K, 2K, 4K)",
+                "Sans filigrane",
+                "Templates premium",
+                "Support prioritaire",
+                "Accès API (si applicable)",
+              ].map((feature) => (
+                <li key={feature} className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              onClick={() => handleSubscribe("business")}
+              disabled={isProcessingPayment}
+              className="w-full py-6 rounded-full font-semibold bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:opacity-90"
+            >
+              {isProcessingPayment ? "Chargement..." : "Acheter maintenant"}
+            </Button>
+          </motion.div>
         </div>
 
         {/* Credit info */}
@@ -228,9 +278,7 @@ export function PricingSection() {
         >
           <h4 className="font-semibold text-foreground mb-2">Consommation des crédits</h4>
           <p className="text-muted-foreground text-sm">
-            <span className="text-primary font-medium">1 crédit</span> pour 1K • 
-            <span className="text-primary font-medium ml-2">2 crédits</span> pour 2K • 
-            <span className="text-primary font-medium ml-2">4 crédits</span> pour 4K
+            <span className="text-primary font-medium">1 affiche = 2 crédits</span>, quelle que soit la résolution choisie
           </p>
         </motion.div>
       </div>
