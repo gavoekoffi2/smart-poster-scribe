@@ -101,8 +101,15 @@ export default function AppPage() {
   const cloneTemplate = locationState?.cloneTemplate;
   
   const { profile } = useUserProfile();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
   const { shouldShowTutorial, isLoading: tutorialLoading, completeTutorial } = useTutorial(user?.id);
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate("/auth", { replace: true });
+    }
+  }, [authLoading, isAuthenticated, navigate]);
   const {
     messages,
     conversationState,
