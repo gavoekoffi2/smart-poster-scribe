@@ -323,14 +323,14 @@ async function pollForResult(
   apiKey: string,
   taskId: string,
   resolution: string = "2K",
-  maxAttempts: number = 150, // Increased for 4K which takes much longer
-  baseIntervalMs: number = 2000  // Base polling interval
+  maxAttempts: number = 60,
+  baseIntervalMs: number = 2000
 ): Promise<string> {
-  // Adjust timeouts based on resolution - 4K takes significantly longer
+  // Keep total polling time under ~140s to avoid edge function wall clock limit
   const resolutionConfig: Record<string, { maxAttempts: number; baseInterval: number }> = {
-    "1K": { maxAttempts: 80, baseInterval: 2000 },
-    "2K": { maxAttempts: 120, baseInterval: 2000 },
-    "4K": { maxAttempts: 200, baseInterval: 2500 }, // 4K needs more time (~8+ min timeout)
+    "1K": { maxAttempts: 50, baseInterval: 2000 },
+    "2K": { maxAttempts: 60, baseInterval: 2000 },
+    "4K": { maxAttempts: 65, baseInterval: 2000 },
   };
   
   const config = resolutionConfig[resolution] || resolutionConfig["2K"];
