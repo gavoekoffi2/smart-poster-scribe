@@ -248,12 +248,27 @@ async function createTask(
   // Ensure we're passing the correct format
   const validResolution = ["1K", "2K", "4K"].includes(resolution) ? resolution : "2K";
   
+  // Map unsupported aspect ratios to closest supported ones
+  const KIE_SUPPORTED_RATIOS = ['1:1', '3:4', '4:3', '4:5', '5:4', '16:9', '9:16', '2:3', '3:2', '21:9'];
+  const RATIO_FALLBACK_MAP: Record<string, string> = {
+    '1:3': '9:16',   // Roll-up → closest tall
+    '3:1': '21:9',   // Header → closest wide  
+    '4:1': '21:9',   // Banner → closest wide
+    '1:4': '9:16',   // Tall banner → closest tall
+    '9:21': '9:16',  // Ultra-tall → closest tall
+  };
+  const validAspectRatio = KIE_SUPPORTED_RATIOS.includes(aspectRatio) 
+    ? aspectRatio 
+    : (RATIO_FALLBACK_MAP[aspectRatio] || '1:1');
+  
+  console.log(`Aspect ratio mapping: ${aspectRatio} → ${validAspectRatio}`);
+
   const requestBody = {
     model: "nano-banana-pro",
     input: {
       prompt: prompt,
       image_input: imageInputs,
-      aspect_ratio: aspectRatio,
+      aspect_ratio: validAspectRatio,
       resolution: validResolution,
       output_format: outputFormat,
     },
