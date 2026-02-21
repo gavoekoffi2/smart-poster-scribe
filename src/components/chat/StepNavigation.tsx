@@ -173,7 +173,7 @@ export function StepIndicator({ currentStep }: { currentStep: ConversationState[
   const stepLabels = ["Domaine", "Détails", "Contenu", "Style", "Couleurs", "Logo", "Image", "Fini"];
 
   return (
-    <div className="relative pt-4 pb-8 px-4 overflow-visible">
+    <div className="relative pt-4 pb-10 px-4 overflow-visible">
       {/* Background decorative gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent" />
       
