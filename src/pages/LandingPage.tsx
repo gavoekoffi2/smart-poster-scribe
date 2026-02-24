@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Scene3D } from "@/components/landing/Scene3D";
+import { captureReferralCode } from "@/hooks/useAffiliate";
 import { Navbar } from "@/components/landing/Navbar";
+import { Scene3D } from "@/components/landing/Scene3D";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { ShowcaseSection } from "@/components/landing/ShowcaseSection";
@@ -16,6 +18,11 @@ import { Footer } from "@/components/landing/Footer";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  // Capture ?ref= referral code from URL
+  useEffect(() => {
+    captureReferralCode();
+  }, []);
 
   const handleGetStarted = () => {
     navigate("/auth");

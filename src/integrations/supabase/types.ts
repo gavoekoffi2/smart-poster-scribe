@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          referral_code: string
+          total_earnings: number
+          total_referrals: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          referral_code: string
+          total_earnings?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          referral_code?: string
+          total_earnings?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -323,6 +356,7 @@ export type Database = {
           industry: string | null
           onboarding_completed: boolean | null
           phone: string | null
+          referred_by: string | null
           tutorial_completed: boolean | null
           updated_at: string
           user_id: string
@@ -342,6 +376,7 @@ export type Database = {
           industry?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          referred_by?: string | null
           tutorial_completed?: boolean | null
           updated_at?: string
           user_id: string
@@ -361,6 +396,7 @@ export type Database = {
           industry?: string | null
           onboarding_completed?: boolean | null
           phone?: string | null
+          referred_by?: string | null
           tutorial_completed?: boolean | null
           updated_at?: string
           user_id?: string
@@ -414,6 +450,54 @@ export type Database = {
             columns: ["designer_id"]
             isOneToOne: false
             referencedRelation: "partner_designers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_commissions: {
+        Row: {
+          affiliate_id: string
+          amount: number
+          commission_rate: number
+          created_at: string
+          id: string
+          payment_transaction_id: string | null
+          referred_user_id: string
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          payment_transaction_id?: string | null
+          referred_user_id: string
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          payment_transaction_id?: string | null
+          referred_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_commissions_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -612,6 +696,7 @@ export type Database = {
         Args: { p_image_id?: string; p_resolution: string; p_user_id: string }
         Returns: Json
       }
+      generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_or_create_user_subscription: {
         Args: { p_user_id: string }
         Returns: {
