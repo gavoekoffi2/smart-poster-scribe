@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { getStoredReferralCode, clearStoredReferralCode } from "@/hooks/useAffiliate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,21 @@ export default function AuthPage() {
     // Only proceed if this was user-initiated or initial session check
     if (!isUserInitiatedAuth.current && hasCheckedSession.current) {
       return;
+    }
+    
+    // Save referral code to profile for new users
+    if (isNewUser) {
+      const refCode = getStoredReferralCode();
+      if (refCode) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase
+            .from("profiles")
+            .update({ referred_by: refCode })
+            .eq("user_id", session.user.id);
+          clearStoredReferralCode();
+        }
+      }
     }
     
     // Check if there's a pending clone template

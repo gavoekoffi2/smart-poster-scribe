@@ -21,7 +21,8 @@ import {
   X,
   Check,
   Pencil,
-  Shield
+  Shield,
+  Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { ColorPalette } from "@/components/chat/ColorPalette";
+import { AffiliateTab } from "@/components/affiliate/AffiliateTab";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -337,6 +339,10 @@ export default function AccountPage() {
             <TabsTrigger value="history" className="gap-2">
               <History className="w-4 h-4" />
               Historique
+            </TabsTrigger>
+            <TabsTrigger value="affiliation" className="gap-2">
+              <Gift className="w-4 h-4" />
+              Affiliation
             </TabsTrigger>
           </TabsList>
 
@@ -673,6 +679,11 @@ export default function AccountPage() {
                 </div>
               )}
             </motion.div>
+          </TabsContent>
+
+          {/* Affiliation Tab */}
+          <TabsContent value="affiliation">
+            <AffiliateTab />
           </TabsContent>
         </Tabs>
 
