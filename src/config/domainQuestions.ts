@@ -198,81 +198,14 @@ export const DOMAIN_QUESTIONS: Record<string, DomainConfig> = {
     ]
   },
 
-  // YouTube - flux simplifié pour miniatures virales
+  // YouTube - flux ultra-simplifié pour miniatures virales
+  // L'IA déduit tout du texte descriptif (titre, éléments, style)
+  // On ne demande que la photo du personnage
   youtube: {
     domain: "youtube",
     label: "Miniature YouTube",
-    templateRequirements: ["face_image", "video_title"],
-    questions: [
-      // Q1: Titre de la vidéo (OBLIGATOIRE)
-      {
-        id: "video_title",
-        question: "🎬 **Quel est le titre de votre vidéo YouTube ?**\n\nCela m'aidera à créer une miniature qui correspond parfaitement à votre contenu.",
-        type: "text",
-        required: true,
-        priority: 1,
-        followUp: {
-          condition: "any",
-          nextStep: "title_collected",
-          textInput: {
-            label: "Titre de la vidéo",
-            placeholder: "Ex: Comment j'ai gagné 10 000€ en 30 jours",
-            multiline: false
-          }
-        }
-      },
-      // Q2: Photo propre ou générée par IA ?
-      {
-        id: "has_own_image",
-        question: "📸 **Voulez-vous utiliser votre propre photo pour la miniature ?**\n\nLe visage est l'élément CLÉ d'une miniature virale.\n\n• **Oui** : Envoyez votre photo (gros plan avec expression marquée)\n• **Non** : L'IA générera automatiquement un visage expressif adapté au thème de votre vidéo",
-        type: "boolean",
-        required: true,
-        priority: 2,
-        followUp: {
-          condition: "yes",
-          nextStep: "own_image",
-          imageUpload: {
-            multiple: false,
-            label: "Votre photo",
-            hint: "Envoyez une photo de vous (idéalement en gros plan avec une expression marquée)"
-          }
-        }
-      },
-      // Q3: Éléments spécifiques à ajouter (optionnel)
-      {
-        id: "specific_elements",
-        question: "🎨 **Voulez-vous ajouter des éléments spécifiques sur la miniature ?** (optionnel)\n\nExemples :\n• \"Des billets d'argent qui volent\"\n• \"Mon logo à côté de ma tête\"\n• \"Un téléphone avec l'écran visible\"\n• \"Des flammes en arrière-plan\"\n\n💡 Tapez \"passer\" si vous n'avez pas de préférence.",
-        type: "text",
-        required: false,
-        priority: 3,
-        followUp: {
-          condition: "any",
-          nextStep: "elements_collected",
-          textInput: {
-            label: "Éléments spécifiques",
-            placeholder: "Ex: Des billets d'argent, mon logo flottant, des emojis de feu",
-            multiline: true
-          }
-        }
-      },
-      // Q4: Texte sur la miniature ?
-      {
-        id: "wants_text",
-        question: "✍️ **Voulez-vous du texte sur la miniature ?**\n\n💡 **Conseil pro** : Les meilleures miniatures YouTube ont **très peu ou pas de texte**. Le visage et les éléments visuels suffisent souvent.\n\n• **Oui** : Indiquez le texte souhaité (3-5 mots max recommandé)\n• **Non** : Pas de texte, miniature 100% visuelle (recommandé)",
-        type: "boolean",
-        required: false,
-        priority: 4,
-        followUp: {
-          condition: "yes",
-          nextStep: "text_collected",
-          textInput: {
-            label: "Texte de la miniature",
-            placeholder: "Ex: INCROYABLE ! ou 10 000€ (3-5 mots max)",
-            multiline: false
-          }
-        }
-      },
-    ]
+    templateRequirements: [],
+    questions: []
   },
 };
 
