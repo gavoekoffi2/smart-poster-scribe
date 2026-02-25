@@ -1834,29 +1834,16 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           // If domain detected, skip domain selection
           if (isValidDomain) {
-            // YouTube: route vers les questions spécifiques (titre, photo, éléments, texte)
+            // YouTube: même flux simplifié que les autres domaines (référence → photo personnage → génération)
             if (detectedDomain === "youtube") {
               setConversationState((prev) => ({
                 ...prev,
+                step: "reference",
                 domain: detectedDomain,
                 extractedInfo: analysis.extractedInfo,
                 missingInfo: [],
               }));
-              // Déclencher les questions YouTube via domain_questions
-              const questions = getDomainQuestions("youtube");
-              if (questions.length > 0) {
-                setConversationState((prev) => ({
-                  ...prev,
-                  step: "domain_questions",
-                  domainQuestionState: {
-                    currentQuestionId: questions[0].id,
-                    answeredQuestions: {},
-                    collectedImages: {},
-                    collectedTexts: {},
-                  },
-                }));
-                response += "\n\n" + questions[0].question;
-              }
+              response += "🎬 J'ai compris, vous voulez créer une miniature YouTube ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'.";
             } else {
               // SIMPLIFICATION: Aller TOUJOURS directement à reference
               setConversationState((prev) => ({
@@ -2463,23 +2450,14 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             );
           }, 250);
         } else if (domain === "youtube") {
-          // YouTube: lancer les questions spécifiques
-          const questions = getDomainQuestions("youtube");
-          if (questions.length > 0) {
-            setConversationState((prev) => ({
-              ...prev,
-              step: "domain_questions",
-              domainQuestionState: {
-                currentQuestionId: questions[0].id,
-                answeredQuestions: {},
-                collectedImages: {},
-                collectedTexts: {},
-              },
-            }));
-            setTimeout(() => {
-              addMessage("assistant", questions[0].question);
-            }, 250);
-          }
+          // YouTube: aller directement à reference (flux simplifié)
+          setConversationState((prev) => ({ ...prev, step: "reference" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "🎬 Parfait ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
         } else {
           setConversationState((prev) => ({ ...prev, step: "reference" }));
           setTimeout(() => {
@@ -2786,15 +2764,28 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         removeLoadingMessage();
 
         if (error || !data?.success) {
-          addMessage(
-            "assistant",
-            "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue. Choisissez maintenant une palette de couleurs :"
-          );
-          setConversationState((prev) => ({
-            ...prev,
-            step: "colors",
-            referenceImage: imageDataUrl,
-          }));
+          const currentDomainForErr = conversationStateRef.current.domain;
+          if (currentDomainForErr === "youtube") {
+            addMessage(
+              "assistant",
+              "📸 Image reçue ! Avez-vous une **photo de la personne** qui sera sur la miniature ? Envoyez-la ou cliquez sur 'Passer' pour que l'IA génère un personnage expressif."
+            );
+            setConversationState((prev) => ({
+              ...prev,
+              step: "content_image",
+              referenceImage: imageDataUrl,
+            }));
+          } else {
+            addMessage(
+              "assistant",
+              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue. Choisissez maintenant une palette de couleurs :"
+            );
+            setConversationState((prev) => ({
+              ...prev,
+              step: "colors",
+              referenceImage: imageDataUrl,
+            }));
+          }
           return;
         }
 
@@ -2823,17 +2814,31 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           });
         }
 
-        addMessage(
-          "assistant",
-          "Image analysée ! Choisissez une palette de couleurs pour personnaliser votre affiche :"
-        );
-
-        setConversationState((prev) => ({
-          ...prev,
-          step: "colors",
-          referenceImage: imageDataUrl,
-          referenceDescription: data.description,
-        }));
+        const currentDomainForNext = conversationStateRef.current.domain;
+        if (currentDomainForNext === "youtube") {
+          // YouTube: skip colors/logo, go directly to content_image
+          addMessage(
+            "assistant",
+            "📸 Image analysée ! Avez-vous une **photo de la personne** qui sera sur la miniature ? Envoyez-la ou cliquez sur 'Passer' pour que l'IA génère un personnage expressif adapté à votre vidéo."
+          );
+          setConversationState((prev) => ({
+            ...prev,
+            step: "content_image",
+            referenceImage: imageDataUrl,
+            referenceDescription: data.description,
+          }));
+        } else {
+          addMessage(
+            "assistant",
+            "Image analysée ! Choisissez une palette de couleurs pour personnaliser votre affiche :"
+          );
+          setConversationState((prev) => ({
+            ...prev,
+            step: "colors",
+            referenceImage: imageDataUrl,
+            referenceDescription: data.description,
+          }));
+        }
       } catch (err) {
         removeLoadingMessage();
         addMessage(
@@ -2851,14 +2856,26 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   const handleSkipReference = useCallback(async () => {
     addMessage("user", "Passer l'image de référence");
     
-    // Demander des instructions de style optionnelles avant de sélectionner un template
-    setConversationState((prev) => ({ ...prev, step: "style_preferences" }));
-    setTimeout(() => {
-      addMessage(
-        "assistant",
-        "Avez-vous des préférences de style particulières ? (Par exemple : style moderne, coloré, sobre, élégant, festif...) Décrivez brièvement ou cliquez sur 'Continuer' pour que je choisisse automatiquement."
-      );
-    }, 250);
+    const currentDomain = conversationStateRef.current.domain;
+    if (currentDomain === "youtube") {
+      // YouTube: skip style/colors/logo, go directly to content_image
+      setConversationState((prev) => ({ ...prev, step: "content_image" }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "📸 Avez-vous une **photo de la personne** qui sera sur la miniature ? Envoyez-la ou cliquez sur 'Passer' pour que l'IA génère un personnage expressif adapté à votre vidéo."
+        );
+      }, 250);
+    } else {
+      // Demander des instructions de style optionnelles avant de sélectionner un template
+      setConversationState((prev) => ({ ...prev, step: "style_preferences" }));
+      setTimeout(() => {
+        addMessage(
+          "assistant",
+          "Avez-vous des préférences de style particulières ? (Par exemple : style moderne, coloré, sobre, élégant, festif...) Décrivez brièvement ou cliquez sur 'Continuer' pour que je choisisse automatiquement."
+        );
+      }, 250);
+    }
   }, [addMessage]);
 
   // Handler pour passer les préférences de style
@@ -3001,21 +3018,29 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       const domain = conversationStateRef.current.domain;
       addMessage("user", domain === "youtube" ? "Photo principale envoyée" : "Image de contenu envoyée", imageDataUrl);
 
-      setConversationState((prev) => ({
-        ...prev,
-        step: "secondary_images",
-        contentImage: imageDataUrl,
-        needsContentImage: false,
-        secondaryImages: [],
-      }));
-
-      setTimeout(() => {
-        if (domain === "youtube") {
-          addMessage("assistant", "Photo principale ajoutée ! ✨\n\nAjoutez maintenant des **images secondaires** : logos de plateformes (YouTube, TikTok...), icônes, ou tout élément visuel à placer sur la miniature. Pour chaque image, vous pourrez indiquer où et comment la positionner.");
-        } else {
+      if (domain === "youtube") {
+        // YouTube: go directly to format then generate (skip secondary images)
+        setConversationState((prev) => ({
+          ...prev,
+          step: "format",
+          contentImage: imageDataUrl,
+          needsContentImage: false,
+        }));
+        setTimeout(() => {
+          addMessage("assistant", "Photo reçue ! ✨ Choisissez le format de sortie pour votre miniature :");
+        }, 250);
+      } else {
+        setConversationState((prev) => ({
+          ...prev,
+          step: "secondary_images",
+          contentImage: imageDataUrl,
+          needsContentImage: false,
+          secondaryImages: [],
+        }));
+        setTimeout(() => {
           addMessage("assistant", "Image principale ajoutée ! ✨\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ? Vous pouvez en ajouter autant que vous voulez.");
-        }
-      }, 250);
+        }, 250);
+      }
     },
     [addMessage]
   );
@@ -3024,26 +3049,33 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     const domain = conversationStateRef.current.domain;
     addMessage("user", "Générer l'image automatiquement");
 
-    setConversationState((prev) => ({
-      ...prev,
-      step: "secondary_images",
-      needsContentImage: true,
-      secondaryImages: [],
-    }));
-
-    setTimeout(() => {
-      if (domain === "youtube") {
+    if (domain === "youtube") {
+      // YouTube: go directly to format then generate (AI generates character)
+      setConversationState((prev) => ({
+        ...prev,
+        step: "format",
+        needsContentImage: true,
+      }));
+      setTimeout(() => {
         addMessage(
           "assistant",
-          "L'IA va générer un visage expressif adapté au thème de votre vidéo. 🎭\n\nAjoutez des images secondaires (logos, icônes) si vous le souhaitez."
+          "L'IA va générer un personnage expressif adapté à votre vidéo. 🎭 Choisissez le format de sortie :"
         );
-      } else {
+      }, 250);
+    } else {
+      setConversationState((prev) => ({
+        ...prev,
+        step: "secondary_images",
+        needsContentImage: true,
+        secondaryImages: [],
+      }));
+      setTimeout(() => {
         addMessage(
           "assistant",
           "D'accord, l'image principale sera générée automatiquement.\n\nSouhaitez-vous ajouter des images secondaires (autres personnes, produits, formateurs, invités...) avec des instructions personnalisées pour chacune ?"
         );
-      }
-    }, 250);
+      }, 250);
+    }
   }, [addMessage]);
 
   // Handlers pour les images secondaires
