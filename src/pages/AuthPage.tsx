@@ -592,6 +592,11 @@ export default function AuthPage() {
                         />
                       </div>
                     </div>
+                    <div className="text-right">
+                      <Link to="/reset-password" className="text-xs text-primary hover:underline">
+                        Mot de passe oublié ?
+                      </Link>
+                    </div>
                     <Button 
                       type="submit" 
                       className="w-full glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90" 
