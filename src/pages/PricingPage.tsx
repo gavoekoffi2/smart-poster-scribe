@@ -6,7 +6,8 @@ import { PlanCard } from "@/components/pricing/PlanCard";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Scene3D } from "@/components/landing/Scene3D";
+import { lazy, Suspense } from "react";
+const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
 export default function PricingPage() {
   const navigate = useNavigate();
@@ -71,7 +72,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden animated-gradient">
       {/* 3D Background */}
-      <Scene3D />
+      <Suspense fallback={null}><Scene3D /></Suspense>
 
       {/* Content */}
       <div className="relative z-10">

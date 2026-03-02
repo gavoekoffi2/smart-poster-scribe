@@ -1036,16 +1036,92 @@ serve(async (req) => {
     
     console.log("Final prompt length:", finalPrompt.length);
 
-    const taskId = await createTask(
-      KIE_API_KEY,
-      finalPrompt,
-      imageInputs,
-      aspectRatio,
-      resolution,
-      outputFormat
-    );
+    let taskId: string;
+    let resultUrl: string;
+    
+    try {
+      taskId = await createTask(
+        KIE_API_KEY,
+        finalPrompt,
+        imageInputs,
+        aspectRatio,
+        resolution,
+        outputFormat
+      );
 
-    const resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+      resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+    } catch (genError) {
+      // ===== REMBOURSEMENT AUTOMATIQUE =====
+      if (creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
+        const creditsToRefund = creditCheckResult.credits_used;
+        console.log(`⚠️ Generation failed, refunding ${creditsToRefund} credits to user ${userId}`);
+        
+        try {
+          await supabase.from('credit_transactions').insert({
+            user_id: userId,
+            amount: creditsToRefund,
+            type: 'refund',
+            description: 'Remboursement auto: génération échouée',
+          });
+          
+          // Re-credit the subscription
+          const { data: currentSub } = await supabase
+            .from('user_subscriptions')
+            .select('id, credits_remaining, plan_id')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (currentSub) {
+            // Check if it's a free plan
+            const { data: plan } = await supabase
+              .from('subscription_plans')
+              .select('slug')
+              .eq('id', currentSub.plan_id)
+              .single();
+            
+            if (plan?.slug === 'free') {
+              // Refund free_generations_used
+              await supabase
+                .from('user_subscriptions')
+                .update({ free_generations_used: supabase.rpc ? undefined : 0 })
+                .eq('id', currentSub.id);
+              // Use direct SQL-style decrement
+              await supabase.rpc('check_and_debit_credits', { p_user_id: userId, p_resolution: 'refund_noop' }).then(() => {});
+              // Simple: just decrement free_generations_used
+              const { data: subData } = await supabase
+                .from('user_subscriptions')
+                .select('free_generations_used')
+                .eq('id', currentSub.id)
+                .single();
+              if (subData) {
+                await supabase
+                  .from('user_subscriptions')
+                  .update({ free_generations_used: Math.max(0, subData.free_generations_used - 1) })
+                  .eq('id', currentSub.id);
+              }
+            } else {
+              await supabase
+                .from('user_subscriptions')
+                .update({ credits_remaining: currentSub.credits_remaining + creditsToRefund })
+                .eq('id', currentSub.id);
+            }
+          }
+          
+          console.log(`✅ Refund of ${creditsToRefund} credits completed`);
+        } catch (refundError) {
+          console.error("❌ Refund failed:", refundError);
+        }
+      }
+      
+      // Cleanup temp files even on error
+      if (tempFilePaths.length > 0) {
+        await cleanupTempImages(supabase, tempFilePaths);
+      }
+      
+      throw genError;
+    }
 
     if (tempFilePaths.length > 0) {
       await cleanupTempImages(supabase, tempFilePaths);

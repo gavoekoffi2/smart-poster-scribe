@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GeneratedImage, LogoPosition, AspectRatio, Resolution, Domain } from "@/types/generation";
 import { toast } from "sonner";
-import { User, Session } from "@supabase/supabase-js";
+import { useAuth } from "./useAuth";
 
 interface SaveImageParams {
   imageUrl: string;
@@ -34,23 +34,7 @@ interface UpdateRatingParams {
 export function useHistory() {
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-
-  // Set up auth state listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { user } = useAuth();
 
   // Fetch history on mount and when user changes
   const fetchHistory = useCallback(async () => {
@@ -145,10 +129,12 @@ export function useHistory() {
         is_showcase: isShowcase,
       };
 
-      // Add user_id if user is logged in
-      if (user) {
-        insertData.user_id = user.id;
+      // Only insert if user is logged in (RLS requires auth.uid() = user_id)
+      if (!user) {
+        console.log("Skipping DB insert: user not authenticated");
+        return null;
       }
+      insertData.user_id = user.id;
 
       const { data, error } = await supabase
         .from("generated_images")

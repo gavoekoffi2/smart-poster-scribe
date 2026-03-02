@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
@@ -39,7 +39,14 @@ export function PricingSection() {
 
     try {
       toast.loading("Ouverture du paiement...", { id: "payment-init" });
-      await openFedaPayCheckout(planSlug);
+      if (planSlug === "business") {
+        await openFedaPayCheckout(planSlug, {
+          customPriceFcfa: businessPriceFCFA,
+          customCredits: businessCredits,
+        });
+      } else {
+        await openFedaPayCheckout(planSlug);
+      }
       toast.dismiss("payment-init");
     } catch (err) {
       toast.dismiss("payment-init");
