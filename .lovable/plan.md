@@ -1,187 +1,217 @@
 
-# Audit Complet de la Plateforme Graphiste GPT
+# Audit Approfondi Final - Graphiste GPT (Pre-lancement)
 
-## Etat des lieux
+## Statut des corrections precedentes
 
-Graphiste GPT est un SaaS de generation d'affiches publicitaires par IA, cible Afrique francophone. L'audit revele des problemes critiques, des incoherences et des fonctionnalites manquantes.
-
----
-
-## 1. PROBLEMES CRITIQUES (a corriger en priorite)
-
-### 1.1 Desynchronisation Base de Donnees / Frontend (Tarifs)
-
-Le frontend affiche 3 plans (Essai gratuit, Populaire a $7, Business a $17) mais la base de donnees contient 4 plans differents :
-- `free` : 0 credits (OK)
-- `pro` : 50 credits, $8, 5000 FCFA (le frontend dit "Populaire" a $7 / 3900 FCFA)
-- `business` : 200 credits, $25, 15000 FCFA (le frontend dit $17 / 9900 FCFA)
-- `enterprise` : -1 credits, $0 (present en DB mais invisible cote frontend)
-
-**Impact** : Un utilisateur qui paie via FedaPay recevra les credits/prix de la DB (50 credits a $8), pas ce qui est affiche ($7, 10 credits). Confiance client brisee.
-
-**Correction** : Mettre a jour les enregistrements `subscription_plans` en base pour correspondre exactement au frontend (Populaire: 10 credits, $7, 3900 FCFA ; Business base: 24 credits, $17, 9900 FCFA).
-
-### 1.2 Systeme de credits incoherent (1 affiche = 2 credits)
-
-Le frontend affiche "1 affiche = 2 credits" mais la fonction `check_and_debit_credits` en base debite toujours selon la resolution : 1K=1 credit, 2K=2, 4K=4. Le hook `useSubscription.ts` a aussi `getCreditsNeeded` avec le meme calcul variable.
-
-**Correction** : Mettre a jour `check_and_debit_credits` pour debiter systematiquement 2 credits par generation, et aligner `getCreditsNeeded` dans le hook.
-
-### 1.3 Failles de securite RLS (3 politiques "true")
-
-Tables `generated_images` et `generation_feedback` :
-- `Anyone can delete generated images` : `USING (true)` -- N'importe qui peut supprimer n'importe quelle image
-- `Anyone can insert generated images` : `WITH CHECK (true)` -- Insertion sans controle
-- `Anyone can insert feedback` : `WITH CHECK (true)` -- Spam possible
-
-**Correction** : Restreindre les politiques aux utilisateurs authentifies et a leurs propres donnees.
-
-### 1.4 Webhook FedaPay non securise
-
-Le webhook `fedapay-webhook` accepte n'importe quelle requete sans verification de signature. Un attaquant peut envoyer un faux webhook pour s'activer un abonnement gratuit.
-
-**Correction** : Verifier la signature ou l'IP source de FedaPay, ou a defaut verifier le statut de la transaction directement aupres de l'API FedaPay avant d'activer l'abonnement.
-
-### 1.5 Protection par mot de passe faible
-
-La protection contre les mots de passe compromis est desactivee (alerte du linter). Les utilisateurs peuvent s'inscrire avec des mots de passe faibles ou deja fuites.
+Les corrections de Phase 1 et Phase 2 ont ete appliquees avec succes :
+- Plans tarifaires alignes en DB (Populaire: $7/10 credits, Business: $17/24 credits) -- FAIT
+- `check_and_debit_credits` fixe a 2 credits -- FAIT
+- RLS securisees sur `generated_images` et `generation_feedback` -- FAIT
+- Route 404 catch-all + traduction FR -- FAIT
+- Error Boundary global -- FAIT
+- Mot de passe oublie + `/reset-password` -- FAIT
+- Pages legales CGU/Mentions/Confidentialite -- FAIT
+- Statut paiement aligne (completed) -- FAIT
 
 ---
 
-## 2. PROBLEMES FONCTIONNELS
+## PROBLEMES RESTANTS A CORRIGER
 
-### 2.1 Pas de reinitialisation de mot de passe
+### 1. CRITIQUE - Pas de remboursement si generation echoue
 
-Il n'y a aucun lien "Mot de passe oublie" sur la page de connexion, et aucune page `/reset-password`. Les utilisateurs qui oublient leur mot de passe sont bloques.
+Quand la generation IA echoue (timeout Kie AI, erreur API), les 2 credits sont debites AVANT la generation (`check_and_debit_credits` est appele en amont). L'utilisateur perd ses credits sans resultat.
 
-**Correction** : Ajouter un lien "Mot de passe oublie" sur AuthPage et creer une page `/reset-password`.
+**Correction** : Dans `generate-image/index.ts`, si la generation echoue apres le debit des credits, rembourser automatiquement via un INSERT dans `credit_transactions` et un UPDATE de `user_subscriptions.credits_remaining`.
 
-### 2.2 Page 404 en anglais
+### 2. CRITIQUE - Plan "enterprise" visible sur /pricing mais non fonctionnel
 
-La page NotFound affiche "Oops! Page not found" et "Return to Home" en anglais alors que toute la plateforme est en francais.
+La page `/pricing` affiche les plans depuis la DB. Le plan `enterprise` (slug: `enterprise`, price: $0, credits: -1) est marque `is_active = true` et donc affiche sur la page `/pricing`. Mais :
+- Le bouton ouvre `mailto:contact@graphiste-gpt.com` qui n'est probablement pas configure
+- Le `PlanCard` ne gere pas le cas enterprise (pas d'icone, gradient par defaut)
+- Sur la landing page `PricingSection`, le plan enterprise n'apparait pas (hardcode), creant une incoherence
 
-### 2.3 Pas de route catch-all pour le 404
+**Correction** : Soit desactiver le plan enterprise en DB (`is_active = false`), soit le gerer proprement dans le PlanCard avec une icone Building2 et un CTA "Nous contacter".
 
-Dans `App.tsx`, il manque `<Route path="*" element={<NotFound />} />` pour les routes inexistantes -- les utilisateurs verront une page blanche.
+### 3. IMPORTANT - Liens du footer "Produit" et "Entreprise" ne fonctionnent pas
 
-### 2.4 Aucun paiement reussi en base
+Les liens "Fonctionnalites", "Tarifs", "Templates" dans le footer utilisent des `<a href="#features">` au lieu de `<Link>`. Depuis une page autre que la landing (ex: /terms, /privacy), ces liens ajoutent juste `#features` a l'URL courante sans naviguer vers la landing page.
 
-Sur 14 transactions de paiement, 13 sont "failed" et 1 "pending". Aucune transaction "success" ou "completed". Le webhook attend le status "completed" pour declencher la commission d'affiliation (`record_referral_commission`), mais le webhook met le status a "success". Le trigger de commission ne se declenche donc jamais.
+Les liens "Blog", "Carrieres", "API" pointent vers `#blog`, `#careers`, `#api` qui n'existent pas.
 
-**Correction** : Aligner les statuts -- soit le webhook met "completed", soit le trigger reagit a "success".
+**Correction** :
+- Remplacer les anchors par `<Link to="/#features">` ou `<Link to="/#pricing">`
+- Retirer ou remplacer les liens "Blog", "Carrieres", "API" par des liens valides ou les masquer
 
-### 2.5 Pas de nettoyage automatique du stockage temporaire
+### 4. IMPORTANT - Liens sociaux du footer sont vides (`href="#"`)
 
-Les images uploadees dans `temp-images` ne sont jamais supprimees automatiquement. Le bucket va grossir indefiniment.
+Les icones Twitter, LinkedIn, Instagram, GitHub dans le footer pointent toutes vers `#`. Un utilisateur qui clique ne va nulle part.
+
+**Correction** : Mettre les vrais liens ou retirer les icones.
+
+### 5. IMPORTANT - useHistory tente d'inserer sans user_id (echec RLS)
+
+Dans `useHistory.ts` (ligne 127-131), le code tente d'inserer des images avec `user_id = null` pour les utilisateurs non connectes. Mais la RLS exige `auth.uid() = user_id`, ce qui bloque l'insertion. La generation `generate-image` bloque deja les non-authentifies (ligne 651-662), mais le code frontend ne devrait pas tenter cette insertion.
+
+**Correction** : Ajouter un guard dans `saveToHistory` : si `!user`, ne pas tenter l'insertion en DB.
+
+### 6. IMPORTANT - Avertissements auth "Lock not released" dans la console
+
+La console montre des avertissements repetitifs `Lock "lock:sb-...-auth-token" was not released within 5000ms`. Cela est cause par des appels concurrents a `getSession()` et `onAuthStateChange` dans plusieurs hooks (`useAuth`, `useHistory`, `useSubscription`). Chaque hook cree son propre listener.
+
+**Correction** : Centraliser l'etat auth dans un seul contexte React (`AuthProvider`) au lieu de repeter `supabase.auth.onAuthStateChange` dans chaque hook. Les hooks `useHistory` et `useSubscription` devraient recevoir le `user` via props ou contexte.
+
+### 7. IMPORTANT - Pas de protection d'acces sur les routes admin
+
+Les pages admin (`/admin/*`) n'ont pas de garde d'acces dans le routeur. Un utilisateur non-admin peut acceder directement a `/admin/dashboard`. Le composant `AdminLayout` fait la verification, mais le contenu est brievement visible avant la redirection.
+
+**Correction** : Creer un composant `AdminRoute` wrapper qui verifie le role avant le rendu, similar au guard d'authentification sur `/app`.
+
+### 8. IMPORTANT - Pas de protection sur les routes designer
+
+Les pages `/designer/*` sont accessibles a tout utilisateur connecte meme s'il n'est pas designer verifie. Il n'y a pas de guard similaire a celui des pages admin.
+
+**Correction** : Ajouter un guard de verification du role designer.
+
+### 9. MOYEN - Le plan Business avec slider ne modifie pas les credits en DB
+
+Le slider du plan Business permet de choisir entre 12 et 50 affiches, mais `openFedaPayCheckout` envoie toujours le `plan.price_fcfa` fixe (9900 FCFA pour 24 credits). Le prix dynamique affiche a l'utilisateur ($17-$70) ne correspond pas au montant debite par FedaPay (toujours 9900 FCFA).
+
+**Correction** : Passer le prix dynamique et les credits dynamiques a `openFedaPayCheckout`, ou fixer le slider a une seule valeur. C'est un probleme de confiance client qui DOIT etre corrige avant le lancement.
+
+### 10. MOYEN - Aucun email de confirmation de paiement
+
+Apres un paiement reussi via FedaPay, l'utilisateur ne recoit aucun email de confirmation ni de recu. Pour un SaaS payant, c'est un manque important de professionnalisme et de confiance.
+
+**Correction** : Envoyer un email transactionnel depuis le webhook `fedapay-webhook` apres activation de l'abonnement.
+
+### 11. MOYEN - Aucune gestion de l'expiration de l'abonnement
+
+Le trigger `reset_monthly_counters` renouvelle les credits automatiquement quand `current_period_end < now()`. Mais il n'y a aucun mecanisme pour :
+- Notifier l'utilisateur que son abonnement expire bientot
+- Gerer le non-renouvellement (pas de paiement recurrent)
+- Revenir au plan gratuit si le mois est passe sans paiement
+
+**Correction** : Ajouter une logique de verification de l'expiration. Si `current_period_end` est passe et aucun paiement n'est enregistre, rebasculer vers le plan gratuit.
+
+### 12. MOYEN - Performances landing page (Scene3D)
+
+La landing page charge `@react-three/fiber` et `@react-three/drei` (Three.js complet) pour un simple effet de fond. C'est environ 500KB+ de JavaScript supplementaire qui ralentit le chargement initial.
+
+**Correction** : Lazy-load le composant `Scene3D` avec `React.lazy()` et `Suspense`, ou le remplacer par un effet CSS plus leger.
+
+### 13. MINEUR - AppPage fait 1025 lignes
+
+Le fichier `AppPage.tsx` est un composant monolithique de 1025 lignes. Cela rend la maintenance difficile et affecte les temps de compilation.
+
+**Correction** : Extraire les sous-composants (header, zone de chat, zone d'image, zone d'input) dans des fichiers separes.
+
+### 14. MINEUR - FedaPay SDK charge en synchrone
+
+Le script `checkout.js` de FedaPay est charge en synchrone dans `index.html` (ligne 24). Cela bloque le rendu initial.
+
+**Correction** : Ajouter `async` ou `defer` a la balise script, ou le charger dynamiquement uniquement quand l'utilisateur arrive sur une page de paiement.
+
+### 15. MINEUR - og:image pointe vers favicon.png
+
+Les meta tags Open Graph utilisent `/favicon.png` comme image de partage. Quand quelqu'un partage le lien sur les reseaux sociaux, l'apercu affiche un petit favicon au lieu d'une image marketing.
+
+**Correction** : Creer une image og:image de 1200x630px avec le branding et la mettre a jour dans `index.html`.
 
 ---
 
-## 3. FONCTIONNALITES MANQUANTES POUR UN SAAS PRET A L'EMPLOI
+## FAILLES DE SECURITE RESTANTES (depuis le scan)
 
-### 3.1 Pas de page de mentions legales / CGU / politique de confidentialite
+### S1. Scan de securite : donnees sensibles accessibles
 
-Obligatoire pour un service payant, surtout avec collecte de donnees personnelles.
+Le scan de securite signale que les tables `profiles`, `payment_transactions`, `referral_commissions`, `user_subscriptions`, `credit_transactions`, `affiliates`, `partner_designers` peuvent exposer des donnees. En verifiant les RLS :
 
-### 3.2 Pas de systeme d'email transactionnel
+- `profiles` : SELECT restreint a `auth.uid() = user_id` + admins. **OK**
+- `payment_transactions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
+- `user_subscriptions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
+- `credit_transactions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
+- `affiliates` : SELECT restreint a `auth.uid() = user_id` + admins. **OK**
+- `referral_commissions` : SELECT restreint via affiliate_id join + admins. **OK**
+- `partner_designers` : SELECT public pour les designers verifies (`is_verified = true`), mais expose `total_earnings`. **A CORRIGER** : creer une vue publique sans `total_earnings`.
 
-Aucun email envoye aux utilisateurs apres :
-- Confirmation de paiement
-- Renouvellement d'abonnement
-- Rappel d'expiration de credits
-- Bienvenue apres inscription
+### S2. Protection mots de passe compromis desactivee
 
-### 3.3 Pas de gestion d'erreurs globale
+Le linter Supabase signale toujours que la protection contre les mots de passe compromis est desactivee. Les utilisateurs peuvent s'inscrire avec des mots de passe connus comme fuites.
 
-Aucun Error Boundary React. Si un composant plante, toute l'application affiche une page blanche.
+**Correction** : Activer la protection dans les parametres d'authentification.
 
-### 3.4 Pas de loading state sur les routes admin
+### S3. Webhook FedaPay toujours sans verification de signature
 
-Les pages admin ne verifient pas toutes les permissions avant affichage. Un utilisateur non-admin pourrait voir brievement le contenu.
+Le webhook accepte n'importe quelle requete POST. Un attaquant pourrait forger un faux webhook pour activer un abonnement gratuit.
 
-### 3.5 Pas de support multi-langue
-
-L'interface est en francais mais certains textes systeme sont en anglais (404, erreurs Supabase). Pas de systeme i18n si vous souhaitez etendre a d'autres marches.
-
-### 3.6 Pas de mecanisme de retry pour les generations echouees
-
-Si la generation IA echoue (timeout, erreur API), l'utilisateur perd ses credits sans resultat. Il n'y a pas de mecanisme de remboursement automatique.
-
-### 3.7 Responsive mobile incomplet
-
-Le fichier `AppPage.tsx` fait plus de 1000 lignes avec une interface complexe. Les tabs du compte (`AccountPage`) ne sont pas optimises pour petit ecran (4 onglets horizontaux).
+**Correction** : Verifier la transaction aupres de l'API FedaPay avant d'activer l'abonnement (GET la transaction par son ID et verifier son status).
 
 ---
 
-## 4. PLAN DE CORRECTIONS PRIORITAIRE
+## PLAN DE CORRECTIONS PRIORITAIRE (Pre-lancement)
 
-### Phase 1 -- Critique (a faire immediatement)
+### Bloc 1 -- Critique (bloquant pour le lancement)
 
-1. **Migrer la base de donnees** pour aligner `subscription_plans` avec les tarifs affiches (Populaire: 10 credits/$7 ; Business base: 24 credits/$17)
-2. **Mettre a jour `check_and_debit_credits`** : debiter 2 credits fixes par generation
-3. **Corriger les RLS** sur `generated_images` et `generation_feedback` (restreindre insert/delete aux utilisateurs authentifies)
-4. **Securiser le webhook FedaPay** (verification de la transaction cote serveur)
-5. **Aligner le statut de paiement** pour que les commissions d'affiliation fonctionnent ("completed" partout)
-6. **Ajouter la route 404 catch-all** et traduire la page en francais
+1. Ajouter le remboursement automatique des credits si la generation echoue
+2. Corriger le slider Business (prix dynamique vs prix fixe en DB)
+3. Corriger les liens du footer (navigation inter-pages)
+4. Verifier la transaction FedaPay dans le webhook avant activation
 
-### Phase 2 -- Important (semaine suivante)
+### Bloc 2 -- Important (a faire avant le lancement)
 
-7. **Ajouter "Mot de passe oublie"** + page `/reset-password`
-8. **Ajouter un Error Boundary** global
-9. **Activer la protection contre les mots de passe compromis**
-10. **Mettre a jour `getCreditsNeeded`** dans `useSubscription.ts` pour retourner 2
+5. Centraliser l'auth dans un Provider pour eliminer les warnings de lock
+6. Ajouter des gardes d'acces sur les routes `/admin/*` et `/designer/*`
+7. Corriger `useHistory` pour ne pas tenter d'insert sans user
+8. Gerer le plan enterprise (desactiver ou implementer)
+9. Masquer `total_earnings` des designers dans la vue publique
 
-### Phase 3 -- Ameliorations (a planifier)
+### Bloc 3 -- Ameliorations (a planifier apres le lancement)
 
-11. Ajouter pages CGU / mentions legales
-12. Mettre en place le nettoyage automatique de `temp-images` (lifecycle policy ou cron)
-13. Mecanisme de remboursement automatique si generation echouee
-14. Emails transactionnels (confirmation paiement, bienvenue)
-15. Optimisation mobile de l'interface de generation
+10. Lazy-load Scene3D + defer FedaPay SDK
+11. Ajouter emails transactionnels (confirmation paiement)
+12. Gestion de l'expiration d'abonnement
+13. Image og:image pour le partage social
+14. Refactorer AppPage.tsx en sous-composants
+15. Corriger/supprimer les liens sociaux et "Blog/Carrieres/API"
 
 ---
 
-## Details techniques des corrections
+## Details techniques
 
-### Migration SQL pour aligner les plans
+### Remboursement automatique (correction 1)
+
+Dans `generate-image/index.ts`, apres l'echec de `pollForResult` ou `createTask`, ajouter :
 
 ```text
-UPDATE subscription_plans SET
-  name = 'Populaire', price_usd = 7, price_fcfa = 3900,
-  credits_per_month = 10, max_resolution = '4K'
-WHERE slug = 'pro';
-
-UPDATE subscription_plans SET
-  price_usd = 17, price_fcfa = 9900,
-  credits_per_month = 24
-WHERE slug = 'business';
+// Si les credits ont ete debites et que la generation echoue
+if (creditCheckResult?.success && userId) {
+  const creditsUsed = creditCheckResult.credits_used;
+  await supabase.from('credit_transactions').insert({
+    user_id: userId,
+    amount: creditsUsed,
+    type: 'refund',
+    description: 'Remboursement auto: generation echouee'
+  });
+  await supabase.from('user_subscriptions')
+    .update({ credits_remaining: supabase.rpc('...') })
+    .eq('user_id', userId);
+}
 ```
 
-### Correction check_and_debit_credits
+### Slider Business (correction 2)
 
-Remplacer le calcul variable par `v_credits_needed := 2;` (fixe).
+Modifier `openFedaPayCheckout` dans `useSubscription.ts` pour accepter un parametre `customCredits` et `customPrice`. Adapter l'appel dans `PricingSection` pour passer le prix dynamique.
 
-### Correction webhook -- statut de paiement
+### Verification FedaPay (correction 4)
 
-Changer `status: "success"` en `status: "completed"` dans `fedapay-webhook/index.ts`, ou modifier le trigger `record_referral_commission` pour reagir aussi sur `status = 'success'`.
-
-### Route 404
-
-Ajouter dans `App.tsx` avant la fermeture de `</Routes>` :
-```text
-<Route path="*" element={<NotFound />} />
-```
-
-### RLS corrections
+Dans `fedapay-webhook/index.ts`, avant d'activer l'abonnement, faire un appel API FedaPay pour verifier le statut reel :
 
 ```text
--- Remplacer les politiques "true" par des controles authentifies
-DROP POLICY "Anyone can delete generated images" ON generated_images;
-CREATE POLICY "Users can delete own images" ON generated_images
-  FOR DELETE TO authenticated
-  USING (auth.uid() = user_id);
-
-DROP POLICY "Anyone can insert generated images" ON generated_images;
-CREATE POLICY "Authenticated users can insert images" ON generated_images
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+const verifyResponse = await fetch(
+  `https://api.fedapay.com/v1/transactions/${transactionData.id}`,
+  { headers: { Authorization: `Bearer ${FEDAPAY_SECRET_KEY}` } }
+);
+const verified = await verifyResponse.json();
+if (verified.v1.status !== 'approved') throw new Error('Transaction non verifiee');
 ```
+
+Cela necessite d'ajouter le secret `FEDAPAY_SECRET_KEY`.
