@@ -195,7 +195,7 @@ export function useSubscription() {
             await supabase
               .from("payment_transactions")
               .update({
-                status: "success",
+                status: "completed",
                 moneroo_payment_id: String(response.transaction?.id || ""),
                 updated_at: new Date().toISOString(),
               })
@@ -248,17 +248,11 @@ export function useSubscription() {
     if (!subscription) return resolution === "1K";
     const isFree = subscription.plan?.slug === "free";
     if (isFree) return resolution === "1K" && subscription.free_generations_used < 5;
-    const creditsNeeded = resolution === "1K" ? 1 : resolution === "2K" ? 2 : 4;
-    return subscription.credits_remaining >= creditsNeeded;
+    return subscription.credits_remaining >= 2;
   }, [subscription]);
 
-  const getCreditsNeeded = useCallback((resolution: string) => {
-    switch (resolution) {
-      case "1K": return 1;
-      case "2K": return 2;
-      case "4K": return 4;
-      default: return 1;
-    }
+  const getCreditsNeeded = useCallback((_resolution: string) => {
+    return 2;
   }, []);
 
   useEffect(() => {

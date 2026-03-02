@@ -65,7 +65,7 @@ serve(async (req) => {
       await supabase
         .from("payment_transactions")
         .update({
-          status: "success",
+          status: "completed",
           payment_method: transactionData.mode || "fedapay",
           moneroo_payment_id: String(transactionData.id || ""),
           updated_at: new Date().toISOString(),
