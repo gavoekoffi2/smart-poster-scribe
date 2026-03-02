@@ -21,6 +21,9 @@ import DesignerUpload from "./pages/DesignerUpload";
 import DesignerProfile from "./pages/DesignerProfile";
 import NotFound from "./pages/NotFound";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import TermsPage from "./pages/TermsPage";
+import LegalPage from "./pages/LegalPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +52,9 @@ const App = () => (
         <Route path="/designer/profile" element={<DesignerProfile />} />
         <Route path="/designer/:designerId" element={<DesignerProfile />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/legal" element={<LegalPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
