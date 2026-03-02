@@ -349,6 +349,7 @@ export type Database = {
           created_at: string
           default_color_palette: string[] | null
           default_logo_url: string | null
+          email: string | null
           expectations: string | null
           full_name: string | null
           how_heard_about_us: string | null
@@ -369,6 +370,7 @@ export type Database = {
           created_at?: string
           default_color_palette?: string[] | null
           default_logo_url?: string | null
+          email?: string | null
           expectations?: string | null
           full_name?: string | null
           how_heard_about_us?: string | null
@@ -389,6 +391,7 @@ export type Database = {
           created_at?: string
           default_color_palette?: string[] | null
           default_logo_url?: string | null
+          email?: string | null
           expectations?: string | null
           full_name?: string | null
           how_heard_about_us?: string | null
@@ -682,6 +685,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_financial_stats: { Args: { p_admin_id: string }; Returns: Json }
+      admin_get_payment_transactions: {
+        Args: { p_admin_id: string }
+        Returns: {
+          amount_fcfa: number
+          amount_usd: number
+          created_at: string
+          id: string
+          payment_method: string
+          plan_name: string
+          status: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
+      admin_get_users_with_subscriptions: {
+        Args: { p_admin_id: string }
+        Returns: {
+          company_name: string
+          created_at: string
+          credits_remaining: number
+          current_period_end: string
+          email: string
+          free_generations_used: number
+          full_name: string
+          plan_name: string
+          plan_slug: string
+          sub_status: string
+          user_id: string
+        }[]
+      }
       admin_grant_subscription: {
         Args: {
           p_admin_id: string

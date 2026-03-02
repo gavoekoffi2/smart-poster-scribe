@@ -26,6 +26,7 @@ const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
 const AdminMarquee = lazy(() => import("./pages/AdminMarquee"));
 const AdminShowcase = lazy(() => import("./pages/AdminShowcase"));
 const AdminFeedback = lazy(() => import("./pages/AdminFeedback"));
+const AdminRoles = lazy(() => import("./pages/AdminRoles"));
 
 // Lazy load designer pages
 const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
@@ -65,6 +66,7 @@ const App = () => (
           <Route path="/admin/marquee" element={<AdminRoute><AdminMarquee /></AdminRoute>} />
           <Route path="/admin/showcase" element={<AdminRoute><AdminShowcase /></AdminRoute>} />
           <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
+          <Route path="/admin/roles" element={<AdminRoute><AdminRoles /></AdminRoute>} />
 
           {/* Designer routes with guard */}
           <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
