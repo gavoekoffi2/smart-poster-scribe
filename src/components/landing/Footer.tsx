@@ -31,13 +31,13 @@ export function Footer() {
     }],
     legal: [{
       label: "Confidentialité",
-      href: "#privacy"
+      href: "/privacy"
     }, {
       label: "CGU",
-      href: "#terms"
+      href: "/terms"
     }, {
-      label: "Cookies",
-      href: "#cookies"
+      label: "Mentions légales",
+      href: "/legal"
     }]
   };
   const socialLinks = [{
@@ -122,9 +122,9 @@ export function Footer() {
             <h4 className="font-display font-semibold text-foreground mb-4">Légal</h4>
             <ul className="space-y-3">
               {footerLinks.legal.map(link => <li key={link.label}>
-                  <a href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
-                  </a>
+                  </Link>
                 </li>)}
             </ul>
           </div>
