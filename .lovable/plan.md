@@ -1,217 +1,181 @@
 
-# Audit Approfondi Final - Graphiste GPT (Pre-lancement)
+# Audit Approfondi - Administration Graphiste GPT
 
-## Statut des corrections precedentes
+## Constat sur le probleme des "utilisateurs avec plans non payes"
 
-Les corrections de Phase 1 et Phase 2 ont ete appliquees avec succes :
-- Plans tarifaires alignes en DB (Populaire: $7/10 credits, Business: $17/24 credits) -- FAIT
-- `check_and_debit_credits` fixe a 2 credits -- FAIT
-- RLS securisees sur `generated_images` et `generation_feedback` -- FAIT
-- Route 404 catch-all + traduction FR -- FAIT
-- Error Boundary global -- FAIT
-- Mot de passe oublie + `/reset-password` -- FAIT
-- Pages legales CGU/Mentions/Confidentialite -- FAIT
-- Statut paiement aligne (completed) -- FAIT
+Apres verification en base de donnees, **tous les utilisateurs sont bien sur le plan "Gratuit"**. Aucun utilisateur n'a de plan payant actif sans paiement -- toutes les transactions de paiement ont le statut "failed" ou "pending". Le probleme que vous voyez est probablement du a l'affichage dans la page AdminSubscriptions qui montre **tous les utilisateurs avec leur plan "Gratuit" et le statut "active"**, ce qui peut preter a confusion. Il faut ameliorer l'affichage pour distinguer clairement les plans gratuits des plans payants.
+
+Cependant, 12 utilisateurs sur 32 n'ont **aucune subscription en base** (JOIN retourne NULL). Cela veut dire que ces utilisateurs se sont inscrits mais n'ont jamais genere d'image (la subscription est creee a la premiere generation). Ce n'est pas un bug mais merite un meilleur affichage admin.
 
 ---
 
-## PROBLEMES RESTANTS A CORRIGER
+## PROBLEMES IDENTIFIES DANS L'ADMINISTRATION
 
-### 1. CRITIQUE - Pas de remboursement si generation echoue
+### 1. CRITIQUE - Page AdminSubscriptions a sa propre sidebar (doublon)
 
-Quand la generation IA echoue (timeout Kie AI, erreur API), les 2 credits sont debites AVANT la generation (`check_and_debit_credits` est appele en amont). L'utilisateur perd ses credits sans resultat.
+La page `AdminSubscriptions.tsx` (501 lignes) a **sa propre sidebar et navigation integrees** au lieu d'utiliser le composant `AdminLayout`. C'est un doublon de code et la navigation est incomplete (seulement 4 items vs 8 dans AdminLayout). Meme probleme pour `AdminTemplates.tsx`, `AdminFeedback.tsx`, `AdminDesigners.tsx`, `AdminShowcase.tsx`, et `AdminMarquee.tsx` qui ont chacun leur propre header/navigation au lieu d'utiliser AdminLayout.
 
-**Correction** : Dans `generate-image/index.ts`, si la generation echoue apres le debit des credits, rembourser automatiquement via un INSERT dans `credit_transactions` et un UPDATE de `user_subscriptions.credits_remaining`.
+**Resultat** : navigation inconsistante entre les pages admin, certaines n'affichent pas tous les liens.
 
-### 2. CRITIQUE - Plan "enterprise" visible sur /pricing mais non fonctionnel
+**Correction** : Migrer toutes les pages admin pour utiliser `AdminLayout` comme wrapper, comme le fait deja `AdminDashboard`.
 
-La page `/pricing` affiche les plans depuis la DB. Le plan `enterprise` (slug: `enterprise`, price: $0, credits: -1) est marque `is_active = true` et donc affiche sur la page `/pricing`. Mais :
-- Le bouton ouvre `mailto:contact@graphiste-gpt.com` qui n'est probablement pas configure
-- Le `PlanCard` ne gere pas le cas enterprise (pas d'icone, gradient par defaut)
-- Sur la landing page `PricingSection`, le plan enterprise n'apparait pas (hardcode), creant une incoherence
+### 2. CRITIQUE - Page AdminRoles manquante (lien mort)
 
-**Correction** : Soit desactiver le plan enterprise en DB (`is_active = false`), soit le gerer proprement dans le PlanCard avec une icone Building2 et un CTA "Nous contacter".
+Le `AdminLayout` affiche un lien "Roles" vers `/admin/roles` avec la permission `manage_admins`, mais **aucune page AdminRoles n'existe**. La route n'est pas definie dans `App.tsx`. Un super_admin qui clique sur ce lien obtient une page 404.
 
-### 3. IMPORTANT - Liens du footer "Produit" et "Entreprise" ne fonctionnent pas
+**Correction** : Creer une page `AdminRoles.tsx` permettant de voir tous les utilisateurs, leur role actuel, et de leur assigner/retirer des roles. Ajouter la route dans `App.tsx`.
 
-Les liens "Fonctionnalites", "Tarifs", "Templates" dans le footer utilisent des `<a href="#features">` au lieu de `<Link>`. Depuis une page autre que la landing (ex: /terms, /privacy), ces liens ajoutent juste `#features` a l'URL courante sans naviguer vers la landing page.
+### 3. IMPORTANT - AdminSubscriptions : N+1 queries (performance catastrophique)
 
-Les liens "Blog", "Carrieres", "API" pointent vers `#blog`, `#careers`, `#api` qui n'existent pas.
+La page AdminSubscriptions fait une boucle `for` sur **chaque profil** pour charger sa subscription individuellement (lignes 129-155). Avec 32 utilisateurs, cela fait 33 requetes. Avec 1000 utilisateurs, ce sera inutilisable.
 
-**Correction** :
-- Remplacer les anchors par `<Link to="/#features">` ou `<Link to="/#pricing">`
-- Retirer ou remplacer les liens "Blog", "Carrieres", "API" par des liens valides ou les masquer
+**Correction** : Remplacer par une seule requete jointe ou utiliser une vue SQL.
 
-### 4. IMPORTANT - Liens sociaux du footer sont vides (`href="#"`)
+### 4. IMPORTANT - AdminSubscriptions n'affiche pas l'email des utilisateurs
 
-Les icones Twitter, LinkedIn, Instagram, GitHub dans le footer pointent toutes vers `#`. Un utilisateur qui clique ne va nulle part.
+L'email est remplace par un placeholder `user_id.substring(0, 8) + "..."` (ligne 148). L'admin ne peut pas identifier les utilisateurs par leur email.
 
-**Correction** : Mettre les vrais liens ou retirer les icones.
+**Correction** : Stocker l'email dans la table `profiles` via le trigger `handle_new_user`, ou le recuperer depuis `auth.users` via une fonction SECURITY DEFINER.
 
-### 5. IMPORTANT - useHistory tente d'inserer sans user_id (echec RLS)
+### 5. IMPORTANT - AdminSubscriptions : aucun filtre par type de plan
 
-Dans `useHistory.ts` (ligne 127-131), le code tente d'inserer des images avec `user_id = null` pour les utilisateurs non connectes. Mais la RLS exige `auth.uid() = user_id`, ce qui bloque l'insertion. La generation `generate-image` bloque deja les non-authentifies (ligne 651-662), mais le code frontend ne devrait pas tenter cette insertion.
+L'admin ne peut pas filtrer les utilisateurs par plan (gratuit vs payant), ni voir rapidement combien d'utilisateurs sont sur chaque plan. Il n'y a aucun compteur par plan.
 
-**Correction** : Ajouter un guard dans `saveToHistory` : si `!user`, ne pas tenter l'insertion en DB.
+**Correction** : Ajouter des filtres par plan et des compteurs statistiques (X gratuits, Y populaires, Z business).
 
-### 6. IMPORTANT - Avertissements auth "Lock not released" dans la console
+### 6. IMPORTANT - AdminDashboard : pas de statistiques financieres
 
-La console montre des avertissements repetitifs `Lock "lock:sb-...-auth-token" was not released within 5000ms`. Cela est cause par des appels concurrents a `getSession()` et `onAuthStateChange` dans plusieurs hooks (`useAuth`, `useHistory`, `useSubscription`). Chaque hook cree son propre listener.
+Le tableau de bord n'affiche aucune donnee financiere : pas de revenus totaux, pas de paiements recents, pas de transactions echouees. Un admin ne peut pas savoir combien la plateforme genere.
 
-**Correction** : Centraliser l'etat auth dans un seul contexte React (`AuthProvider`) au lieu de repeter `supabase.auth.onAuthStateChange` dans chaque hook. Les hooks `useHistory` et `useSubscription` devraient recevoir le `user` via props ou contexte.
+**Correction** : Ajouter des cartes pour : revenus total, revenus du mois, nombre d'abonnes payants, et une liste des transactions recentes.
 
-### 7. IMPORTANT - Pas de protection d'acces sur les routes admin
+### 7. IMPORTANT - Aucune page pour gerer les paiements/transactions
 
-Les pages admin (`/admin/*`) n'ont pas de garde d'acces dans le routeur. Un utilisateur non-admin peut acceder directement a `/admin/dashboard`. Le composant `AdminLayout` fait la verification, mais le contenu est brievement visible avant la redirection.
+Il n'existe aucune page admin pour voir les transactions de paiement (completed, failed, pending). L'admin ne peut pas diagnostiquer les problemes de paiement ni voir l'historique.
 
-**Correction** : Creer un composant `AdminRoute` wrapper qui verifie le role avant le rendu, similar au guard d'authentification sur `/app`.
+**Correction** : Ajouter une section "Transactions" dans AdminSubscriptions ou une page dediee.
 
-### 8. IMPORTANT - Pas de protection sur les routes designer
+### 8. MOYEN - AdminDesigners n'utilise pas AdminLayout
 
-Les pages `/designer/*` sont accessibles a tout utilisateur connecte meme s'il n'est pas designer verifie. Il n'y a pas de guard similaire a celui des pages admin.
+La page designers a son propre header simple avec juste un bouton retour. Elle n'est pas integree dans la navigation complete de l'admin.
 
-**Correction** : Ajouter un guard de verification du role designer.
+### 9. MOYEN - AdminShowcase ne verifie pas les permissions correctement
 
-### 9. MOYEN - Le plan Business avec slider ne modifie pas les credits en DB
+`AdminShowcase` utilise `isAdmin` directement au lieu de `hasPermission`. Un `content_manager` qui devrait pouvoir gerer le showcase ne peut pas y acceder. Meme probleme pour `AdminMarquee`.
 
-Le slider du plan Business permet de choisir entre 12 et 50 affiches, mais `openFedaPayCheckout` envoie toujours le `plan.price_fcfa` fixe (9900 FCFA pour 24 credits). Le prix dynamique affiche a l'utilisateur ($17-$70) ne correspond pas au montant debite par FedaPay (toujours 9900 FCFA).
+### 10. MOYEN - Pas de pagination dans les listes admin
 
-**Correction** : Passer le prix dynamique et les credits dynamiques a `openFedaPayCheckout`, ou fixer le slider a une seule valeur. C'est un probleme de confiance client qui DOIT etre corrige avant le lancement.
+Les templates sont limites a 50, les images a 100, les feedbacks a 100. Il n'y a aucune pagination. Quand le nombre d'elements grandira, l'admin ne pourra pas naviguer.
 
-### 10. MOYEN - Aucun email de confirmation de paiement
+### 11. MINEUR - AdminUploadPage : page utilitaire sans protection
 
-Apres un paiement reussi via FedaPay, l'utilisateur ne recoit aucun email de confirmation ni de recu. Pour un SaaS payant, c'est un manque important de professionnalisme et de confiance.
-
-**Correction** : Envoyer un email transactionnel depuis le webhook `fedapay-webhook` apres activation de l'abonnement.
-
-### 11. MOYEN - Aucune gestion de l'expiration de l'abonnement
-
-Le trigger `reset_monthly_counters` renouvelle les credits automatiquement quand `current_period_end < now()`. Mais il n'y a aucun mecanisme pour :
-- Notifier l'utilisateur que son abonnement expire bientot
-- Gerer le non-renouvellement (pas de paiement recurrent)
-- Revenir au plan gratuit si le mois est passe sans paiement
-
-**Correction** : Ajouter une logique de verification de l'expiration. Si `current_period_end` est passe et aucun paiement n'est enregistre, rebasculer vers le plan gratuit.
-
-### 12. MOYEN - Performances landing page (Scene3D)
-
-La landing page charge `@react-three/fiber` et `@react-three/drei` (Three.js complet) pour un simple effet de fond. C'est environ 500KB+ de JavaScript supplementaire qui ralentit le chargement initial.
-
-**Correction** : Lazy-load le composant `Scene3D` avec `React.lazy()` et `Suspense`, ou le remplacer par un effet CSS plus leger.
-
-### 13. MINEUR - AppPage fait 1025 lignes
-
-Le fichier `AppPage.tsx` est un composant monolithique de 1025 lignes. Cela rend la maintenance difficile et affecte les temps de compilation.
-
-**Correction** : Extraire les sous-composants (header, zone de chat, zone d'image, zone d'input) dans des fichiers separes.
-
-### 14. MINEUR - FedaPay SDK charge en synchrone
-
-Le script `checkout.js` de FedaPay est charge en synchrone dans `index.html` (ligne 24). Cela bloque le rendu initial.
-
-**Correction** : Ajouter `async` ou `defer` a la balise script, ou le charger dynamiquement uniquement quand l'utilisateur arrive sur une page de paiement.
-
-### 15. MINEUR - og:image pointe vers favicon.png
-
-Les meta tags Open Graph utilisent `/favicon.png` comme image de partage. Quand quelqu'un partage le lien sur les reseaux sociaux, l'apercu affiche un petit favicon au lieu d'une image marketing.
-
-**Correction** : Creer une image og:image de 1200x630px avec le branding et la mettre a jour dans `index.html`.
+La page `/admin/upload` est une page de migration one-shot qui n'a pas de verification de role et ne devrait probablement plus etre accessible en production.
 
 ---
 
-## FAILLES DE SECURITE RESTANTES (depuis le scan)
+## CORRECTIONS RESTANTES PLATEFORME GENERALE
 
-### S1. Scan de securite : donnees sensibles accessibles
+### 12. IMPORTANT - Expiration d'abonnement non geree
 
-Le scan de securite signale que les tables `profiles`, `payment_transactions`, `referral_commissions`, `user_subscriptions`, `credit_transactions`, `affiliates`, `partner_designers` peuvent exposer des donnees. En verifiant les RLS :
+Il n'y a aucun mecanisme pour verifier si un abonnement payant a expire sans renouvellement. Le trigger `reset_monthly_counters` renouvelle les credits automatiquement meme sans paiement. Un utilisateur qui paie un mois recoit des credits indefiniment.
 
-- `profiles` : SELECT restreint a `auth.uid() = user_id` + admins. **OK**
-- `payment_transactions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
-- `user_subscriptions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
-- `credit_transactions` : SELECT restreint a `auth.uid() = user_id` + service_role. **OK**
-- `affiliates` : SELECT restreint a `auth.uid() = user_id` + admins. **OK**
-- `referral_commissions` : SELECT restreint via affiliate_id join + admins. **OK**
-- `partner_designers` : SELECT public pour les designers verifies (`is_verified = true`), mais expose `total_earnings`. **A CORRIGER** : creer une vue publique sans `total_earnings`.
+**Correction** : Modifier la logique pour verifier si un paiement recent existe avant de renouveler. Ou ajouter un cron/function qui passe les abonnements expires en statut "expired" et les remet sur le plan gratuit.
 
-### S2. Protection mots de passe compromis desactivee
+### 13. MOYEN - partner_designers expose total_earnings publiquement
 
-Le linter Supabase signale toujours que la protection contre les mots de passe compromis est desactivee. Les utilisateurs peuvent s'inscrire avec des mots de passe connus comme fuites.
+La RLS sur `partner_designers` permet a tous de voir les designers verifies, y compris le champ `total_earnings`. C'est une donnee financiere sensible.
 
-**Correction** : Activer la protection dans les parametres d'authentification.
-
-### S3. Webhook FedaPay toujours sans verification de signature
-
-Le webhook accepte n'importe quelle requete POST. Un attaquant pourrait forger un faux webhook pour activer un abonnement gratuit.
-
-**Correction** : Verifier la transaction aupres de l'API FedaPay avant d'activer l'abonnement (GET la transaction par son ID et verifier son status).
+**Correction** : Creer une vue publique sans le champ `total_earnings`.
 
 ---
 
-## PLAN DE CORRECTIONS PRIORITAIRE (Pre-lancement)
+## PLAN DE CORRECTIONS
 
-### Bloc 1 -- Critique (bloquant pour le lancement)
+### Phase 1 -- Administration (prioritaire)
 
-1. Ajouter le remboursement automatique des credits si la generation echoue
-2. Corriger le slider Business (prix dynamique vs prix fixe en DB)
-3. Corriger les liens du footer (navigation inter-pages)
-4. Verifier la transaction FedaPay dans le webhook avant activation
+1. **Migrer toutes les pages admin vers AdminLayout** : Refactorer AdminSubscriptions, AdminTemplates, AdminFeedback, AdminDesigners, AdminShowcase, AdminMarquee pour utiliser le wrapper AdminLayout au lieu de gerer leur propre navigation.
 
-### Bloc 2 -- Important (a faire avant le lancement)
+2. **Creer la page AdminRoles** : Page pour gerer les roles utilisateurs (voir, assigner, retirer). Ajouter la route `/admin/roles` dans App.tsx.
 
-5. Centraliser l'auth dans un Provider pour eliminer les warnings de lock
-6. Ajouter des gardes d'acces sur les routes `/admin/*` et `/designer/*`
-7. Corriger `useHistory` pour ne pas tenter d'insert sans user
-8. Gerer le plan enterprise (desactiver ou implementer)
-9. Masquer `total_earnings` des designers dans la vue publique
+3. **Corriger AdminSubscriptions** :
+   - Remplacer les N+1 queries par une seule requete jointe
+   - Ajouter l'affichage de l'email (via une colonne email dans profiles, ajoutee via trigger)
+   - Ajouter des filtres par plan et des compteurs statistiques
+   - Ajouter une section pour voir les transactions de paiement
+   - Distinguer clairement les plans gratuits des payants
 
-### Bloc 3 -- Ameliorations (a planifier apres le lancement)
+4. **Ajouter des stats financieres au dashboard** : Revenus totaux, revenus du mois, nombre d'abonnes payants, transactions echouees.
 
-10. Lazy-load Scene3D + defer FedaPay SDK
-11. Ajouter emails transactionnels (confirmation paiement)
-12. Gestion de l'expiration d'abonnement
-13. Image og:image pour le partage social
-14. Refactorer AppPage.tsx en sous-composants
-15. Corriger/supprimer les liens sociaux et "Blog/Carrieres/API"
+5. **Corriger les permissions** dans AdminShowcase et AdminMarquee pour utiliser `hasPermission` au lieu de `isAdmin`.
+
+### Phase 2 -- Securite et logique metier
+
+6. **Creer une vue publique pour partner_designers** sans `total_earnings`.
+
+7. **Gerer l'expiration des abonnements** : Ajouter une logique pour ne pas renouveler les credits automatiquement si aucun paiement n'a ete effectue.
+
+### Phase 3 -- Ameliorations
+
+8. Ajouter la pagination aux listes admin.
+9. Supprimer ou proteger la page AdminUploadPage.
 
 ---
 
 ## Details techniques
 
-### Remboursement automatique (correction 1)
+### Migration vers AdminLayout (correction 1)
 
-Dans `generate-image/index.ts`, apres l'echec de `pollForResult` ou `createTask`, ajouter :
+Chaque page admin sera simplifiee en retirant sa sidebar/header et en wrappant le contenu dans `<AdminLayout requiredPermission="xxx">`. Exemple pour AdminSubscriptions :
 
 ```text
-// Si les credits ont ete debites et que la generation echoue
-if (creditCheckResult?.success && userId) {
-  const creditsUsed = creditCheckResult.credits_used;
-  await supabase.from('credit_transactions').insert({
-    user_id: userId,
-    amount: creditsUsed,
-    type: 'refund',
-    description: 'Remboursement auto: generation echouee'
-  });
-  await supabase.from('user_subscriptions')
-    .update({ credits_remaining: supabase.rpc('...') })
-    .eq('user_id', userId);
+// AVANT: 501 lignes avec sidebar integree
+// APRES: ~250 lignes, juste le contenu
+export default function AdminSubscriptions() {
+  return (
+    <AdminLayout requiredPermission="manage_users">
+      {/* Juste le contenu, plus de sidebar */}
+    </AdminLayout>
+  );
 }
 ```
 
-### Slider Business (correction 2)
+### AdminRoles (correction 2)
 
-Modifier `openFedaPayCheckout` dans `useSubscription.ts` pour accepter un parametre `customCredits` et `customPrice`. Adapter l'appel dans `PricingSection` pour passer le prix dynamique.
+Nouvelle page avec :
+- Liste de tous les utilisateurs avec leur role actuel
+- Bouton pour assigner un role (dropdown: user, designer, content_manager, admin)
+- Super admin peut gerer admin et content_manager
+- Admin peut gerer content_manager et designer
+- Utilise les fonctions existantes `assignRole` et `removeRole` du hook `useAdmin`
 
-### Verification FedaPay (correction 4)
+### Optimisation queries AdminSubscriptions (correction 3)
 
-Dans `fedapay-webhook/index.ts`, avant d'activer l'abonnement, faire un appel API FedaPay pour verifier le statut reel :
+Ajouter une colonne `email` a la table `profiles` via le trigger `handle_new_user`, puis faire une seule requete jointe :
 
 ```text
-const verifyResponse = await fetch(
-  `https://api.fedapay.com/v1/transactions/${transactionData.id}`,
-  { headers: { Authorization: `Bearer ${FEDAPAY_SECRET_KEY}` } }
-);
-const verified = await verifyResponse.json();
-if (verified.v1.status !== 'approved') throw new Error('Transaction non verifiee');
+SELECT p.user_id, p.full_name, p.email,
+  us.credits_remaining, us.free_generations_used, us.status, us.current_period_end,
+  sp.name as plan_name, sp.slug as plan_slug
+FROM profiles p
+LEFT JOIN user_subscriptions us ON p.user_id = us.user_id
+LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
+ORDER BY p.created_at DESC
 ```
 
-Cela necessite d'ajouter le secret `FEDAPAY_SECRET_KEY`.
+### Stats financieres (correction 4)
+
+Requetes a ajouter au dashboard :
+- `SELECT SUM(amount_usd) FROM payment_transactions WHERE status = 'completed'` -- revenus totaux
+- Meme requete avec filtre `created_at >= month_start` -- revenus du mois
+- `SELECT COUNT(*) FROM user_subscriptions us JOIN subscription_plans sp ON us.plan_id = sp.id WHERE sp.slug != 'free'` -- abonnes payants
+
+### Vue publique designers (correction 6)
+
+```text
+CREATE VIEW public.partner_designers_public
+WITH (security_invoker=on) AS
+  SELECT id, display_name, bio, portfolio_url, templates_count, is_verified, created_at
+  FROM public.partner_designers
+  WHERE is_verified = true;
+-- Exclut total_earnings et user_id
+```
