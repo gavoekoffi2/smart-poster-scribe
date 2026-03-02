@@ -113,7 +113,7 @@ export function useSubscription() {
   }, [user]);
 
   // Open FedaPay Checkout widget
-  const openFedaPayCheckout = useCallback(async (planSlug: string) => {
+  const openFedaPayCheckout = useCallback(async (planSlug: string, options?: { customPriceFcfa?: number; customCredits?: number }) => {
     if (!user) {
       throw new Error("Vous devez être connecté pour souscrire");
     }
@@ -131,6 +131,9 @@ export function useSubscription() {
     if (plan.slug === "free") {
       throw new Error("Le plan gratuit ne nécessite pas de paiement");
     }
+
+    const finalPriceFcfa = options?.customPriceFcfa || plan.price_fcfa;
+    const finalCredits = options?.customCredits || plan.credits_per_month;
 
     setIsProcessingPayment(true);
     console.log("[FedaPay] Opening checkout for plan:", planSlug);
@@ -154,10 +157,10 @@ export function useSubscription() {
         .insert({
           user_id: user.id,
           plan_id: plan.id,
-          amount_fcfa: plan.price_fcfa,
+          amount_fcfa: finalPriceFcfa,
           amount_usd: plan.price_usd,
           status: "pending",
-          metadata: { plan_slug: planSlug }
+          metadata: { plan_slug: planSlug, custom_credits: finalCredits }
         })
         .select()
         .single();
@@ -172,8 +175,8 @@ export function useSubscription() {
       window.FedaPay.init({
         public_key: FEDAPAY_PUBLIC_KEY,
         transaction: {
-          amount: plan.price_fcfa,
-          description: `Abonnement ${plan.name} - Graphiste GPT`,
+          amount: finalPriceFcfa,
+          description: `Abonnement ${plan.name} - Graphiste GPT (${finalCredits} crédits)`,
           custom_metadata: {
             user_id: user.id,
             plan_id: plan.id,

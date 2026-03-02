@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { captureReferralCode } from "@/hooks/useAffiliate";
 import { Navbar } from "@/components/landing/Navbar";
-import { Scene3D } from "@/components/landing/Scene3D";
+const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 import { HeroSection } from "@/components/landing/HeroSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { ShowcaseSection } from "@/components/landing/ShowcaseSection";
@@ -31,7 +31,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden animated-gradient">
       {/* 3D Background - Interactive */}
-      <Scene3D />
+      <Suspense fallback={null}><Scene3D /></Suspense>
       
       {/* Main Content */}
       <div className="relative z-10">

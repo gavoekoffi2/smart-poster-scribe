@@ -42,6 +42,43 @@ serve(async (req) => {
       throw new Error("Métadonnées manquantes");
     }
 
+    // Verify transaction with FedaPay API before activating
+    const fedapaySecretKey = Deno.env.get("FEDAPAY_SECRET_KEY");
+    const transactionId = transactionData.id;
+    
+    if (fedapaySecretKey && transactionId) {
+      console.log(`Verifying transaction ${transactionId} with FedaPay API...`);
+      try {
+        const verifyResponse = await fetch(
+          `https://api.fedapay.com/v1/transactions/${transactionId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${fedapaySecretKey}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        if (verifyResponse.ok) {
+          const verifiedData = await verifyResponse.json();
+          const verifiedStatus = verifiedData?.v1?.transaction?.status || verifiedData?.v1?.status;
+          console.log("FedaPay verified status:", verifiedStatus);
+          
+          if (verifiedStatus !== "approved" && verifiedStatus !== "completed") {
+            console.error(`Transaction ${transactionId} not verified: status=${verifiedStatus}`);
+            return new Response(
+              JSON.stringify({ success: false, error: "Transaction non vérifiée" }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else {
+          console.warn("Could not verify with FedaPay API:", verifyResponse.status);
+        }
+      } catch (verifyError) {
+        console.warn("FedaPay verification error (continuing):", verifyError);
+      }
+    }
+
     // Handle successful payment
     const isSuccess = eventName === "transaction.approved" || 
                       eventName === "transaction.completed" ||
