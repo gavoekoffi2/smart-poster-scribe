@@ -133,10 +133,31 @@ export default function AuthPage() {
     checkInitialSession();
 
     // Listen for auth changes (login/signup events only)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Only handle SIGNED_IN events from user actions
       if (event === 'SIGNED_IN' && session?.user && isUserInitiatedAuth.current) {
-        handleSuccessfulAuth(false);
+        // For Google OAuth, check if this is a new user by looking at profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed, referred_by")
+          .eq("user_id", session.user.id)
+          .single();
+        
+        const isNewUser = !profile?.onboarding_completed;
+        
+        // Save referral code for new Google OAuth users
+        if (isNewUser && !profile?.referred_by) {
+          const refCode = getStoredReferralCode();
+          if (refCode) {
+            await supabase
+              .from("profiles")
+              .update({ referred_by: refCode })
+              .eq("user_id", session.user.id);
+            clearStoredReferralCode();
+          }
+        }
+        
+        handleSuccessfulAuth(isNewUser);
       }
     });
 
