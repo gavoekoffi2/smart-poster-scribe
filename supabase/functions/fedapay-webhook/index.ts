@@ -109,6 +109,13 @@ serve(async (req) => {
         })
         .eq("id", transaction_id);
 
+      // Determine credits: use custom_credits from metadata if present
+      const creditsToAssign = customMetadata.custom_credits
+        ? parseInt(String(customMetadata.custom_credits), 10)
+        : plan.credits_per_month;
+
+      console.log(`Credits to assign: ${creditsToAssign} (custom: ${!!customMetadata.custom_credits})`);
+
       // Update or create subscription
       const { data: existingSub } = await supabase
         .from("user_subscriptions")
@@ -128,7 +135,7 @@ serve(async (req) => {
           .update({
             plan_id,
             status: "active",
-            credits_remaining: plan.credits_per_month,
+            credits_remaining: creditsToAssign,
             free_generations_used: 0,
             current_period_start: now.toISOString(),
             current_period_end: periodEnd.toISOString(),
@@ -142,7 +149,7 @@ serve(async (req) => {
             user_id,
             plan_id,
             status: "active",
-            credits_remaining: plan.credits_per_month,
+            credits_remaining: creditsToAssign,
             free_generations_used: 0,
             current_period_start: now.toISOString(),
             current_period_end: periodEnd.toISOString(),
@@ -154,9 +161,9 @@ serve(async (req) => {
         .from("credit_transactions")
         .insert({
           user_id,
-          amount: plan.credits_per_month,
+          amount: creditsToAssign,
           type: "subscription_renewal",
-          description: `Activation abonnement ${plan.name} via FedaPay`,
+          description: `Activation abonnement ${plan.name} via FedaPay (${creditsToAssign} crédits)`,
         });
 
       console.log(`✅ Subscription activated for user ${user_id}`);
