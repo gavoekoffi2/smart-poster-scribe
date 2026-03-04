@@ -298,7 +298,7 @@ export default function AdminSubscriptions() {
                                     <Select value={selectedPlan} onValueChange={setSelectedPlan}>
                                       <SelectTrigger><SelectValue placeholder="Sélectionner un plan" /></SelectTrigger>
                                       <SelectContent>
-                                        {plans.map(p => <SelectItem key={p.id} value={p.slug}>{p.name} ({p.credits_per_month} crédits)</SelectItem>)}
+                                        {plans.filter(p => p.slug !== "free").map(p => <SelectItem key={p.id} value={p.slug}>{p.name} ({p.credits_per_month} crédits)</SelectItem>)}
                                       </SelectContent>
                                     </Select>
                                   </div>

@@ -134,6 +134,10 @@ export function useSubscription() {
 
     const finalPriceFcfa = options?.customPriceFcfa || plan.price_fcfa;
     const finalCredits = options?.customCredits || plan.credits_per_month;
+    // Calculate proportional USD amount when custom price is used
+    const finalAmountUsd = options?.customPriceFcfa 
+      ? Math.round((options.customPriceFcfa / plan.price_fcfa) * plan.price_usd * 100) / 100
+      : plan.price_usd;
 
     setIsProcessingPayment(true);
     console.log("[FedaPay] Opening checkout for plan:", planSlug);
@@ -158,7 +162,7 @@ export function useSubscription() {
           user_id: user.id,
           plan_id: plan.id,
           amount_fcfa: finalPriceFcfa,
-          amount_usd: plan.price_usd,
+          amount_usd: finalAmountUsd,
           status: "pending",
           metadata: { plan_slug: planSlug, custom_credits: finalCredits }
         })
@@ -194,11 +198,11 @@ export function useSubscription() {
           console.log("[FedaPay] Payment complete:", response);
           
           if (response.reason === "CHECKOUT_COMPLETE" || response.transaction?.status === "approved") {
-            // Update local transaction
+            // Set intermediate status - only the server webhook can set "completed" after verification
             await supabase
               .from("payment_transactions")
               .update({
-                status: "completed",
+                status: "processing",
                 moneroo_payment_id: String(response.transaction?.id || ""),
                 updated_at: new Date().toISOString(),
               })
