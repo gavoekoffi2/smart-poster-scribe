@@ -1,64 +1,60 @@
 
 
-# Audit Abonnements, Roles & Affiliation - Corrections
+# Renforcement du Prompt de Clonage de Référence
 
-## Problemes critiques identifies
+## Probleme
 
-### 1. CRITIQUE - Triggers dupliques (commissions x3)
-Les triggers `record_referral_commission` sont attaches **3 fois** sur `payment_transactions` :
-- `on_payment_completed_record_commission`
-- `on_payment_completed`
-- `record_referral_commission_trigger`
+Le prompt actuel en mode clone (lignes 199-214 de `generate-image/index.ts`) est trop generique. Il dit "COPIE QUASI-IDENTIQUE" mais manque de directives precises pour forcer l'IA a vraiment reproduire le design exact et a appliquer une typographie designee (pas du texte plat).
 
-Meme chose pour `track_referral_signup` (2x) et `reset_monthly_counters` (2x).
+Le prompt fait seulement 13 lignes courtes. Il ne mentionne pas les techniques specifiques de reproduction (couleurs exactes, positions, proportions, effets) ni les exigences de typographie stylee.
 
-**Impact** : Chaque paiement valide enregistre la commission d'affiliation 3 fois au lieu d'1. Les credits mensuels sont renouveles 2 fois.
+## Corrections
 
-**Correction** : Migration SQL pour supprimer les doublons et ne garder qu'un trigger par fonction.
+### 1. Renforcer le prompt clone dans `buildProfessionalPrompt` (lignes 199-214)
 
-### 2. CRITIQUE - Webhook ignore custom_credits (plan Business slider)
-Quand un utilisateur choisit 30 affiches sur le slider Business, le metadata contient `custom_credits: 60`, mais le webhook (ligne 131) utilise `plan.credits_per_month` (la valeur fixe du plan, 24). L'utilisateur paie pour 30 affiches mais recoit seulement 12.
+Remplacer le bloc clone par un prompt beaucoup plus directif qui :
 
-**Correction** : Le webhook doit lire `custom_credits` du metadata et l'utiliser s'il est present.
+- Insiste sur la **modification directe** de l'image de reference (pas une recreation)
+- Specifie que le fond, les formes, les couleurs, les degrades, les textures doivent etre **reproduits pixel par pixel**
+- Detaille les regles de **remplacement de texte** : meme position, meme taille relative, meme style d'effets
+- Ajoute des regles de **typographie designee** : interdiction de texte plat, obligation d'effets (ombre portee epaisse, contour, 3D, degrade, glow, metallic) sur tous les textes
+- Renforce la regle de **suppression intelligente** : si un element n'a pas d'equivalent dans les infos client, le supprimer et redistribuer l'espace (pas de zones vides)
+- Ajoute des directives pour les cas specifiques (logo absent, photo absente, contacts absents)
 
-### 3. CRITIQUE - Client met "completed" avant verification serveur
-Dans `useSubscription.ts` (ligne 198-205), le `onComplete` du widget FedaPay met directement `payment_transactions.status = "completed"` cote client. Cela declenche les triggers de commission AVANT que le webhook serveur ne verifie la transaction aupres de FedaPay.
+### 2. Structure du nouveau prompt clone
 
-**Impact** : Un utilisateur malveillant pourrait simuler un `onComplete` sans payer reellement, et les commissions seraient enregistrees.
+```text
+MISSION: Tu es un ÉDITEUR D'IMAGE. Tu reçois une affiche existante. Tu dois la MODIFIER DIRECTEMENT.
+Tu ne crées PAS une nouvelle affiche. Tu ÉDITES l'image fournie.
 
-**Correction** : Le client ne doit **jamais** mettre le statut a "completed". Il doit seulement mettre un statut intermediaire ("client_confirmed") et laisser le webhook serveur le passer a "completed" apres verification.
+DESIGN - INTOUCHABLE:
+- Fond (couleurs, dégradés, textures, motifs) = IDENTIQUE
+- Formes décoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES
+- Mise en page et composition = IDENTIQUE
+- Effets visuels (ombres, lumières, reflets, particules) = IDENTIQUES
+- Couleurs et palette = IDENTIQUES
 
-### 4. BUG - amount_usd incorrect pour Business slider
-`useSubscription.ts` ligne 161 : `amount_usd: plan.price_usd` utilise le prix fixe du plan (17$) meme quand le slider est a 30 affiches. Le montant enregistre ne correspond pas au montant reel paye.
+TEXTE - REMPLACEMENT STRICT:
+- Remplace chaque texte par l'info correspondante du client
+- MÊME position, MÊME taille relative, MÊME alignement
+- MÊME style typographique (gras, italique, majuscules)
+- OBLIGATOIRE: effets typographiques pro (ombre épaisse, contour, 3D, dégradé, glow, metallic)
+- INTERDIT: texte plat, basique, sans effet, style secrétariat
 
-**Correction** : Calculer `amount_usd` proportionnellement au `customPriceFcfa`.
+SUPPRESSION INTELLIGENTE:
+- Info absente = supprimer le texte ET les icônes/décorations associées
+- Redistribuer l'espace restant naturellement
+- ZÉRO zone vide, ZÉRO placeholder, ZÉRO info inventée
 
-### 5. IMPORTANT - Admin grant fonctionne mais ne gere pas le plan "free"
-La fonction `admin_grant_subscription` permet d'attribuer le plan gratuit, ce qui n'a pas de sens. Il faudrait filtrer le plan "free" dans l'UI du dialog d'attribution.
+PHOTOS/LOGOS:
+- Photo client fournie → remplacer à la MÊME position et taille
+- Logo client fourni → remplacer à la MÊME position
+- Pas de photo/logo fourni → SUPPRIMER proprement
+```
 
----
+### Fichier modifie
 
-## Plan de corrections
+- `supabase/functions/generate-image/index.ts` : fonction `buildProfessionalPrompt`, bloc `isCloneMode` (lignes 199-214)
 
-### Phase 1 - Migration SQL (triggers + webhook)
-
-Migration pour :
-- Supprimer les triggers dupliques, garder 1 seul par fonction
-- Aucune autre modification de schema necessaire
-
-### Phase 2 - Webhook fedapay-webhook
-
-Modifier pour :
-- Lire `custom_credits` du metadata et l'utiliser au lieu de `plan.credits_per_month` quand present
-- Enregistrer le bon nombre de credits dans `credit_transactions`
-
-### Phase 3 - useSubscription.ts (securite client)
-
-- Le `onComplete` ne doit plus mettre `status: "completed"` mais `status: "processing"` (statut intermediaire qui ne declenche pas les triggers)
-- Corriger `amount_usd` pour utiliser le prix proportionnel quand customPriceFcfa est utilise
-
-### Phase 4 - AdminSubscriptions UI
-
-- Filtrer le plan "free" de la liste des plans dans le dialog d'attribution d'abonnement
-- Le dialog fonctionne deja correctement avec `admin_grant_subscription` RPC
+Le prompt reste condense (sous 4500 chars au total) pour respecter la limite API Kie AI.
 
