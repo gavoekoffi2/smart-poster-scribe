@@ -198,15 +198,15 @@ function buildProfessionalPrompt({
   // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    lines.push("MISSION: Tu recois une affiche de reference. Tu dois produire une COPIE QUASI-IDENTIQUE de cette affiche. NE CHANGE RIEN au design.");
-    lines.push("REGLE ABSOLUE: Le fond, les formes, les courbes, les couleurs, la mise en page, la composition, les effets, les textures, les ombres = IDENTIQUES a la reference.");
-    lines.push("TEXTE: Remplace UNIQUEMENT le texte par les infos du client. Garde le MEME style typographique (police, taille, effets 3D, ombres, glow, couleur, position).");
-    lines.push("PHOTOS: Si le client fournit une photo, remplace la photo de la reference par celle du client a la MEME position et MEME taille.");
-    lines.push("LOGOS: Si le client fournit un logo, remplace le logo de la reference. Sinon SUPPRIME le logo.");
-    lines.push("SUPPRESSION: Tout element de la reference dont le client n'a PAS fourni l'equivalent (date, telephone, adresse, logo, photo) doit etre SUPPRIME proprement sans laisser de vide.");
-    lines.push("INTERDIT: Ne change PAS le fond. Ne change PAS les formes decoratives. Ne change PAS la structure. Ne REINVENTE PAS le design. COPIE le design exact.");
-    if (hasContentImage) lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference.");
-    if (hasLogoImage) lines.push("LOGO CLIENT: Reproduire EXACTEMENT le logo fourni.");
+    lines.push("MISSION: Tu es un EDITEUR D'IMAGE. Tu recois une affiche existante. Tu dois la MODIFIER DIRECTEMENT. Tu ne crees PAS une nouvelle affiche. Tu EDITES l'image fournie.");
+    lines.push("DESIGN INTOUCHABLE: Fond (couleurs, degrades, textures, motifs) = IDENTIQUE. Formes decoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES. Mise en page et composition = IDENTIQUE. Effets visuels (ombres, lumieres, reflets, particules) = IDENTIQUES. Palette couleurs = IDENTIQUE.");
+    lines.push("TEXTE - REMPLACEMENT STRICT: Remplace chaque texte par l'info correspondante du client. MEME position, MEME taille relative, MEME alignement, MEME style (gras, italique, majuscules).");
+    lines.push("TYPO PRO OBLIGATOIRE: Chaque texte DOIT avoir des effets typographiques professionnels: ombre portee epaisse, contour marque, effet 3D, degrade sur lettres, glow/lueur, aspect metallique. INTERDIT: texte plat, basique, sans effet, style secretariat. Le texte est un ELEMENT GRAPHIQUE DESIGNE.");
+    lines.push("SUPPRESSION INTELLIGENTE: Info absente du client = supprimer le texte ET les icones/decorations associees. Redistribuer l'espace naturellement. ZERO zone vide, ZERO placeholder, ZERO info inventee.");
+    lines.push("PHOTOS/LOGOS: Photo client fournie = remplacer MEME position et taille. Logo client fourni = remplacer MEME position. Pas de photo/logo fourni = SUPPRIMER proprement et combler l'espace.");
+    if (hasContentImage) lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference, MEME cadrage, MEME taille.");
+    if (hasLogoImage) lines.push("LOGO CLIENT: Reproduire EXACTEMENT le logo fourni a la position du logo original.");
+    lines.push("INTERDIT ABSOLU: Ne change PAS le fond. Ne change PAS les formes. Ne REINVENTE PAS le design. COPIE le design EXACT pixel par pixel.");
     lines.push("Personnes africaines par defaut. Zero info inventee. Zero placeholder.");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
     lines.push("=== INFOS CLIENT A APPLIQUER ===");
