@@ -55,10 +55,10 @@ export default function AdminContact() {
   };
 
   const deleteMessage = async (id: string) => {
-    const { error } = await supabase
-      .from("contact_messages")
+    const { error } = await (supabase
+      .from("contact_messages" as any)
       .delete()
-      .eq("id", id);
+      .eq("id", id) as any);
 
     if (!error) {
       setMessages((prev) => prev.filter((m) => m.id !== id));

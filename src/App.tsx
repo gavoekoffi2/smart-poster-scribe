@@ -69,6 +69,7 @@ const App = () => (
           <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
           <Route path="/admin/roles" element={<AdminRoute><AdminRoles /></AdminRoute>} />
           <Route path="/admin/affiliates" element={<AdminRoute><AdminAffiliates /></AdminRoute>} />
+          <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
 
           {/* Designer routes with guard */}
           <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
