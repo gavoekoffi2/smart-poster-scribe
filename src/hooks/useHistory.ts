@@ -117,7 +117,7 @@ export function useHistory() {
         logo_positions: params.logoPositions || null,
         color_palette: params.colorPalette || null,
         is_free_plan: isFreePlan,
-        is_showcase: isShowcase,
+        is_showcase: false, // Never auto-publish to showcase without user consent
       };
 
       // Only insert if user is logged in (RLS requires auth.uid() = user_id)

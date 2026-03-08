@@ -93,7 +93,7 @@ export default function AccountPage() {
   // Redirect if not logged in (only after auth check is complete)
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth?redirect=/account");
+      navigate("/auth", { state: { redirectTo: "/account" } });
     }
   }, [user, authLoading, navigate]);
 

@@ -7,7 +7,7 @@ interface CTASectionProps {
 
 export function CTASection({ onGetStarted }: CTASectionProps) {
   return (
-    <section id="contact" className="py-24 px-4 relative overflow-hidden">
+    <section id="cta" className="py-24 px-4 relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/5" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[200px]" />
