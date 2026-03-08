@@ -37,6 +37,7 @@ export default function LandingPage() {
       
       {/* Main Content */}
       <div className="relative z-10">
+        <JsonLd />
         {/* Navigation */}
         <Navbar onGetStarted={handleGetStarted} />
         
