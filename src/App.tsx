@@ -79,6 +79,7 @@ const App = () => (
           <Route path="/designer/profile" element={<DesignerRoute><DesignerProfile /></DesignerRoute>} />
           <Route path="/designer/:designerId" element={<DesignerProfile />} />
 
+          <Route path="/faq" element={<FAQPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />

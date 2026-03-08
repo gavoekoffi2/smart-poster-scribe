@@ -71,6 +71,9 @@ export default function LandingPage() {
         {/* Contact Section */}
         <ContactSection />
         
+        {/* FAQ Section */}
+        <FAQSection />
+        
         {/* CTA Section */}
         <CTASection onGetStarted={handleGetStarted} />
         

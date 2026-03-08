@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://graphiste-gpt.lovable.app/sitemap.xml
