@@ -22,11 +22,11 @@ export default function AdminContact() {
 
   const fetchMessages = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("contact_messages")
+    const { data, error } = await (supabase
+      .from("contact_messages" as any)
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(100) as any);
 
     if (error) {
       console.error("Error fetching messages:", error);
