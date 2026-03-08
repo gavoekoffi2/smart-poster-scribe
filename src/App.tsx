@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import TermsPage from "./pages/TermsPage";
 import LegalPage from "./pages/LegalPage";
 import PrivacyPage from "./pages/PrivacyPage";
+const FAQPage = lazy(() => import("./pages/FAQPage"));
 import AdminRoute from "./components/routes/AdminRoute";
 import DesignerRoute from "./components/routes/DesignerRoute";
 
