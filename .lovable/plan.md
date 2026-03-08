@@ -1,60 +1,55 @@
 
 
-# Renforcement du Prompt de Clonage de Référence
+# Phase 2 - Corrections des bugs fonctionnels
 
-## Probleme
+## 1. Formulaire de contact - envoi reel
 
-Le prompt actuel en mode clone (lignes 199-214 de `generate-image/index.ts`) est trop generique. Il dit "COPIE QUASI-IDENTIQUE" mais manque de directives precises pour forcer l'IA a vraiment reproduire le design exact et a appliquer une typographie designee (pas du texte plat).
+Le formulaire dans `ContactSection.tsx` (ligne 48-49) simule l'envoi avec un `setTimeout`. Il faut creer une edge function `send-contact` qui envoie le message par email ou le stocke en base.
 
-Le prompt fait seulement 13 lignes courtes. Il ne mentionne pas les techniques specifiques de reproduction (couleurs exactes, positions, proportions, effets) ni les exigences de typographie stylee.
+**Approche** : Creer une table `contact_messages` pour stocker les messages, puis notifier l'admin. Pas besoin d'email externe - les messages seront visibles dans le dashboard admin.
 
-## Corrections
+- Migration SQL : table `contact_messages` (name, email, message, created_at, is_read)
+- Edge function `send-contact` : valide les inputs (zod), insere en base
+- Modifier `ContactSection.tsx` : appeler la edge function au lieu du setTimeout
+- Ajouter une page admin `AdminContact` pour consulter les messages recus
 
-### 1. Renforcer le prompt clone dans `buildProfessionalPrompt` (lignes 199-214)
+## 2. Bouton "Voir la demo" inactif
 
-Remplacer le bloc clone par un prompt beaucoup plus directif qui :
+Dans `HeroSection.tsx` (ligne 85-92), le bouton n'a pas de `onClick`. 
 
-- Insiste sur la **modification directe** de l'image de reference (pas une recreation)
-- Specifie que le fond, les formes, les couleurs, les degrades, les textures doivent etre **reproduits pixel par pixel**
-- Detaille les regles de **remplacement de texte** : meme position, meme taille relative, meme style d'effets
-- Ajoute des regles de **typographie designee** : interdiction de texte plat, obligation d'effets (ombre portee epaisse, contour, 3D, degrade, glow, metallic) sur tous les textes
-- Renforce la regle de **suppression intelligente** : si un element n'a pas d'equivalent dans les infos client, le supprimer et redistribuer l'espace (pas de zones vides)
-- Ajoute des directives pour les cas specifiques (logo absent, photo absente, contacts absents)
+**Approche** : Le faire scroller vers la section `ProcessSection` qui montre le processus en 3 etapes, ce qui sert de demo visuelle.
 
-### 2. Structure du nouveau prompt clone
+- Ajouter `onClick` qui scrolle vers `#process` (la section ProcessSection)
+- Verifier que ProcessSection a bien un `id="process"`
 
-```text
-MISSION: Tu es un ÉDITEUR D'IMAGE. Tu reçois une affiche existante. Tu dois la MODIFIER DIRECTEMENT.
-Tu ne crées PAS une nouvelle affiche. Tu ÉDITES l'image fournie.
+## 3. Limite sur l'historique
 
-DESIGN - INTOUCHABLE:
-- Fond (couleurs, dégradés, textures, motifs) = IDENTIQUE
-- Formes décoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES
-- Mise en page et composition = IDENTIQUE
-- Effets visuels (ombres, lumières, reflets, particules) = IDENTIQUES
-- Couleurs et palette = IDENTIQUES
+Dans `useHistory.ts` (ligne 57), la requete n'a pas de `.limit()`, ce qui peut ramener des milliers d'images.
 
-TEXTE - REMPLACEMENT STRICT:
-- Remplace chaque texte par l'info correspondante du client
-- MÊME position, MÊME taille relative, MÊME alignement
-- MÊME style typographique (gras, italique, majuscules)
-- OBLIGATOIRE: effets typographiques pro (ombre épaisse, contour, 3D, dégradé, glow, metallic)
-- INTERDIT: texte plat, basique, sans effet, style secrétariat
+**Correction** : Ajouter `.limit(50)` a la requete pour limiter a 50 images les plus recentes.
 
-SUPPRESSION INTELLIGENTE:
-- Info absente = supprimer le texte ET les icônes/décorations associées
-- Redistribuer l'espace restant naturellement
-- ZÉRO zone vide, ZÉRO placeholder, ZÉRO info inventée
+## 4. Redirection account
 
-PHOTOS/LOGOS:
-- Photo client fournie → remplacer à la MÊME position et taille
-- Logo client fourni → remplacer à la MÊME position
-- Pas de photo/logo fourni → SUPPRIMER proprement
-```
+La page `AccountPage.tsx` (ligne 96) redirige vers `/auth?redirect=/account` quand l'utilisateur n'est pas connecte. Il faut verifier que `AuthPage` gere bien le parametre `redirect` apres connexion.
 
-### Fichier modifie
+- Verifier `AuthPage.tsx` pour le support du param `redirect`
 
-- `supabase/functions/generate-image/index.ts` : fonction `buildProfessionalPrompt`, bloc `isCloneMode` (lignes 199-214)
+## 5. Nettoyage automatique des images temporaires
 
-Le prompt reste condense (sous 4500 chars au total) pour respecter la limite API Kie AI.
+Le bucket `temp-images` accumule des fichiers sans nettoyage.
+
+**Approche** : Creer une edge function `cleanup-temp-images` qui supprime les fichiers de plus de 7 jours. Elle peut etre appelee manuellement ou via un cron (pg_cron n'est pas dispo, donc on met un bouton admin ou on documente l'appel periodique).
+
+- Edge function `cleanup-temp-images` : liste et supprime les fichiers > 7 jours du bucket `temp-images`
+
+## Fichiers concernes
+
+- `supabase/migrations/` : nouvelle migration pour `contact_messages`
+- `supabase/functions/send-contact/index.ts` : nouvelle edge function
+- `supabase/functions/cleanup-temp-images/index.ts` : nouvelle edge function
+- `src/components/landing/ContactSection.tsx` : appel reel au backend
+- `src/components/landing/HeroSection.tsx` : onClick bouton demo
+- `src/components/landing/ProcessSection.tsx` : verifier id="process"
+- `src/hooks/useHistory.ts` : ajouter .limit(50)
+- `src/pages/AuthPage.tsx` : verifier redirect param support
 
