@@ -54,7 +54,7 @@ export function useHistory() {
         query = query.is("user_id", null).eq("is_showcase", false);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query.limit(50);
 
       if (error) {
         console.error("Error fetching history:", error);

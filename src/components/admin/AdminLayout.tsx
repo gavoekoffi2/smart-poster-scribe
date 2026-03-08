@@ -20,6 +20,7 @@ import {
   Link2,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ const navItems = [
   { id: "affiliates", label: "Affiliation", icon: Link2, path: "/admin/affiliates", permission: "manage_users" },
   { id: "designers", label: "Graphistes", icon: Users, path: "/admin/designers", permission: "manage_designers" },
   { id: "roles", label: "Rôles", icon: Shield, path: "/admin/roles", permission: "manage_admins" },
+  { id: "contact", label: "Messages", icon: Mail, path: "/admin/contact", permission: "view_dashboard" },
 ];
 
 export default function AdminLayout({ children, requiredPermission = "view_dashboard" }: AdminLayoutProps) {

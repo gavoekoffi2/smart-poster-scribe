@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const contactInfo = [
   {
@@ -45,12 +46,26 @@ export function ContactSection() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await supabase.functions.invoke("send-contact", {
+        body: {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          message: formData.message.trim(),
+        },
+      });
 
-    toast.success("Message envoyé avec succès ! Nous vous répondrons sous 24h.");
-    setFormData({ name: "", email: "", message: "" });
-    setIsSubmitting(false);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Message envoyé avec succès ! Nous vous répondrons sous 24h.");
+      setFormData({ name: "", email: "", message: "" });
+    } catch (err: any) {
+      console.error("Contact form error:", err);
+      toast.error(err?.message || "Erreur lors de l'envoi. Réessayez ou contactez-nous sur WhatsApp.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
