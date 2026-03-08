@@ -86,9 +86,8 @@ export function useHistory() {
   // Save a new image to history
   const saveToHistory = useCallback(async (params: SaveImageParams): Promise<GeneratedImage | null> => {
     try {
-      // Determine if user is on free plan for auto-showcase
-      let isFreePlan = true; // Default to free plan for new users
-      let isShowcase = false;
+      // Determine if user is on free plan
+      let isFreePlan = true;
       
       if (user) {
         try {
@@ -102,16 +101,8 @@ export function useHistory() {
             isFreePlan = (subscription?.plan as any)?.slug === "free" || !(subscription?.plan as any)?.slug;
           }
         } catch (e) {
-          // If no subscription found, assume free plan
           console.log("No subscription found, assuming free plan");
         }
-        
-        // Auto-publish to showcase if free plan
-        isShowcase = isFreePlan;
-      } else {
-        // Non-authenticated users are considered free, add to showcase
-        isFreePlan = true;
-        isShowcase = true;
       }
 
       const insertData: any = {
