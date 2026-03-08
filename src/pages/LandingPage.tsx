@@ -14,7 +14,9 @@ import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { ContactSection } from "@/components/landing/ContactSection";
 import { CTASection } from "@/components/landing/CTASection";
+import { FAQSection } from "@/components/landing/FAQSection";
 import { Footer } from "@/components/landing/Footer";
+import { JsonLd } from "@/components/seo/JsonLd";
 
 export default function LandingPage() {
   const navigate = useNavigate();
