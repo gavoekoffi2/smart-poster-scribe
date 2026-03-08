@@ -12,6 +12,7 @@ export function Footer() {
     company: [
       { label: "À propos", href: "/#about" },
       { label: "Contact", href: "/#contact" },
+      { label: "FAQ", href: "/faq" },
     ],
     legal: [
       { label: "Confidentialité", href: "/privacy" },

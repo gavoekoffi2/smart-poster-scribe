@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import TermsPage from "./pages/TermsPage";
 import LegalPage from "./pages/LegalPage";
 import PrivacyPage from "./pages/PrivacyPage";
+const FAQPage = lazy(() => import("./pages/FAQPage"));
 import AdminRoute from "./components/routes/AdminRoute";
 import DesignerRoute from "./components/routes/DesignerRoute";
 
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/designer/profile" element={<DesignerRoute><DesignerProfile /></DesignerRoute>} />
           <Route path="/designer/:designerId" element={<DesignerProfile />} />
 
+          <Route path="/faq" element={<FAQPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />
