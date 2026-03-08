@@ -42,10 +42,10 @@ export default function AdminContact() {
   }, []);
 
   const markAsRead = async (id: string) => {
-    const { error } = await supabase
-      .from("contact_messages")
-      .update({ is_read: true } as any)
-      .eq("id", id);
+    const { error } = await (supabase
+      .from("contact_messages" as any)
+      .update({ is_read: true })
+      .eq("id", id) as any);
 
     if (!error) {
       setMessages((prev) =>
