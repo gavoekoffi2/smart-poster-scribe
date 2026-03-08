@@ -66,7 +66,7 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section id="services" className="py-24 px-4 relative overflow-hidden">
+    <section id="features" className="py-24 px-4 relative overflow-hidden">
       {/* Diagonal stripes background */}
       <div className="absolute inset-0 diagonal-stripes opacity-50" />
       
