@@ -20,6 +20,7 @@ import {
   Link2,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
