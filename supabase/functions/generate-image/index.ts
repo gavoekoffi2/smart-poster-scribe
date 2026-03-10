@@ -201,11 +201,16 @@ function buildProfessionalPrompt({
     lines.push("MISSION: Tu es un EDITEUR D'IMAGE. Tu recois une affiche existante. Tu dois la MODIFIER DIRECTEMENT. Tu ne crees PAS une nouvelle affiche. Tu EDITES l'image fournie.");
     lines.push("DESIGN INTOUCHABLE: Fond (couleurs, degrades, textures, motifs) = IDENTIQUE. Formes decoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES. Mise en page et composition = IDENTIQUE. Effets visuels (ombres, lumieres, reflets, particules) = IDENTIQUES. Palette couleurs = IDENTIQUE.");
     lines.push("TEXTE - REMPLACEMENT STRICT: Remplace chaque texte par l'info correspondante du client. MEME position, MEME taille relative, MEME alignement, MEME style (gras, italique, majuscules).");
-    lines.push("TYPO PRO OBLIGATOIRE: Chaque texte DOIT avoir des effets typographiques professionnels: ombre portee epaisse, contour marque, effet 3D, degrade sur lettres, glow/lueur, aspect metallique. INTERDIT: texte plat, basique, sans effet, style secretariat. Le texte est un ELEMENT GRAPHIQUE DESIGNE.");
+    lines.push(`TYPO PRO OBLIGATOIRE: ${getRandomTypographyStyle()}. Chaque texte DOIT avoir des effets typographiques professionnels varies. INTERDIT: texte plat, basique, sans effet.`);
     lines.push("SUPPRESSION INTELLIGENTE: Info absente du client = supprimer le texte ET les icones/decorations associees. Redistribuer l'espace naturellement. ZERO zone vide, ZERO placeholder, ZERO info inventee.");
-    lines.push("PHOTOS/LOGOS: Photo client fournie = remplacer MEME position et taille. Logo client fourni = remplacer MEME position. Pas de photo/logo fourni = SUPPRIMER proprement et combler l'espace.");
-    if (hasContentImage) lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference, MEME cadrage, MEME taille.");
+    // CRITICAL: Handle missing content image - generate contextual subject
+    if (hasContentImage) {
+      lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference, MEME cadrage, MEME taille.");
+    } else {
+      lines.push("PAS DE PHOTO CLIENT FOURNIE: GENERE un personnage/sujet africain photoréaliste correspondant au contexte (pasteur, formateur, chef cuisinier, artiste, etc.) a la MEME position et taille que la photo dans la reference. Expression naturelle et professionnelle. Eclairage coherent avec le design.");
+    }
     if (hasLogoImage) lines.push("LOGO CLIENT: Reproduire EXACTEMENT le logo fourni a la position du logo original.");
+    else lines.push("PAS DE LOGO: Supprimer proprement le logo original et combler l'espace.");
     lines.push("INTERDIT ABSOLU: Ne change PAS le fond. Ne change PAS les formes. Ne REINVENTE PAS le design. COPIE le design EXACT pixel par pixel.");
     lines.push("Personnes africaines par defaut. Zero info inventee. Zero placeholder.");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
@@ -216,14 +221,22 @@ function buildProfessionalPrompt({
 
   // ====== MODE LIBRE (Cas C) ======
   const instructions: string[] = [];
-  instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle unique.");
+  instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle UNIQUE et CREATIVE.");
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
-  instructions.push(`TYPO DESIGNEE: ${getRandomTypographyStyle()}. Zero texte plat.`);
-  instructions.push("LAYOUT PRO: Courbes, vagues, bandeaux obliques, rubans 3D, superposition couches.");
+  // Random layout style for visual diversity
+  const layoutStyle = getRandomLayoutStyle();
+  instructions.push(`TYPO DESIGNEE: ${getRandomTypographyStyle()}. Zero texte plat. Chaque mot-cle a un style unique.`);
+  instructions.push(`LAYOUT PRO: ${layoutStyle}. Superposition de couches avec profondeur 3-5 plans.`);
+  instructions.push("FOND RICHE: Degrades multicolores, textures subtiles, motifs geometriques ou organiques. JAMAIS de fond uni simple.");
+  // Handle content image in free mode too
+  if (hasContentImage) {
+    instructions.push("PHOTO: Utiliser telle quelle, integree harmonieusement.");
+  } else {
+    instructions.push("GENERE un personnage/sujet africain photoréaliste adapte au contexte. Expression naturelle, eclairage pro, pose dynamique. Le personnage est un element central du design.");
+  }
   instructions.push("Infos client uniquement. Africains par defaut. Texte lisible, zero faute. Couleurs 60-30-10.");
   if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT.");
-  if (hasContentImage) instructions.push("PHOTO: Utiliser telle quelle.");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
   instructions.push("=== DONNEES CLIENT ===");
   instructions.push(userPrompt);
