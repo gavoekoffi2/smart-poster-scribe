@@ -691,20 +691,56 @@ export function getExpertProfileForDomain(domain: string): ExpertSkillProfile {
  * Sélection aléatoire à chaque génération pour éviter la répétitivité
  */
 const TYPOGRAPHY_STYLES = [
-  "Titre 3D métallique chrome avec reflets et ombres portées épaisses",
-  "Titre néon lumineux avec glow intense et halo coloré",
-  "Titre rétro vintage avec textures usées et serif classique",
-  "Titre calligraphie élégante avec traits fluides et dorures",
-  "Titre grunge texturisé avec effet béton, peinture écaillée",
-  "Titre dégradé multicolore bold avec contours épais contrastés",
-  "Titre ombre longue flat design avec couleurs vives et géométrie",
-  "Titre brush peinture manuscrit avec éclaboussures dynamiques",
-  "Titre gravure classique avec empattements forts et lignes fines",
-  "Titre futuriste holographique avec reflets arc-en-ciel et glow",
+  "Titre 3D métallique chrome avec reflets miroir et ombres portées épaisses (8-12px)",
+  "Titre néon lumineux avec glow intense multicolore et halo pulsant",
+  "Titre rétro vintage avec textures usées, serif classique et bordures dorées",
+  "Titre calligraphie élégante avec traits fluides, dorures et fioritures",
+  "Titre grunge texturisé avec effet béton brut, peinture écaillée et stencil",
+  "Titre dégradé multicolore bold avec contours épais contrastés noir/blanc",
+  "Titre ombre longue flat design avec couleurs vives et géométrie nette",
+  "Titre brush peinture manuscrit avec éclaboussures dynamiques et traits spontanés",
+  "Titre gravure classique avec empattements forts, lignes fines et ornements",
+  "Titre futuriste holographique avec reflets arc-en-ciel, glow cyan et lignes laser",
+  "Titre effet feu flammes avec dégradé orange-rouge-jaune et étincelles",
+  "Titre glace cristal avec reflets bleutés, givre et transparence glaciale",
+  "Titre bois sculpté avec texture grain, ombres profondes et relief 3D réaliste",
+  "Titre néon rétro synthwave avec fond grille 80s, couleurs magenta-cyan-violet",
+  "Titre aquarelle artistique avec coulures colorées, splash et dégradés fondus",
+  "Titre comic book pop art avec contours épais noirs, halftone dots et couleurs saturées",
+  "Titre diamant luxe avec facettes brillantes, reflets dorés et éclats de lumière",
+  "Titre pixel art rétro gaming avec carrés nets, couleurs vives et ombre portée blocky",
+  "Titre effet or massif avec texture métal brillant, reflets chauds et biseautage",
+  "Titre nuage fumée avec lettres intégrées dans la brume, dégradé mystérieux",
+  "Titre papier découpé avec ombres portées réalistes, couches superposées et profondeur",
+  "Titre néon double contour avec glow intérieur et extérieur de couleurs différentes",
+  "Titre effet craie tableau noir avec texture poudreuse, traits imparfaits et charme artisanal",
+  "Titre métal brossé acier avec reflets directionnels, rivets et aspect industriel",
+];
+
+/**
+ * Styles de layout variés pour diversifier les designs en mode libre
+ */
+const LAYOUT_STYLES = [
+  "Courbes fluides et vagues dynamiques en arrière-plan, bandeaux obliques colorés, formes organiques",
+  "Grille géométrique moderne avec rectangles arrondis superposés, lignes diagonales audacieuses",
+  "Composition circulaire concentrique avec cercles concentriques, arcs et halos lumineux",
+  "Mise en page en Z avec bandeaux horizontaux colorés, séparateurs courbes et rubans 3D",
+  "Explosion radiale depuis le centre avec rayons, particules et éléments dispersés dynamiquement",
+  "Composition asymétrique 70/30 avec grand visuel à gauche, texte structuré à droite sur fond contrasté",
+  "Superposition de plans transparents avec formes géométriques, losanges et hexagones translucides",
+  "Design split diagonal avec deux zones contrastées séparées par une ligne oblique audacieuse",
+  "Cadre décoratif ornemental avec bordures travaillées, coins décoratifs et éléments floraux stylisés",
+  "Composition en escalier avec blocs décalés, ombres portées longues et profondeur architecturale",
+  "Flux organique avec formes blob, dégradés fluides et transitions douces entre les zones",
+  "Grille brisée avec éléments qui débordent des cadres, superpositions audacieuses et dynamisme",
 ];
 
 export function getRandomTypographyStyle(): string {
   return TYPOGRAPHY_STYLES[Math.floor(Math.random() * TYPOGRAPHY_STYLES.length)];
+}
+
+export function getRandomLayoutStyle(): string {
+  return LAYOUT_STYLES[Math.floor(Math.random() * LAYOUT_STYLES.length)];
 }
 
 /**
