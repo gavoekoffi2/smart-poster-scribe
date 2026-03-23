@@ -1028,8 +1028,16 @@ serve(async (req) => {
       secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
     }
     
+    // Truncate user prompt to leave room for system instructions (max ~2500 chars for user data)
+    const MAX_USER_PROMPT = 2500;
+    let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
+    if (userPromptFull.length > MAX_USER_PROMPT) {
+      console.warn(`User prompt too long (${userPromptFull.length}), truncating to ${MAX_USER_PROMPT}`);
+      userPromptFull = userPromptFull.substring(0, MAX_USER_PROMPT);
+    }
+    
     const professionalPrompt = buildProfessionalPrompt({
-      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection,
+      userPrompt: userPromptFull,
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
       hasLogoImage: logoImages && logoImages.length > 0,
