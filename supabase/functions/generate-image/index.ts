@@ -1212,10 +1212,35 @@ serve(async (req) => {
       await cleanupTempImages(supabase, tempFilePaths);
     }
 
+    // Persist image to Supabase Storage for permanent URL
+    let permanentUrl = resultUrl;
+    try {
+      const imgResp = await fetch(resultUrl);
+      if (imgResp.ok) {
+        const ct = imgResp.headers.get("content-type") || "image/png";
+        const ext = ct.includes("jpeg") || ct.includes("jpg") ? "jpg" : "png";
+        const blob = await imgResp.blob();
+        const arr = new Uint8Array(await blob.arrayBuffer());
+        const fileName = `generated/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("reference-templates")
+          .upload(fileName, arr, { contentType: ct, upsert: true });
+        if (!upErr) {
+          const { data: pubUrl } = supabase.storage.from("reference-templates").getPublicUrl(fileName);
+          permanentUrl = pubUrl.publicUrl;
+          console.log("Image persisted to storage:", permanentUrl);
+        } else {
+          console.warn("Storage upload failed, using temp URL:", upErr.message);
+        }
+      }
+    } catch (persistErr) {
+      console.warn("Image persistence failed, using temp URL:", persistErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        imageUrl: resultUrl,
+        imageUrl: permanentUrl,
         taskId: taskId,
       }),
       {
