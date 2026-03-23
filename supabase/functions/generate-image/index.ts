@@ -1028,12 +1028,12 @@ serve(async (req) => {
       secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
     }
     
-    // Truncate user prompt to leave room for system instructions (max ~2500 chars for user data)
+    // Smart condensation of user prompt to fit within API limits
     const MAX_USER_PROMPT = 2500;
     let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
     if (userPromptFull.length > MAX_USER_PROMPT) {
-      console.warn(`User prompt too long (${userPromptFull.length}), truncating to ${MAX_USER_PROMPT}`);
-      userPromptFull = userPromptFull.substring(0, MAX_USER_PROMPT);
+      console.warn(`User prompt too long (${userPromptFull.length}), condensing to ${MAX_USER_PROMPT}`);
+      userPromptFull = condenseUserPrompt(userPromptFull, MAX_USER_PROMPT);
     }
     
     const professionalPrompt = buildProfessionalPrompt({
@@ -1047,12 +1047,25 @@ serve(async (req) => {
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
     
-    // Safety: truncate prompt if it exceeds API limit (keep user data at the end)
+    // Safety: smart truncate if exceeds API limit
     const MAX_SAFE_PROMPT = 4500;
     let finalPrompt = professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
-      console.warn(`Prompt too long (${finalPrompt.length}), truncating to ${MAX_SAFE_PROMPT}`);
-      finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+      console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
+      // Find where user data starts (after "=== INFOS CLIENT" or "=== DONNEES CLIENT")
+      const clientDataMarker = finalPrompt.indexOf("=== ");
+      if (clientDataMarker > 0) {
+        const systemPart = finalPrompt.substring(0, clientDataMarker);
+        const userPart = finalPrompt.substring(clientDataMarker);
+        const availableForUser = MAX_SAFE_PROMPT - systemPart.length;
+        if (availableForUser > 200) {
+          finalPrompt = systemPart + condenseUserPrompt(userPart, availableForUser);
+        } else {
+          finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+        }
+      } else {
+        finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+      }
     }
     
     console.log("Final prompt length:", finalPrompt.length);
