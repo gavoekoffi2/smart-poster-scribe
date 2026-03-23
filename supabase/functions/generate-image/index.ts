@@ -177,6 +177,57 @@ async function cleanupTempImages(supabase: any, filePaths: string[]) {
   }
 }
 
+/**
+ * Condense user prompt intelligently instead of brutal substring cut.
+ * - Remove duplicate lines, excessive whitespace, repeated punctuation
+ * - Deduplicate repeated info (phone, email, address patterns)
+ * - Cut at sentence/line boundary to avoid broken text
+ */
+function condenseUserPrompt(text: string, maxLen: number): string {
+  let result = text;
+  
+  // 1. Normalize whitespace: collapse multiple spaces/newlines
+  result = result.replace(/[ \t]+/g, ' ');
+  result = result.replace(/\n{3,}/g, '\n\n');
+  
+  // 2. Remove duplicate lines (exact matches)
+  const lines = result.split('\n');
+  const seen = new Set<string>();
+  const uniqueLines: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { uniqueLines.push(''); continue; }
+    if (!seen.has(trimmed.toLowerCase())) {
+      seen.add(trimmed.toLowerCase());
+      uniqueLines.push(line);
+    }
+  }
+  result = uniqueLines.join('\n').trim();
+  
+  // 3. Remove repeated punctuation patterns (e.g. "!!!!!!", "-------")
+  result = result.replace(/([!?.\-=*#~])\1{3,}/g, '$1$1');
+  
+  // 4. Shorten very long words/URLs (likely copy-paste artifacts)
+  result = result.replace(/\S{120,}/g, (match) => match.substring(0, 80) + '...');
+  
+  // 5. If still too long, cut at last complete line that fits
+  if (result.length > maxLen) {
+    const cutLines = result.substring(0, maxLen).split('\n');
+    // Remove last potentially incomplete line
+    if (cutLines.length > 1) {
+      cutLines.pop();
+    }
+    result = cutLines.join('\n').trim();
+  }
+  
+  // 6. Final safety: hard cap
+  if (result.length > maxLen) {
+    result = result.substring(0, maxLen);
+  }
+  
+  return result;
+}
+
 function buildProfessionalPrompt({
   userPrompt,
   hasReferenceImage,
@@ -1028,12 +1079,12 @@ serve(async (req) => {
       secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
     }
     
-    // Truncate user prompt to leave room for system instructions (max ~2500 chars for user data)
+    // Smart condensation of user prompt to fit within API limits
     const MAX_USER_PROMPT = 2500;
     let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
     if (userPromptFull.length > MAX_USER_PROMPT) {
-      console.warn(`User prompt too long (${userPromptFull.length}), truncating to ${MAX_USER_PROMPT}`);
-      userPromptFull = userPromptFull.substring(0, MAX_USER_PROMPT);
+      console.warn(`User prompt too long (${userPromptFull.length}), condensing to ${MAX_USER_PROMPT}`);
+      userPromptFull = condenseUserPrompt(userPromptFull, MAX_USER_PROMPT);
     }
     
     const professionalPrompt = buildProfessionalPrompt({
@@ -1047,12 +1098,25 @@ serve(async (req) => {
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
     
-    // Safety: truncate prompt if it exceeds API limit (keep user data at the end)
+    // Safety: smart truncate if exceeds API limit
     const MAX_SAFE_PROMPT = 4500;
     let finalPrompt = professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
-      console.warn(`Prompt too long (${finalPrompt.length}), truncating to ${MAX_SAFE_PROMPT}`);
-      finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+      console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
+      // Find where user data starts (after "=== INFOS CLIENT" or "=== DONNEES CLIENT")
+      const clientDataMarker = finalPrompt.indexOf("=== ");
+      if (clientDataMarker > 0) {
+        const systemPart = finalPrompt.substring(0, clientDataMarker);
+        const userPart = finalPrompt.substring(clientDataMarker);
+        const availableForUser = MAX_SAFE_PROMPT - systemPart.length;
+        if (availableForUser > 200) {
+          finalPrompt = systemPart + condenseUserPrompt(userPart, availableForUser);
+        } else {
+          finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+        }
+      } else {
+        finalPrompt = finalPrompt.substring(0, MAX_SAFE_PROMPT);
+      }
     }
     
     console.log("Final prompt length:", finalPrompt.length);
