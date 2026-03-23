@@ -177,6 +177,57 @@ async function cleanupTempImages(supabase: any, filePaths: string[]) {
   }
 }
 
+/**
+ * Condense user prompt intelligently instead of brutal substring cut.
+ * - Remove duplicate lines, excessive whitespace, repeated punctuation
+ * - Deduplicate repeated info (phone, email, address patterns)
+ * - Cut at sentence/line boundary to avoid broken text
+ */
+function condenseUserPrompt(text: string, maxLen: number): string {
+  let result = text;
+  
+  // 1. Normalize whitespace: collapse multiple spaces/newlines
+  result = result.replace(/[ \t]+/g, ' ');
+  result = result.replace(/\n{3,}/g, '\n\n');
+  
+  // 2. Remove duplicate lines (exact matches)
+  const lines = result.split('\n');
+  const seen = new Set<string>();
+  const uniqueLines: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { uniqueLines.push(''); continue; }
+    if (!seen.has(trimmed.toLowerCase())) {
+      seen.add(trimmed.toLowerCase());
+      uniqueLines.push(line);
+    }
+  }
+  result = uniqueLines.join('\n').trim();
+  
+  // 3. Remove repeated punctuation patterns (e.g. "!!!!!!", "-------")
+  result = result.replace(/([!?.\-=*#~])\1{3,}/g, '$1$1');
+  
+  // 4. Shorten very long words/URLs (likely copy-paste artifacts)
+  result = result.replace(/\S{120,}/g, (match) => match.substring(0, 80) + '...');
+  
+  // 5. If still too long, cut at last complete line that fits
+  if (result.length > maxLen) {
+    const cutLines = result.substring(0, maxLen).split('\n');
+    // Remove last potentially incomplete line
+    if (cutLines.length > 1) {
+      cutLines.pop();
+    }
+    result = cutLines.join('\n').trim();
+  }
+  
+  // 6. Final safety: hard cap
+  if (result.length > maxLen) {
+    result = result.substring(0, maxLen);
+  }
+  
+  return result;
+}
+
 function buildProfessionalPrompt({
   userPrompt,
   hasReferenceImage,
