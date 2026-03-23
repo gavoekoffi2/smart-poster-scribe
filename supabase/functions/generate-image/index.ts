@@ -442,7 +442,7 @@ async function pollForResult(
   throw new Error(`Délai d'attente dépassé après ${totalTime} secondes. Réessayez avec une résolution inférieure si le problème persiste.`);
 }
 
-const MAX_PROMPT_LENGTH = 5000;
+const MAX_PROMPT_LENGTH = 15000;
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_LOGO_COUNT = 5;
 // Extended list of allowed aspect ratios to support all social media and print formats
@@ -1028,8 +1028,16 @@ serve(async (req) => {
       secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
     }
     
+    // Truncate user prompt to leave room for system instructions (max ~2500 chars for user data)
+    const MAX_USER_PROMPT = 2500;
+    let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
+    if (userPromptFull.length > MAX_USER_PROMPT) {
+      console.warn(`User prompt too long (${userPromptFull.length}), truncating to ${MAX_USER_PROMPT}`);
+      userPromptFull = userPromptFull.substring(0, MAX_USER_PROMPT);
+    }
+    
     const professionalPrompt = buildProfessionalPrompt({
-      userPrompt: prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection,
+      userPrompt: userPromptFull,
       hasReferenceImage: !!referenceImage,
       hasContentImage: !!contentImage,
       hasLogoImage: logoImages && logoImages.length > 0,
