@@ -442,7 +442,7 @@ async function pollForResult(
   throw new Error(`Délai d'attente dépassé après ${totalTime} secondes. Réessayez avec une résolution inférieure si le problème persiste.`);
 }
 
-const MAX_PROMPT_LENGTH = 5000;
+const MAX_PROMPT_LENGTH = 15000;
 const MAX_IMAGE_SIZE_MB = 10;
 const MAX_LOGO_COUNT = 5;
 // Extended list of allowed aspect ratios to support all social media and print formats
