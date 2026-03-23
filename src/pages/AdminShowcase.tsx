@@ -47,17 +47,39 @@ export default function AdminShowcase() {
 
   const handleToggleShowcase = async (id: string, currentState: boolean) => {
     try {
-      const newOrder = currentState ? 0 : images.length;
-      const { error } = await supabase.from("generated_images").update({ is_showcase: !currentState, showcase_order: newOrder }).eq("id", id);
-      if (error) throw error;
-      setImages(prev => currentState ? prev.filter(img => img.id !== id) : prev);
-      setAllImages(prev => prev.map(img => img.id === id ? { ...img, is_showcase: !currentState, showcase_order: newOrder } : img));
       if (!currentState) {
+        // Adding to showcase: first persist the image to permanent storage
+        toast.info("Sauvegarde de l'image en cours...");
+        const { data: persistData, error: persistError } = await supabase.functions.invoke("persist-showcase-image", {
+          body: { image_id: id },
+        });
+        if (persistError) throw persistError;
+        if (persistData?.error) throw new Error(persistData.error);
+
+        const permanentUrl = persistData?.url;
+        const newOrder = images.length;
+        const { error } = await supabase.from("generated_images").update({ is_showcase: true, showcase_order: newOrder }).eq("id", id);
+        if (error) throw error;
+
         const addedImage = allImages.find(img => img.id === id);
-        if (addedImage) setImages(prev => [...prev, { ...addedImage, is_showcase: true, showcase_order: newOrder }]);
+        if (addedImage) {
+          const updatedImage = { ...addedImage, is_showcase: true, showcase_order: newOrder, image_url: permanentUrl || addedImage.image_url };
+          setImages(prev => [...prev, updatedImage]);
+          setAllImages(prev => prev.map(img => img.id === id ? updatedImage : img));
+        }
+        toast.success("Ajouté au showcase avec image permanente");
+      } else {
+        // Removing from showcase
+        const { error } = await supabase.from("generated_images").update({ is_showcase: false, showcase_order: 0 }).eq("id", id);
+        if (error) throw error;
+        setImages(prev => prev.filter(img => img.id !== id));
+        setAllImages(prev => prev.map(img => img.id === id ? { ...img, is_showcase: false, showcase_order: 0 } : img));
+        toast.success("Retiré du showcase");
       }
-      toast.success(currentState ? "Retiré du showcase" : "Ajouté au showcase");
-    } catch (err) { toast.error("Erreur"); }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Erreur lors de la mise à jour");
+    }
   };
 
   const handleMoveUp = async (index: number) => {
