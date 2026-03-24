@@ -108,11 +108,50 @@ export default function AdminDashboard() {
 
   const toggleShowcase = async (imageId: string, currentValue: boolean | null) => {
     try {
-      const { error } = await supabase.from("generated_images").update({ is_showcase: !currentValue }).eq("id", imageId);
-      if (error) throw error;
-      toast.success(currentValue ? "Retiré du showcase" : "Ajouté au showcase");
+      if (!currentValue) {
+        toast.info("Sauvegarde permanente de l'image...");
+
+        const [{ count: showcaseCount = 0 }, persistResult] = await Promise.all([
+          supabase
+            .from("generated_images")
+            .select("id", { count: "exact", head: true })
+            .eq("is_showcase", true),
+          supabase.functions.invoke("persist-showcase-image", {
+            body: { image_id: imageId },
+          }),
+        ]);
+
+        if (persistResult.error) throw persistResult.error;
+        if (persistResult.data?.error) throw new Error(persistResult.data.error);
+
+        const updatePayload = {
+          is_showcase: true,
+          showcase_order: showcaseCount,
+          ...(persistResult.data?.url ? { image_url: persistResult.data.url } : {}),
+        };
+
+        const { error } = await supabase
+          .from("generated_images")
+          .update(updatePayload)
+          .eq("id", imageId);
+
+        if (error) throw error;
+        toast.success("Ajouté au showcase");
+      } else {
+        const { error } = await supabase
+          .from("generated_images")
+          .update({ is_showcase: false, showcase_order: 0 })
+          .eq("id", imageId);
+
+        if (error) throw error;
+        toast.success("Retiré du showcase");
+      }
+
       fetchDashboardData();
-    } catch { toast.error("Erreur"); }
+    } catch (error: any) {
+      console.error("Error updating showcase:", error);
+      toast.error(error?.message || "Erreur");
+    }
   };
 
   return (
