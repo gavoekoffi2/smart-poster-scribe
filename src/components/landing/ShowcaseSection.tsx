@@ -18,6 +18,7 @@ export function ShowcaseSection() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     fetchShowcaseImages();
@@ -35,8 +36,32 @@ export function ShowcaseSection() {
         .limit(12);
 
       if (error) throw error;
-      
-      setImages(data || []);
+
+      if (data && data.length > 0) {
+        setImages(data);
+        setUsingFallback(false);
+        return;
+      }
+
+      const { data: templateData, error: templateError } = await supabase
+        .from("reference_templates")
+        .select("id, image_url, description, domain, created_at")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(12);
+
+      if (templateError) throw templateError;
+
+      const fallbackImages: GeneratedImage[] = (templateData || []).map((template) => ({
+        id: template.id,
+        image_url: template.image_url,
+        prompt: template.description || "Création en vitrine",
+        domain: template.domain,
+        created_at: template.created_at,
+      }));
+
+      setImages(fallbackImages);
+      setUsingFallback(fallbackImages.length > 0);
     } catch (err) {
       console.error("Error fetching showcase images:", err);
     } finally {
@@ -124,7 +149,9 @@ export function ShowcaseSection() {
             <span className="gradient-text">Graphiste GPT</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des affiches professionnelles générées en quelques secondes. Ces visuels ont été créés par nos utilisateurs grâce à l'IA.
+            {usingFallback
+              ? "Découvrez une sélection de visuels inspirants pendant que les créations validées du showcase sont en cours de publication."
+              : "Des affiches professionnelles générées en quelques secondes. Ces visuels ont été créés par nos utilisateurs grâce à l'IA."}
           </p>
         </div>
 
