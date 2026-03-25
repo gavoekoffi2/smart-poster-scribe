@@ -1188,14 +1188,24 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           console.log("Session refresh warning:", refreshError.message);
         }
 
+        // Use the same aspect ratio and resolution as the original generation
+        const formatPreset = state.formatPreset;
+        const aspectRatio = state.domain === "youtube" ? "16:9" : (formatPreset?.aspectRatio || "3:4");
+        const resolution = formatPreset?.resolution || "2K";
+        const outputFormat = "png";
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt: modificationPrompt,
-            aspectRatio: "3:4",
-            referenceImage: referenceImageToSend,
+            aspectRatio,
+            resolution,
+            outputFormat,
+            referenceImage: generatedImage || referenceImageToSend,
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
+            isCloneMode: true,
+            domain: state.domain || undefined,
           },
         });
 
