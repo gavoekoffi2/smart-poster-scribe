@@ -41,6 +41,144 @@ interface KieResultJson {
   resultObject?: Record<string, unknown>;
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Erreur inconnue";
+  }
+}
+
+function isKieCreditError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes("credits insufficient") ||
+    message.includes("solde insuffisant") ||
+    message.includes("balance isn’t enough") ||
+    message.includes("balance isn't enough")
+  );
+}
+
+function decodeDataUrlImage(dataUrl: string): { bytes: Uint8Array; contentType: string; extension: string } {
+  const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/i);
+  if (!matches) {
+    throw new Error("Format de réponse image invalide");
+  }
+
+  const subtype = matches[1].toLowerCase();
+  const base64Content = matches[2];
+  const binaryString = atob(base64Content);
+  const bytes = new Uint8Array(binaryString.length);
+
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const extension = subtype.includes("jpeg") || subtype.includes("jpg")
+    ? "jpg"
+    : subtype.includes("webp")
+      ? "webp"
+      : "png";
+
+  return {
+    bytes,
+    contentType: `image/${subtype}`,
+    extension,
+  };
+}
+
+async function persistGeneratedImageToStorage(
+  supabase: any,
+  imageSource: string,
+  preferredFormat: string,
+): Promise<string> {
+  let bytes: Uint8Array;
+  let contentType = preferredFormat === "jpg" ? "image/jpeg" : `image/${preferredFormat}`;
+  let extension = preferredFormat === "jpg" ? "jpg" : preferredFormat;
+
+  if (imageSource.startsWith("data:image/")) {
+    const decoded = decodeDataUrlImage(imageSource);
+    bytes = decoded.bytes;
+    contentType = decoded.contentType;
+    extension = decoded.extension;
+  } else {
+    const imgResp = await fetch(imageSource);
+    if (!imgResp.ok) {
+      throw new Error(`Impossible de télécharger l'image générée (${imgResp.status})`);
+    }
+
+    contentType = imgResp.headers.get("content-type") || contentType;
+    extension = contentType.includes("jpeg") || contentType.includes("jpg")
+      ? "jpg"
+      : contentType.includes("webp")
+        ? "webp"
+        : "png";
+    bytes = new Uint8Array(await imgResp.arrayBuffer());
+  }
+
+  const fileName = `generated/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${extension}`;
+  const { error } = await supabase.storage
+    .from("reference-templates")
+    .upload(fileName, bytes, { contentType, upsert: true });
+
+  if (error) {
+    throw new Error(`Erreur de persistance image: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from("reference-templates").getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+async function generateWithLovableFallback(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+): Promise<string> {
+  console.log("Falling back to Lovable AI image generation...");
+
+  const content = [
+    { type: "text", text: prompt },
+    ...imageInputs.slice(0, 6).map((url) => ({
+      type: "image_url",
+      image_url: { url },
+    })),
+  ];
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3.1-flash-image-preview",
+      messages: [
+        {
+          role: "user",
+          content,
+        },
+      ],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Fallback Lovable AI indisponible: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+  if (!imageUrl || typeof imageUrl !== "string") {
+    throw new Error("Lovable AI n'a pas retourné d'image exploitable");
+  }
+
+  return imageUrl;
+}
+
 function isHttpUrl(str: string): boolean {
   return str.startsWith("http://") || str.startsWith("https://");
 }
@@ -537,6 +675,7 @@ serve(async (req) => {
 
   try {
     const KIE_API_KEY = Deno.env.get("KIE_AI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!KIE_API_KEY) {
       throw new Error("KIE_AI_API_KEY non configurée");
     }
@@ -1125,6 +1264,8 @@ serve(async (req) => {
     let taskId: string;
     let resultUrl: string;
     
+    let generationError: unknown = null;
+
     try {
       taskId = await createTask(
         KIE_API_KEY,
@@ -1137,8 +1278,25 @@ serve(async (req) => {
 
       resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
     } catch (genError) {
+      if (isKieCreditError(genError) && LOVABLE_API_KEY) {
+        console.warn("Kie AI a refusé la génération pour manque de crédits. Bascule vers Lovable AI.");
+        try {
+          taskId = `lovable-${crypto.randomUUID()}`;
+          resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+        } catch (fallbackError) {
+          console.error("Lovable AI fallback failed:", fallbackError);
+          generationError = fallbackError;
+        }
+      } else {
+        generationError = genError;
+      }
+
+      if (!generationError) {
+        console.log("Lovable AI fallback succeeded.");
+      }
+
       // ===== REMBOURSEMENT AUTOMATIQUE =====
-      if (creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
+      if (generationError && creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
         const creditsToRefund = creditCheckResult.credits_used;
         console.log(`⚠️ Generation failed, refunding ${creditsToRefund} credits to user ${userId}`);
         
@@ -1205,35 +1363,20 @@ serve(async (req) => {
       if (tempFilePaths.length > 0) {
         await cleanupTempImages(supabase, tempFilePaths);
       }
-      
-      throw genError;
+
+      if (generationError) {
+        throw generationError;
+      }
     }
 
     if (tempFilePaths.length > 0) {
       await cleanupTempImages(supabase, tempFilePaths);
     }
 
-    // Persist image to Supabase Storage for permanent URL
     let permanentUrl = resultUrl;
     try {
-      const imgResp = await fetch(resultUrl);
-      if (imgResp.ok) {
-        const ct = imgResp.headers.get("content-type") || "image/png";
-        const ext = ct.includes("jpeg") || ct.includes("jpg") ? "jpg" : "png";
-        const blob = await imgResp.blob();
-        const arr = new Uint8Array(await blob.arrayBuffer());
-        const fileName = `generated/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("reference-templates")
-          .upload(fileName, arr, { contentType: ct, upsert: true });
-        if (!upErr) {
-          const { data: pubUrl } = supabase.storage.from("reference-templates").getPublicUrl(fileName);
-          permanentUrl = pubUrl.publicUrl;
-          console.log("Image persisted to storage:", permanentUrl);
-        } else {
-          console.warn("Storage upload failed, using temp URL:", upErr.message);
-        }
-      }
+      permanentUrl = await persistGeneratedImageToStorage(supabase, resultUrl, outputFormat);
+      console.log("Image persisted to storage:", permanentUrl);
     } catch (persistErr) {
       console.warn("Image persistence failed, using temp URL:", persistErr);
     }
