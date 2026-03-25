@@ -1192,7 +1192,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const formatPreset = state.formatPreset;
         const aspectRatio = state.domain === "youtube" ? "16:9" : (formatPreset?.aspectRatio || "3:4");
         const resolution = formatPreset?.resolution || "2K";
-        const outputFormat = formatPreset?.outputFormat || "png";
+        const outputFormat = "png";
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
