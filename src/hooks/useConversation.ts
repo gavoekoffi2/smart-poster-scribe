@@ -1189,9 +1189,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         }
 
         // Use the same aspect ratio and resolution as the original generation
-        const aspectRatio = state.aspectRatio || "3:4";
-        const resolution = state.resolution || "2K";
-        const outputFormat = state.outputFormat || "png";
+        const formatPreset = state.formatPreset;
+        const aspectRatio = state.domain === "youtube" ? "16:9" : (formatPreset?.aspectRatio || "3:4");
+        const resolution = formatPreset?.resolution || "2K";
+        const outputFormat = formatPreset?.outputFormat || "png";
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
