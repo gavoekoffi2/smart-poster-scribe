@@ -131,6 +131,97 @@ async function persistGeneratedImageToStorage(
   return data.publicUrl;
 }
 
+async function generateWithGoogleGemini(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+): Promise<string> {
+  console.log("🔵 Generating image with Google Gemini API (Nano Banana 2)...");
+  console.log("Image inputs count:", imageInputs.length);
+
+  // Build content parts: text prompt + reference images
+  const parts: any[] = [{ text: prompt }];
+
+  // Add reference images as inline data or file URIs
+  for (const imgUrl of imageInputs.slice(0, 6)) {
+    if (imgUrl.startsWith("data:image/")) {
+      // Base64 image
+      const matches = imgUrl.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/i);
+      if (matches) {
+        parts.push({
+          inlineData: {
+            mimeType: `image/${matches[1]}`,
+            data: matches[2],
+          },
+        });
+      }
+    } else if (imgUrl.startsWith("http")) {
+      // Download and convert to base64 for Gemini API
+      try {
+        const imgResp = await fetch(imgUrl);
+        if (imgResp.ok) {
+          const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+          const buffer = await imgResp.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+          parts.push({
+            inlineData: {
+              mimeType: contentType,
+              data: base64,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to download image for Gemini input:", e);
+      }
+    }
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Google Gemini API error:", response.status, errorText);
+    throw new Error(`Google Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  // Extract image from response
+  const candidates = data?.candidates;
+  if (!candidates || candidates.length === 0) {
+    throw new Error("Google Gemini n'a retourné aucun candidat");
+  }
+
+  const contentParts = candidates[0]?.content?.parts;
+  if (!contentParts || contentParts.length === 0) {
+    throw new Error("Google Gemini n'a retourné aucune donnée");
+  }
+
+  // Find the image part in the response
+  for (const part of contentParts) {
+    if (part.inlineData && part.inlineData.data) {
+      const mimeType = part.inlineData.mimeType || "image/png";
+      const dataUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+      console.log("✅ Google Gemini image generated successfully");
+      return dataUrl;
+    }
+  }
+
+  throw new Error("Google Gemini n'a pas retourné d'image dans la réponse");
+}
+
 async function generateWithLovableFallback(
   apiKey: string,
   prompt: string,
