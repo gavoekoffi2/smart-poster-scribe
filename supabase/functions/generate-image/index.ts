@@ -131,6 +131,97 @@ async function persistGeneratedImageToStorage(
   return data.publicUrl;
 }
 
+async function generateWithGoogleGemini(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+): Promise<string> {
+  console.log("🔵 Generating image with Google Gemini API (Nano Banana 2)...");
+  console.log("Image inputs count:", imageInputs.length);
+
+  // Build content parts: text prompt + reference images
+  const parts: any[] = [{ text: prompt }];
+
+  // Add reference images as inline data or file URIs
+  for (const imgUrl of imageInputs.slice(0, 6)) {
+    if (imgUrl.startsWith("data:image/")) {
+      // Base64 image
+      const matches = imgUrl.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/i);
+      if (matches) {
+        parts.push({
+          inlineData: {
+            mimeType: `image/${matches[1]}`,
+            data: matches[2],
+          },
+        });
+      }
+    } else if (imgUrl.startsWith("http")) {
+      // Download and convert to base64 for Gemini API
+      try {
+        const imgResp = await fetch(imgUrl);
+        if (imgResp.ok) {
+          const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+          const buffer = await imgResp.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+          parts.push({
+            inlineData: {
+              mimeType: contentType,
+              data: base64,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to download image for Gemini input:", e);
+      }
+    }
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Google Gemini API error:", response.status, errorText);
+    throw new Error(`Google Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  // Extract image from response
+  const candidates = data?.candidates;
+  if (!candidates || candidates.length === 0) {
+    throw new Error("Google Gemini n'a retourné aucun candidat");
+  }
+
+  const contentParts = candidates[0]?.content?.parts;
+  if (!contentParts || contentParts.length === 0) {
+    throw new Error("Google Gemini n'a retourné aucune donnée");
+  }
+
+  // Find the image part in the response
+  for (const part of contentParts) {
+    if (part.inlineData && part.inlineData.data) {
+      const mimeType = part.inlineData.mimeType || "image/png";
+      const dataUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+      console.log("✅ Google Gemini image generated successfully");
+      return dataUrl;
+    }
+  }
+
+  throw new Error("Google Gemini n'a pas retourné d'image dans la réponse");
+}
+
 async function generateWithLovableFallback(
   apiKey: string,
   prompt: string,
@@ -1266,107 +1357,128 @@ serve(async (req) => {
     
     let generationError: unknown = null;
 
-    try {
-      taskId = await createTask(
-        KIE_API_KEY,
-        finalPrompt,
-        imageInputs,
-        aspectRatio,
-        resolution,
-        outputFormat
-      );
-
-      resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
-    } catch (genError) {
-      if (isKieCreditError(genError) && LOVABLE_API_KEY) {
-        console.warn("Kie AI a refusé la génération pour manque de crédits. Bascule vers Lovable AI.");
-        try {
-          taskId = `lovable-${crypto.randomUUID()}`;
-          resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
-        } catch (fallbackError) {
-          console.error("Lovable AI fallback failed:", fallbackError);
-          generationError = fallbackError;
-        }
-      } else {
-        generationError = genError;
-      }
-
-      if (!generationError) {
-        console.log("Lovable AI fallback succeeded.");
-      }
-
-      // ===== REMBOURSEMENT AUTOMATIQUE =====
-      if (generationError && creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
-        const creditsToRefund = creditCheckResult.credits_used;
-        console.log(`⚠️ Generation failed, refunding ${creditsToRefund} credits to user ${userId}`);
+    // ===== GÉNÉRATION PRINCIPALE: Google Gemini API (Nano Banana 2) =====
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    
+    if (GOOGLE_AI_API_KEY) {
+      try {
+        console.log("🔵 Tentative de génération avec Google Gemini (PRIMARY)...");
+        taskId = `gemini-${crypto.randomUUID()}`;
+        resultUrl = await generateWithGoogleGemini(GOOGLE_AI_API_KEY, finalPrompt, imageInputs);
+        console.log("✅ Google Gemini generation succeeded.");
+      } catch (geminiError) {
+        console.warn("⚠️ Google Gemini failed:", getErrorMessage(geminiError));
         
+        // Fallback 1: Kie AI
         try {
-          await supabase.from('credit_transactions').insert({
-            user_id: userId,
-            amount: creditsToRefund,
-            type: 'refund',
-            description: 'Remboursement auto: génération échouée',
-          });
+          console.log("🟡 Fallback vers Kie AI...");
+          taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
+          resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+          console.log("✅ Kie AI fallback succeeded.");
+        } catch (kieError) {
+          console.warn("⚠️ Kie AI failed:", getErrorMessage(kieError));
           
-          // Re-credit the subscription
-          const { data: currentSub } = await supabase
-            .from('user_subscriptions')
-            .select('id, credits_remaining, plan_id')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(1)
+          // Fallback 2: Lovable AI Gateway
+          if (LOVABLE_API_KEY) {
+            try {
+              console.log("🟠 Fallback vers Lovable AI...");
+              taskId = `lovable-${crypto.randomUUID()}`;
+              resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+              console.log("✅ Lovable AI fallback succeeded.");
+            } catch (lovableError) {
+              console.error("❌ All providers failed.");
+              generationError = lovableError;
+            }
+          } else {
+            generationError = kieError;
+          }
+        }
+      }
+    } else {
+      // Pas de clé Google, utiliser Kie AI comme principal
+      try {
+        taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
+        resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+      } catch (genError) {
+        if (isKieCreditError(genError) && LOVABLE_API_KEY) {
+          console.warn("Kie AI crédits insuffisants. Bascule vers Lovable AI.");
+          try {
+            taskId = `lovable-${crypto.randomUUID()}`;
+            resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+          } catch (fallbackError) {
+            generationError = fallbackError;
+          }
+        } else {
+          generationError = genError;
+        }
+      }
+    }
+
+    if (!generationError) {
+      console.log("✅ Image generation succeeded.");
+    }
+
+    // ===== REMBOURSEMENT AUTOMATIQUE =====
+    if (generationError && creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
+      const creditsToRefund = creditCheckResult.credits_used;
+      console.log(`⚠️ Generation failed, refunding ${creditsToRefund} credits to user ${userId}`);
+      
+      try {
+        await supabase.from('credit_transactions').insert({
+          user_id: userId,
+          amount: creditsToRefund,
+          type: 'refund',
+          description: 'Remboursement auto: génération échouée',
+        });
+        
+        const { data: currentSub } = await supabase
+          .from('user_subscriptions')
+          .select('id, credits_remaining, plan_id')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (currentSub) {
+          const { data: plan } = await supabase
+            .from('subscription_plans')
+            .select('slug')
+            .eq('id', currentSub.plan_id)
             .single();
           
-          if (currentSub) {
-            // Check if it's a free plan
-            const { data: plan } = await supabase
-              .from('subscription_plans')
-              .select('slug')
-              .eq('id', currentSub.plan_id)
+          if (plan?.slug === 'free') {
+            const { data: subData } = await supabase
+              .from('user_subscriptions')
+              .select('free_generations_used')
+              .eq('id', currentSub.id)
               .single();
-            
-            if (plan?.slug === 'free') {
-              // Refund free_generations_used
+            if (subData) {
               await supabase
                 .from('user_subscriptions')
-                .update({ free_generations_used: supabase.rpc ? undefined : 0 })
-                .eq('id', currentSub.id);
-              // Use direct SQL-style decrement
-              await supabase.rpc('check_and_debit_credits', { p_user_id: userId, p_resolution: 'refund_noop' }).then(() => {});
-              // Simple: just decrement free_generations_used
-              const { data: subData } = await supabase
-                .from('user_subscriptions')
-                .select('free_generations_used')
-                .eq('id', currentSub.id)
-                .single();
-              if (subData) {
-                await supabase
-                  .from('user_subscriptions')
-                  .update({ free_generations_used: Math.max(0, subData.free_generations_used - 1) })
-                  .eq('id', currentSub.id);
-              }
-            } else {
-              await supabase
-                .from('user_subscriptions')
-                .update({ credits_remaining: currentSub.credits_remaining + creditsToRefund })
+                .update({ free_generations_used: Math.max(0, subData.free_generations_used - 1) })
                 .eq('id', currentSub.id);
             }
+          } else {
+            await supabase
+              .from('user_subscriptions')
+              .update({ credits_remaining: currentSub.credits_remaining + creditsToRefund })
+              .eq('id', currentSub.id);
           }
-          
-          console.log(`✅ Refund of ${creditsToRefund} credits completed`);
-        } catch (refundError) {
-          console.error("❌ Refund failed:", refundError);
         }
+        
+        console.log(`✅ Refund of ${creditsToRefund} credits completed`);
+      } catch (refundError) {
+        console.error("❌ Refund failed:", refundError);
       }
-      
-      // Cleanup temp files even on error
-      if (tempFilePaths.length > 0) {
-        await cleanupTempImages(supabase, tempFilePaths);
-      }
+    }
+    
+    // Cleanup temp files even on error
+    if (tempFilePaths.length > 0) {
+      await cleanupTempImages(supabase, tempFilePaths);
+    }
 
-      if (generationError) {
-        throw generationError;
-      }
+    if (generationError) {
+      throw generationError;
     }
 
     if (tempFilePaths.length > 0) {
