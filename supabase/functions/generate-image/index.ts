@@ -1357,34 +1357,66 @@ serve(async (req) => {
     
     let generationError: unknown = null;
 
-    try {
-      taskId = await createTask(
-        KIE_API_KEY,
-        finalPrompt,
-        imageInputs,
-        aspectRatio,
-        resolution,
-        outputFormat
-      );
-
-      resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
-    } catch (genError) {
-      if (isKieCreditError(genError) && LOVABLE_API_KEY) {
-        console.warn("Kie AI a refusé la génération pour manque de crédits. Bascule vers Lovable AI.");
+    // ===== GÉNÉRATION PRINCIPALE: Google Gemini API (Nano Banana 2) =====
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    
+    if (GOOGLE_AI_API_KEY) {
+      try {
+        console.log("🔵 Tentative de génération avec Google Gemini (PRIMARY)...");
+        taskId = `gemini-${crypto.randomUUID()}`;
+        resultUrl = await generateWithGoogleGemini(GOOGLE_AI_API_KEY, finalPrompt, imageInputs);
+        console.log("✅ Google Gemini generation succeeded.");
+      } catch (geminiError) {
+        console.warn("⚠️ Google Gemini failed:", getErrorMessage(geminiError));
+        
+        // Fallback 1: Kie AI
         try {
-          taskId = `lovable-${crypto.randomUUID()}`;
-          resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
-        } catch (fallbackError) {
-          console.error("Lovable AI fallback failed:", fallbackError);
-          generationError = fallbackError;
+          console.log("🟡 Fallback vers Kie AI...");
+          taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
+          resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+          console.log("✅ Kie AI fallback succeeded.");
+        } catch (kieError) {
+          console.warn("⚠️ Kie AI failed:", getErrorMessage(kieError));
+          
+          // Fallback 2: Lovable AI Gateway
+          if (LOVABLE_API_KEY) {
+            try {
+              console.log("🟠 Fallback vers Lovable AI...");
+              taskId = `lovable-${crypto.randomUUID()}`;
+              resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+              console.log("✅ Lovable AI fallback succeeded.");
+            } catch (lovableError) {
+              console.error("❌ All providers failed.");
+              generationError = lovableError;
+            }
+          } else {
+            generationError = kieError;
+          }
         }
-      } else {
-        generationError = genError;
       }
+    } else {
+      // Pas de clé Google, utiliser Kie AI comme principal
+      try {
+        taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
+        resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+      } catch (genError) {
+        if (isKieCreditError(genError) && LOVABLE_API_KEY) {
+          console.warn("Kie AI crédits insuffisants. Bascule vers Lovable AI.");
+          try {
+            taskId = `lovable-${crypto.randomUUID()}`;
+            resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+          } catch (fallbackError) {
+            generationError = fallbackError;
+          }
+        } else {
+          generationError = genError;
+        }
+      }
+    }
 
-      if (!generationError) {
-        console.log("Lovable AI fallback succeeded.");
-      }
+    if (!generationError) {
+      console.log("✅ Image generation succeeded.");
+    }
 
       // ===== REMBOURSEMENT AUTOMATIQUE =====
       if (generationError && creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
