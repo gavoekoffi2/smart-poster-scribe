@@ -821,6 +821,7 @@ serve(async (req) => {
       outputFormat = "png",
       scenePreference, // Nouvelle prop pour les préférences de mise en scène YouTube
       domain, // Domaine passé par le client
+      isModification, // Flag pour les modifications (pas de débit de crédits)
     } = body;
 
     let referenceImage = rawReferenceImage as string | undefined;
