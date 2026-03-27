@@ -138,7 +138,7 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
               <Slider
                 value={[businessPosters]}
                 onValueChange={(v) => setBusinessPosters(v[0])}
-                min={12}
+                min={30}
                 max={MAX_POSTERS}
                 step={1}
                 className="mb-2"
