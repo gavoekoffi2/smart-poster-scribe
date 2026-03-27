@@ -164,11 +164,11 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           ) : (
             <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Crédits offerts</span>
-                <span className="text-xl font-bold text-primary">5</span>
+                <span className="text-sm text-muted-foreground">Affiches offertes</span>
+                <span className="text-xl font-bold text-primary">3</span>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                1 affiche = 2 crédits ≈ 2 affiches (bonus unique)
+                3 affiches gratuites • Modifications illimitées
               </div>
             </div>
           )}
