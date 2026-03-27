@@ -18,6 +18,7 @@ import { LogoPositionSelect } from "@/components/chat/LogoPositionSelect";
 import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
+import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { VisualEditor } from "@/components/editor/VisualEditor";
@@ -709,6 +710,10 @@ export default function AppPage() {
                     onKeyPress={handleKeyPress}
                     disabled={isProcessing}
                     className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
+                  />
+                  <VoiceInputButton
+                    onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
+                    disabled={isProcessing}
                   />
                   <Button 
                     onClick={handleSend} 
