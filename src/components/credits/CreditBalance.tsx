@@ -88,7 +88,7 @@ export function CreditBalance({ compact = false, showUpgrade = true, onUpgrade }
             {displayCredits}
           </div>
           <div className="text-xs text-muted-foreground">
-            {isFree ? `sur 5 affiches` : `sur ${maxCredits} crédits`}
+            {isFree ? `sur 3 affiches` : `sur ${maxCredits} crédits`}
           </div>
         </div>
       </div>

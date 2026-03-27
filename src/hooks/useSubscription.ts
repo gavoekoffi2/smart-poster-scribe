@@ -254,7 +254,7 @@ export function useSubscription() {
   const canGenerate = useCallback((resolution: string) => {
     if (!subscription) return resolution === "1K";
     const isFree = subscription.plan?.slug === "free";
-    if (isFree) return resolution === "1K" && subscription.free_generations_used < 5;
+    if (isFree) return resolution === "1K" && subscription.free_generations_used < 3;
     return subscription.credits_remaining >= 2;
   }, [subscription]);
 

@@ -912,6 +912,7 @@ serve(async (req) => {
           p_user_id: userId,
           p_resolution: resolution,
           p_image_id: null,
+          p_is_modification: !!isModification,
         }
       );
       

@@ -144,7 +144,7 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
                 className="mb-2"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>12</span>
+                <span>30</span>
                 <span>{MAX_POSTERS}</span>
               </div>
               <div className="mt-2 text-xs text-center text-muted-foreground">
