@@ -9,20 +9,15 @@ interface VoiceInputButtonProps {
   disabled?: boolean;
 }
 
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
-
 export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputButtonProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       setIsSupported(false);
       return;
@@ -33,7 +28,7 @@ export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputB
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => {
       let finalTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
@@ -45,7 +40,7 @@ export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputB
       }
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
       if (event.error === "not-allowed") {
         toast.error("Veuillez autoriser l'accès au microphone");
