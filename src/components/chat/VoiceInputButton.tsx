@@ -9,19 +9,26 @@ interface VoiceInputButtonProps {
   disabled?: boolean;
 }
 
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputButtonProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
       setIsSupported(false);
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SR();
     recognition.lang = "fr-FR";
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -29,9 +36,8 @@ export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputB
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
         }
       }
       if (finalTranscript.trim()) {
@@ -39,7 +45,7 @@ export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputB
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error:", event.error);
       if (event.error === "not-allowed") {
         toast.error("Veuillez autoriser l'accès au microphone");
@@ -89,7 +95,7 @@ export function VoiceInputButton({ onTranscript, disabled = false }: VoiceInputB
       title={isListening ? "Arrêter l'écoute" : "Parler"}
       className={cn(
         "transition-all duration-300 shrink-0",
-        isListening && "bg-red-500/20 border-red-500 text-red-500 hover:bg-red-500/30 hover:border-red-500 animate-pulse"
+        isListening && "border-destructive text-destructive hover:bg-destructive/10 hover:border-destructive animate-pulse"
       )}
     >
       {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
