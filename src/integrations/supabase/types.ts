@@ -754,10 +754,24 @@ export type Database = {
         }
         Returns: Json
       }
-      check_and_debit_credits: {
-        Args: { p_image_id?: string; p_resolution: string; p_user_id: string }
-        Returns: Json
-      }
+      check_and_debit_credits:
+        | {
+            Args: {
+              p_image_id?: string
+              p_resolution: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_image_id?: string
+              p_is_modification?: boolean
+              p_resolution: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_or_create_user_subscription: {
         Args: { p_user_id: string }

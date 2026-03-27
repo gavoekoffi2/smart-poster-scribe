@@ -26,7 +26,7 @@ const planColors: Record<string, string> = {
   business: "from-amber-500 to-orange-600",
 };
 
-const BASE_BUSINESS_POSTERS = 12;
+const BASE_BUSINESS_POSTERS = 30;
 const BASE_BUSINESS_PRICE_USD = 17;
 const BASE_BUSINESS_PRICE_FCFA = 9900;
 const PRICE_PER_POSTER_USD = BASE_BUSINESS_PRICE_USD / BASE_BUSINESS_POSTERS;
@@ -138,13 +138,13 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
               <Slider
                 value={[businessPosters]}
                 onValueChange={(v) => setBusinessPosters(v[0])}
-                min={12}
+                min={30}
                 max={MAX_POSTERS}
                 step={1}
                 className="mb-2"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>12</span>
+                <span>30</span>
                 <span>{MAX_POSTERS}</span>
               </div>
               <div className="mt-2 text-xs text-center text-muted-foreground">
@@ -164,11 +164,11 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           ) : (
             <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Crédits offerts</span>
-                <span className="text-xl font-bold text-primary">5</span>
+                <span className="text-sm text-muted-foreground">Affiches offertes</span>
+                <span className="text-xl font-bold text-primary">3</span>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                1 affiche = 2 crédits ≈ 2 affiches (bonus unique)
+                3 affiches gratuites • Modifications illimitées
               </div>
             </div>
           )}

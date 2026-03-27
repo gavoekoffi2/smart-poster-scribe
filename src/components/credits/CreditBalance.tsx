@@ -23,7 +23,7 @@ export function CreditBalance({ compact = false, showUpgrade = true, onUpgrade }
 
   const { credits, freeRemaining, isFree } = getRemainingCredits();
   const displayCredits = isFree ? freeRemaining : credits;
-  const maxCredits = isFree ? 5 : (subscription?.plan?.credits_per_month || 50);
+  const maxCredits = isFree ? 3 : (subscription?.plan?.credits_per_month || 50);
   const percentage = Math.max(0, Math.min(100, (displayCredits / maxCredits) * 100));
   const isLow = percentage < 20;
   const planName = subscription?.plan?.name || "Gratuit";
@@ -88,7 +88,7 @@ export function CreditBalance({ compact = false, showUpgrade = true, onUpgrade }
             {displayCredits}
           </div>
           <div className="text-xs text-muted-foreground">
-            {isFree ? `sur 5 affiches` : `sur ${maxCredits} crédits`}
+            {isFree ? `sur 3 affiches` : `sur ${maxCredits} crédits`}
           </div>
         </div>
       </div>

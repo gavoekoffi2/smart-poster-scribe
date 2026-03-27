@@ -1205,6 +1205,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
             isCloneMode: true,
+            isModification: true,
             domain: state.domain || undefined,
           },
         });

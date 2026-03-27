@@ -241,12 +241,12 @@ export function useSubscription() {
 
   const getRemainingCredits = useCallback(() => {
     if (!subscription) {
-      return { credits: 0, freeRemaining: 5, isFree: true };
+      return { credits: 0, freeRemaining: 3, isFree: true };
     }
     const isFree = subscription.plan?.slug === "free";
     return {
       credits: subscription.credits_remaining,
-      freeRemaining: isFree ? Math.max(0, 5 - subscription.free_generations_used) : 0,
+      freeRemaining: isFree ? Math.max(0, 3 - subscription.free_generations_used) : 0,
       isFree,
     };
   }, [subscription]);
@@ -254,7 +254,7 @@ export function useSubscription() {
   const canGenerate = useCallback((resolution: string) => {
     if (!subscription) return resolution === "1K";
     const isFree = subscription.plan?.slug === "free";
-    if (isFree) return resolution === "1K" && subscription.free_generations_used < 5;
+    if (isFree) return resolution === "1K" && subscription.free_generations_used < 3;
     return subscription.credits_remaining >= 2;
   }, [subscription]);
 
