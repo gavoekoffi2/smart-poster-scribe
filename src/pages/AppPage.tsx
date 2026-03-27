@@ -711,6 +711,10 @@ export default function AppPage() {
                     disabled={isProcessing}
                     className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
                   />
+                  <VoiceInputButton
+                    onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
+                    disabled={isProcessing}
+                  />
                   <Button 
                     onClick={handleSend} 
                     disabled={!inputValue.trim() || isProcessing}
