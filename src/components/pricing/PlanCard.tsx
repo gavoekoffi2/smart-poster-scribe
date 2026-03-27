@@ -26,7 +26,7 @@ const planColors: Record<string, string> = {
   business: "from-amber-500 to-orange-600",
 };
 
-const BASE_BUSINESS_POSTERS = 12;
+const BASE_BUSINESS_POSTERS = 30;
 const BASE_BUSINESS_PRICE_USD = 17;
 const BASE_BUSINESS_PRICE_FCFA = 9900;
 const PRICE_PER_POSTER_USD = BASE_BUSINESS_PRICE_USD / BASE_BUSINESS_POSTERS;
