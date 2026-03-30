@@ -1,60 +1,70 @@
 
 
-# Renforcement du Prompt de Clonage de Référence
+## Plan : Ajouter un Mode Rapide vs Mode Personnalisé
 
-## Probleme
+### Concept
 
-Le prompt actuel en mode clone (lignes 199-214 de `generate-image/index.ts`) est trop generique. Il dit "COPIE QUASI-IDENTIQUE" mais manque de directives precises pour forcer l'IA a vraiment reproduire le design exact et a appliquer une typographie designee (pas du texte plat).
+Au tout début de la conversation (après le message de bienvenue), l'utilisateur choisit entre :
+- **Mode Rapide** : Décrit son affiche → (optionnel : image de référence) → Génération immédiate (format Instagram Story 9:16 par défaut) → Après génération, proposer les personnalisations (logo, couleurs, format)
+- **Mode Personnalisé** : Le flux actuel inchangé (référence → format → couleurs → logo → images secondaires → génération)
 
-Le prompt fait seulement 13 lignes courtes. Il ne mentionne pas les techniques specifiques de reproduction (couleurs exactes, positions, proportions, effets) ni les exigences de typographie stylee.
+### Modifications techniques
 
-## Corrections
+**1. Types (`src/types/generation.ts`)**
+- Ajouter `CreationMode = "quick" | "custom"` 
+- Ajouter étape `"mode_select"` dans les steps du `ConversationState`
+- Ajouter `creationMode?: CreationMode` dans `ConversationState`
+- Ajouter étape `"post_generation_options"` pour les personnalisations post-génération en mode rapide
 
-### 1. Renforcer le prompt clone dans `buildProfessionalPrompt` (lignes 199-214)
+**2. Conversation flow (`src/hooks/useConversation.ts`)**
+- Modifier le message initial pour proposer le choix du mode
+- Après analyse de la description en mode rapide :
+  - Demander uniquement si l'utilisateur a une image de référence (oui/non)
+  - Si oui → upload puis génération directe
+  - Si non → génération directe avec format 9:16, sans logo, sans couleurs personnalisées
+- Après génération en mode rapide (`"complete"`) : afficher un message proposant des personnalisations optionnelles (logo, couleurs, format)
+- En mode personnalisé : le flux reste identique à l'actuel
 
-Remplacer le bloc clone par un prompt beaucoup plus directif qui :
+**3. UI - Sélection du mode (`src/pages/AppPage.tsx`)**
+- Ajouter un composant de choix de mode (2 boutons/cards) quand `step === "mode_select"`
+- Bouton "Mode Rapide" avec icone éclair et description courte
+- Bouton "Mode Personnalisé" avec icone palette et description courte
 
-- Insiste sur la **modification directe** de l'image de reference (pas une recreation)
-- Specifie que le fond, les formes, les couleurs, les degrades, les textures doivent etre **reproduits pixel par pixel**
-- Detaille les regles de **remplacement de texte** : meme position, meme taille relative, meme style d'effets
-- Ajoute des regles de **typographie designee** : interdiction de texte plat, obligation d'effets (ombre portee epaisse, contour, 3D, degrade, glow, metallic) sur tous les textes
-- Renforce la regle de **suppression intelligente** : si un element n'a pas d'equivalent dans les infos client, le supprimer et redistribuer l'espace (pas de zones vides)
-- Ajoute des directives pour les cas specifiques (logo absent, photo absente, contacts absents)
+**4. Nouveau composant (`src/components/chat/ModeSelect.tsx`)**
+- Deux cartes cliquables : Rapide (éclair) et Personnalisé (palette)
+- Style cohérent avec les composants existants (DomainSelect, FormatSelect)
 
-### 2. Structure du nouveau prompt clone
+**5. Post-génération rapide (`src/components/chat/PostGenerationOptions.tsx`)**
+- Après la génération en mode rapide, afficher des boutons :
+  - "Ajouter un logo"
+  - "Changer les couleurs" 
+  - "Changer le format"
+  - "C'est parfait !"
+- Chaque option lance une modification de l'affiche existante
+
+### Flux Mode Rapide résumé
 
 ```text
-MISSION: Tu es un ÉDITEUR D'IMAGE. Tu reçois une affiche existante. Tu dois la MODIFIER DIRECTEMENT.
-Tu ne crées PAS une nouvelle affiche. Tu ÉDITES l'image fournie.
-
-DESIGN - INTOUCHABLE:
-- Fond (couleurs, dégradés, textures, motifs) = IDENTIQUE
-- Formes décoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES
-- Mise en page et composition = IDENTIQUE
-- Effets visuels (ombres, lumières, reflets, particules) = IDENTIQUES
-- Couleurs et palette = IDENTIQUES
-
-TEXTE - REMPLACEMENT STRICT:
-- Remplace chaque texte par l'info correspondante du client
-- MÊME position, MÊME taille relative, MÊME alignement
-- MÊME style typographique (gras, italique, majuscules)
-- OBLIGATOIRE: effets typographiques pro (ombre épaisse, contour, 3D, dégradé, glow, metallic)
-- INTERDIT: texte plat, basique, sans effet, style secrétariat
-
-SUPPRESSION INTELLIGENTE:
-- Info absente = supprimer le texte ET les icônes/décorations associées
-- Redistribuer l'espace restant naturellement
-- ZÉRO zone vide, ZÉRO placeholder, ZÉRO info inventée
-
-PHOTOS/LOGOS:
-- Photo client fournie → remplacer à la MÊME position et taille
-- Logo client fourni → remplacer à la MÊME position
-- Pas de photo/logo fourni → SUPPRIMER proprement
+Bienvenue → Choix du mode → [Rapide]
+  → Description de l'affiche
+  → Analyse IA (détection domaine auto)
+  → "Avez-vous une image de référence ?" (oui/passer)
+  → Génération immédiate (format 9:16, pas de logo, couleurs auto)
+  → "Votre affiche est prête ! Souhaitez-vous :"
+      - Ajouter un logo
+      - Modifier les couleurs
+      - Changer le format
+      - C'est parfait !
 ```
 
-### Fichier modifie
+### Fichiers impactés
 
-- `supabase/functions/generate-image/index.ts` : fonction `buildProfessionalPrompt`, bloc `isCloneMode` (lignes 199-214)
-
-Le prompt reste condense (sous 4500 chars au total) pour respecter la limite API Kie AI.
+| Fichier | Action |
+|---------|--------|
+| `src/types/generation.ts` | Ajouter types `CreationMode`, steps |
+| `src/hooks/useConversation.ts` | Logique mode rapide dans le flux |
+| `src/pages/AppPage.tsx` | Afficher ModeSelect et PostGenerationOptions |
+| `src/components/chat/ModeSelect.tsx` | Nouveau composant choix de mode |
+| `src/components/chat/PostGenerationOptions.tsx` | Nouveau composant options post-génération |
+| `src/components/chat/StepNavigation.tsx` | Ajouter le step mode_select |
 
