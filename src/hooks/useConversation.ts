@@ -19,6 +19,7 @@ import {
   MissingElement,
   CollectedReplacements,
   SecondaryImage,
+  CreationMode,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
