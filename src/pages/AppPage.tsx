@@ -474,6 +474,9 @@ export default function AppPage() {
   const { step } = conversationState;
   const showTextInput = step === "greeting" || step === "quick_description" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
   const showModeSelect = step === "mode_select";
+  const showDomainSelect = step === "domain";
+  const showQuickReference = step === "quick_reference";
+  const showPostGenerationOptions = step === "post_generation_options";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
   const showBeveragesUpload = step === "restaurant_beverages_photos";
