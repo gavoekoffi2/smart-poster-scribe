@@ -3692,6 +3692,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     // Format handlers
     handleFormatSelect,
     handleSkipFormat,
+    // Mode handlers
+    handleModeSelect,
+    handleQuickReferenceImage,
+    handleSkipQuickReference,
+    handlePostGenerationOption,
     resetConversation,
     goBackToStep,
     goForwardToStep,
