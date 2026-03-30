@@ -156,6 +156,11 @@ export default function AppPage() {
     // Format handlers
     handleFormatSelect,
     handleSkipFormat,
+    // Mode handlers
+    handleModeSelect,
+    handleQuickReferenceImage,
+    handleSkipQuickReference,
+    handlePostGenerationOption,
     resetConversation,
     goBackToStep,
     goForwardToStep,
