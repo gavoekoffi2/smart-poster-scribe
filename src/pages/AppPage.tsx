@@ -19,6 +19,8 @@ import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
+import { ModeSelect } from "@/components/chat/ModeSelect";
+import { PostGenerationOptions } from "@/components/chat/PostGenerationOptions";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { VisualEditor } from "@/components/editor/VisualEditor";
