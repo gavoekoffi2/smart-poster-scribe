@@ -435,4 +435,6 @@ export interface ConversationState {
   secondaryImages?: SecondaryImage[];
   // Image secondaire en cours d'ajout
   pendingSecondaryImage?: string;
+  // Mode de création (rapide ou personnalisé)
+  creationMode?: CreationMode;
 }
