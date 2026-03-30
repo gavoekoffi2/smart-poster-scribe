@@ -337,8 +337,12 @@ export interface DomainQuestionState {
 
 export interface ConversationState {
   step: 
-    | "greeting" 
-    | "analyzing" 
+    | "greeting"
+    | "mode_select"
+    | "quick_description"
+    | "quick_reference"
+    | "post_generation_options"
+    | "analyzing"
     | "domain" 
     | "custom_domain" 
     | "details" 
