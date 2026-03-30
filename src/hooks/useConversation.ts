@@ -617,7 +617,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [suggestedDomain, setSuggestedDomain] = useState<string | null>(cloneTemplate?.domain || null);
-  const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["greeting"]);
+  const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["mode_select"]);
   const [creditError, setCreditError] = useState<{
     error: string;
     message: string;
