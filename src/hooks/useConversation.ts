@@ -1536,8 +1536,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       addMessage("user", content);
       const { step } = conversationStateRef.current;
 
-      // Handle modification requests when in complete state
-      if (step === "complete") {
+      // Handle modification requests when in complete or post_generation_options state
+      if (step === "complete" || step === "post_generation_options") {
         handleModificationRequest(content);
         return;
       }
