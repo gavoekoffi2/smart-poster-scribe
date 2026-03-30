@@ -1476,7 +1476,62 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
-  const handleUserMessage = useCallback(
+  // Handler pour la sélection du mode de création
+  const handleModeSelect = useCallback((mode: CreationMode) => {
+    addMessage("user", mode === "quick" ? "⚡ Mode Rapide" : "🎨 Mode Personnalisé");
+    
+    if (mode === "quick") {
+      setConversationState(prev => ({
+        ...prev,
+        step: "quick_description",
+        creationMode: "quick",
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Décrivez votre affiche en quelques mots (type, textes, dates, prix, contact...) et je la génère immédiatement !");
+      }, 250);
+    } else {
+      setConversationState(prev => ({
+        ...prev,
+        step: "greeting",
+        creationMode: "custom",
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)");
+      }, 250);
+    }
+  }, [addMessage]);
+
+  // Handler pour les options post-génération en mode rapide
+  const handlePostGenerationOption = useCallback((option: "logo" | "colors" | "format" | "keep") => {
+    if (option === "keep") {
+      addMessage("user", "C'est parfait !");
+      addMessage("assistant", "Super ! Votre affiche est finalisée. 🎉 Vous pouvez la télécharger ou demander d'autres modifications en les décrivant ci-dessous.");
+      setConversationState(prev => ({ ...prev, step: "complete" }));
+      return;
+    }
+    
+    if (option === "logo") {
+      addMessage("user", "Ajouter un logo");
+      setConversationState(prev => ({ ...prev, step: "logo" }));
+      setTimeout(() => {
+        addMessage("assistant", "Envoyez votre logo ou cliquez sur 'Passer' :");
+      }, 250);
+    } else if (option === "colors") {
+      addMessage("user", "Changer les couleurs");
+      setConversationState(prev => ({ ...prev, step: "colors" }));
+      setTimeout(() => {
+        addMessage("assistant", "Choisissez une nouvelle palette de couleurs :");
+      }, 250);
+    } else if (option === "format") {
+      addMessage("user", "Changer le format");
+      setConversationState(prev => ({ ...prev, step: "format" }));
+      setTimeout(() => {
+        addMessage("assistant", "Choisissez le format souhaité :");
+      }, 250);
+    }
+  }, [addMessage]);
+
+
     async (content: string) => {
       addMessage("user", content);
       const { step } = conversationStateRef.current;
