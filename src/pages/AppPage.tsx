@@ -818,6 +818,32 @@ export default function AppPage() {
                 </div>
               )}
 
+              {showQuickReference && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleQuickReferenceImage}
+                    disabled={isProcessing}
+                    label="Envoyer image de référence"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipQuickReference} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Générer directement
+                  </Button>
+                </div>
+              )}
+
+              {showPostGenerationOptions && (
+                <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <PostGenerationOptions
+                    onAddLogo={() => handlePostGenerationOption("logo")}
+                    onChangeColors={() => handlePostGenerationOption("colors")}
+                    onChangeFormat={() => handlePostGenerationOption("format")}
+                    onKeepAsIs={() => handlePostGenerationOption("keep")}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
+
               {showReferenceUpload && (
                 <div className="flex flex-wrap gap-3">
                   <ImageUploadButton
