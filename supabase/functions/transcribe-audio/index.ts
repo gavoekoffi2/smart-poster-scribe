@@ -6,17 +6,16 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { audioBase64 } = await req.json();
-    const BYTEZ_API_KEY = Deno.env.get("BYTEZ_API_KEY");
+    const { audioBase64, mimeType } = await req.json();
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
-    if (!BYTEZ_API_KEY) {
-      console.error("BYTEZ_API_KEY not configured");
+    if (!GOOGLE_AI_API_KEY) {
+      console.error("GOOGLE_AI_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Service de transcription non configuré" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -30,34 +29,48 @@ serve(async (req) => {
       );
     }
 
-    console.log("Sending audio to Bytez Whisper API...");
-    console.log("Audio base64 length:", audioBase64.length);
+    console.log("Sending audio to Gemini for transcription, mime:", mimeType || "audio/webm");
 
     const response = await fetch(
-      "https://api.bytez.com/models/v2/openai/whisper-large-v3",
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Authorization": BYTEZ_API_KEY,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          base64: audioBase64,
+          contents: [
+            {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: mimeType || "audio/webm",
+                    data: audioBase64,
+                  },
+                },
+                {
+                  text: "Transcris exactement ce qui est dit dans cet audio. Retourne UNIQUEMENT le texte transcrit, sans aucune explication, sans guillemets, sans préfixe. Si l'audio est vide ou inaudible, retourne une chaîne vide.",
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 1024,
+          },
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Bytez API error:", response.status, errorText);
-      
+      console.error("Gemini API error:", response.status, errorText);
+
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Limite de requêtes atteinte, veuillez patienter quelques secondes." }),
+          JSON.stringify({ error: "Limite de requêtes atteinte, veuillez patienter." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       return new Response(
         JSON.stringify({ error: "Erreur de transcription. Veuillez réessayer." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -65,10 +78,9 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Transcription result:", data);
+    const transcribedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-    // Handle both possible response formats
-    const transcribedText = data.output || data.text || "";
+    console.log("Transcription result:", transcribedText.substring(0, 100));
 
     return new Response(
       JSON.stringify({ text: transcribedText }),
