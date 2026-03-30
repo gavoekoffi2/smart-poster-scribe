@@ -3499,11 +3499,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       {
         id: "initial",
         role: "assistant",
-        content: INITIAL_MESSAGE,
+        content: MODE_SELECT_MESSAGE,
         timestamp: new Date(),
       },
     ]);
-    setConversationState({ step: "greeting" });
+    setConversationState({ step: "mode_select" });
     setGeneratedImage(null);
     setSuggestedDomain(null);
   }, []);
