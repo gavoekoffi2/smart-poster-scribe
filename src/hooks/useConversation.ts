@@ -1862,7 +1862,60 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         return;
       }
 
-      // Initial greeting - analyze the request
+      // =========== MODE RAPIDE: Description ===========
+      if (step === "quick_description") {
+        setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
+        addLoadingMessage();
+        setIsProcessing(true);
+
+        try {
+          const { data, error } = await supabase.functions.invoke("analyze-request", {
+            body: { userText: content },
+          });
+
+          removeLoadingMessage();
+          setIsProcessing(false);
+
+          let extractedInfo: ExtractedInfo = {};
+          let detectedDomain: Domain | null = null;
+
+          if (!error && data?.success && data.analysis) {
+            extractedInfo = data.analysis.extractedInfo || {};
+            detectedDomain = data.analysis.suggestedDomain as Domain | null;
+            setSuggestedDomain(detectedDomain);
+          } else {
+            extractedInfo = simpleExtractInfo(content);
+          }
+
+          // En mode rapide, demander juste si une référence est disponible
+          setConversationState((prev) => ({
+            ...prev,
+            step: "quick_reference",
+            domain: detectedDomain || prev.domain,
+            extractedInfo,
+            description: content,
+            creationMode: "quick",
+          }));
+
+          const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
+          addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+        } catch (err) {
+          removeLoadingMessage();
+          setIsProcessing(false);
+          
+          setConversationState((prev) => ({
+            ...prev,
+            step: "quick_reference",
+            extractedInfo: simpleExtractInfo(content),
+            description: content,
+            creationMode: "quick",
+          }));
+          addMessage("assistant", "Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.");
+        }
+        return;
+      }
+
+      // Initial greeting - analyze the request (mode personnalisé)
       if (step === "greeting") {
         setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
         addLoadingMessage();
