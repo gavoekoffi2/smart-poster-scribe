@@ -604,7 +604,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   ]);
 
   const [conversationState, setConversationState] = useState<ConversationState>({
-    step: cloneTemplate ? "analyzing_template" : "greeting",
+    step: cloneTemplate ? "analyzing_template" : "mode_select",
     domain: cloneTemplate?.domain as Domain | undefined,
     referenceImage: cloneTemplate?.imageUrl,
   });
