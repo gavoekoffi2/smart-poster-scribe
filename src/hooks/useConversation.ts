@@ -36,7 +36,10 @@ const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestat
 const RESTAURANT_DOMAIN: Domain = "restaurant";
 
 const INITIAL_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
+  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+
+const MODE_SELECT_MESSAGE =
+  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
 
 // Convertit un code hex en description de couleur naturelle
 function hexToColorName(hex: string): string {
