@@ -2976,6 +2976,183 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
+  // Fonction helper pour lancer la génération en mode rapide
+  const launchQuickGeneration = useCallback(
+    (referenceImage?: string, referenceDescription?: string) => {
+      // Format par défaut: 9:16 (Instagram Story)
+      const quickFormat: FormatPreset = {
+        id: "instagram-story",
+        name: "Instagram Story",
+        aspectRatio: "9:16",
+        width: 1080,
+        height: 1920,
+        platform: "Instagram",
+        icon: "📱",
+        usage: "social" as UsageType,
+        resolution: "1K" as Resolution,
+      };
+
+      const nextState: ConversationState = {
+        ...conversationStateRef.current,
+        step: "generating",
+        formatPreset: quickFormat,
+        usageType: "social",
+        referenceImage: referenceImage || conversationStateRef.current.referenceImage,
+        referenceDescription: referenceDescription || conversationStateRef.current.referenceDescription,
+      };
+
+      setConversationState(nextState);
+      addMessage("assistant", "⚡ Génération en cours au format Instagram Story (9:16)...");
+      
+      // Override generatePoster to use post_generation_options instead of complete
+      setIsProcessing(true);
+      const prompt = buildPrompt(nextState);
+
+      (async () => {
+        try {
+          const logos = nextState.logos || [];
+          const logoImages = logos.map((l) => l.imageUrl);
+          const logoPositions = logos.map((l) => l.position);
+
+          let referenceImageToSend = nextState.referenceImage || undefined;
+
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) console.log("Session refresh warning:", refreshError.message);
+
+          const { data, error } = await supabase.functions.invoke("generate-image", {
+            body: {
+              prompt,
+              aspectRatio: "9:16",
+              resolution: "1K",
+              referenceImage: referenceImageToSend,
+              logoImages: logoImages.length > 0 ? logoImages : undefined,
+              logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
+              contentImage: nextState.contentImage || undefined,
+              isCloneMode: false,
+              formatWidth: 1080,
+              formatHeight: 1920,
+              usageType: "social",
+              domain: nextState.domain || undefined,
+            },
+          });
+
+          if (error || !data?.success) {
+            const errorData = data as any;
+            if (errorData?.error === "FREE_LIMIT_REACHED" ||
+                errorData?.error === "RESOLUTION_NOT_ALLOWED" ||
+                errorData?.error === "INSUFFICIENT_CREDITS" ||
+                errorData?.error === "AUTHENTICATION_REQUIRED") {
+              setCreditError(errorData);
+              addMessage("assistant", errorData.message || "Erreur de crédits.");
+              setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+              return;
+            }
+            addMessage("assistant", `Désolé, la génération a échoué. Voulez-vous réessayer ?`);
+            setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+            toast.error("Erreur lors de la génération");
+            return;
+          }
+
+          setGeneratedImage(data.imageUrl);
+          setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
+          addMessage("assistant", "Votre affiche est prête ! 🎨 Souhaitez-vous la personnaliser davantage ?");
+          toast.success("Affiche générée avec succès !");
+        } catch (err) {
+          console.error("Quick generation error:", err);
+          addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
+          setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+          toast.error("Erreur inattendue");
+        } finally {
+          setIsProcessing(false);
+        }
+      })();
+    },
+    [addMessage]
+  );
+
+  // Handler pour l'image de référence en mode rapide
+  const handleQuickReferenceImage = useCallback(
+    async (imageDataUrl: string) => {
+      addMessage("user", "Image de référence envoyée", imageDataUrl);
+      addLoadingMessage();
+      setIsProcessing(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("analyze-image", {
+          body: { imageData: imageDataUrl },
+        });
+
+        removeLoadingMessage();
+        setIsProcessing(false);
+
+        const description = (!error && data?.success) ? data.description : undefined;
+
+        setConversationState((prev) => ({
+          ...prev,
+          referenceImage: imageDataUrl,
+          referenceDescription: description,
+        }));
+
+        // Lancer la génération immédiatement
+        launchQuickGeneration(imageDataUrl, description);
+      } catch (err) {
+        removeLoadingMessage();
+        setIsProcessing(false);
+        launchQuickGeneration(imageDataUrl);
+      }
+    },
+    [addMessage, addLoadingMessage, removeLoadingMessage, launchQuickGeneration]
+  );
+
+  // Handler pour passer la référence en mode rapide
+  const handleSkipQuickReference = useCallback(() => {
+    addMessage("user", "Passer l'image de référence");
+    
+    // Aller chercher un template automatiquement puis générer
+    const currentDomain = conversationStateRef.current.domain;
+    
+    // Fetch a template and generate
+    (async () => {
+      setIsProcessing(true);
+      addLoadingMessage();
+      try {
+        let templates: any[] = [];
+        if (currentDomain) {
+          const { data } = await supabase.from("reference_templates").select("*").eq("domain", currentDomain).limit(10);
+          if (data) templates = data;
+        }
+        if (templates.length === 0) {
+          const { data } = await supabase.from("reference_templates").select("*").limit(20);
+          if (data) templates = data;
+        }
+
+        removeLoadingMessage();
+        setIsProcessing(false);
+
+        if (templates.length > 0) {
+          const selected = templates[Math.floor(Math.random() * Math.min(5, templates.length))];
+          const imageUrl = selected.image_url.startsWith('/') ? window.location.origin + selected.image_url : selected.image_url;
+          const styleDesc = `DESIGN TEMPLATE À REPRODUIRE: ${selected.description || 'Template professionnel'}. Reproduire FIDÈLEMENT le style visuel.`;
+          
+          setConversationState(prev => ({
+            ...prev,
+            referenceImage: imageUrl,
+            referenceDescription: styleDesc,
+            usingAutoTemplate: true,
+          }));
+          
+          launchQuickGeneration(imageUrl, styleDesc);
+        } else {
+          launchQuickGeneration();
+        }
+      } catch {
+        removeLoadingMessage();
+        setIsProcessing(false);
+        launchQuickGeneration();
+      }
+    })();
+  }, [addMessage, addLoadingMessage, removeLoadingMessage, launchQuickGeneration]);
+
   const handleSkipReference = useCallback(async () => {
     addMessage("user", "Passer l'image de référence");
     
