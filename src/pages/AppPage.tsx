@@ -19,6 +19,8 @@ import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
+import { ModeSelect } from "@/components/chat/ModeSelect";
+import { PostGenerationOptions } from "@/components/chat/PostGenerationOptions";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import { VisualEditor } from "@/components/editor/VisualEditor";
@@ -154,6 +156,11 @@ export default function AppPage() {
     // Format handlers
     handleFormatSelect,
     handleSkipFormat,
+    // Mode handlers
+    handleModeSelect,
+    handleQuickReferenceImage,
+    handleSkipQuickReference,
+    handlePostGenerationOption,
     resetConversation,
     goBackToStep,
     goForwardToStep,
@@ -465,8 +472,11 @@ export default function AppPage() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
+  const showTextInput = step === "greeting" || step === "quick_description" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
+  const showModeSelect = step === "mode_select";
   const showDomainSelect = step === "domain";
+  const showQuickReference = step === "quick_reference";
+  const showPostGenerationOptions = step === "post_generation_options";
   const showReferenceUpload = step === "reference";
   const showColorPalette = step === "colors";
   const showBeveragesUpload = step === "restaurant_beverages_photos";
@@ -645,6 +655,15 @@ export default function AppPage() {
               ))}
               
               {/* Interactive elements based on step */}
+              {showModeSelect && (
+                <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <ModeSelect
+                    onSelect={handleModeSelect}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
+
               {showDomainSelect && (
                 <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
                   <DomainSelect 
@@ -796,6 +815,32 @@ export default function AppPage() {
                     <SkipForward className="w-4 h-4 mr-2" />
                     {(conversationState.currentDishImages?.length || 0) > 0 ? "Continuer" : "Pas de plats"}
                   </Button>
+                </div>
+              )}
+
+              {showQuickReference && (
+                <div className="flex flex-wrap gap-3">
+                  <ImageUploadButton
+                    onImageSelect={handleQuickReferenceImage}
+                    disabled={isProcessing}
+                    label="Envoyer image de référence"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleSkipQuickReference} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Générer directement
+                  </Button>
+                </div>
+              )}
+
+              {showPostGenerationOptions && (
+                <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <PostGenerationOptions
+                    onAddLogo={() => handlePostGenerationOption("logo")}
+                    onChangeColors={() => handlePostGenerationOption("colors")}
+                    onChangeFormat={() => handlePostGenerationOption("format")}
+                    onKeepAsIs={() => handlePostGenerationOption("keep")}
+                    disabled={isProcessing}
+                  />
                 </div>
               )}
 

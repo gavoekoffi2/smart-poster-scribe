@@ -19,6 +19,7 @@ import {
   MissingElement,
   CollectedReplacements,
   SecondaryImage,
+  CreationMode,
 } from "@/types/generation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -35,7 +36,10 @@ const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestat
 const RESTAURANT_DOMAIN: Domain = "restaurant";
 
 const INITIAL_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)";
+  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+
+const MODE_SELECT_MESSAGE =
+  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
 
 // Convertit un code hex en description de couleur naturelle
 function hexToColorName(hex: string): string {
@@ -600,7 +604,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   ]);
 
   const [conversationState, setConversationState] = useState<ConversationState>({
-    step: cloneTemplate ? "analyzing_template" : "greeting",
+    step: cloneTemplate ? "analyzing_template" : "mode_select",
     domain: cloneTemplate?.domain as Domain | undefined,
     referenceImage: cloneTemplate?.imageUrl,
   });
@@ -613,7 +617,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [suggestedDomain, setSuggestedDomain] = useState<string | null>(cloneTemplate?.domain || null);
-  const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["greeting"]);
+  const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["mode_select"]);
   const [creditError, setCreditError] = useState<{
     error: string;
     message: string;
@@ -1472,13 +1476,68 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
+  // Handler pour la sélection du mode de création
+  const handleModeSelect = useCallback((mode: CreationMode) => {
+    addMessage("user", mode === "quick" ? "⚡ Mode Rapide" : "🎨 Mode Personnalisé");
+    
+    if (mode === "quick") {
+      setConversationState(prev => ({
+        ...prev,
+        step: "quick_description",
+        creationMode: "quick",
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Décrivez votre affiche en quelques mots (type, textes, dates, prix, contact...) et je la génère immédiatement !");
+      }, 250);
+    } else {
+      setConversationState(prev => ({
+        ...prev,
+        step: "greeting",
+        creationMode: "custom",
+      }));
+      setTimeout(() => {
+        addMessage("assistant", "Décrivez-moi l'affiche que vous souhaitez créer (type, textes, dates, prix, contact, etc.)");
+      }, 250);
+    }
+  }, [addMessage]);
+
+  // Handler pour les options post-génération en mode rapide
+  const handlePostGenerationOption = useCallback((option: "logo" | "colors" | "format" | "keep") => {
+    if (option === "keep") {
+      addMessage("user", "C'est parfait !");
+      addMessage("assistant", "Super ! Votre affiche est finalisée. 🎉 Vous pouvez la télécharger ou demander d'autres modifications en les décrivant ci-dessous.");
+      setConversationState(prev => ({ ...prev, step: "complete" }));
+      return;
+    }
+    
+    if (option === "logo") {
+      addMessage("user", "Ajouter un logo");
+      setConversationState(prev => ({ ...prev, step: "logo" }));
+      setTimeout(() => {
+        addMessage("assistant", "Envoyez votre logo ou cliquez sur 'Passer' :");
+      }, 250);
+    } else if (option === "colors") {
+      addMessage("user", "Changer les couleurs");
+      setConversationState(prev => ({ ...prev, step: "colors" }));
+      setTimeout(() => {
+        addMessage("assistant", "Choisissez une nouvelle palette de couleurs :");
+      }, 250);
+    } else if (option === "format") {
+      addMessage("user", "Changer le format");
+      setConversationState(prev => ({ ...prev, step: "format" }));
+      setTimeout(() => {
+        addMessage("assistant", "Choisissez le format souhaité :");
+      }, 250);
+    }
+  }, [addMessage]);
+
   const handleUserMessage = useCallback(
     async (content: string) => {
       addMessage("user", content);
       const { step } = conversationStateRef.current;
 
-      // Handle modification requests when in complete state
-      if (step === "complete") {
+      // Handle modification requests when in complete or post_generation_options state
+      if (step === "complete" || step === "post_generation_options") {
         handleModificationRequest(content);
         return;
       }
@@ -1803,7 +1862,60 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         return;
       }
 
-      // Initial greeting - analyze the request
+      // =========== MODE RAPIDE: Description ===========
+      if (step === "quick_description") {
+        setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
+        addLoadingMessage();
+        setIsProcessing(true);
+
+        try {
+          const { data, error } = await supabase.functions.invoke("analyze-request", {
+            body: { userText: content },
+          });
+
+          removeLoadingMessage();
+          setIsProcessing(false);
+
+          let extractedInfo: ExtractedInfo = {};
+          let detectedDomain: Domain | null = null;
+
+          if (!error && data?.success && data.analysis) {
+            extractedInfo = data.analysis.extractedInfo || {};
+            detectedDomain = data.analysis.suggestedDomain as Domain | null;
+            setSuggestedDomain(detectedDomain);
+          } else {
+            extractedInfo = simpleExtractInfo(content);
+          }
+
+          // En mode rapide, demander juste si une référence est disponible
+          setConversationState((prev) => ({
+            ...prev,
+            step: "quick_reference",
+            domain: detectedDomain || prev.domain,
+            extractedInfo,
+            description: content,
+            creationMode: "quick",
+          }));
+
+          const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
+          addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+        } catch (err) {
+          removeLoadingMessage();
+          setIsProcessing(false);
+          
+          setConversationState((prev) => ({
+            ...prev,
+            step: "quick_reference",
+            extractedInfo: simpleExtractInfo(content),
+            description: content,
+            creationMode: "quick",
+          }));
+          addMessage("assistant", "Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.");
+        }
+        return;
+      }
+
+      // Initial greeting - analyze the request (mode personnalisé)
       if (step === "greeting") {
         setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
         addLoadingMessage();
@@ -2864,6 +2976,183 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage, addLoadingMessage, removeLoadingMessage]
   );
 
+  // Fonction helper pour lancer la génération en mode rapide
+  const launchQuickGeneration = useCallback(
+    (referenceImage?: string, referenceDescription?: string) => {
+      // Format par défaut: 9:16 (Instagram Story)
+      const quickFormat: FormatPreset = {
+        id: "instagram-story",
+        name: "Instagram Story",
+        aspectRatio: "9:16",
+        width: 1080,
+        height: 1920,
+        platform: "Instagram",
+        icon: "📱",
+        usage: "social" as UsageType,
+        resolution: "1K" as Resolution,
+      };
+
+      const nextState: ConversationState = {
+        ...conversationStateRef.current,
+        step: "generating",
+        formatPreset: quickFormat,
+        usageType: "social",
+        referenceImage: referenceImage || conversationStateRef.current.referenceImage,
+        referenceDescription: referenceDescription || conversationStateRef.current.referenceDescription,
+      };
+
+      setConversationState(nextState);
+      addMessage("assistant", "⚡ Génération en cours au format Instagram Story (9:16)...");
+      
+      // Override generatePoster to use post_generation_options instead of complete
+      setIsProcessing(true);
+      const prompt = buildPrompt(nextState);
+
+      (async () => {
+        try {
+          const logos = nextState.logos || [];
+          const logoImages = logos.map((l) => l.imageUrl);
+          const logoPositions = logos.map((l) => l.position);
+
+          let referenceImageToSend = nextState.referenceImage || undefined;
+
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) console.log("Session refresh warning:", refreshError.message);
+
+          const { data, error } = await supabase.functions.invoke("generate-image", {
+            body: {
+              prompt,
+              aspectRatio: "9:16",
+              resolution: "1K",
+              referenceImage: referenceImageToSend,
+              logoImages: logoImages.length > 0 ? logoImages : undefined,
+              logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
+              contentImage: nextState.contentImage || undefined,
+              isCloneMode: false,
+              formatWidth: 1080,
+              formatHeight: 1920,
+              usageType: "social",
+              domain: nextState.domain || undefined,
+            },
+          });
+
+          if (error || !data?.success) {
+            const errorData = data as any;
+            if (errorData?.error === "FREE_LIMIT_REACHED" ||
+                errorData?.error === "RESOLUTION_NOT_ALLOWED" ||
+                errorData?.error === "INSUFFICIENT_CREDITS" ||
+                errorData?.error === "AUTHENTICATION_REQUIRED") {
+              setCreditError(errorData);
+              addMessage("assistant", errorData.message || "Erreur de crédits.");
+              setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+              return;
+            }
+            addMessage("assistant", `Désolé, la génération a échoué. Voulez-vous réessayer ?`);
+            setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+            toast.error("Erreur lors de la génération");
+            return;
+          }
+
+          setGeneratedImage(data.imageUrl);
+          setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
+          addMessage("assistant", "Votre affiche est prête ! 🎨 Souhaitez-vous la personnaliser davantage ?");
+          toast.success("Affiche générée avec succès !");
+        } catch (err) {
+          console.error("Quick generation error:", err);
+          addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
+          setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+          toast.error("Erreur inattendue");
+        } finally {
+          setIsProcessing(false);
+        }
+      })();
+    },
+    [addMessage]
+  );
+
+  // Handler pour l'image de référence en mode rapide
+  const handleQuickReferenceImage = useCallback(
+    async (imageDataUrl: string) => {
+      addMessage("user", "Image de référence envoyée", imageDataUrl);
+      addLoadingMessage();
+      setIsProcessing(true);
+
+      try {
+        const { data, error } = await supabase.functions.invoke("analyze-image", {
+          body: { imageData: imageDataUrl },
+        });
+
+        removeLoadingMessage();
+        setIsProcessing(false);
+
+        const description = (!error && data?.success) ? data.description : undefined;
+
+        setConversationState((prev) => ({
+          ...prev,
+          referenceImage: imageDataUrl,
+          referenceDescription: description,
+        }));
+
+        // Lancer la génération immédiatement
+        launchQuickGeneration(imageDataUrl, description);
+      } catch (err) {
+        removeLoadingMessage();
+        setIsProcessing(false);
+        launchQuickGeneration(imageDataUrl);
+      }
+    },
+    [addMessage, addLoadingMessage, removeLoadingMessage, launchQuickGeneration]
+  );
+
+  // Handler pour passer la référence en mode rapide
+  const handleSkipQuickReference = useCallback(() => {
+    addMessage("user", "Passer l'image de référence");
+    
+    // Aller chercher un template automatiquement puis générer
+    const currentDomain = conversationStateRef.current.domain;
+    
+    // Fetch a template and generate
+    (async () => {
+      setIsProcessing(true);
+      addLoadingMessage();
+      try {
+        let templates: any[] = [];
+        if (currentDomain) {
+          const { data } = await supabase.from("reference_templates").select("*").eq("domain", currentDomain).limit(10);
+          if (data) templates = data;
+        }
+        if (templates.length === 0) {
+          const { data } = await supabase.from("reference_templates").select("*").limit(20);
+          if (data) templates = data;
+        }
+
+        removeLoadingMessage();
+        setIsProcessing(false);
+
+        if (templates.length > 0) {
+          const selected = templates[Math.floor(Math.random() * Math.min(5, templates.length))];
+          const imageUrl = selected.image_url.startsWith('/') ? window.location.origin + selected.image_url : selected.image_url;
+          const styleDesc = `DESIGN TEMPLATE À REPRODUIRE: ${selected.description || 'Template professionnel'}. Reproduire FIDÈLEMENT le style visuel.`;
+          
+          setConversationState(prev => ({
+            ...prev,
+            referenceImage: imageUrl,
+            referenceDescription: styleDesc,
+            usingAutoTemplate: true,
+          }));
+          
+          launchQuickGeneration(imageUrl, styleDesc);
+        } else {
+          launchQuickGeneration();
+        }
+      } catch {
+        removeLoadingMessage();
+        setIsProcessing(false);
+        launchQuickGeneration();
+      }
+    })();
+  }, [addMessage, addLoadingMessage, removeLoadingMessage, launchQuickGeneration]);
+
   const handleSkipReference = useCallback(async () => {
     addMessage("user", "Passer l'image de référence");
     
@@ -3210,11 +3499,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       {
         id: "initial",
         role: "assistant",
-        content: INITIAL_MESSAGE,
+        content: MODE_SELECT_MESSAGE,
         timestamp: new Date(),
       },
     ]);
-    setConversationState({ step: "greeting" });
+    setConversationState({ step: "mode_select" });
     setGeneratedImage(null);
     setSuggestedDomain(null);
   }, []);
@@ -3403,6 +3692,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     // Format handlers
     handleFormatSelect,
     handleSkipFormat,
+    // Mode handlers
+    handleModeSelect,
+    handleQuickReferenceImage,
+    handleSkipQuickReference,
+    handlePostGenerationOption,
     resetConversation,
     goBackToStep,
     goForwardToStep,
