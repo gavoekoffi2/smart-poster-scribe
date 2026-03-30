@@ -1531,7 +1531,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     }
   }, [addMessage]);
 
-
+  const handleUserMessage = useCallback(
     async (content: string) => {
       addMessage("user", content);
       const { step } = conversationStateRef.current;
