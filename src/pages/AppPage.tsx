@@ -655,6 +655,15 @@ export default function AppPage() {
               ))}
               
               {/* Interactive elements based on step */}
+              {showModeSelect && (
+                <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                  <ModeSelect
+                    onSelect={handleModeSelect}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
+
               {showDomainSelect && (
                 <div className="ml-14 animate-in fade-in slide-in-from-bottom-3 duration-500">
                   <DomainSelect 
