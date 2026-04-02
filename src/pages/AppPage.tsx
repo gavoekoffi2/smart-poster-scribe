@@ -6,6 +6,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTutorial } from "@/hooks/useTutorial";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
@@ -195,7 +196,24 @@ export default function AppPage() {
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
 
-  // Auto-scroll to bottom on new messages
+  // Text-to-speech for AI suggestions
+  const { speak, stop: stopSpeech } = useTextToSpeech();
+
+  // Trigger TTS when entering ai_suggestions step
+  useEffect(() => {
+    if (conversationState.step === "ai_suggestions" && conversationState.aiSuggestions?.length) {
+      // Small delay so the message renders first
+      const timer = setTimeout(() => {
+        const speechText = conversationState.aiSuggestions!.reduce((acc, s, i) => {
+          return acc + `${i + 1}, ${s}. `;
+        }, "En tant que graphiste, je vous suggère d'ajouter : ");
+        speak(speechText + "Vous pouvez ajouter ces informations ou dire passer pour continuer.");
+      }, 500);
+      return () => { clearTimeout(timer); stopSpeech(); };
+    }
+  }, [conversationState.step, conversationState.aiSuggestions, speak, stopSpeech]);
+
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -472,7 +490,7 @@ export default function AppPage() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "quick_description" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
+  const showTextInput = step === "greeting" || step === "quick_description" || step === "ai_suggestions" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
   const showModeSelect = step === "mode_select";
   const showDomainSelect = step === "domain";
   const showQuickReference = step === "quick_reference";
@@ -814,6 +832,15 @@ export default function AppPage() {
                   <Button variant="ghost" size="sm" onClick={handleSkipDishes} disabled={isProcessing} className="hover:bg-muted/50">
                     <SkipForward className="w-4 h-4 mr-2" />
                     {(conversationState.currentDishImages?.length || 0) > 0 ? "Continuer" : "Pas de plats"}
+                  </Button>
+                </div>
+              )}
+
+              {step === "ai_suggestions" && (
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="ghost" size="sm" onClick={() => { stopSpeech(); handleUserMessage("passer"); }} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Passer les suggestions
                   </Button>
                 </div>
               )}

@@ -439,7 +439,126 @@ function simpleExtractInfo(text: string): ExtractedInfo {
   return extractedInfo;
 }
 
-// Interface pour les zones de texte du template
+// Génère des suggestions contextuelles basées sur le domaine et les infos extraites
+function buildContextualSuggestions(domain: Domain | null, extractedInfo: ExtractedInfo, description: string): string[] {
+  const suggestions: string[] = [];
+  const lower = description.toLowerCase();
+
+  // Suggestions par domaine
+  const domainSuggestions: Record<string, Array<{ check: () => boolean; text: string }>> = {
+    restaurant: [
+      { check: () => !extractedInfo.prices, text: "les prix des plats ou le budget" },
+      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu"), text: "le(s) plat(s) ou produit(s) à mettre en avant" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des plats (ou je peux en générer)" },
+    ],
+    event: [
+      { check: () => !extractedInfo.dates, text: "la date et l'heure de l'événement" },
+      { check: () => !extractedInfo.location, text: "le lieu de l'événement" },
+      { check: () => !extractedInfo.prices && !lower.includes("gratuit"), text: "le prix d'entrée ou si c'est gratuit" },
+    ],
+    church: [
+      { check: () => !extractedInfo.dates, text: "la date et l'heure du culte/événement" },
+      { check: () => !extractedInfo.location, text: "l'adresse de l'église" },
+      { check: () => !lower.includes("pasteur") && !lower.includes("orateur") && !lower.includes("évêque"), text: "le nom du pasteur ou de l'orateur invité" },
+    ],
+    formation: [
+      { check: () => !extractedInfo.dates, text: "la date de la formation" },
+      { check: () => !extractedInfo.prices && !lower.includes("gratuit"), text: "le coût de la formation ou si c'est gratuit" },
+      { check: () => !extractedInfo.location && !lower.includes("en ligne") && !lower.includes("zoom"), text: "le lieu ou si c'est en ligne" },
+    ],
+    fashion: [
+      { check: () => !lower.includes("produit") && !lower.includes("collection") && !lower.includes("article"), text: "le(s) produit(s) ou la collection à présenter" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des articles (ou je peux en générer)" },
+      { check: () => !extractedInfo.prices, text: "les prix ou la gamme de prix" },
+    ],
+    music: [
+      { check: () => !extractedInfo.dates, text: "la date du concert/événement" },
+      { check: () => !extractedInfo.location, text: "le lieu du concert" },
+      { check: () => !lower.includes("artiste") && !lower.includes("dj"), text: "le(s) nom(s) des artistes" },
+    ],
+    sport: [
+      { check: () => !extractedInfo.dates, text: "la date de la compétition" },
+      { check: () => !extractedInfo.location, text: "le lieu de l'événement sportif" },
+    ],
+    health: [
+      { check: () => !extractedInfo.contact, text: "le numéro de contact ou l'adresse du centre" },
+      { check: () => !lower.includes("service") && !lower.includes("consultation"), text: "le(s) service(s) proposé(s)" },
+    ],
+    realestate: [
+      { check: () => !extractedInfo.prices, text: "le prix du bien" },
+      { check: () => !extractedInfo.location, text: "la localisation du bien" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos du bien immobilier" },
+    ],
+    education: [
+      { check: () => !extractedInfo.dates, text: "les dates d'inscription ou de rentrée" },
+      { check: () => !extractedInfo.contact, text: "le contact pour les inscriptions" },
+    ],
+    technology: [
+      { check: () => !lower.includes("fonctionnalit") && !lower.includes("avantage"), text: "les fonctionnalités ou avantages clés" },
+    ],
+    youtube: [],
+  };
+
+  const rules = domainSuggestions[domain || ""] || [];
+  for (const rule of rules) {
+    if (rule.check()) suggestions.push(rule.text);
+  }
+
+  // Limiter à 3 suggestions max pour ne pas surcharger
+  return suggestions.slice(0, 3);
+}
+
+// Construit le message vocal et textuel des suggestions IA
+function buildSuggestionsMessage(suggestions: string[], domain: Domain | null): string {
+  const domainLabels: Record<string, string> = {
+    restaurant: "une affiche de restaurant",
+    event: "une affiche d'événement",
+    church: "une affiche pour l'église",
+    formation: "une affiche de formation",
+    fashion: "une affiche de mode",
+    music: "une affiche de concert/musique",
+    sport: "une affiche sportive",
+    health: "une affiche santé",
+    realestate: "une affiche immobilière",
+    education: "une affiche éducative",
+    technology: "une affiche technologique",
+  };
+
+  const label = domainLabels[domain || ""] || "cette affiche";
+  let msg = `🎨 **En tant que graphiste**, pour ${label}, je vous suggère d'ajouter :\n\n`;
+  suggestions.forEach((s, i) => {
+    msg += `${i + 1}. **${s}**\n`;
+  });
+  msg += `\n💬 Vous pouvez **ajouter ces informations** ci-dessous, ou dire **"passer"** pour continuer sans.\n`;
+  msg += `🔊 _J'ai aussi lu ces suggestions à voix haute pour vous._`;
+  return msg;
+}
+
+// Construit le texte vocal (sans markdown)
+function buildSpeechText(suggestions: string[], domain: Domain | null): string {
+  const domainLabels: Record<string, string> = {
+    restaurant: "une affiche de restaurant",
+    event: "une affiche d'événement",
+    church: "une affiche pour l'église",
+    formation: "une affiche de formation",
+    fashion: "une affiche de mode",
+    music: "un concert",
+    sport: "un événement sportif",
+    health: "une affiche santé",
+    realestate: "une annonce immobilière",
+    education: "une affiche éducative",
+    technology: "une affiche tech",
+  };
+  const label = domainLabels[domain || ""] || "cette affiche";
+  let speech = `En tant que graphiste, pour ${label}, je vous suggère d'ajouter : `;
+  suggestions.forEach((s, i) => {
+    speech += `${i + 1}, ${s}. `;
+  });
+  speech += "Vous pouvez ajouter ces informations ou dire passer pour continuer.";
+  return speech;
+}
+
+
 interface TemplateTextZone {
   type: string;
   content: string;
@@ -1862,6 +1981,50 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         return;
       }
 
+      // =========== SUGGESTIONS IA: Réponse de l'utilisateur ===========
+      if (step === "ai_suggestions") {
+        const lowerContent = content.toLowerCase().trim();
+        const isSkip = ["passer", "skip", "non", "no", "continuer", "continue", "rien", "c'est bon", "ok"].some(w => lowerContent.includes(w));
+        
+        const nextStep = conversationStateRef.current.aiSuggestionsNextStep || "reference";
+        
+        if (isSkip) {
+          // L'utilisateur passe les suggestions
+          setConversationState((prev) => ({
+            ...prev,
+            step: nextStep,
+            aiSuggestions: undefined,
+            aiSuggestionsNextStep: undefined,
+          }));
+          
+          if (nextStep === "quick_reference") {
+            addMessage("assistant", "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
+          } else {
+            addMessage("assistant", "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+          }
+        } else {
+          // L'utilisateur fournit des infos supplémentaires — les fusionner
+          setConversationState((prev) => ({
+            ...prev,
+            step: nextStep,
+            extractedInfo: {
+              ...prev.extractedInfo,
+              additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
+            },
+            description: [prev.description, content].filter(Boolean).join("\n"),
+            aiSuggestions: undefined,
+            aiSuggestionsNextStep: undefined,
+          }));
+          
+          if (nextStep === "quick_reference") {
+            addMessage("assistant", "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
+          } else {
+            addMessage("assistant", "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+          }
+        }
+        return;
+      }
+
       // =========== MODE RAPIDE: Description ===========
       if (step === "quick_description") {
         setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
@@ -1887,18 +2050,35 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             extractedInfo = simpleExtractInfo(content);
           }
 
-          // En mode rapide, demander juste si une référence est disponible
-          setConversationState((prev) => ({
-            ...prev,
-            step: "quick_reference",
-            domain: detectedDomain || prev.domain,
-            extractedInfo,
-            description: content,
-            creationMode: "quick",
-          }));
+          // Vérifier si des suggestions contextuelles sont pertinentes
+          const suggestions = buildContextualSuggestions(detectedDomain, extractedInfo, content);
 
-          const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
-          addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+          if (suggestions.length > 0) {
+            // Proposer les suggestions avant de continuer
+            setConversationState((prev) => ({
+              ...prev,
+              step: "ai_suggestions",
+              domain: detectedDomain || prev.domain,
+              extractedInfo,
+              description: content,
+              creationMode: "quick",
+              aiSuggestions: suggestions,
+              aiSuggestionsNextStep: "quick_reference",
+            }));
+            addMessage("assistant", buildSuggestionsMessage(suggestions, detectedDomain));
+          } else {
+            // Pas de suggestions, continuer directement
+            setConversationState((prev) => ({
+              ...prev,
+              step: "quick_reference",
+              domain: detectedDomain || prev.domain,
+              extractedInfo,
+              description: content,
+              creationMode: "quick",
+            }));
+            const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
+            addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+          }
         } catch (err) {
           removeLoadingMessage();
           setIsProcessing(false);
@@ -1957,7 +2137,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           // If domain detected, skip domain selection
           if (isValidDomain) {
-            // YouTube: même flux simplifié que les autres domaines (référence → photo personnage → génération)
+            // Vérifier les suggestions contextuelles
+            const suggestions = buildContextualSuggestions(detectedDomain, analysis.extractedInfo || {}, content);
+
             if (detectedDomain === "youtube") {
               setConversationState((prev) => ({
                 ...prev,
@@ -1967,8 +2149,19 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
                 missingInfo: [],
               }));
               response += "🎬 J'ai compris, vous voulez créer une miniature YouTube ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'.";
+            } else if (suggestions.length > 0) {
+              // Proposer les suggestions IA avant de continuer
+              setConversationState((prev) => ({
+                ...prev,
+                step: "ai_suggestions",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: [],
+                aiSuggestions: suggestions,
+                aiSuggestionsNextStep: "reference",
+              }));
+              response += "\n\n" + buildSuggestionsMessage(suggestions, detectedDomain);
             } else {
-              // SIMPLIFICATION: Aller TOUJOURS directement à reference
               setConversationState((prev) => ({
                 ...prev,
                 step: "reference",

@@ -56,7 +56,7 @@ interface StepNavigationProps {
 
 export function StepNavigation({ currentStep, onGoBack, onGoForward, visitedSteps = [], disabled }: StepNavigationProps) {
   // Ne pas afficher la navigation pour l'étape initiale, l'analyse ou la génération
-  if (currentStep === "greeting" || currentStep === "mode_select" || currentStep === "analyzing" || currentStep === "generating" || currentStep === "modifying" || currentStep === "quick_description" || currentStep === "quick_reference" || currentStep === "post_generation_options") {
+  if (currentStep === "greeting" || currentStep === "mode_select" || currentStep === "analyzing" || currentStep === "generating" || currentStep === "modifying" || currentStep === "quick_description" || currentStep === "quick_reference" || currentStep === "post_generation_options" || currentStep === "ai_suggestions") {
     return null;
   }
 

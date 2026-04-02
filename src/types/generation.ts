@@ -380,7 +380,8 @@ export interface ConversationState {
     | "clone_gathering" // Collecte des informations en un seul message pour le clonage
     | "missing_elements" // Questions sur les éléments manquants (photos, logos, etc.)
     | "confirm_missing_zones" // Confirmation des zones de texte manquantes
-    | "confirm_context_mismatch"; // Confirmation des zones hors contexte (ex: frais d'inscription sur affiche de service)
+    | "confirm_context_mismatch" // Confirmation des zones hors contexte (ex: frais d'inscription sur affiche de service)
+    | "ai_suggestions"; // Suggestions IA vocales des éléments manquants
   domain?: Domain;
   modificationRequest?: string;
   customDomain?: string;
@@ -437,4 +438,8 @@ export interface ConversationState {
   pendingSecondaryImage?: string;
   // Mode de création (rapide ou personnalisé)
   creationMode?: CreationMode;
+  // Suggestions IA pour éléments manquants
+  aiSuggestions?: string[];
+  // Étape suivante après les suggestions IA
+  aiSuggestionsNextStep?: ConversationState["step"];
 }
