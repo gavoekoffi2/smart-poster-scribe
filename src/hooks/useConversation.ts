@@ -439,7 +439,126 @@ function simpleExtractInfo(text: string): ExtractedInfo {
   return extractedInfo;
 }
 
-// Interface pour les zones de texte du template
+// Génère des suggestions contextuelles basées sur le domaine et les infos extraites
+function buildContextualSuggestions(domain: Domain | null, extractedInfo: ExtractedInfo, description: string): string[] {
+  const suggestions: string[] = [];
+  const lower = description.toLowerCase();
+
+  // Suggestions par domaine
+  const domainSuggestions: Record<string, Array<{ check: () => boolean; text: string }>> = {
+    restaurant: [
+      { check: () => !extractedInfo.prices, text: "les prix des plats ou le budget" },
+      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu"), text: "le(s) plat(s) ou produit(s) à mettre en avant" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des plats (ou je peux en générer)" },
+    ],
+    event: [
+      { check: () => !extractedInfo.dates, text: "la date et l'heure de l'événement" },
+      { check: () => !extractedInfo.location, text: "le lieu de l'événement" },
+      { check: () => !extractedInfo.prices && !lower.includes("gratuit"), text: "le prix d'entrée ou si c'est gratuit" },
+    ],
+    church: [
+      { check: () => !extractedInfo.dates, text: "la date et l'heure du culte/événement" },
+      { check: () => !extractedInfo.location, text: "l'adresse de l'église" },
+      { check: () => !lower.includes("pasteur") && !lower.includes("orateur") && !lower.includes("évêque"), text: "le nom du pasteur ou de l'orateur invité" },
+    ],
+    formation: [
+      { check: () => !extractedInfo.dates, text: "la date de la formation" },
+      { check: () => !extractedInfo.prices && !lower.includes("gratuit"), text: "le coût de la formation ou si c'est gratuit" },
+      { check: () => !extractedInfo.location && !lower.includes("en ligne") && !lower.includes("zoom"), text: "le lieu ou si c'est en ligne" },
+    ],
+    fashion: [
+      { check: () => !lower.includes("produit") && !lower.includes("collection") && !lower.includes("article"), text: "le(s) produit(s) ou la collection à présenter" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des articles (ou je peux en générer)" },
+      { check: () => !extractedInfo.prices, text: "les prix ou la gamme de prix" },
+    ],
+    music: [
+      { check: () => !extractedInfo.dates, text: "la date du concert/événement" },
+      { check: () => !extractedInfo.location, text: "le lieu du concert" },
+      { check: () => !lower.includes("artiste") && !lower.includes("dj"), text: "le(s) nom(s) des artistes" },
+    ],
+    sport: [
+      { check: () => !extractedInfo.dates, text: "la date de la compétition" },
+      { check: () => !extractedInfo.location, text: "le lieu de l'événement sportif" },
+    ],
+    health: [
+      { check: () => !extractedInfo.contact, text: "le numéro de contact ou l'adresse du centre" },
+      { check: () => !lower.includes("service") && !lower.includes("consultation"), text: "le(s) service(s) proposé(s)" },
+    ],
+    realestate: [
+      { check: () => !extractedInfo.prices, text: "le prix du bien" },
+      { check: () => !extractedInfo.location, text: "la localisation du bien" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos du bien immobilier" },
+    ],
+    education: [
+      { check: () => !extractedInfo.dates, text: "les dates d'inscription ou de rentrée" },
+      { check: () => !extractedInfo.contact, text: "le contact pour les inscriptions" },
+    ],
+    technology: [
+      { check: () => !lower.includes("fonctionnalit") && !lower.includes("avantage"), text: "les fonctionnalités ou avantages clés" },
+    ],
+    youtube: [],
+  };
+
+  const rules = domainSuggestions[domain || ""] || [];
+  for (const rule of rules) {
+    if (rule.check()) suggestions.push(rule.text);
+  }
+
+  // Limiter à 3 suggestions max pour ne pas surcharger
+  return suggestions.slice(0, 3);
+}
+
+// Construit le message vocal et textuel des suggestions IA
+function buildSuggestionsMessage(suggestions: string[], domain: Domain | null): string {
+  const domainLabels: Record<string, string> = {
+    restaurant: "une affiche de restaurant",
+    event: "une affiche d'événement",
+    church: "une affiche pour l'église",
+    formation: "une affiche de formation",
+    fashion: "une affiche de mode",
+    music: "une affiche de concert/musique",
+    sport: "une affiche sportive",
+    health: "une affiche santé",
+    realestate: "une affiche immobilière",
+    education: "une affiche éducative",
+    technology: "une affiche technologique",
+  };
+
+  const label = domainLabels[domain || ""] || "cette affiche";
+  let msg = `🎨 **En tant que graphiste**, pour ${label}, je vous suggère d'ajouter :\n\n`;
+  suggestions.forEach((s, i) => {
+    msg += `${i + 1}. **${s}**\n`;
+  });
+  msg += `\n💬 Vous pouvez **ajouter ces informations** ci-dessous, ou dire **"passer"** pour continuer sans.\n`;
+  msg += `🔊 _J'ai aussi lu ces suggestions à voix haute pour vous._`;
+  return msg;
+}
+
+// Construit le texte vocal (sans markdown)
+function buildSpeechText(suggestions: string[], domain: Domain | null): string {
+  const domainLabels: Record<string, string> = {
+    restaurant: "une affiche de restaurant",
+    event: "une affiche d'événement",
+    church: "une affiche pour l'église",
+    formation: "une affiche de formation",
+    fashion: "une affiche de mode",
+    music: "un concert",
+    sport: "un événement sportif",
+    health: "une affiche santé",
+    realestate: "une annonce immobilière",
+    education: "une affiche éducative",
+    technology: "une affiche tech",
+  };
+  const label = domainLabels[domain || ""] || "cette affiche";
+  let speech = `En tant que graphiste, pour ${label}, je vous suggère d'ajouter : `;
+  suggestions.forEach((s, i) => {
+    speech += `${i + 1}, ${s}. `;
+  });
+  speech += "Vous pouvez ajouter ces informations ou dire passer pour continuer.";
+  return speech;
+}
+
+
 interface TemplateTextZone {
   type: string;
   content: string;
