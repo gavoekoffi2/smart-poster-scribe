@@ -2093,7 +2093,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           // If domain detected, skip domain selection
           if (isValidDomain) {
-            // YouTube: même flux simplifié que les autres domaines (référence → photo personnage → génération)
+            // Vérifier les suggestions contextuelles
+            const suggestions = buildContextualSuggestions(detectedDomain, analysis.extractedInfo || {}, content);
+
             if (detectedDomain === "youtube") {
               setConversationState((prev) => ({
                 ...prev,
@@ -2103,8 +2105,19 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
                 missingInfo: [],
               }));
               response += "🎬 J'ai compris, vous voulez créer une miniature YouTube ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'.";
+            } else if (suggestions.length > 0) {
+              // Proposer les suggestions IA avant de continuer
+              setConversationState((prev) => ({
+                ...prev,
+                step: "ai_suggestions",
+                domain: detectedDomain,
+                extractedInfo: analysis.extractedInfo,
+                missingInfo: [],
+                aiSuggestions: suggestions,
+                aiSuggestionsNextStep: "reference",
+              }));
+              response += "\n\n" + buildSuggestionsMessage(suggestions, detectedDomain);
             } else {
-              // SIMPLIFICATION: Aller TOUJOURS directement à reference
               setConversationState((prev) => ({
                 ...prev,
                 step: "reference",
