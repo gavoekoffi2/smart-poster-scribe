@@ -6,6 +6,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTutorial } from "@/hooks/useTutorial";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
