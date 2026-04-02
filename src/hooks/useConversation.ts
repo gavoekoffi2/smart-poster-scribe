@@ -2006,18 +2006,35 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             extractedInfo = simpleExtractInfo(content);
           }
 
-          // En mode rapide, demander juste si une référence est disponible
-          setConversationState((prev) => ({
-            ...prev,
-            step: "quick_reference",
-            domain: detectedDomain || prev.domain,
-            extractedInfo,
-            description: content,
-            creationMode: "quick",
-          }));
+          // Vérifier si des suggestions contextuelles sont pertinentes
+          const suggestions = buildContextualSuggestions(detectedDomain, extractedInfo, content);
 
-          const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
-          addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+          if (suggestions.length > 0) {
+            // Proposer les suggestions avant de continuer
+            setConversationState((prev) => ({
+              ...prev,
+              step: "ai_suggestions",
+              domain: detectedDomain || prev.domain,
+              extractedInfo,
+              description: content,
+              creationMode: "quick",
+              aiSuggestions: suggestions,
+              aiSuggestionsNextStep: "quick_reference",
+            }));
+            addMessage("assistant", buildSuggestionsMessage(suggestions, detectedDomain));
+          } else {
+            // Pas de suggestions, continuer directement
+            setConversationState((prev) => ({
+              ...prev,
+              step: "quick_reference",
+              domain: detectedDomain || prev.domain,
+              extractedInfo,
+              description: content,
+              creationMode: "quick",
+            }));
+            const domainLabel = detectedDomain ? ` (${detectedDomain})` : "";
+            addMessage("assistant", `Compris${domainLabel} ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer' pour générer directement.`);
+          }
         } catch (err) {
           removeLoadingMessage();
           setIsProcessing(false);
