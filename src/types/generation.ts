@@ -438,4 +438,8 @@ export interface ConversationState {
   pendingSecondaryImage?: string;
   // Mode de création (rapide ou personnalisé)
   creationMode?: CreationMode;
+  // Suggestions IA pour éléments manquants
+  aiSuggestions?: string[];
+  // Étape suivante après les suggestions IA
+  aiSuggestionsNextStep?: ConversationState["step"];
 }
