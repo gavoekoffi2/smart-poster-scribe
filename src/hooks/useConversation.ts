@@ -1981,6 +1981,50 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         return;
       }
 
+      // =========== SUGGESTIONS IA: Réponse de l'utilisateur ===========
+      if (step === "ai_suggestions") {
+        const lowerContent = content.toLowerCase().trim();
+        const isSkip = ["passer", "skip", "non", "no", "continuer", "continue", "rien", "c'est bon", "ok"].some(w => lowerContent.includes(w));
+        
+        const nextStep = conversationStateRef.current.aiSuggestionsNextStep || "reference";
+        
+        if (isSkip) {
+          // L'utilisateur passe les suggestions
+          setConversationState((prev) => ({
+            ...prev,
+            step: nextStep,
+            aiSuggestions: undefined,
+            aiSuggestionsNextStep: undefined,
+          }));
+          
+          if (nextStep === "quick_reference") {
+            addMessage("assistant", "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
+          } else {
+            addMessage("assistant", "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+          }
+        } else {
+          // L'utilisateur fournit des infos supplémentaires — les fusionner
+          setConversationState((prev) => ({
+            ...prev,
+            step: nextStep,
+            extractedInfo: {
+              ...prev.extractedInfo,
+              additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
+            },
+            description: [prev.description, content].filter(Boolean).join("\n"),
+            aiSuggestions: undefined,
+            aiSuggestionsNextStep: undefined,
+          }));
+          
+          if (nextStep === "quick_reference") {
+            addMessage("assistant", "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
+          } else {
+            addMessage("assistant", "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
+          }
+        }
+        return;
+      }
+
       // =========== MODE RAPIDE: Description ===========
       if (step === "quick_description") {
         setConversationState((prev) => ({ ...prev, step: "analyzing", description: content }));
