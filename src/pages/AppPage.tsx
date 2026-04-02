@@ -196,7 +196,24 @@ export default function AppPage() {
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
 
-  // Auto-scroll to bottom on new messages
+  // Text-to-speech for AI suggestions
+  const { speak, stop: stopSpeech } = useTextToSpeech();
+
+  // Trigger TTS when entering ai_suggestions step
+  useEffect(() => {
+    if (conversationState.step === "ai_suggestions" && conversationState.aiSuggestions?.length) {
+      // Small delay so the message renders first
+      const timer = setTimeout(() => {
+        const speechText = conversationState.aiSuggestions!.reduce((acc, s, i) => {
+          return acc + `${i + 1}, ${s}. `;
+        }, "En tant que graphiste, je vous suggère d'ajouter : ");
+        speak(speechText + "Vous pouvez ajouter ces informations ou dire passer pour continuer.");
+      }, 500);
+      return () => { clearTimeout(timer); stopSpeech(); };
+    }
+  }, [conversationState.step, conversationState.aiSuggestions, speak, stopSpeech]);
+
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
