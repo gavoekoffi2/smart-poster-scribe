@@ -836,6 +836,15 @@ export default function AppPage() {
                 </div>
               )}
 
+              {step === "ai_suggestions" && (
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="ghost" size="sm" onClick={() => { stopSpeech(); handleUserMessage("passer"); }} disabled={isProcessing} className="hover:bg-muted/50">
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Passer les suggestions
+                  </Button>
+                </div>
+              )}
+
               {showQuickReference && (
                 <div className="flex flex-wrap gap-3">
                   <ImageUploadButton
