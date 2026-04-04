@@ -478,24 +478,57 @@ function buildProfessionalPrompt({
   // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    lines.push("MISSION: Tu es un EDITEUR D'IMAGE. Tu recois une affiche existante. Tu dois la MODIFIER DIRECTEMENT. Tu ne crees PAS une nouvelle affiche. Tu EDITES l'image fournie.");
-    lines.push("DESIGN INTOUCHABLE: Fond (couleurs, degrades, textures, motifs) = IDENTIQUE. Formes decoratives (courbes, vagues, cercles, bandeaux) = IDENTIQUES. Mise en page et composition = IDENTIQUE. Effets visuels (ombres, lumieres, reflets, particules) = IDENTIQUES. Palette couleurs = IDENTIQUE.");
-    lines.push("TEXTE - REMPLACEMENT STRICT: Remplace chaque texte par l'info correspondante du client. MEME position, MEME taille relative, MEME alignement, MEME style (gras, italique, majuscules).");
-    lines.push(`TYPO PRO OBLIGATOIRE: ${getRandomTypographyStyle()}. Chaque texte DOIT avoir des effets typographiques professionnels varies. INTERDIT: texte plat, basique, sans effet.`);
-    lines.push("SUPPRESSION STRICTE ET TOTALE: Tout texte, mot, phrase, icone, symbole ou element graphique present sur l'affiche de reference qui N'A PAS d'equivalent dans les INFOS CLIENT ci-dessous DOIT ETRE SUPPRIME COMPLETEMENT. Cela inclut: textes en anglais ou autre langue, noms, slogans, dates, adresses, numeros de telephone, hashtags, mentions de reseaux sociaux, prix, icones decoratives, symboles, QR codes, watermarks. AUCUNE trace ne doit rester. Redistribuer l'espace naturellement. ZERO zone vide, ZERO placeholder, ZERO info inventee, ZERO texte residuel du template original.");
-    lines.push("ICONES ET SYMBOLES: Remplacer TOUTES les icones/symboles du template par des icones correspondant au domaine et au contenu du client. Exemple: si le client fait un evenement de formation, remplacer les icones de musique par des icones d'education. Si aucune icone n'est pertinente, SUPPRIMER simplement.");
-    // CRITICAL: Handle missing content image - generate contextual subject
+    
+    // MISSION ULTRA-STRICTE
+    lines.push("⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE PROFESSIONNEL. Tu NE CREES PAS une nouvelle affiche. Tu EDITES DIRECTEMENT l'image de reference fournie. Le resultat final DOIT ressembler a 95% a l'original avec seulement le contenu remplace.");
+    
+    // DESIGN - REPRODUCTION PIXEL PAR PIXEL
+    lines.push("🔒 DESIGN 100% INTOUCHABLE - COPIER PIXEL PAR PIXEL:");
+    lines.push("- FOND: Couleurs, degrades, textures, motifs, images de fond = STRICTEMENT IDENTIQUES. Ne change RIEN.");
+    lines.push("- FORMES: Courbes, vagues, cercles, bandeaux, rectangles, triangles, formes decoratives = POSITION, TAILLE, COULEUR IDENTIQUES.");
+    lines.push("- MISE EN PAGE: Disposition des zones, marges, espacements, grille = IDENTIQUE. Ne deplace RIEN.");
+    lines.push("- EFFETS: Ombres, lumieres, reflets, particules, flous, degradés, overlays = IDENTIQUES.");
+    lines.push("- PALETTE COULEURS: Les couleurs exactes du design original = IDENTIQUES. Ne change AUCUNE couleur.");
+    lines.push("- STRUCTURE: Bandeaux, rubans, encadres, separateurs = IDENTIQUES en position, forme et couleur.");
+    
+    // TEXTE - REMPLACEMENT CHIRURGICAL
+    lines.push("✏️ TEXTE - REMPLACEMENT CHIRURGICAL:");
+    lines.push("- Chaque texte original est remplace par l'info CLIENT correspondante.");
+    lines.push("- MEME position EXACTE, MEME taille relative, MEME alignement (gauche/centre/droite), MEME style (gras, italique, majuscules).");
+    lines.push("- Si un texte original est un titre → le remplacer par le titre client a la MEME taille.");
+    lines.push("- Si un texte original est une date → le remplacer par la date client au MEME endroit.");
+    lines.push("- ADAPTER la taille du texte si le contenu client est plus long, mais JAMAIS depasser la zone originale.");
+    lines.push(`- TYPO PRO: ${getRandomTypographyStyle()}. Effets typographiques professionnels (ombres epaisses, contours, 3D, degrades, glow). INTERDIT: texte plat, basique, sans effet.`);
+    
+    // SUPPRESSION - REGLE D'OR
+    lines.push("🗑️ SUPPRESSION TOTALE - REGLE D'OR ABSOLUE:");
+    lines.push("- TOUT element present sur la reference qui N'A PAS d'equivalent dans les INFOS CLIENT ci-dessous DOIT DISPARAITRE COMPLETEMENT.");
+    lines.push("- Cela inclut: textes (toute langue), noms, slogans, dates, adresses, telephones, hashtags, reseaux sociaux, prix, QR codes, watermarks, logos originaux.");
+    lines.push("- Apres suppression: REDISTRIBUER l'espace naturellement. Etendre les elements restants pour combler. ZERO zone vide. ZERO trou visible.");
+    lines.push("- ZERO info inventee. ZERO placeholder. ZERO texte residuel de l'original. Si tu ne sais pas quoi mettre → NE METS RIEN, laisse le fond remplir l'espace.");
+    
+    // ICONES ET SYMBOLES
+    lines.push("🎨 ICONES ET SYMBOLES: Remplacer TOUTES les icones/symboles du template par des icones PERTINENTES au domaine du client. Exemple: icones de musique → icones d'education si c'est une formation. Si aucune icone pertinente → SUPPRIMER.");
+    
+    // PHOTOS
     if (hasContentImage) {
-      lines.push("PHOTO CLIENT: Integre-la exactement a la position de la photo dans la reference, MEME cadrage, MEME taille.");
+      lines.push("📷 PHOTO CLIENT FOURNIE: L'integrer EXACTEMENT a la position de la photo dans la reference. MEME cadrage, MEME taille, MEME decoupe/masque. Adapter l'eclairage pour coherence.");
     } else {
-      lines.push("PAS DE PHOTO CLIENT FOURNIE: GENERE un personnage/sujet africain photoréaliste correspondant au contexte (pasteur, formateur, chef cuisinier, artiste, etc.) a la MEME position et taille que la photo dans la reference. Expression naturelle et professionnelle. Eclairage coherent avec le design.");
+      lines.push("📷 PAS DE PHOTO CLIENT: GENERER un personnage/sujet africain photorealiste correspondant au contexte (pasteur, formateur, chef cuisinier, artiste, sportif, etc.). MEME position et taille que la photo dans la reference. Expression naturelle, professionnelle. Eclairage coherent avec le design.");
     }
-    if (hasLogoImage) lines.push("LOGO CLIENT: Reproduire EXACTEMENT le logo fourni a la position du logo original.");
-    else lines.push("PAS DE LOGO: Supprimer proprement le logo original et combler l'espace.");
-    lines.push("INTERDIT ABSOLU: Ne change PAS le fond. Ne change PAS les formes. Ne REINVENTE PAS le design. COPIE le design EXACT pixel par pixel.");
-    lines.push("Personnes africaines par defaut. Zero info inventee. Zero placeholder.");
+    if (hasLogoImage) lines.push("🏷️ LOGO CLIENT: Reproduire le logo fourni a la position du logo original, MEME taille.");
+    else lines.push("🏷️ PAS DE LOGO: Supprimer proprement le logo original. Combler l'espace avec le fond.");
+    
+    // INTERDICTIONS FINALES
+    lines.push("🚫 INTERDICTIONS ABSOLUES:");
+    lines.push("- Ne change PAS le fond. Ne change PAS les formes. Ne REINVENTE PAS le design.");
+    lines.push("- Ne cree PAS un nouveau design inspire de la reference. EDITE la reference directement.");
+    lines.push("- N'ajoute PAS d'elements qui n'existent pas sur la reference (sauf photo generee si pas fournie).");
+    lines.push("- N'invente AUCUNE information. Si ce n'est pas dans les INFOS CLIENT → ca ne doit PAS apparaitre.");
+    
+    lines.push("Personnes africaines par defaut. Qualite HD professionnelle au PREMIER COUP.");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
-    lines.push("=== INFOS CLIENT A APPLIQUER ===");
+    lines.push("=== INFOS CLIENT A APPLIQUER (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE) ===");
     lines.push(userPrompt);
     return lines.join("\n");
   }
