@@ -1415,8 +1415,8 @@ serve(async (req) => {
     
     console.log("Final prompt length:", finalPrompt.length);
 
-    let taskId: string;
-    let resultUrl: string;
+    let taskId = "";
+    let resultUrl = "";
     
     let generationError: unknown = null;
 
