@@ -457,6 +457,8 @@ function condenseUserPrompt(text: string, maxLen: number): string {
   return result;
 }
 
+type ReferenceMode = "none" | "user" | "auto";
+
 function buildProfessionalPrompt({
   userPrompt,
   hasReferenceImage,
@@ -464,6 +466,7 @@ function buildProfessionalPrompt({
   hasLogoImage,
   aspectRatio,
   isCloneMode = false,
+  referenceMode = "none",
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -471,6 +474,7 @@ function buildProfessionalPrompt({
   hasLogoImage: boolean;
   aspectRatio: string;
   isCloneMode?: boolean;
+  referenceMode?: ReferenceMode;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
@@ -478,55 +482,69 @@ function buildProfessionalPrompt({
   // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
-    
-    // MISSION ULTRA-STRICTE
-    lines.push("⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE PROFESSIONNEL. Tu NE CREES PAS une nouvelle affiche. Tu EDITES DIRECTEMENT l'image de reference fournie. Le resultat final DOIT ressembler a 95% a l'original avec seulement le contenu remplace.");
-    
-    // DESIGN - REPRODUCTION PIXEL PAR PIXEL
-    lines.push("🔒 DESIGN 100% INTOUCHABLE - COPIER PIXEL PAR PIXEL:");
-    lines.push("- FOND: Couleurs, degrades, textures, motifs, images de fond = STRICTEMENT IDENTIQUES. Ne change RIEN.");
-    lines.push("- FORMES: Courbes, vagues, cercles, bandeaux, rectangles, triangles, formes decoratives = POSITION, TAILLE, COULEUR IDENTIQUES.");
-    lines.push("- MISE EN PAGE: Disposition des zones, marges, espacements, grille = IDENTIQUE. Ne deplace RIEN.");
-    lines.push("- EFFETS: Ombres, lumieres, reflets, particules, flous, degradés, overlays = IDENTIQUES.");
-    lines.push("- PALETTE COULEURS: Les couleurs exactes du design original = IDENTIQUES. Ne change AUCUNE couleur.");
-    lines.push("- STRUCTURE: Bandeaux, rubans, encadres, separateurs = IDENTIQUES en position, forme et couleur.");
-    
-    // TEXTE - REMPLACEMENT CHIRURGICAL
-    lines.push("✏️ TEXTE - REMPLACEMENT CHIRURGICAL:");
-    lines.push("- Chaque texte original est remplace par l'info CLIENT correspondante.");
-    lines.push("- MEME position EXACTE, MEME taille relative, MEME alignement (gauche/centre/droite), MEME style (gras, italique, majuscules).");
-    lines.push("- Si un texte original est un titre → le remplacer par le titre client a la MEME taille.");
-    lines.push("- Si un texte original est une date → le remplacer par la date client au MEME endroit.");
-    lines.push("- ADAPTER la taille du texte si le contenu client est plus long, mais JAMAIS depasser la zone originale.");
-    lines.push(`- TYPO PRO: ${getRandomTypographyStyle()}. Effets typographiques professionnels (ombres epaisses, contours, 3D, degrades, glow). INTERDIT: texte plat, basique, sans effet.`);
-    
-    // SUPPRESSION - REGLE D'OR
-    lines.push("🗑️ SUPPRESSION TOTALE - REGLE D'OR ABSOLUE:");
-    lines.push("- TOUT element present sur la reference qui N'A PAS d'equivalent dans les INFOS CLIENT ci-dessous DOIT DISPARAITRE COMPLETEMENT.");
-    lines.push("- Cela inclut: textes (toute langue), noms, slogans, dates, adresses, telephones, hashtags, reseaux sociaux, prix, QR codes, watermarks, logos originaux.");
-    lines.push("- Apres suppression: REDISTRIBUER l'espace naturellement. Etendre les elements restants pour combler. ZERO zone vide. ZERO trou visible.");
-    lines.push("- ZERO info inventee. ZERO placeholder. ZERO texte residuel de l'original. Si tu ne sais pas quoi mettre → NE METS RIEN, laisse le fond remplir l'espace.");
-    
-    // ICONES ET SYMBOLES
-    lines.push("🎨 ICONES ET SYMBOLES: Remplacer TOUTES les icones/symboles du template par des icones PERTINENTES au domaine du client. Exemple: icones de musique → icones d'education si c'est une formation. Si aucune icone pertinente → SUPPRIMER.");
-    
-    // PHOTOS
-    if (hasContentImage) {
-      lines.push("📷 PHOTO CLIENT FOURNIE: L'integrer EXACTEMENT a la position de la photo dans la reference. MEME cadrage, MEME taille, MEME decoupe/masque. Adapter l'eclairage pour coherence.");
-    } else {
-      lines.push("📷 PAS DE PHOTO CLIENT: GENERER un personnage/sujet africain photorealiste correspondant au contexte (pasteur, formateur, chef cuisinier, artiste, sportif, etc.). MEME position et taille que la photo dans la reference. Expression naturelle, professionnelle. Eclairage coherent avec le design.");
+    const isStrictUserReference = referenceMode === "user";
+
+    lines.push(
+      isStrictUserReference
+        ? "⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE, pas un createur. L'utilisateur a fourni SA PROPRE affiche de reference. Tu dois conserver le design a l'identique et ne changer QUE le contenu. Toute reinterpretation creative est interdite."
+        : "⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE PROFESSIONNEL. Tu NE CREES PAS une nouvelle affiche. Tu EDITES DIRECTEMENT l'image de reference fournie et le resultat final doit rester visuellement le meme design."
+    );
+
+    lines.push("🧭 SOURCE DE VERITE ABSOLUE:");
+    lines.push("- La PREMIERE image jointe est l'affiche de reference MAITRESSE. Elle dicte 100% du design final.");
+    lines.push("- Toutes les autres images jointes sont seulement des elements de contenu a inserer dans cette affiche, JAMAIS des inspirations de style.");
+    lines.push("- Priorite maximale: PRESERVER l'affiche d'origine avant toute creativite.");
+    if (isStrictUserReference) {
+      lines.push("- Cas critique: respect LITTERAL obligatoire. Si tu hesites entre fidelite et creativite, choisis TOUJOURS la fidelite.");
     }
-    if (hasLogoImage) lines.push("🏷️ LOGO CLIENT: Reproduire le logo fourni a la position du logo original, MEME taille.");
-    else lines.push("🏷️ PAS DE LOGO: Supprimer proprement le logo original. Combler l'espace avec le fond.");
-    
-    // INTERDICTIONS FINALES
+
+    lines.push("🔒 DESIGN 100% INTOUCHABLE - AUCUN REDESIGN:");
+    lines.push("- FOND: couleurs, degrades, textures, motifs, images de fond = STRICTEMENT IDENTIQUES.");
+    lines.push("- FORMES: courbes, vagues, cercles, bandeaux, rectangles, triangles, separations = MEME position, MEME taille, MEME couleur.");
+    lines.push("- MISE EN PAGE: disposition, marges, espacements, grille, proportions = IDENTIQUES. Ne deplace RIEN.");
+    lines.push("- EFFETS: ombres, lumieres, reflets, flous, overlays, brillances = IDENTIQUES.");
+    lines.push("- PALETTE: conserver exactement les couleurs et contrastes de l'affiche source.");
+
+    lines.push("✏️ REMPLACEMENT DU CONTENU UNIQUEMENT:");
+    lines.push("- Remplacer chaque texte original uniquement par l'information CLIENT correspondante.");
+    lines.push("- Conserver EXACTEMENT les polices, effets, tailles, couleurs, rotations, alignements, interlignages et placements deja presents sur la reference.");
+    lines.push("- Si le texte original est simple, le nouveau texte doit rester simple. N'ajoute AUCUN nouvel effet typographique.");
+    lines.push("- Autorise seulement de micro-ajustements internes (taille/interlettrage) pour faire tenir le nouveau contenu dans LA MEME zone, sans changer la composition.");
+    lines.push("- Ne cree aucune nouvelle zone de texte et ne fusionne pas plusieurs blocs si la reference ne le fait pas.");
+
+    lines.push("🗑️ SUPPRESSION TOTALE SANS TOUCHER AU DESIGN:");
+    lines.push("- TOUT element ancien sans equivalent fourni par le client doit disparaitre completement: textes, prix, slogans, dates, adresses, telephones, hashtags, reseaux sociaux, QR codes, watermarks, logos, photos, objets contextuels.");
+    lines.push("- Apres suppression, RECONSTRUIRE uniquement le fond local d'origine a l'identique. Ne deplace, n'etire, ne grossis AUCUN autre element pour combler.");
+    lines.push("- ZERO texte residuel. ZERO placeholder. ZERO information inventee.");
+
+    lines.push("🎨 ICONES ET SYMBOLES:");
+    lines.push("- Conserver les icones decoratives si elles restent coherentes avec le nouveau contenu.");
+    lines.push("- Si une icone ou un symbole est hors contexte, la remplacer uniquement par un equivalent de MEME style graphique, MEME taille et MEME emplacement.");
+    lines.push("- Si aucune icone pertinente n'est necessaire, la supprimer proprement et restaurer le fond local.");
+
+    if (hasContentImage) {
+      lines.push("📷 VISUEL CLIENT FOURNI: l'inserer uniquement dans la zone image deja prevue par la reference, avec le MEME cadrage, la MEME taille et le MEME masque/decoupage.");
+    } else {
+      lines.push("📷 PAS DE VISUEL CLIENT: seulement si la reference contient deja une zone photo/produit essentielle, inserer un visuel photorealiste coherent dans CETTE MEME zone. Si la reference n'a pas de zone photo, n'en ajoute aucune.");
+    }
+
+    if (hasLogoImage) {
+      lines.push("🏷️ LOGO CLIENT: remplacer uniquement le logo existant ou l'emplacement logo prevu, sans toucher au reste de la composition.");
+    } else {
+      lines.push("🏷️ PAS DE LOGO CLIENT: supprimer uniquement le logo existant et reconstruire le fond sous-jacent localement.");
+    }
+
+    lines.push("✅ CONTROLE QUALITE OBLIGATOIRE AVANT RENDU:");
+    lines.push("- Meme affiche, meme fond, meme structure, meme palette, meme composition.");
+    lines.push("- Seules les informations CLIENT apparaissent sur l'affiche finale.");
+    lines.push("- Si le rendu ressemble a une nouvelle creation au lieu d'une edition fidele de la reference, le resultat est FAUX.");
+
     lines.push("🚫 INTERDICTIONS ABSOLUES:");
-    lines.push("- Ne change PAS le fond. Ne change PAS les formes. Ne REINVENTE PAS le design.");
-    lines.push("- Ne cree PAS un nouveau design inspire de la reference. EDITE la reference directement.");
-    lines.push("- N'ajoute PAS d'elements qui n'existent pas sur la reference (sauf photo generee si pas fournie).");
-    lines.push("- N'invente AUCUNE information. Si ce n'est pas dans les INFOS CLIENT → ca ne doit PAS apparaitre.");
-    
-    lines.push("Personnes africaines par defaut. Qualite HD professionnelle au PREMIER COUP.");
+    lines.push("- Ne cree JAMAIS un nouveau design inspire de la reference.");
+    lines.push("- Ne modifie JAMAIS la palette, la mise en page, les formes, les effets, la hierarchie ou les proportions.");
+    lines.push("- N'utilise JAMAIS les autres images jointes comme references de style.");
+    lines.push("- N'ajoute JAMAIS de decoration, de bloc, de photo ou de texte supplementaire absent de la reference.");
+
     lines.push(`Format:${aspectRatio}|HD|Francais`);
     lines.push("=== INFOS CLIENT A APPLIQUER (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE) ===");
     lines.push(userPrompt);
@@ -857,6 +875,7 @@ serve(async (req) => {
       isModification, // Flag pour les modifications (pas de débit de crédits)
     } = body;
 
+    const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
 
     // Validation
@@ -1262,7 +1281,10 @@ serve(async (req) => {
           tempFilePaths.push(refUrl);
         } catch (e) {
           console.error("Failed to download template with fallback:", e);
-          // Continuer sans image de référence si échec
+          if (userProvidedReferenceImage) {
+            throw new Error("Impossible de charger l'image de reference fournie. Generation annulee pour eviter un design non fidele.");
+          }
+          // On tolère l'échec uniquement pour les templates auto-sélectionnés
         }
       } else {
         // Image non-template: traitement normal
@@ -1319,8 +1341,13 @@ serve(async (req) => {
     // Détecter si c'est un mode clone (passé dans le body de la requête OU auto-sélectionné)
     // NOUVEAU: Les templates auto-sélectionnés sont AUSSI traités comme du clonage
     const isCloneMode = body.isCloneMode === true || isAutoSelectedTemplate;
+    const referenceMode: ReferenceMode = userProvidedReferenceImage
+      ? "user"
+      : isAutoSelectedTemplate
+        ? "auto"
+        : "none";
     
-    console.log(`🎯 Mode final: isCloneMode=${isCloneMode} (body=${body.isCloneMode}, autoSelected=${isAutoSelectedTemplate})`);
+    console.log(`🎯 Mode final: isCloneMode=${isCloneMode} (body=${body.isCloneMode}, autoSelected=${isAutoSelectedTemplate}, referenceMode=${referenceMode})`);
     
     // Construire le texte pour les préférences de mise en scène YouTube
     let scenePreferenceText = "";
@@ -1360,6 +1387,7 @@ serve(async (req) => {
       hasLogoImage: logoImages && logoImages.length > 0,
       aspectRatio,
       isCloneMode,
+      referenceMode,
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
@@ -1387,8 +1415,8 @@ serve(async (req) => {
     
     console.log("Final prompt length:", finalPrompt.length);
 
-    let taskId: string;
-    let resultUrl: string;
+    let taskId = "";
+    let resultUrl = "";
     
     let generationError: unknown = null;
 
