@@ -1988,22 +1988,42 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         
         const nextStep = conversationStateRef.current.aiSuggestionsNextStep || "reference";
         
+        // Déterminer le message suivant selon le nextStep
+        const getNextMessage = (isSkipAction: boolean, step: string) => {
+          if (step === "restaurant_menu_check") {
+            return isSkipAction 
+              ? "Pas de souci ! 🍽️ Parlons de votre affiche restaurant. Souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?"
+              : "Merci pour ces précisions ! 🍽️ Maintenant, souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?";
+          }
+          if (step === "speakers_check") {
+            return isSkipAction
+              ? "Compris ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+              : "Merci ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+          }
+          if (step === "product_character_check") {
+            return isSkipAction
+              ? "OK ! Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?"
+              : "Merci ! Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?";
+          }
+          if (step === "quick_reference") {
+            return isSkipAction
+              ? "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'."
+              : "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.";
+          }
+          return isSkipAction
+            ? "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            : "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+        };
+
         if (isSkip) {
-          // L'utilisateur passe les suggestions
           setConversationState((prev) => ({
             ...prev,
             step: nextStep,
             aiSuggestions: undefined,
             aiSuggestionsNextStep: undefined,
           }));
-          
-          if (nextStep === "quick_reference") {
-            addMessage("assistant", "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
-          } else {
-            addMessage("assistant", "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
-          }
+          addMessage("assistant", getNextMessage(true, nextStep));
         } else {
-          // L'utilisateur fournit des infos supplémentaires — les fusionner
           setConversationState((prev) => ({
             ...prev,
             step: nextStep,
@@ -2015,12 +2035,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             aiSuggestions: undefined,
             aiSuggestionsNextStep: undefined,
           }));
-          
-          if (nextStep === "quick_reference") {
-            addMessage("assistant", "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
-          } else {
-            addMessage("assistant", "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
-          }
+          addMessage("assistant", getNextMessage(false, nextStep));
         }
         return;
       }
