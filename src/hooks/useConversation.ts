@@ -2187,14 +2187,44 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               }));
               response += "\n\n" + buildSuggestionsMessage(suggestions, detectedDomain);
             } else {
-              setConversationState((prev) => ({
-                ...prev,
-                step: "reference",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: [],
-              }));
-              response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+              // Pas de suggestions — router selon le domaine (mode personnalisé)
+              if (detectedDomain === RESTAURANT_DOMAIN) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "restaurant_menu_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "🍽️ Souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?";
+              } else if (SPEAKER_DOMAINS.includes(detectedDomain!)) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "speakers_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+              } else if (PRODUCT_DOMAINS.includes(detectedDomain!)) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "product_character_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?";
+              } else {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "reference",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+              }
             }
           } else {
             // Domain not detected, ask user to select
