@@ -2165,6 +2165,16 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               }));
               response += "🎬 J'ai compris, vous voulez créer une miniature YouTube ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'.";
             } else if (suggestions.length > 0) {
+              // Déterminer la prochaine étape selon le domaine (mode personnalisé)
+              let nextStepAfterSuggestions: ConversationState["step"] = "reference";
+              if (detectedDomain === RESTAURANT_DOMAIN) {
+                nextStepAfterSuggestions = "restaurant_menu_check";
+              } else if (SPEAKER_DOMAINS.includes(detectedDomain!)) {
+                nextStepAfterSuggestions = "speakers_check";
+              } else if (PRODUCT_DOMAINS.includes(detectedDomain!)) {
+                nextStepAfterSuggestions = "product_character_check";
+              }
+              
               // Proposer les suggestions IA avant de continuer
               setConversationState((prev) => ({
                 ...prev,
@@ -2173,7 +2183,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
                 extractedInfo: analysis.extractedInfo,
                 missingInfo: [],
                 aiSuggestions: suggestions,
-                aiSuggestionsNextStep: "reference",
+                aiSuggestionsNextStep: nextStepAfterSuggestions,
               }));
               response += "\n\n" + buildSuggestionsMessage(suggestions, detectedDomain);
             } else {
