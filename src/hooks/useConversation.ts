@@ -447,9 +447,9 @@ function buildContextualSuggestions(domain: Domain | null, extractedInfo: Extrac
   // Suggestions par domaine
   const domainSuggestions: Record<string, Array<{ check: () => boolean; text: string }>> = {
     restaurant: [
-      { check: () => !extractedInfo.prices, text: "les prix des plats ou le budget" },
-      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu"), text: "le(s) plat(s) ou produit(s) à mettre en avant" },
-      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des plats (ou je peux en générer)" },
+      { check: () => !extractedInfo.prices && !lower.includes("prix") && !lower.includes("fcfa") && !lower.includes("cfa"), text: "les prix des plats (ex: Poulet braisé 5000 FCFA)" },
+      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu") && !lower.includes("repas") && !lower.includes("cuisine"), text: "le(s) plat(s) ou spécialité(s) à mettre en avant sur l'affiche" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos de vos plats (sinon je peux en générer pour vous)" },
     ],
     event: [
       { check: () => !extractedInfo.dates, text: "la date et l'heure de l'événement" },
