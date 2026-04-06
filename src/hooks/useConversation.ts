@@ -447,9 +447,9 @@ function buildContextualSuggestions(domain: Domain | null, extractedInfo: Extrac
   // Suggestions par domaine
   const domainSuggestions: Record<string, Array<{ check: () => boolean; text: string }>> = {
     restaurant: [
-      { check: () => !extractedInfo.prices, text: "les prix des plats ou le budget" },
-      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu"), text: "le(s) plat(s) ou produit(s) à mettre en avant" },
-      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos des plats (ou je peux en générer)" },
+      { check: () => !extractedInfo.prices && !lower.includes("prix") && !lower.includes("fcfa") && !lower.includes("cfa"), text: "les prix des plats (ex: Poulet braisé 5000 FCFA)" },
+      { check: () => !lower.includes("produit") && !lower.includes("plat") && !lower.includes("menu") && !lower.includes("repas") && !lower.includes("cuisine"), text: "le(s) plat(s) ou spécialité(s) à mettre en avant sur l'affiche" },
+      { check: () => !lower.includes("image") && !lower.includes("photo"), text: "des photos de vos plats (sinon je peux en générer pour vous)" },
     ],
     event: [
       { check: () => !extractedInfo.dates, text: "la date et l'heure de l'événement" },
@@ -1988,22 +1988,42 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         
         const nextStep = conversationStateRef.current.aiSuggestionsNextStep || "reference";
         
+        // Déterminer le message suivant selon le nextStep
+        const getNextMessage = (isSkipAction: boolean, step: string) => {
+          if (step === "restaurant_menu_check") {
+            return isSkipAction 
+              ? "Pas de souci ! 🍽️ Parlons de votre affiche restaurant. Souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?"
+              : "Merci pour ces précisions ! 🍽️ Maintenant, souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?";
+          }
+          if (step === "speakers_check") {
+            return isSkipAction
+              ? "Compris ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
+              : "Merci ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+          }
+          if (step === "product_character_check") {
+            return isSkipAction
+              ? "OK ! Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?"
+              : "Merci ! Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?";
+          }
+          if (step === "quick_reference") {
+            return isSkipAction
+              ? "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'."
+              : "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.";
+          }
+          return isSkipAction
+            ? "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            : "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+        };
+
         if (isSkip) {
-          // L'utilisateur passe les suggestions
           setConversationState((prev) => ({
             ...prev,
             step: nextStep,
             aiSuggestions: undefined,
             aiSuggestionsNextStep: undefined,
           }));
-          
-          if (nextStep === "quick_reference") {
-            addMessage("assistant", "Pas de problème ! Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
-          } else {
-            addMessage("assistant", "Compris ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
-          }
+          addMessage("assistant", getNextMessage(true, nextStep));
         } else {
-          // L'utilisateur fournit des infos supplémentaires — les fusionner
           setConversationState((prev) => ({
             ...prev,
             step: nextStep,
@@ -2015,12 +2035,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             aiSuggestions: undefined,
             aiSuggestionsNextStep: undefined,
           }));
-          
-          if (nextStep === "quick_reference") {
-            addMessage("assistant", "Merci pour ces précisions ! 🎨 Avez-vous une **image de référence** ? Envoyez-la ou cliquez sur 'Passer'.");
-          } else {
-            addMessage("assistant", "Merci pour ces précisions ! Avez-vous une **image de référence** (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.");
-          }
+          addMessage("assistant", getNextMessage(false, nextStep));
         }
         return;
       }
@@ -2150,6 +2165,16 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               }));
               response += "🎬 J'ai compris, vous voulez créer une miniature YouTube ! Avez-vous une **miniature de référence** dont vous aimez le style ? Envoyez-la ou cliquez sur 'Passer'.";
             } else if (suggestions.length > 0) {
+              // Déterminer la prochaine étape selon le domaine (mode personnalisé)
+              let nextStepAfterSuggestions: ConversationState["step"] = "reference";
+              if (detectedDomain === RESTAURANT_DOMAIN) {
+                nextStepAfterSuggestions = "restaurant_menu_check";
+              } else if (SPEAKER_DOMAINS.includes(detectedDomain!)) {
+                nextStepAfterSuggestions = "speakers_check";
+              } else if (PRODUCT_DOMAINS.includes(detectedDomain!)) {
+                nextStepAfterSuggestions = "product_character_check";
+              }
+              
               // Proposer les suggestions IA avant de continuer
               setConversationState((prev) => ({
                 ...prev,
@@ -2158,18 +2183,48 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
                 extractedInfo: analysis.extractedInfo,
                 missingInfo: [],
                 aiSuggestions: suggestions,
-                aiSuggestionsNextStep: "reference",
+                aiSuggestionsNextStep: nextStepAfterSuggestions,
               }));
               response += "\n\n" + buildSuggestionsMessage(suggestions, detectedDomain);
             } else {
-              setConversationState((prev) => ({
-                ...prev,
-                step: "reference",
-                domain: detectedDomain,
-                extractedInfo: analysis.extractedInfo,
-                missingInfo: [],
-              }));
-              response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+              // Pas de suggestions — router selon le domaine (mode personnalisé)
+              if (detectedDomain === RESTAURANT_DOMAIN) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "restaurant_menu_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "🍽️ Souhaitez-vous inclure un **menu** (liste des plats avec prix) sur votre affiche ?";
+              } else if (SPEAKER_DOMAINS.includes(detectedDomain!)) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "speakers_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+              } else if (PRODUCT_DOMAINS.includes(detectedDomain!)) {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "product_character_check",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Souhaitez-vous qu'un **personnage** mette en valeur votre produit sur l'affiche ?";
+              } else {
+                setConversationState((prev) => ({
+                  ...prev,
+                  step: "reference",
+                  domain: detectedDomain,
+                  extractedInfo: analysis.extractedInfo,
+                  missingInfo: [],
+                }));
+                response += "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.";
+              }
             }
           } else {
             // Domain not detected, ask user to select
