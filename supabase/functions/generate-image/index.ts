@@ -479,98 +479,144 @@ function buildProfessionalPrompt({
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
 
-  // ====== MODE CLONE (Cas A & B) : Expert Design Graphique ======
+  // ====== MODE CLONE (Cas A & B) : ÉDITEUR D'IMAGE STRICT ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
     const isStrictUserReference = referenceMode === "user";
 
+    lines.push("🚨🚨🚨 DIRECTIVE SUPREME - LIRE AVANT TOUTE ACTION 🚨🚨🚨");
     lines.push(
       isStrictUserReference
-        ? "⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE, pas un createur. L'utilisateur a fourni SA PROPRE affiche de reference. Tu dois conserver le design a l'identique et ne changer QUE le contenu. Toute reinterpretation creative est interdite."
-        : "⚠️ MISSION ABSOLUE: Tu es un EDITEUR D'IMAGE PROFESSIONNEL. Tu NE CREES PAS une nouvelle affiche. Tu EDITES DIRECTEMENT l'image de reference fournie et le resultat final doit rester visuellement le meme design."
+        ? "Tu es un ÉDITEUR D'IMAGE. PAS un créateur. PAS un designer. Tu ÉDITES l'image de référence fournie. Tu ne crées RIEN de nouveau. Le résultat final DOIT être visuellement IDENTIQUE à la référence sauf le contenu textuel."
+        : "Tu es un ÉDITEUR D'IMAGE PROFESSIONNEL. Tu modifies l'image de référence fournie. Le design original est SACRÉ et INTOUCHABLE."
     );
 
-    lines.push("🧭 SOURCE DE VERITE ABSOLUE:");
-    lines.push("- La PREMIERE image jointe est l'affiche de reference MAITRESSE. Elle dicte 100% du design final.");
-    lines.push("- Toutes les autres images jointes sont seulement des elements de contenu a inserer dans cette affiche, JAMAIS des inspirations de style.");
-    lines.push("- Priorite maximale: PRESERVER l'affiche d'origine avant toute creativite.");
-    if (isStrictUserReference) {
-      lines.push("- Cas critique: respect LITTERAL obligatoire. Si tu hesites entre fidelite et creativite, choisis TOUJOURS la fidelite.");
-    }
+    lines.push("");
+    lines.push("═══ RÈGLE #1: IDENTIFICATION DE LA RÉFÉRENCE ═══");
+    lines.push("La PREMIÈRE image jointe = affiche de référence MAÎTRESSE. Elle dicte 100% du design.");
+    lines.push("Toutes les autres images = éléments de contenu à INSÉRER (photos, logos). JAMAIS des inspirations de style.");
 
-    lines.push("🔒 DESIGN 100% INTOUCHABLE - AUCUN REDESIGN:");
-    lines.push("- FOND: couleurs, degrades, textures, motifs, images de fond = STRICTEMENT IDENTIQUES.");
-    lines.push("- FORMES: courbes, vagues, cercles, bandeaux, rectangles, triangles, separations = MEME position, MEME taille, MEME couleur.");
-    lines.push("- MISE EN PAGE: disposition, marges, espacements, grille, proportions = IDENTIQUES. Ne deplace RIEN.");
-    lines.push("- EFFETS: ombres, lumieres, reflets, flous, overlays, brillances = IDENTIQUES.");
-    lines.push("- PALETTE: conserver exactement les couleurs et contrastes de l'affiche source.");
+    lines.push("");
+    lines.push("═══ RÈGLE #2: DESIGN 100% INTOUCHABLE ═══");
+    lines.push("FOND: couleurs, dégradés, textures, motifs, images de fond = STRICTEMENT IDENTIQUES pixel par pixel.");
+    lines.push("FORMES: courbes, vagues, cercles, bandeaux, rectangles, triangles = MÊME position, MÊME taille, MÊME couleur.");
+    lines.push("MISE EN PAGE: disposition, marges, espacements, grille, proportions = IDENTIQUES. Ne déplace RIEN.");
+    lines.push("EFFETS: ombres, lumières, reflets, flous, overlays, brillances = IDENTIQUES.");
+    lines.push("PALETTE: conserver EXACTEMENT les couleurs et contrastes de l'affiche source.");
+    lines.push("STRUCTURE: nombre de blocs, zones, sections = IDENTIQUE. Ne fusionne pas, ne sépare pas.");
 
-    lines.push("✏️ REMPLACEMENT DU CONTENU UNIQUEMENT:");
-    lines.push("- Remplacer chaque texte original uniquement par l'information CLIENT correspondante.");
-    lines.push("- Conserver EXACTEMENT les polices, effets, tailles, couleurs, rotations, alignements, interlignages et placements deja presents sur la reference.");
-    lines.push("- Si le texte original est simple, le nouveau texte doit rester simple. N'ajoute AUCUN nouvel effet typographique.");
-    lines.push("- Autorise seulement de micro-ajustements internes (taille/interlettrage) pour faire tenir le nouveau contenu dans LA MEME zone, sans changer la composition.");
-    lines.push("- Ne cree aucune nouvelle zone de texte et ne fusionne pas plusieurs blocs si la reference ne le fait pas.");
+    lines.push("");
+    lines.push("═══ RÈGLE #3: REMPLACEMENT DU CONTENU ═══");
+    lines.push("Remplacer chaque texte original par l'information CLIENT correspondante UNIQUEMENT.");
+    lines.push("Conserver EXACTEMENT: polices, graisses, effets, tailles, couleurs, rotations, alignements, interlignages et placements.");
+    lines.push("Micro-ajustements UNIQUEMENT pour faire tenir le nouveau texte dans LA MÊME zone.");
+    lines.push("Ne crée AUCUNE nouvelle zone de texte. Ne fusionne AUCUN bloc.");
 
-    lines.push("🗑️ SUPPRESSION TOTALE SANS TOUCHER AU DESIGN:");
-    lines.push("- TOUT element ancien sans equivalent fourni par le client doit disparaitre completement: textes, prix, slogans, dates, adresses, telephones, hashtags, reseaux sociaux, QR codes, watermarks, logos, photos, objets contextuels.");
-    lines.push("- Apres suppression, RECONSTRUIRE uniquement le fond local d'origine a l'identique. Ne deplace, n'etire, ne grossis AUCUN autre element pour combler.");
-    lines.push("- ZERO texte residuel. ZERO placeholder. ZERO information inventee.");
+    lines.push("");
+    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE ═══");
+    lines.push("TOUT élément ancien sans équivalent fourni par le client DOIT DISPARAÎTRE COMPLÈTEMENT:");
+    lines.push("→ textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos, photos.");
+    lines.push("Après suppression: RECONSTRUIRE le fond local d'origine à l'identique. Ne déplace, n'étire, ne grossis AUCUN autre élément.");
+    lines.push("ZÉRO texte résiduel. ZÉRO placeholder. ZÉRO information inventée. ZÉRO texte de l'ancienne affiche.");
 
-    lines.push("🎨 ICONES ET SYMBOLES:");
-    lines.push("- Conserver les icones decoratives si elles restent coherentes avec le nouveau contenu.");
-    lines.push("- Si une icone ou un symbole est hors contexte, la remplacer uniquement par un equivalent de MEME style graphique, MEME taille et MEME emplacement.");
-    lines.push("- Si aucune icone pertinente n'est necessaire, la supprimer proprement et restaurer le fond local.");
+    lines.push("");
+    lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
+    lines.push("Conserver les icônes décoratives cohérentes avec le nouveau contenu.");
+    lines.push("Icône hors contexte → remplacer par équivalent de MÊME style, MÊME taille, MÊME emplacement.");
+    lines.push("Si aucune icône pertinente → supprimer proprement et restaurer le fond local.");
 
     if (hasContentImage) {
-      lines.push("📷 VISUEL CLIENT FOURNI: l'inserer uniquement dans la zone image deja prevue par la reference, avec le MEME cadrage, la MEME taille et le MEME masque/decoupage.");
+      lines.push("");
+      lines.push("═══ VISUEL CLIENT ═══");
+      lines.push("Insérer le visuel client dans la zone image EXISTANTE de la référence, MÊME cadrage, MÊME taille, MÊME masque/découpage.");
     } else {
-      lines.push("📷 PAS DE VISUEL CLIENT: seulement si la reference contient deja une zone photo/produit essentielle, inserer un visuel photorealiste coherent dans CETTE MEME zone. Si la reference n'a pas de zone photo, n'en ajoute aucune.");
+      lines.push("");
+      lines.push("═══ PAS DE VISUEL CLIENT ═══");
+      lines.push("Si la référence contient une zone photo essentielle: générer un sujet photoréaliste africain adapté au contexte, DANS cette même zone.");
+      lines.push("Si pas de zone photo dans la référence: N'EN AJOUTE AUCUNE.");
     }
 
     if (hasLogoImage) {
-      lines.push("🏷️ LOGO CLIENT: remplacer uniquement le logo existant ou l'emplacement logo prevu, sans toucher au reste de la composition.");
+      lines.push("LOGO CLIENT: remplacer le logo existant à son emplacement exact.");
     } else {
-      lines.push("🏷️ PAS DE LOGO CLIENT: supprimer uniquement le logo existant et reconstruire le fond sous-jacent localement.");
+      lines.push("PAS DE LOGO: supprimer le logo existant, reconstruire le fond sous-jacent.");
     }
 
-    lines.push("✅ CONTROLE QUALITE OBLIGATOIRE AVANT RENDU:");
-    lines.push("- Meme affiche, meme fond, meme structure, meme palette, meme composition.");
-    lines.push("- Seules les informations CLIENT apparaissent sur l'affiche finale.");
-    lines.push("- Si le rendu ressemble a une nouvelle creation au lieu d'une edition fidele de la reference, le resultat est FAUX.");
+    lines.push("");
+    lines.push("═══ CONTRÔLE QUALITÉ ═══");
+    lines.push("✓ Le résultat ressemble-t-il à la MÊME affiche? Si non → ÉCHEC.");
+    lines.push("✓ Seules les infos CLIENT apparaissent? Si non → ÉCHEC.");
+    lines.push("✓ Le fond, les formes, la palette sont identiques? Si non → ÉCHEC.");
+    lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
 
-    lines.push("🚫 INTERDICTIONS ABSOLUES:");
-    lines.push("- Ne cree JAMAIS un nouveau design inspire de la reference.");
-    lines.push("- Ne modifie JAMAIS la palette, la mise en page, les formes, les effets, la hierarchie ou les proportions.");
-    lines.push("- N'utilise JAMAIS les autres images jointes comme references de style.");
-    lines.push("- N'ajoute JAMAIS de decoration, de bloc, de photo ou de texte supplementaire absent de la reference.");
+    lines.push("");
+    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / Inventer du contenu / S'inspirer au lieu de copier.");
 
+    lines.push("");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
-    lines.push("=== INFOS CLIENT A APPLIQUER (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE) ===");
+    lines.push("═══ INFOS CLIENT (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE) ═══");
     lines.push(userPrompt);
     return lines.join("\n");
   }
 
-  // ====== MODE LIBRE (Cas C) ======
+  // ====== MODE LIBRE (Cas C) : CRÉATION PROFESSIONNELLE HAUT DE GAMME ======
   const instructions: string[] = [];
-  instructions.push("Expert Design Graphique: Affiche publicitaire professionnelle UNIQUE et CREATIVE.");
+  
+  // Directive principale forte
+  instructions.push("🎨 EXPERT GRAPHISTE PROFESSIONNEL - CRÉER UNE AFFICHE DE QUALITÉ AGENCE (15+ ANS D'EXPÉRIENCE)");
+  instructions.push("Le résultat DOIT être indiscernable d'une création d'agence de design premium. ZÉRO compromis sur la qualité.");
+  
+  // Expert skills spécifiques au domaine
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
-  // Random layout style for visual diversity
+  
+  // Typographie professionnelle
+  const typoStyle = getRandomTypographyStyle();
   const layoutStyle = getRandomLayoutStyle();
-  instructions.push(`TYPO DESIGNEE: ${getRandomTypographyStyle()}. Zero texte plat. Chaque mot-cle a un style unique.`);
-  instructions.push(`LAYOUT PRO: ${layoutStyle}. Superposition de couches avec profondeur 3-5 plans.`);
-  instructions.push("FOND RICHE: Degrades multicolores, textures subtiles, motifs geometriques ou organiques. JAMAIS de fond uni simple.");
-  // Handle content image in free mode too
+  
+  instructions.push("");
+  instructions.push("═══ TYPOGRAPHIE OBLIGATOIRE ═══");
+  instructions.push(`Style: ${typoStyle}`);
+  instructions.push("CHAQUE titre doit avoir un traitement typographique UNIQUE et SPECTACULAIRE.");
+  instructions.push("JAMAIS de texte plat/basique. Les titres sont des ÉLÉMENTS GRAPHIQUES à part entière.");
+  instructions.push("Sous-titres: effets plus subtils mais JAMAIS plats. Ombres, contours, ou dégradés minimum.");
+  instructions.push("Hiérarchie stricte: Titre 2x+ le sous-titre. Sous-titre 1.5x+ le corps.");
+  
+  instructions.push("");
+  instructions.push("═══ MISE EN PAGE PROFESSIONNELLE ═══");
+  instructions.push(`Layout: ${layoutStyle}`);
+  instructions.push("Superposition de 3-5 couches de profondeur: fond → formes décoratives → photos → texte → effets.");
+  instructions.push("FOND RICHE: Dégradés multicolores, textures subtiles, motifs géométriques ou organiques. JAMAIS de fond uni simple.");
+  instructions.push("Espace blanc: 30-40% minimum. Marges ≥5%.");
+  instructions.push("Composition asymétrique 60/40 ou 70/30 pour le dynamisme.");
+  
+  instructions.push("");
+  instructions.push("═══ ÉLÉMENTS VISUELS ═══");
   if (hasContentImage) {
-    instructions.push("PHOTO: Utiliser telle quelle, integree harmonieusement.");
+    instructions.push("PHOTO CLIENT: Intégrer harmonieusement avec masque/découpage professionnel, ombres portées réalistes.");
   } else {
-    instructions.push("GENERE un personnage/sujet africain photoréaliste adapte au contexte. Expression naturelle, eclairage pro, pose dynamique. Le personnage est un element central du design.");
+    instructions.push("GÉNÉRER un personnage/sujet AFRICAIN photoréaliste adapté au contexte: expression naturelle, éclairage studio pro, pose dynamique.");
+    instructions.push("Le personnage est un ÉLÉMENT CENTRAL du design, détouré proprement avec ombre portée.");
   }
-  instructions.push("Infos client uniquement. Africains par defaut. Texte lisible, zero faute. Couleurs 60-30-10.");
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT.");
+  instructions.push("Formes décoratives: courbes, vagues, arcs, éléments organiques pour structurer le design.");
+  instructions.push("Icônes contextuelles du domaine, style cohérent avec le design global.");
+  
+  instructions.push("");
+  instructions.push("═══ COULEURS ET EFFETS ═══");
+  instructions.push("Palette 60-30-10: Dominante 60%, Accent 30%, Highlight 10%.");
+  instructions.push("Dégradés sophistiqués (2-3 couleurs harmonieuses). Ombres portées cohérentes direction 135°.");
+  instructions.push("Effets premium: reflets subtils, glow léger, grain photographique 3-5%.");
+  
+  instructions.push("");
+  instructions.push("═══ RÈGLES ABSOLUES ═══");
+  instructions.push("Infos client UNIQUEMENT sur l'affiche. ZÉRO invention. ZÉRO texte non fourni.");
+  instructions.push("Personnages africains par défaut. Texte 100% lisible, zéro faute.");
+  instructions.push("Contraste WCAG 4.5:1 minimum pour tout texte.");
+  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT tel que fourni.");
+  
+  instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
-  instructions.push("=== DONNEES CLIENT ===");
+  instructions.push("═══ DONNÉES CLIENT ═══");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
