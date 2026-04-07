@@ -1439,7 +1439,7 @@ serve(async (req) => {
     console.log("Professional prompt built, length:", professionalPrompt.length);
     
     // Safety: smart truncate if exceeds API limit
-    const MAX_SAFE_PROMPT = 4500;
+    const MAX_SAFE_PROMPT = 6000;
     let finalPrompt = professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
       console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
