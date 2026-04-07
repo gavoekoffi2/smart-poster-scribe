@@ -750,10 +750,17 @@ export function getRandomLayoutStyle(): string {
 export function buildExpertSkillsPrompt(domain: string): string {
   const profile = getExpertProfileForDomain(domain);
   
-  // Extraire seulement les 2 règles les plus critiques de chaque section
-  const comp = profile.composition.slice(0, 2).join("; ");
-  const typo = profile.typography.slice(0, 2).join("; ");
-  const colors = profile.colorHarmonization.slice(0, 3).join("; ");
+  // Inject more rules for higher quality first-generation output
+  const comp = profile.composition.slice(0, 3).join("; ");
+  const typo = profile.typography.slice(0, 3).join("; ");
+  const colors = profile.colorHarmonization.slice(0, 4).join("; ");
+  const visuals = profile.visualElements.slice(0, 3).join("; ");
+  const effects = profile.effects.slice(0, 2).join("; ");
+  const refStyle = profile.referenceStyleGuide?.slice(0, 3).join("; ") || "";
   
-  return `[${profile.name}] Composition: ${comp}. Typo: ${typo}. Couleurs: ${colors}.`;
+  let result = `[${profile.name}] Composition: ${comp}. Typo: ${typo}. Couleurs: ${colors}. Visuels: ${visuals}. Effets: ${effects}.`;
+  if (refStyle) {
+    result += ` Style: ${refStyle}.`;
+  }
+  return result;
 }
