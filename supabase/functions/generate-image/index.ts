@@ -957,7 +957,7 @@ serve(async (req) => {
       scenePreference, // Nouvelle prop pour les préférences de mise en scène YouTube
       domain, // Domaine passé par le client
       isModification, // Flag pour les modifications (pas de débit de crédits)
-    } = body;
+      modificationRequest: rawModificationRequest, // Description de la modification demandée
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
