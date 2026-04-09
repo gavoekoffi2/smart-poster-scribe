@@ -1473,6 +1473,8 @@ serve(async (req) => {
       aspectRatio,
       isCloneMode,
       referenceMode,
+      isModification: !!isModification,
+      modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
