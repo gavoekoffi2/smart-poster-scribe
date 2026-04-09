@@ -958,6 +958,7 @@ serve(async (req) => {
       domain, // Domaine passé par le client
       isModification, // Flag pour les modifications (pas de débit de crédits)
       modificationRequest: rawModificationRequest, // Description de la modification demandée
+    } = body;
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
