@@ -1331,6 +1331,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             contentImage: state.contentImage || undefined,
             isCloneMode: true,
             isModification: true,
+            modificationRequest: request,
             domain: state.domain || undefined,
           },
         });
