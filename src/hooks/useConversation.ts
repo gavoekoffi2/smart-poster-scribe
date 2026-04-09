@@ -1272,12 +1272,14 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const state = conversationStateRef.current;
-        // Build a modification prompt that includes the original prompt + modification request
+        // Build the original prompt for context, and send modification separately
         const originalPrompt = buildPrompt(state);
-        const modificationPrompt = `${originalPrompt}. MODIFICATIONS DEMANDÉES: ${request}`;
+        // The modification prompt includes original context for the AI to understand,
+        // but the actual modification instruction is sent separately
+        const modificationPrompt = originalPrompt;
 
-        console.log("Regenerating with modifications:", request);
-        console.log("Modified prompt:", modificationPrompt);
+        console.log("Modification request:", request);
+        console.log("Original prompt for context:", originalPrompt.substring(0, 200));
 
         const logos = state.logos || [];
         const logoImages = logos.map((l) => l.imageUrl);
@@ -1329,6 +1331,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             contentImage: state.contentImage || undefined,
             isCloneMode: true,
             isModification: true,
+            modificationRequest: request,
             domain: state.domain || undefined,
           },
         });

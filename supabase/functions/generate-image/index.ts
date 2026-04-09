@@ -467,6 +467,8 @@ function buildProfessionalPrompt({
   aspectRatio,
   isCloneMode = false,
   referenceMode = "none",
+  isModification = false,
+  modificationRequest = "",
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -475,9 +477,45 @@ function buildProfessionalPrompt({
   aspectRatio: string;
   isCloneMode?: boolean;
   referenceMode?: ReferenceMode;
+  isModification?: boolean;
+  modificationRequest?: string;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+
+  // ====== MODE MODIFICATION CHIRURGICALE ======
+  // Quand l'utilisateur demande une correction sur une affiche déjà générée,
+  // on ne régénère PAS tout. On applique UNIQUEMENT le changement demandé.
+  if (isModification && modificationRequest && hasReferenceImage) {
+    const lines: string[] = [];
+    lines.push("🔧 MODE MODIFICATION CHIRURGICALE - LIRE ATTENTIVEMENT 🔧");
+    lines.push("");
+    lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE par toi. Le client demande UNE CORRECTION PRÉCISE.");
+    lines.push("");
+    lines.push("═══ RÈGLE ABSOLUE: MODIFIER UNIQUEMENT CE QUI EST DEMANDÉ ═══");
+    lines.push("• L'affiche doit rester 100% IDENTIQUE sauf le changement demandé.");
+    lines.push("• NE PAS régénérer un nouveau design. NE PAS changer la mise en page.");
+    lines.push("• NE PAS modifier les couleurs, les polices, les positions, les tailles SAUF si demandé.");
+    lines.push("• NE PAS ajouter ou supprimer d'éléments SAUF si demandé.");
+    lines.push("• Le fond, les formes, les photos, les logos: INTOUCHABLES sauf demande explicite.");
+    lines.push("");
+    lines.push("═══ TYPES DE MODIFICATIONS ═══");
+    lines.push("• Correction de texte → changer UNIQUEMENT le texte concerné, même police, même taille, même position.");
+    lines.push("• Suppression → supprimer UNIQUEMENT l'élément cité, reconstruire le fond local proprement.");
+    lines.push("• Ajout → ajouter UNIQUEMENT ce qui est demandé, style cohérent avec l'existant.");
+    lines.push("• Couleur → modifier UNIQUEMENT la couleur citée, tout le reste intact.");
+    lines.push("• Déplacement → déplacer UNIQUEMENT l'élément cité, tout le reste fixe.");
+    lines.push("");
+    lines.push("═══ CONTRÔLE QUALITÉ ═══");
+    lines.push("✓ Comparer pixel par pixel avec l'original: SEUL le changement demandé doit être visible.");
+    lines.push("✓ Si on masque la zone modifiée, le reste doit être IDENTIQUE.");
+    lines.push("");
+    lines.push(`Format:${aspectRatio}|HD|Francais`);
+    lines.push("");
+    lines.push("═══ MODIFICATION DEMANDÉE ═══");
+    lines.push(modificationRequest);
+    return lines.join("\n");
+  }
 
   // ====== MODE CLONE (Cas A & B) : ÉDITEUR D'IMAGE STRICT ======
   if (isCloneMode || hasReferenceImage) {
@@ -919,6 +957,7 @@ serve(async (req) => {
       scenePreference, // Nouvelle prop pour les préférences de mise en scène YouTube
       domain, // Domaine passé par le client
       isModification, // Flag pour les modifications (pas de débit de crédits)
+      modificationRequest: rawModificationRequest, // Description de la modification demandée
     } = body;
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
@@ -1434,6 +1473,8 @@ serve(async (req) => {
       aspectRatio,
       isCloneMode,
       referenceMode,
+      isModification: !!isModification,
+      modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
