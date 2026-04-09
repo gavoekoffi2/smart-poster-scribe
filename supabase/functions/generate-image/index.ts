@@ -467,6 +467,8 @@ function buildProfessionalPrompt({
   aspectRatio,
   isCloneMode = false,
   referenceMode = "none",
+  isModification = false,
+  modificationRequest = "",
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -475,6 +477,8 @@ function buildProfessionalPrompt({
   aspectRatio: string;
   isCloneMode?: boolean;
   referenceMode?: ReferenceMode;
+  isModification?: boolean;
+  modificationRequest?: string;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
