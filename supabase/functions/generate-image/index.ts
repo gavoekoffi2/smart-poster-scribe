@@ -597,64 +597,80 @@ function buildProfessionalPrompt({
     return lines.join("\n");
   }
 
-  // ====== MODE LIBRE (Cas C) : CRÉATION PROFESSIONNELLE HAUT DE GAMME ======
+  // ====== MODE LIBRE (Cas C) : CRÉATION ULTRA-PROFESSIONNELLE PREMIUM ======
   const instructions: string[] = [];
   
-  // Directive principale forte
-  instructions.push("🎨 EXPERT GRAPHISTE PROFESSIONNEL - CRÉER UNE AFFICHE DE QUALITÉ AGENCE (15+ ANS D'EXPÉRIENCE)");
-  instructions.push("Le résultat DOIT être indiscernable d'une création d'agence de design premium. ZÉRO compromis sur la qualité.");
+  // Directive principale ultra-exigeante
+  instructions.push("🎨🏆 DIRECTEUR ARTISTIQUE SENIOR - AGENCE DE DESIGN INTERNATIONALE (20+ ANS)");
+  instructions.push("Tu crées une affiche de NIVEAU AWARD-WINNING. Le résultat doit rivaliser avec les meilleures agences de design au monde.");
+  instructions.push("QUALITÉ NON-NÉGOCIABLE: Chaque pixel compte. Chaque choix typographique est une décision de design consciente.");
   
   // Expert skills spécifiques au domaine
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
   
-  // Typographie professionnelle
+  // Typographie ultra-premium
   const typoStyle = getRandomTypographyStyle();
   const layoutStyle = getRandomLayoutStyle();
   
   instructions.push("");
-  instructions.push("═══ TYPOGRAPHIE OBLIGATOIRE ═══");
-  instructions.push(`Style: ${typoStyle}`);
-  instructions.push("CHAQUE titre doit avoir un traitement typographique UNIQUE et SPECTACULAIRE.");
-  instructions.push("JAMAIS de texte plat/basique. Les titres sont des ÉLÉMENTS GRAPHIQUES à part entière.");
-  instructions.push("Sous-titres: effets plus subtils mais JAMAIS plats. Ombres, contours, ou dégradés minimum.");
-  instructions.push("Hiérarchie stricte: Titre 2x+ le sous-titre. Sous-titre 1.5x+ le corps.");
+  instructions.push("═══ 🔤 TYPOGRAPHIE ULTRA-PREMIUM (CRITIQUE) ═══");
+  instructions.push(`Style principal: ${typoStyle}`);
+  instructions.push("TITRE PRINCIPAL: Police display MASSIVE avec traitement graphique SPECTACULAIRE.");
+  instructions.push("→ Effets obligatoires sur le titre: 3D, ombres portées épaisses (6-12px), contours doubles, dégradé métallique, glow, ou relief biseauté.");
+  instructions.push("→ Le titre n'est PAS du texte. C'est un ÉLÉMENT GRAPHIQUE CENTRAL qui attire l'œil immédiatement.");
+  instructions.push("→ Taille titre: 60-100pt. IMPOSANT. DOMINANT. Occupe 20-30% de la surface.");
+  instructions.push("SOUS-TITRES: Police complémentaire avec effets subtils (ombre légère, contour fin, légère transparence).");
+  instructions.push("→ Hiérarchie DRAMATIQUE: Titre 3x+ le sous-titre. Sous-titre 2x+ le corps.");
+  instructions.push("CORPS DE TEXTE: Ultra-lisible, espacement généreux, police clean et moderne.");
+  instructions.push("INTERDITS: Texte plat sans effet, polices basiques (Arial, Helvetica brut), texte qui se fond dans le décor.");
   
   instructions.push("");
-  instructions.push("═══ MISE EN PAGE PROFESSIONNELLE ═══");
-  instructions.push(`Layout: ${layoutStyle}`);
-  instructions.push("Superposition de 3-5 couches de profondeur: fond → formes décoratives → photos → texte → effets.");
-  instructions.push("FOND RICHE: Dégradés multicolores, textures subtiles, motifs géométriques ou organiques. JAMAIS de fond uni simple.");
-  instructions.push("Espace blanc: 30-40% minimum. Marges ≥5%.");
-  instructions.push("Composition asymétrique 60/40 ou 70/30 pour le dynamisme.");
+  instructions.push("═══ 📐 MISE EN PAGE AWARD-WINNING ═══");
+  instructions.push(`Structure: ${layoutStyle}`);
+  instructions.push("COMPOSITION EN COUCHES (5 niveaux minimum):");
+  instructions.push("  1. FOND: Dégradé riche multicolore ou texture sophistiquée (JAMAIS fond uni/plat)");
+  instructions.push("  2. FORMES DÉCORATIVES: Courbes, vagues, formes géométriques, particules, motifs abstraits");
+  instructions.push("  3. ÉLÉMENTS VISUELS: Photos détourées, illustrations, icônes contextuelles");
+  instructions.push("  4. TEXTE: Titres spectaculaires + sous-titres + infos avec hiérarchie claire");
+  instructions.push("  5. EFFETS FINAUX: Glow, particules, reflets, grain photographique, overlays subtils");
+  instructions.push("Composition asymétrique 60/40 ou 70/30. Point focal sur intersection des tiers.");
+  instructions.push("Espace de respiration: 30-40%. Marges ≥5%. Grille invisible de 12 colonnes.");
   
   instructions.push("");
-  instructions.push("═══ ÉLÉMENTS VISUELS ═══");
+  instructions.push("═══ 🎭 ÉLÉMENTS VISUELS PREMIUM ═══");
   if (hasContentImage) {
-    instructions.push("PHOTO CLIENT: Intégrer harmonieusement avec masque/découpage professionnel, ombres portées réalistes.");
+    instructions.push("PHOTO CLIENT: Intégration premium avec masque organique ou géométrique, ombre portée réaliste (15-25px flou, 20% opacité), léger glow ambient.");
   } else {
-    instructions.push("GÉNÉRER un personnage/sujet AFRICAIN photoréaliste adapté au contexte: expression naturelle, éclairage studio pro, pose dynamique.");
-    instructions.push("Le personnage est un ÉLÉMENT CENTRAL du design, détouré proprement avec ombre portée.");
+    instructions.push("GÉNÉRER un personnage AFRICAIN photoréaliste HAUTE QUALITÉ:");
+    instructions.push("→ Éclairage studio professionnel 3 points (key light, fill light, rim light).");
+    instructions.push("→ Expression engageante et naturelle. Pose dynamique mais professionnelle.");
+    instructions.push("→ Détourage net avec ombre portée réaliste. Le personnage est l'ACCROCHE VISUELLE.");
   }
-  instructions.push("Formes décoratives: courbes, vagues, arcs, éléments organiques pour structurer le design.");
-  instructions.push("Icônes contextuelles du domaine, style cohérent avec le design global.");
+  instructions.push("FORMES DÉCORATIVES: Courbes fluides, vagues dynamiques, arcs, bandeaux obliques, rubans 3D.");
+  instructions.push("ICÔNES: Contextuelles au domaine, style flat ou outlined cohérent, taille proportionnelle.");
+  instructions.push("SÉPARATEURS: Lignes courbes, dégradés, formes organiques (JAMAIS de lignes droites basiques).");
   
   instructions.push("");
-  instructions.push("═══ COULEURS ET EFFETS ═══");
-  instructions.push("Palette 60-30-10: Dominante 60%, Accent 30%, Highlight 10%.");
-  instructions.push("Dégradés sophistiqués (2-3 couleurs harmonieuses). Ombres portées cohérentes direction 135°.");
-  instructions.push("Effets premium: reflets subtils, glow léger, grain photographique 3-5%.");
+  instructions.push("═══ 🎨 PALETTE COULEURS & EFFETS PREMIUM ═══");
+  instructions.push("Règle 60-30-10: Dominante 60%, Accent 30%, Highlight vibrant 10%.");
+  instructions.push("Dégradés: 2-3 couleurs harmonieuses, transitions fluides. Direction cohérente.");
+  instructions.push("Ombres: Direction unique 135°, flou 15-30px, opacité 15-25%. Cohérence totale.");
+  instructions.push("Effets premium: Grain photographique subtil (3-5%), reflets subtils, glow ambiant doux.");
+  instructions.push("Coins arrondis cohérents partout (15-25px). Bordures fines (1-2px) si utilisées.");
   
   instructions.push("");
-  instructions.push("═══ RÈGLES ABSOLUES ═══");
-  instructions.push("Infos client UNIQUEMENT sur l'affiche. ZÉRO invention. ZÉRO texte non fourni.");
-  instructions.push("Personnages africains par défaut. Texte 100% lisible, zéro faute.");
-  instructions.push("Contraste WCAG 4.5:1 minimum pour tout texte.");
-  if (hasLogoImage) instructions.push("LOGO: Reproduire EXACTEMENT tel que fourni.");
+  instructions.push("═══ ⚡ EXIGENCES ABSOLUES ═══");
+  instructions.push("• CONTENU: Strictement les infos client. ZÉRO invention. ZÉRO texte non fourni. ZÉRO placeholder.");
+  instructions.push("• PERSONNAGES: Africains par défaut. Photoréalistes. Professionnels.");
+  instructions.push("• LISIBILITÉ: Contraste WCAG 4.5:1 minimum. Texte TOUJOURS lisible au premier regard.");
+  instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe exacte du client.");
+  instructions.push("• CTA: Si pertinent, bouton/bandeau visible et accrocheur.");
+  if (hasLogoImage) instructions.push("• LOGO: Reproduire EXACTEMENT tel que fourni, sans déformation.");
   
   instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
-  instructions.push("═══ DONNÉES CLIENT ═══");
+  instructions.push("═══ DONNÉES CLIENT (UNIQUEMENT CES INFORMATIONS) ═══");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
