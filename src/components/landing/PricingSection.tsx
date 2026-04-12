@@ -165,14 +165,13 @@ export function PricingSection() {
 
                 <Button
                   onClick={() => handleSubscribe(plan.slug)}
-                  disabled={isProcessingPayment}
                   className={`w-full py-6 rounded-full font-semibold ${
                     plan.popular
                       ? "bg-gradient-to-r from-primary to-accent text-primary-foreground glow-orange"
                       : "bg-muted hover:bg-muted/80 text-foreground"
                   }`}
                 >
-                  {isProcessingPayment ? "Chargement..." : plan.cta}
+                  {plan.cta}
                 </Button>
               </motion.div>
             );
