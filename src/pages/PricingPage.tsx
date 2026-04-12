@@ -48,8 +48,8 @@ export default function PricingPage() {
     },
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "Sécurisé par FedaPay",
-      description: "Vos paiements sont protégés par une technologie de pointe",
+      title: "Activation manuelle",
+      description: "Nous vérifions et activons votre compte après paiement",
     },
   ];
 
