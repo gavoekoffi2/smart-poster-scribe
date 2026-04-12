@@ -244,10 +244,9 @@ export function PricingSection() {
 
             <Button
               onClick={() => handleSubscribe("business")}
-              disabled={isProcessingPayment}
               className="w-full py-6 rounded-full font-semibold bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:opacity-90"
             >
-              {isProcessingPayment ? "Chargement..." : "Acheter maintenant"}
+              Acheter maintenant
             </Button>
           </motion.div>
         </div>
