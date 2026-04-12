@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
 
 const BASE_BUSINESS_POSTERS = 12;
 const BASE_BUSINESS_PRICE_USD = 17;
@@ -18,42 +17,20 @@ const MAX_POSTERS = 50;
 export function PricingSection() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isProcessingPayment, openFedaPayCheckout } = useSubscription();
   const [businessPosters, setBusinessPosters] = useState(BASE_BUSINESS_POSTERS);
 
   const businessPriceUSD = Math.round(businessPosters * PRICE_PER_POSTER_USD);
   const businessPriceFCFA = Math.round(businessPosters * PRICE_PER_POSTER_FCFA);
   const businessCredits = businessPosters * 2;
 
-  const handleSubscribe = async (planSlug: string) => {
+  const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
       navigate("/auth");
       return;
     }
-
-    if (!user) {
-      toast.info("Veuillez vous connecter pour souscrire à un abonnement.");
-      navigate("/auth");
-      return;
-    }
-
-    try {
-      toast.loading("Ouverture du paiement...", { id: "payment-init" });
-      if (planSlug === "business") {
-        await openFedaPayCheckout(planSlug, {
-          customPriceFcfa: businessPriceFCFA,
-          customCredits: businessCredits,
-        });
-      } else {
-        await openFedaPayCheckout(planSlug);
-      }
-      toast.dismiss("payment-init");
-    } catch (err) {
-      toast.dismiss("payment-init");
-      toast.error(err instanceof Error ? err.message : "Erreur lors de l'initialisation du paiement");
-    }
+    // Redirect to pricing page for the form flow
+    navigate("/pricing");
   };
-
   const plans = [
     {
       name: "Essai gratuit",
