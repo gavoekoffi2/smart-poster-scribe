@@ -556,6 +556,7 @@ function buildProfessionalPrompt({
     lines.push("→ textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos, photos.");
     lines.push("Après suppression: RECONSTRUIRE le fond local d'origine à l'identique. Ne déplace, n'étire, ne grossis AUCUN autre élément.");
     lines.push("ZÉRO texte résiduel. ZÉRO placeholder. ZÉRO information inventée. ZÉRO texte de l'ancienne affiche.");
+    lines.push("⚠️ AUCUN contenu du template original ne doit apparaître sur l'affiche finale. Seul le contenu fourni par le client est affiché.");
 
     lines.push("");
     lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
