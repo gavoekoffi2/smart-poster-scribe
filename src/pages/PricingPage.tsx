@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/pricing/PlanCard";
+import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -12,43 +14,25 @@ const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ d
 export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { plans, subscription, isProcessingPayment, openFedaPayCheckout } = useSubscription();
+  const { plans, subscription, isProcessingPayment } = useSubscription();
+  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string }>({
+    open: false, planName: "", planSlug: ""
+  });
 
-  const handleSubscribe = async (planSlug: string) => {
-    console.log("[Pricing] Subscribe clicked for plan:", planSlug);
-
-    if (planSlug === "enterprise") {
-      // Open email or contact form for enterprise plan
-      window.location.href = "mailto:contact@graphiste-gpt.com?subject=Demande%20Plan%20Entreprise";
-      return;
-    }
-
+  const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
-      // Just navigate to app for free plan
       navigate("/app");
       return;
     }
 
     if (!user) {
-      // Redirect to auth with return URL
       toast.info("Connectez-vous pour souscrire à un abonnement");
       navigate("/auth?redirect=/pricing");
       return;
     }
 
-    try {
-      console.log("[Pricing] User authenticated, opening FedaPay checkout...");
-      toast.loading("Ouverture du paiement...", { id: "payment-init" });
-      
-      await openFedaPayCheckout(planSlug);
-      
-      toast.dismiss("payment-init");
-    } catch (error) {
-      toast.dismiss("payment-init");
-      console.error("[Pricing] Payment error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Erreur lors du paiement";
-      toast.error(errorMessage);
-    }
+    const plan = plans.find(p => p.slug === planSlug);
+    setRequestModal({ open: true, planName: plan?.name || planSlug, planSlug });
   };
 
   const features = [
