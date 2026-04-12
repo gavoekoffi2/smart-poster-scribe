@@ -146,6 +146,25 @@ export default function PricingPage() {
           </div>
         </section>
 
+        {/* How it works */}
+        <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-y border-border/50">
+          <div className="container mx-auto max-w-4xl text-center">
+            <h2 className="text-2xl font-bold mb-6">Comment ça marche ?</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { step: "1", title: "Choisissez un plan", desc: "Sélectionnez le plan qui correspond à vos besoins" },
+                { step: "2", title: "Envoyez le formulaire", desc: "Remplissez votre nom et numéro de téléphone" },
+                { step: "3", title: "Activation", desc: "Nous vérifions et activons votre compte après paiement" },
+              ].map((item, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="p-6 rounded-2xl bg-card/60 border border-border/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center mx-auto mb-3">{item.step}</div>
+                  <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
         {/* Credit explanation */}
         <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-y border-border/50">
           <div className="container mx-auto max-w-4xl">
