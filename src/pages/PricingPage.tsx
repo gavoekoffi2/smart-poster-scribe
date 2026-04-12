@@ -164,8 +164,8 @@ export default function PricingPage() {
               ))}
             </div>
           </div>
+        </section>
 
-        {/* Credit explanation */}
         <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-y border-border/50">
           <div className="container mx-auto max-w-4xl">
             <motion.div
