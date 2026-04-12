@@ -739,26 +739,36 @@ export default function AppPage() {
               />
               
               {showTextInput && (
-                <div className="flex gap-3">
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
-                    onKeyPress={handleKeyPress}
-                    disabled={isProcessing}
-                    className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
-                  />
-                  <VoiceInputButton
-                    onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
-                    disabled={isProcessing}
-                  />
-                  <Button 
-                    onClick={handleSend} 
-                    disabled={!inputValue.trim() || isProcessing}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
+                <div>
+                  {step === "complete" && (
+                    <div className="mb-3 flex items-start gap-2 rounded-lg bg-accent/40 border border-accent/60 px-3 py-2 text-xs text-muted-foreground">
+                      <Pencil className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                      <span>
+                        Pas satisfait du résultat ? Décrivez ce que vous souhaitez modifier en tapant du texte ci-dessous ou en utilisant le micro 🎙️ pour dicter vos changements.
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
+                      onKeyPress={handleKeyPress}
+                      disabled={isProcessing}
+                      className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
+                    />
+                    <VoiceInputButton
+                      onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
+                      disabled={isProcessing}
+                    />
+                    <Button 
+                      onClick={handleSend} 
+                      disabled={!inputValue.trim() || isProcessing}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
 
