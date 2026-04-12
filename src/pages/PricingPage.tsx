@@ -309,6 +309,13 @@ export default function PricingPage() {
           </div>
         </section>
       </div>
+
+      <SubscriptionRequestModal
+        open={requestModal.open}
+        onOpenChange={(open) => setRequestModal(prev => ({ ...prev, open }))}
+        planName={requestModal.planName}
+        planSlug={requestModal.planSlug}
+      />
     </div>
   );
 }
