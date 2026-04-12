@@ -207,33 +207,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Payment methods */}
-        <section className="py-16 px-4">
-          <div className="container mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-2xl font-bold mb-6">
-                Moyens de paiement acceptés
-              </h2>
-              <div className="flex flex-wrap items-center justify-center gap-4">
-                {["Orange Money", "MTN MoMo", "Wave", "Moov Money", "Visa", "Mastercard"].map((method) => (
-                  <div
-                    key={method}
-                    className="px-4 py-2 rounded-lg bg-card/60 border border-border/50 text-sm text-muted-foreground"
-                  >
-                    {method}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-6 text-sm text-muted-foreground">
-                Paiements sécurisés par <span className="text-primary font-medium">FedaPay</span>
-              </p>
-            </motion.div>
-          </div>
-        </section>
 
         {/* FAQ */}
         <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-t border-border/50">
