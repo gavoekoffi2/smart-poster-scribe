@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/pricing/PlanCard";
+import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -12,43 +14,25 @@ const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ d
 export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { plans, subscription, isProcessingPayment, openFedaPayCheckout } = useSubscription();
+  const { plans, subscription, isProcessingPayment } = useSubscription();
+  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string }>({
+    open: false, planName: "", planSlug: ""
+  });
 
-  const handleSubscribe = async (planSlug: string) => {
-    console.log("[Pricing] Subscribe clicked for plan:", planSlug);
-
-    if (planSlug === "enterprise") {
-      // Open email or contact form for enterprise plan
-      window.location.href = "mailto:contact@graphiste-gpt.com?subject=Demande%20Plan%20Entreprise";
-      return;
-    }
-
+  const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
-      // Just navigate to app for free plan
       navigate("/app");
       return;
     }
 
     if (!user) {
-      // Redirect to auth with return URL
       toast.info("Connectez-vous pour souscrire à un abonnement");
       navigate("/auth?redirect=/pricing");
       return;
     }
 
-    try {
-      console.log("[Pricing] User authenticated, opening FedaPay checkout...");
-      toast.loading("Ouverture du paiement...", { id: "payment-init" });
-      
-      await openFedaPayCheckout(planSlug);
-      
-      toast.dismiss("payment-init");
-    } catch (error) {
-      toast.dismiss("payment-init");
-      console.error("[Pricing] Payment error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Erreur lors du paiement";
-      toast.error(errorMessage);
-    }
+    const plan = plans.find(p => p.slug === planSlug);
+    setRequestModal({ open: true, planName: plan?.name || planSlug, planSlug });
   };
 
   const features = [
@@ -64,8 +48,8 @@ export default function PricingPage() {
     },
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "Sécurisé par FedaPay",
-      description: "Vos paiements sont protégés par une technologie de pointe",
+      title: "Activation manuelle",
+      description: "Nous vérifions et activons votre compte après paiement",
     },
   ];
 
@@ -162,7 +146,26 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Credit explanation */}
+        {/* How it works */}
+        <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-y border-border/50">
+          <div className="container mx-auto max-w-4xl text-center">
+            <h2 className="text-2xl font-bold mb-6">Comment ça marche ?</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { step: "1", title: "Choisissez un plan", desc: "Sélectionnez le plan qui correspond à vos besoins" },
+                { step: "2", title: "Envoyez le formulaire", desc: "Remplissez votre nom et numéro de téléphone" },
+                { step: "3", title: "Activation", desc: "Nous vérifions et activons votre compte après paiement" },
+              ].map((item, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="p-6 rounded-2xl bg-card/60 border border-border/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center mx-auto mb-3">{item.step}</div>
+                  <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-y border-border/50">
           <div className="container mx-auto max-w-4xl">
             <motion.div
@@ -204,33 +207,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Payment methods */}
-        <section className="py-16 px-4">
-          <div className="container mx-auto max-w-4xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-2xl font-bold mb-6">
-                Moyens de paiement acceptés
-              </h2>
-              <div className="flex flex-wrap items-center justify-center gap-4">
-                {["Orange Money", "MTN MoMo", "Wave", "Moov Money", "Visa", "Mastercard"].map((method) => (
-                  <div
-                    key={method}
-                    className="px-4 py-2 rounded-lg bg-card/60 border border-border/50 text-sm text-muted-foreground"
-                  >
-                    {method}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-6 text-sm text-muted-foreground">
-                Paiements sécurisés par <span className="text-primary font-medium">FedaPay</span>
-              </p>
-            </motion.div>
-          </div>
-        </section>
 
         {/* FAQ */}
         <section className="py-16 px-4 bg-card/30 backdrop-blur-sm border-t border-border/50">
@@ -306,6 +282,13 @@ export default function PricingPage() {
           </div>
         </section>
       </div>
+
+      <SubscriptionRequestModal
+        open={requestModal.open}
+        onOpenChange={(open) => setRequestModal(prev => ({ ...prev, open }))}
+        planName={requestModal.planName}
+        planSlug={requestModal.planSlug}
+      />
     </div>
   );
 }

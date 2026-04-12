@@ -601,6 +601,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string
+          plan_slug: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          phone: string
+          plan_slug: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string
+          plan_slug?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       template_earnings: {
         Row: {
           amount: number

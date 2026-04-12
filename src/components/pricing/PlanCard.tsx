@@ -213,7 +213,7 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
               "Tester gratuitement"
             ) : (
               <>
-                Acheter maintenant
+                Souscrire
                 <Sparkles className="w-4 h-4 ml-2" />
               </>
             )}
