@@ -499,6 +499,12 @@ function buildProfessionalPrompt({
     lines.push("• NE PAS ajouter ou supprimer d'éléments SAUF si demandé.");
     lines.push("• Le fond, les formes, les photos, les logos: INTOUCHABLES sauf demande explicite.");
     lines.push("");
+    lines.push("═══ 🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫 ═══");
+    lines.push("• NE JAMAIS inventer, ajouter ou modifier du texte que le client N'A PAS demandé de changer.");
+    lines.push("• NE JAMAIS changer une date, un prix, un numéro, un nom propre : reproduire EXACTEMENT ce qui existe.");
+    lines.push("• NE JAMAIS ajouter de contenu décoratif, slogan, ou information qui n'est pas dans la demande.");
+    lines.push("• Chaque caractère, chaque chiffre doit être une copie FIDÈLE sauf la modification demandée.");
+    lines.push("");
     lines.push("═══ TYPES DE MODIFICATIONS ═══");
     lines.push("• Correction de texte → changer UNIQUEMENT le texte concerné, même police, même taille, même position.");
     lines.push("• Suppression → supprimer UNIQUEMENT l'élément cité, reconstruire le fond local proprement.");
@@ -551,12 +557,20 @@ function buildProfessionalPrompt({
     lines.push("Ne crée AUCUNE nouvelle zone de texte. Ne fusionne AUCUN bloc.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE ═══");
+    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE & ANTI-HALLUCINATION ═══");
     lines.push("TOUT élément ancien sans équivalent fourni par le client DOIT DISPARAÎTRE COMPLÈTEMENT:");
     lines.push("→ textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos, photos.");
     lines.push("Après suppression: RECONSTRUIRE le fond local d'origine à l'identique. Ne déplace, n'étire, ne grossis AUCUN autre élément.");
     lines.push("ZÉRO texte résiduel. ZÉRO placeholder. ZÉRO information inventée. ZÉRO texte de l'ancienne affiche.");
     lines.push("⚠️ AUCUN contenu du template original ne doit apparaître sur l'affiche finale. Seul le contenu fourni par le client est affiché.");
+    lines.push("");
+    lines.push("🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫");
+    lines.push("• NE JAMAIS INVENTER de texte, date, prix, numéro de téléphone, adresse, slogan, ou toute information NON FOURNIE par le client.");
+    lines.push("• NE JAMAIS PARAPHRASER ou REFORMULER le texte du client. Utiliser ses mots EXACTS, caractère par caractère.");
+    lines.push("• NE JAMAIS AJOUTER de contenu 'pour compléter' ou 'pour faire joli' : si le client n'a pas donné l'info, elle N'EXISTE PAS.");
+    lines.push("• NE JAMAIS CHANGER une date (ex: client dit '15 Mars' → écrire '15 Mars', PAS '16 Mars' ni 'Mars 2025').");
+    lines.push("• NE JAMAIS MÉLANGER les domaines (ex: e-commerce → PAS de texte sur l'impression ou les services religieux).");
+    lines.push("• Si une zone est vide faute d'info client → la laisser VIDE ou la remplir avec le FOND, JAMAIS avec du texte inventé.");
 
     lines.push("");
     lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
@@ -589,7 +603,7 @@ function buildProfessionalPrompt({
     lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
 
     lines.push("");
-    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / Inventer du contenu / S'inspirer au lieu de copier.");
+    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / INVENTER DU CONTENU / S'inspirer au lieu de copier / Paraphraser le texte client / Ajouter des dates, prix ou infos non fournies.");
 
     lines.push("");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
@@ -661,17 +675,26 @@ function buildProfessionalPrompt({
   instructions.push("Coins arrondis cohérents partout (15-25px). Bordures fines (1-2px) si utilisées.");
   
   instructions.push("");
-  instructions.push("═══ ⚡ EXIGENCES ABSOLUES ═══");
-  instructions.push("• CONTENU: Strictement les infos client. ZÉRO invention. ZÉRO texte non fourni. ZÉRO placeholder.");
+  instructions.push("═══ 🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION (CRITIQUE) 🚫🚫🚫 ═══");
+  instructions.push("C'est la RÈGLE LA PLUS IMPORTANTE. Violation = ÉCHEC TOTAL.");
+  instructions.push("• SEUL le texte EXACTEMENT fourni par le client apparaît sur l'affiche. RIEN D'AUTRE.");
+  instructions.push("• NE JAMAIS INVENTER : date, prix, numéro de téléphone, adresse, slogan, nom de marque, hashtag, URL, email, ou TOUTE info non donnée.");
+  instructions.push("• NE JAMAIS PARAPHRASER : si le client écrit 'Grande Vente du 15 Mars', écrire EXACTEMENT 'Grande Vente du 15 Mars'. Pas 'Mega Promo', pas '15/03', pas 'Mars 2025'.");
+  instructions.push("• NE JAMAIS AJOUTER de texte 'décoratif' ou 'pour compléter le design'. Les zones sans info client = fond graphique SANS TEXTE.");
+  instructions.push("• NE JAMAIS MÉLANGER les domaines : une affiche e-commerce ne contient PAS de texte sur l'impression, la religion, ou d'autres domaines non liés.");
+  instructions.push("• CHAQUE MOT sur l'affiche doit pouvoir être RETROUVÉ dans le texte du client ci-dessous. Sinon → NE PAS L'ÉCRIRE.");
+  instructions.push("• Si le client a donné peu d'infos → l'affiche a PEU DE TEXTE. C'est NORMAL. Compenser avec du DESIGN, pas du texte inventé.");
+  instructions.push("");
+  instructions.push("═══ ⚡ EXIGENCES COMPLÉMENTAIRES ═══");
   instructions.push("• PERSONNAGES: Africains par défaut. Photoréalistes. Professionnels.");
   instructions.push("• LISIBILITÉ: Contraste WCAG 4.5:1 minimum. Texte TOUJOURS lisible au premier regard.");
-  instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe exacte du client.");
-  instructions.push("• CTA: Si pertinent, bouton/bandeau visible et accrocheur.");
+  instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe EXACTE du client, caractère par caractère.");
+  instructions.push("• CTA: Si pertinent ET fourni par le client, bouton/bandeau visible et accrocheur.");
   if (hasLogoImage) instructions.push("• LOGO: Reproduire EXACTEMENT tel que fourni, sans déformation.");
   
   instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
-  instructions.push("═══ DONNÉES CLIENT (UNIQUEMENT CES INFORMATIONS) ═══");
+  instructions.push("═══ DONNÉES CLIENT (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE, RIEN D'AUTRE) ═══");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
