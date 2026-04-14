@@ -603,7 +603,7 @@ function buildProfessionalPrompt({
     lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
 
     lines.push("");
-    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / Inventer du contenu / S'inspirer au lieu de copier.");
+    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / INVENTER DU CONTENU / S'inspirer au lieu de copier / Paraphraser le texte client / Ajouter des dates, prix ou infos non fournies.");
 
     lines.push("");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
