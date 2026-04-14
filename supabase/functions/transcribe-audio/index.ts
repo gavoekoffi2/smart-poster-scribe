@@ -12,10 +12,10 @@ serve(async (req) => {
 
   try {
     const { audioBase64, mimeType } = await req.json();
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!GOOGLE_AI_API_KEY) {
-      console.error("GOOGLE_AI_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Service de transcription non configuré" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -29,45 +29,54 @@ serve(async (req) => {
       );
     }
 
-    console.log("Sending audio to Gemini for transcription, mime:", mimeType || "audio/webm");
+    const audioMime = mimeType || "audio/webm";
+    console.log("Sending audio to Lovable AI for transcription, mime:", audioMime);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  inlineData: {
-                    mimeType: mimeType || "audio/webm",
-                    data: audioBase64,
-                  },
+    const dataUrl = `data:${audioMime};base64,${audioBase64}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_audio",
+                input_audio: {
+                  data: audioBase64,
+                  format: "wav",
                 },
-                {
-                  text: "Transcris exactement ce qui est dit dans cet audio. Retourne UNIQUEMENT le texte transcrit, sans aucune explication, sans guillemets, sans préfixe. Si l'audio est vide ou inaudible, retourne une chaîne vide.",
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 1024,
+              },
+              {
+                type: "text",
+                text: "Transcris exactement ce qui est dit dans cet audio. Retourne UNIQUEMENT le texte transcrit, sans aucune explication, sans guillemets, sans préfixe. Si l'audio est vide ou inaudible, retourne une chaîne vide.",
+              },
+            ],
           },
-        }),
-      }
-    );
+        ],
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      console.error("Lovable AI API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requêtes atteinte, veuillez patienter." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Crédits AI épuisés." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -78,7 +87,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const transcribedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const transcribedText = data.choices?.[0]?.message?.content?.trim() || "";
 
     console.log("Transcription result:", transcribedText.substring(0, 100));
 
