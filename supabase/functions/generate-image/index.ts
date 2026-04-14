@@ -557,12 +557,20 @@ function buildProfessionalPrompt({
     lines.push("Ne crée AUCUNE nouvelle zone de texte. Ne fusionne AUCUN bloc.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE ═══");
+    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE & ANTI-HALLUCINATION ═══");
     lines.push("TOUT élément ancien sans équivalent fourni par le client DOIT DISPARAÎTRE COMPLÈTEMENT:");
     lines.push("→ textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos, photos.");
     lines.push("Après suppression: RECONSTRUIRE le fond local d'origine à l'identique. Ne déplace, n'étire, ne grossis AUCUN autre élément.");
     lines.push("ZÉRO texte résiduel. ZÉRO placeholder. ZÉRO information inventée. ZÉRO texte de l'ancienne affiche.");
     lines.push("⚠️ AUCUN contenu du template original ne doit apparaître sur l'affiche finale. Seul le contenu fourni par le client est affiché.");
+    lines.push("");
+    lines.push("🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫");
+    lines.push("• NE JAMAIS INVENTER de texte, date, prix, numéro de téléphone, adresse, slogan, ou toute information NON FOURNIE par le client.");
+    lines.push("• NE JAMAIS PARAPHRASER ou REFORMULER le texte du client. Utiliser ses mots EXACTS, caractère par caractère.");
+    lines.push("• NE JAMAIS AJOUTER de contenu 'pour compléter' ou 'pour faire joli' : si le client n'a pas donné l'info, elle N'EXISTE PAS.");
+    lines.push("• NE JAMAIS CHANGER une date (ex: client dit '15 Mars' → écrire '15 Mars', PAS '16 Mars' ni 'Mars 2025').");
+    lines.push("• NE JAMAIS MÉLANGER les domaines (ex: e-commerce → PAS de texte sur l'impression ou les services religieux).");
+    lines.push("• Si une zone est vide faute d'info client → la laisser VIDE ou la remplir avec le FOND, JAMAIS avec du texte inventé.");
 
     lines.push("");
     lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
