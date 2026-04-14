@@ -675,17 +675,26 @@ function buildProfessionalPrompt({
   instructions.push("Coins arrondis cohérents partout (15-25px). Bordures fines (1-2px) si utilisées.");
   
   instructions.push("");
-  instructions.push("═══ ⚡ EXIGENCES ABSOLUES ═══");
-  instructions.push("• CONTENU: Strictement les infos client. ZÉRO invention. ZÉRO texte non fourni. ZÉRO placeholder.");
+  instructions.push("═══ 🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION (CRITIQUE) 🚫🚫🚫 ═══");
+  instructions.push("C'est la RÈGLE LA PLUS IMPORTANTE. Violation = ÉCHEC TOTAL.");
+  instructions.push("• SEUL le texte EXACTEMENT fourni par le client apparaît sur l'affiche. RIEN D'AUTRE.");
+  instructions.push("• NE JAMAIS INVENTER : date, prix, numéro de téléphone, adresse, slogan, nom de marque, hashtag, URL, email, ou TOUTE info non donnée.");
+  instructions.push("• NE JAMAIS PARAPHRASER : si le client écrit 'Grande Vente du 15 Mars', écrire EXACTEMENT 'Grande Vente du 15 Mars'. Pas 'Mega Promo', pas '15/03', pas 'Mars 2025'.");
+  instructions.push("• NE JAMAIS AJOUTER de texte 'décoratif' ou 'pour compléter le design'. Les zones sans info client = fond graphique SANS TEXTE.");
+  instructions.push("• NE JAMAIS MÉLANGER les domaines : une affiche e-commerce ne contient PAS de texte sur l'impression, la religion, ou d'autres domaines non liés.");
+  instructions.push("• CHAQUE MOT sur l'affiche doit pouvoir être RETROUVÉ dans le texte du client ci-dessous. Sinon → NE PAS L'ÉCRIRE.");
+  instructions.push("• Si le client a donné peu d'infos → l'affiche a PEU DE TEXTE. C'est NORMAL. Compenser avec du DESIGN, pas du texte inventé.");
+  instructions.push("");
+  instructions.push("═══ ⚡ EXIGENCES COMPLÉMENTAIRES ═══");
   instructions.push("• PERSONNAGES: Africains par défaut. Photoréalistes. Professionnels.");
   instructions.push("• LISIBILITÉ: Contraste WCAG 4.5:1 minimum. Texte TOUJOURS lisible au premier regard.");
-  instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe exacte du client.");
-  instructions.push("• CTA: Si pertinent, bouton/bandeau visible et accrocheur.");
+  instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe EXACTE du client, caractère par caractère.");
+  instructions.push("• CTA: Si pertinent ET fourni par le client, bouton/bandeau visible et accrocheur.");
   if (hasLogoImage) instructions.push("• LOGO: Reproduire EXACTEMENT tel que fourni, sans déformation.");
   
   instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
-  instructions.push("═══ DONNÉES CLIENT (UNIQUEMENT CES INFORMATIONS) ═══");
+  instructions.push("═══ DONNÉES CLIENT (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE, RIEN D'AUTRE) ═══");
   instructions.push(userPrompt);
   return instructions.join("\n");
 }
