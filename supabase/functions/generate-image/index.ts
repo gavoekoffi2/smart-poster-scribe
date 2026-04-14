@@ -499,6 +499,12 @@ function buildProfessionalPrompt({
     lines.push("• NE PAS ajouter ou supprimer d'éléments SAUF si demandé.");
     lines.push("• Le fond, les formes, les photos, les logos: INTOUCHABLES sauf demande explicite.");
     lines.push("");
+    lines.push("═══ 🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫 ═══");
+    lines.push("• NE JAMAIS inventer, ajouter ou modifier du texte que le client N'A PAS demandé de changer.");
+    lines.push("• NE JAMAIS changer une date, un prix, un numéro, un nom propre : reproduire EXACTEMENT ce qui existe.");
+    lines.push("• NE JAMAIS ajouter de contenu décoratif, slogan, ou information qui n'est pas dans la demande.");
+    lines.push("• Chaque caractère, chaque chiffre doit être une copie FIDÈLE sauf la modification demandée.");
+    lines.push("");
     lines.push("═══ TYPES DE MODIFICATIONS ═══");
     lines.push("• Correction de texte → changer UNIQUEMENT le texte concerné, même police, même taille, même position.");
     lines.push("• Suppression → supprimer UNIQUEMENT l'élément cité, reconstruire le fond local proprement.");
