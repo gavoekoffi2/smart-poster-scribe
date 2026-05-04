@@ -222,6 +222,60 @@ async function generateWithGoogleGemini(
   throw new Error("Google Gemini n'a pas retourné d'image dans la réponse");
 }
 
+async function generateWithOpenRouter(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+): Promise<string> {
+  console.log("🟣 Generating with OpenRouter Nano Banana Pro (gemini-3-pro-image-preview)...");
+
+  const content: any[] = [{ type: "text", text: prompt }];
+  for (const imgUrl of imageInputs.slice(0, 6)) {
+    content.push({ type: "image_url", image_url: { url: imgUrl } });
+  }
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://graphistegpt.pro",
+      "X-Title": "GraphisteGPT",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-pro-image-preview",
+      messages: [{ role: "user", content }],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("OpenRouter API error:", response.status, errorText);
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const message = data?.choices?.[0]?.message;
+  const images = message?.images;
+  if (Array.isArray(images) && images.length > 0) {
+    const url = images[0]?.image_url?.url;
+    if (url) {
+      console.log("✅ OpenRouter Nano Banana Pro image generated.");
+      return url;
+    }
+  }
+  // Some providers return content as array with image parts
+  if (Array.isArray(message?.content)) {
+    for (const part of message.content) {
+      if (part?.type === "image_url" && part?.image_url?.url) {
+        return part.image_url.url;
+      }
+    }
+  }
+  throw new Error("OpenRouter n'a retourné aucune image. Réponse: " + JSON.stringify(data).slice(0, 500));
+}
+
 async function generateWithLovableFallback(
   apiKey: string,
   prompt: string,
@@ -1547,62 +1601,66 @@ serve(async (req) => {
     
     let generationError: unknown = null;
 
-    // ===== GÉNÉRATION PRINCIPALE: Google Gemini API (Nano Banana 2) =====
+    // ===== GÉNÉRATION PRINCIPALE: OpenRouter (Nano Banana Pro) =====
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    
-    if (GOOGLE_AI_API_KEY) {
+
+    const tryGoogle = async () => {
+      if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY non configurée");
+      taskId = `gemini-${crypto.randomUUID()}`;
+      resultUrl = await generateWithGoogleGemini(GOOGLE_AI_API_KEY, finalPrompt, imageInputs);
+    };
+    const tryKie = async () => {
+      taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
+      resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
+    };
+    const tryLovable = async () => {
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY non configurée");
+      taskId = `lovable-${crypto.randomUUID()}`;
+      resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
+    };
+
+    if (OPENROUTER_API_KEY) {
       try {
-        console.log("🔵 Tentative de génération avec Google Gemini (PRIMARY)...");
-        taskId = `gemini-${crypto.randomUUID()}`;
-        resultUrl = await generateWithGoogleGemini(GOOGLE_AI_API_KEY, finalPrompt, imageInputs);
-        console.log("✅ Google Gemini generation succeeded.");
-      } catch (geminiError) {
-        console.warn("⚠️ Google Gemini failed:", getErrorMessage(geminiError));
-        
-        // Fallback 1: Kie AI
-        try {
-          console.log("🟡 Fallback vers Kie AI...");
-          taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
-          resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
-          console.log("✅ Kie AI fallback succeeded.");
-        } catch (kieError) {
-          console.warn("⚠️ Kie AI failed:", getErrorMessage(kieError));
-          
-          // Fallback 2: Lovable AI Gateway
-          if (LOVABLE_API_KEY) {
-            try {
-              console.log("🟠 Fallback vers Lovable AI...");
-              taskId = `lovable-${crypto.randomUUID()}`;
-              resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
-              console.log("✅ Lovable AI fallback succeeded.");
-            } catch (lovableError) {
-              console.error("❌ All providers failed.");
-              generationError = lovableError;
-            }
-          } else {
-            generationError = kieError;
+        console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
+        taskId = `openrouter-${crypto.randomUUID()}`;
+        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs);
+        console.log("✅ OpenRouter generation succeeded.");
+      } catch (orError) {
+        console.warn("⚠️ OpenRouter failed:", getErrorMessage(orError));
+        try { await tryGoogle(); console.log("✅ Google Gemini fallback succeeded."); }
+        catch (gErr) {
+          console.warn("⚠️ Google Gemini failed:", getErrorMessage(gErr));
+          try { await tryKie(); console.log("✅ Kie AI fallback succeeded."); }
+          catch (kErr) {
+            console.warn("⚠️ Kie AI failed:", getErrorMessage(kErr));
+            try { await tryLovable(); console.log("✅ Lovable AI fallback succeeded."); }
+            catch (lErr) { generationError = lErr; }
           }
         }
       }
+    } else if (GOOGLE_AI_API_KEY) {
+      try { await tryGoogle(); }
+      catch (geminiError) {
+        console.warn("⚠️ Google Gemini failed:", getErrorMessage(geminiError));
+        try { await tryKie(); }
+        catch (kieError) {
+          console.warn("⚠️ Kie AI failed:", getErrorMessage(kieError));
+          try { await tryLovable(); }
+          catch (lErr) { generationError = lErr; }
+        }
+      }
     } else {
-      // Pas de clé Google, utiliser Kie AI comme principal
-      try {
-        taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
-        resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
-      } catch (genError) {
+      try { await tryKie(); }
+      catch (genError) {
         if (isKieCreditError(genError) && LOVABLE_API_KEY) {
-          console.warn("Kie AI crédits insuffisants. Bascule vers Lovable AI.");
-          try {
-            taskId = `lovable-${crypto.randomUUID()}`;
-            resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
-          } catch (fallbackError) {
-            generationError = fallbackError;
-          }
+          try { await tryLovable(); }
+          catch (fallbackError) { generationError = fallbackError; }
         } else {
           generationError = genError;
         }
       }
-    }
+    
 
     if (!generationError) {
       console.log("✅ Image generation succeeded.");
