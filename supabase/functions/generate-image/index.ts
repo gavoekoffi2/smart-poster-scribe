@@ -1660,7 +1660,8 @@ serve(async (req) => {
           generationError = genError;
         }
       }
-    
+    }
+
 
     if (!generationError) {
       console.log("✅ Image generation succeeded.");
