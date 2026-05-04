@@ -222,6 +222,60 @@ async function generateWithGoogleGemini(
   throw new Error("Google Gemini n'a pas retourné d'image dans la réponse");
 }
 
+async function generateWithOpenRouter(
+  apiKey: string,
+  prompt: string,
+  imageInputs: string[],
+): Promise<string> {
+  console.log("🟣 Generating with OpenRouter Nano Banana Pro (gemini-3-pro-image-preview)...");
+
+  const content: any[] = [{ type: "text", text: prompt }];
+  for (const imgUrl of imageInputs.slice(0, 6)) {
+    content.push({ type: "image_url", image_url: { url: imgUrl } });
+  }
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://graphistegpt.pro",
+      "X-Title": "GraphisteGPT",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-pro-image-preview",
+      messages: [{ role: "user", content }],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("OpenRouter API error:", response.status, errorText);
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const message = data?.choices?.[0]?.message;
+  const images = message?.images;
+  if (Array.isArray(images) && images.length > 0) {
+    const url = images[0]?.image_url?.url;
+    if (url) {
+      console.log("✅ OpenRouter Nano Banana Pro image generated.");
+      return url;
+    }
+  }
+  // Some providers return content as array with image parts
+  if (Array.isArray(message?.content)) {
+    for (const part of message.content) {
+      if (part?.type === "image_url" && part?.image_url?.url) {
+        return part.image_url.url;
+      }
+    }
+  }
+  throw new Error("OpenRouter n'a retourné aucune image. Réponse: " + JSON.stringify(data).slice(0, 500));
+}
+
 async function generateWithLovableFallback(
   apiKey: string,
   prompt: string,
