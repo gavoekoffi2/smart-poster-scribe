@@ -1660,26 +1660,7 @@ serve(async (req) => {
           generationError = genError;
         }
       }
-    }
-    } else {
-      // Pas de clé Google, utiliser Kie AI comme principal
-      try {
-        taskId = await createTask(KIE_API_KEY, finalPrompt, imageInputs, aspectRatio, resolution, outputFormat);
-        resultUrl = await pollForResult(KIE_API_KEY, taskId, resolution);
-      } catch (genError) {
-        if (isKieCreditError(genError) && LOVABLE_API_KEY) {
-          console.warn("Kie AI crédits insuffisants. Bascule vers Lovable AI.");
-          try {
-            taskId = `lovable-${crypto.randomUUID()}`;
-            resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
-          } catch (fallbackError) {
-            generationError = fallbackError;
-          }
-        } else {
-          generationError = genError;
-        }
-      }
-    }
+    
 
     if (!generationError) {
       console.log("✅ Image generation succeeded.");
