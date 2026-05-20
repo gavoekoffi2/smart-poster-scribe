@@ -243,7 +243,7 @@ async function generateWithOpenRouter(
       "X-Title": "GraphisteGPT",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-pro-image-preview",
+      model: "openai/gpt-5.4-image-2",
       messages: [{ role: "user", content }],
       modalities: ["image", "text"],
     }),
