@@ -76,20 +76,61 @@ export function useImageGeneration() {
         return null;
       }
 
-      if (!data?.success || !data.imageUrl) {
-        console.error("Generation failed:", data);
-        toast.error(data?.error || "La génération a échoué");
-        return null;
+      // Async job pattern: edge function returns { success, jobId, status: 'processing' }
+      const jobId = (data as any)?.jobId;
+      if (!jobId) {
+        // Backward compat: direct imageUrl response
+        if (!data?.imageUrl) {
+          console.error("Generation failed (no jobId/imageUrl):", data);
+          toast.error(data?.error || "La génération a échoué");
+          return null;
+        }
+      }
+
+      // Poll image_jobs table until completed/failed (max ~8 minutes)
+      let finalImageUrl: string | undefined = data?.imageUrl;
+      let finalTaskId: string | undefined = data?.taskId;
+
+      if (jobId) {
+        const maxAttempts = 160; // 160 * 3s = 480s
+        const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < maxAttempts; i++) {
+          await delay(3000);
+          const { data: job, error: jobErr } = await supabase
+            .from("image_jobs")
+            .select("status, result_url, task_id, error_message")
+            .eq("id", jobId)
+            .maybeSingle();
+          if (jobErr) {
+            console.warn("Job poll error:", jobErr.message);
+            continue;
+          }
+          if (!job) continue;
+          if (job.status === "completed" && job.result_url) {
+            finalImageUrl = job.result_url;
+            finalTaskId = job.task_id || jobId;
+            break;
+          }
+          if (job.status === "failed") {
+            toast.error(job.error_message || "La génération a échoué");
+            return null;
+          }
+        }
+        if (!finalImageUrl) {
+          toast.error("La génération prend plus de temps que prévu. Réessayez dans un instant.");
+          return null;
+        }
       }
 
       const newImage: GeneratedImage = {
-        id: data.taskId || crypto.randomUUID(),
-        imageUrl: data.imageUrl,
+        id: finalTaskId || crypto.randomUUID(),
+        imageUrl: finalImageUrl!,
         prompt: params.prompt,
         aspectRatio: params.aspectRatio,
         resolution: params.resolution,
         createdAt: new Date(),
       };
+
 
       setCurrentImage(newImage);
       setHistory((prev) => [newImage, ...prev]);
