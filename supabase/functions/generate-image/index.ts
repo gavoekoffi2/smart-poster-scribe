@@ -1191,6 +1191,27 @@ serve(async (req) => {
     }
     // ===== FIN VÉRIFICATION DES CRÉDITS =====
 
+    // ===== CRÉATION DU JOB ASYNCHRONE =====
+    const { data: jobRow, error: jobErr } = await supabase
+      .from('image_jobs')
+      .insert({
+        user_id: userId,
+        status: 'processing',
+        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat },
+      })
+      .select('id')
+      .single();
+    if (jobErr || !jobRow) {
+      console.error("Failed to create job:", jobErr);
+      throw new Error("Erreur lors de la création du job de génération");
+    }
+    const jobId = jobRow.id as string;
+    console.log("📋 Job created:", jobId);
+
+    const backgroundWork = async () => {
+      try {
+
+
     // Convertir les chemins relatifs de templates en URLs absolues
     // Cette conversion doit se faire APRÈS avoir extrait requestOrigin
     if (referenceImage && referenceImage.startsWith('/reference-templates/')) {
