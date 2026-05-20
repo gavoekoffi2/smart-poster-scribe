@@ -1763,16 +1763,32 @@ serve(async (req) => {
       console.warn("Image persistence failed, using temp URL:", persistErr);
     }
 
+        await supabase.from('image_jobs').update({
+          status: 'completed',
+          result_url: permanentUrl,
+          task_id: taskId,
+        }).eq('id', jobId);
+        console.log("✅ Job completed:", jobId);
+      } catch (bgErr) {
+        console.error("❌ Background job error:", bgErr);
+        await supabase.from('image_jobs').update({
+          status: 'failed',
+          error_message: getErrorMessage(bgErr).slice(0, 1000),
+        }).eq('id', jobId);
+      }
+    };
+
+    // @ts-ignore EdgeRuntime global
+    EdgeRuntime.waitUntil(backgroundWork());
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        imageUrl: permanentUrl,
-        taskId: taskId,
-      }),
+      JSON.stringify({ success: true, jobId, status: 'processing' }),
       {
+        status: 202,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
+
   } catch (error) {
     console.error("Generate image error:", error);
     return new Response(
