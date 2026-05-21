@@ -1334,6 +1334,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             isModification: true,
             modificationRequest: request,
             domain: state.domain || undefined,
+            quality: (typeof window !== "undefined" && localStorage.getItem("premiumQuality") === "true") ? "premium" : "fast",
           },
         });
 
