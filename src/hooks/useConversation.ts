@@ -3286,6 +3286,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               formatHeight: 1920,
               usageType: "social",
               domain: nextState.domain || undefined,
+              quality: (typeof window !== "undefined" && localStorage.getItem("premiumQuality") === "true") ? "premium" : "fast",
             },
           });
 
