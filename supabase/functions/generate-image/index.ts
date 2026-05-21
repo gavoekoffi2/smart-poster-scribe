@@ -1056,7 +1056,9 @@ serve(async (req) => {
       domain, // Domaine passé par le client
       isModification, // Flag pour les modifications (pas de débit de crédits)
       modificationRequest: rawModificationRequest, // Description de la modification demandée
+      quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
     } = body;
+    const quality: "fast" | "premium" = rawQuality === "premium" ? "premium" : "fast";
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
