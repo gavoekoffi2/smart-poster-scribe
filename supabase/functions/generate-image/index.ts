@@ -1651,7 +1651,7 @@ serve(async (req) => {
       try {
         console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
         taskId = `openrouter-${crypto.randomUUID()}`;
-        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs);
+        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, quality);
         console.log("✅ OpenRouter generation succeeded.");
       } catch (orError) {
         console.warn("⚠️ OpenRouter failed:", getErrorMessage(orError));
