@@ -596,6 +596,7 @@ export default function AppPage() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <QualityToggle />
             {isAuthenticated && (
               <CreditBalance compact onUpgrade={() => navigate("/pricing")} />
             )}
