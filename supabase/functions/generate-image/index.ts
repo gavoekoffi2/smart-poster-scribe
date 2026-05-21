@@ -226,8 +226,12 @@ async function generateWithOpenRouter(
   apiKey: string,
   prompt: string,
   imageInputs: string[],
+  quality: "fast" | "premium" = "fast",
 ): Promise<string> {
-  console.log("🟣 Generating with OpenRouter Nano Banana Pro (gemini-3-pro-image-preview)...");
+  const model = quality === "premium"
+    ? "openai/gpt-5.4-image-2"
+    : "google/gemini-3-pro-image-preview";
+  console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality})...`);
 
   const content: any[] = [{ type: "text", text: prompt }];
   for (const imgUrl of imageInputs.slice(0, 6)) {
@@ -243,7 +247,7 @@ async function generateWithOpenRouter(
       "X-Title": "GraphisteGPT",
     },
     body: JSON.stringify({
-      model: "openai/gpt-5.4-image-2",
+      model,
       messages: [{ role: "user", content }],
       modalities: ["image", "text"],
     }),
@@ -1052,7 +1056,9 @@ serve(async (req) => {
       domain, // Domaine passé par le client
       isModification, // Flag pour les modifications (pas de débit de crédits)
       modificationRequest: rawModificationRequest, // Description de la modification demandée
+      quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
     } = body;
+    const quality: "fast" | "premium" = rawQuality === "premium" ? "premium" : "fast";
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
@@ -1645,7 +1651,7 @@ serve(async (req) => {
       try {
         console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
         taskId = `openrouter-${crypto.randomUUID()}`;
-        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs);
+        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, quality);
         console.log("✅ OpenRouter generation succeeded.");
       } catch (orError) {
         console.warn("⚠️ OpenRouter failed:", getErrorMessage(orError));

@@ -8,6 +8,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { CreditBalance } from "@/components/credits/CreditBalance";
+import { QualityToggle } from "@/components/QualityToggle";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { ChatMessage } from "@/components/chat/ChatMessage";
@@ -595,6 +596,7 @@ export default function AppPage() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <QualityToggle />
             {isAuthenticated && (
               <CreditBalance compact onUpgrade={() => navigate("/pricing")} />
             )}
