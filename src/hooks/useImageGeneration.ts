@@ -36,6 +36,7 @@ export function useImageGeneration() {
           outputFormat: params.outputFormat,
           referenceImage: params.referenceImageUrl,
           contentImage: params.contentImageUrl,
+          quality: (typeof window !== "undefined" && localStorage.getItem("premiumQuality") === "true") ? "premium" : "fast",
         },
       });
 
