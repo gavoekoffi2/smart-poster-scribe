@@ -29,6 +29,31 @@ import { detectContextMismatch, getDomainLabel as getContextDomainLabel } from "
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
+// Attente de la fin d'un job de génération asynchrone (poll image_jobs)
+async function waitForImageJob(jobId: string, maxAttempts = 200): Promise<{ url?: string; error?: string }> {
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < maxAttempts; i++) {
+    await delay(3000);
+    const { data: job } = await supabase
+      .from("image_jobs")
+      .select("status, result_url, error_message")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (!job) continue;
+    if (job.status === "completed" && job.result_url) return { url: job.result_url };
+    if (job.status === "failed") return { error: job.error_message || "Génération échouée" };
+  }
+  return { error: "La génération prend plus de temps que prévu. Réessayez." };
+}
+
+// Récupère l'imageUrl final que la réponse soit synchrone (imageUrl) ou asynchrone (jobId)
+async function resolveImageUrl(data: any): Promise<{ url?: string; error?: string }> {
+  if (data?.imageUrl) return { url: data.imageUrl };
+  if (data?.jobId) return await waitForImageJob(data.jobId);
+  return { error: "Aucune image retournée" };
+}
+
+
 // Domaines qui sont orientés produit/e-commerce (sans restaurant qui a un traitement spécial)
 const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestate"];
 
@@ -1247,13 +1272,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
 
-        setGeneratedImage(data.imageUrl);
+        const { url: finalUrl, error: jobErr } = await resolveImageUrl(data);
+        if (!finalUrl) {
+          addMessage("assistant", `Désolé, la génération a échoué : ${jobErr}. Voulez-vous réessayer ?`);
+          toast.error(jobErr || "Erreur lors de la génération");
+          setConversationState((prev) => ({ ...prev, step: "content_image" }));
+          return;
+        }
+        setGeneratedImage(finalUrl);
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
           "Votre affiche est prête ! 🎨 Si vous souhaitez des modifications (changer un texte, ajuster les couleurs, déplacer un élément...), décrivez-les moi. Sinon, téléchargez-la ou créez-en une nouvelle !"
         );
         toast.success("Affiche générée avec succès !");
+
       } catch (err) {
         console.error("Generation error:", err);
         addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
@@ -1367,13 +1400,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
 
-        setGeneratedImage(data.imageUrl);
+        const { url: modUrl, error: modErr } = await resolveImageUrl(data);
+        if (!modUrl) {
+          addMessage("assistant", `Désolé, la modification a échoué : ${modErr}. Décrivez à nouveau ce que vous voulez changer.`);
+          setConversationState((prev) => ({ ...prev, step: "complete" }));
+          toast.error(modErr || "Erreur lors de la modification");
+          return;
+        }
+        setGeneratedImage(modUrl);
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
           "J'ai appliqué vos modifications ! Si vous voulez d'autres changements, dites-le moi. Sinon, téléchargez votre affiche !"
         );
         toast.success("Modifications appliquées !");
+
       } catch (err) {
         console.error("Modification error:", err);
         removeLoadingMessage();
@@ -3307,10 +3348,18 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             return;
           }
 
-          setGeneratedImage(data.imageUrl);
+          const { url: qUrl, error: qErr } = await resolveImageUrl(data);
+          if (!qUrl) {
+            addMessage("assistant", `Désolé, la génération a échoué : ${qErr}. Voulez-vous réessayer ?`);
+            setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+            toast.error(qErr || "Erreur lors de la génération");
+            return;
+          }
+          setGeneratedImage(qUrl);
           setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
           addMessage("assistant", "Votre affiche est prête ! 🎨 Souhaitez-vous la personnaliser davantage ?");
           toast.success("Affiche générée avec succès !");
+
         } catch (err) {
           console.error("Quick generation error:", err);
           addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");

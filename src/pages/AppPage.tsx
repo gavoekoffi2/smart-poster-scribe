@@ -29,6 +29,7 @@ import { VisualEditor } from "@/components/editor/VisualEditor";
 import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -750,27 +751,39 @@ export default function AppPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex gap-3">
-                    <Input
+                  <div className="flex gap-3 items-end">
+                    <Textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={step === "complete" ? "Décrivez vos modifications..." : "Décrivez votre projet créatif..."}
-                      onKeyPress={handleKeyPress}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleKeyPress({ key: "Enter" } as any);
+                        }
+                      }}
                       disabled={isProcessing}
-                      className="flex-1 bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all"
+                      rows={4}
+                      className="flex-1 min-h-[110px] max-h-[260px] resize-y bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all text-sm leading-relaxed"
                     />
-                    <VoiceInputButton
-                      onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
-                      disabled={isProcessing}
-                    />
-                    <Button 
-                      onClick={handleSend} 
-                      disabled={!inputValue.trim() || isProcessing}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <VoiceInputButton
+                        onTranscript={(text) => setInputValue((prev) => prev ? prev + " " + text : text)}
+                        disabled={isProcessing}
+                      />
+                      <Button
+                        onClick={handleSend}
+                        disabled={!inputValue.trim() || isProcessing}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 px-6 glow-gold"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
+                    Astuce : <kbd className="px-1 py-0.5 rounded bg-muted/60 border border-border/40">Maj</kbd> + <kbd className="px-1 py-0.5 rounded bg-muted/60 border border-border/40">Entrée</kbd> pour une nouvelle ligne
+                  </p>
+
                 </div>
               )}
 
