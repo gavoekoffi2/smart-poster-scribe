@@ -541,11 +541,70 @@ function buildProfessionalPrompt({
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
 
-  // ====== MODE MODIFICATION CHIRURGICALE ======
-  // Quand l'utilisateur demande une correction sur une affiche déjà générée,
-  // on ne régénère PAS tout. On applique UNIQUEMENT le changement demandé.
+  // ====== MODE MODIFICATION ======
+  // Deux sous-modes :
+  //  (A) AMÉLIORATION GLOBALE : demandes vagues ("plus professionnel", "mieux", "améliore"...)
+  //  (B) MODIFICATION CHIRURGICALE : demandes précises (changer texte, couleur, supprimer X...)
   if (isModification && modificationRequest && hasReferenceImage) {
+    const normalized = modificationRequest
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const enhancementKeywords = [
+      "plus professionnel", "professionnel", "professionel", "pro ",
+      "ameliore", "ameliorer", "ameliorez", "amelioration",
+      "plus beau", "plus joli", "plus moderne", "plus design", "plus elegant",
+      "plus premium", "plus haut de gamme", "plus impressionnant", "plus attractif",
+      "plus stylé", "plus stylee", "plus stylise", "plus soigne",
+      "mieux", "rends mieux", "rendre mieux", "fais mieux", "refais mieux",
+      "qualite superieure", "plus de qualite", "monte en gamme",
+      "wow", "spectaculaire", "premium",
+    ];
+    const isEnhancementRequest = enhancementKeywords.some((k) => normalized.includes(k));
+
     const lines: string[] = [];
+
+    if (isEnhancementRequest) {
+      // ====== (A) AMÉLIORATION GLOBALE ======
+      lines.push("✨ MODE AMÉLIORATION PROFESSIONNELLE - LIRE ATTENTIVEMENT ✨");
+      lines.push("");
+      lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE. Le client la trouve insuffisante et demande un RENDU NETTEMENT PLUS PROFESSIONNEL.");
+      lines.push("");
+      lines.push("═══ MISSION : RETRAVAILLER ET ÉLEVER LA QUALITÉ ═══");
+      lines.push("• Tu DOIS RETRAVAILLER l'affiche. INTERDIT de renvoyer la même image quasi inchangée.");
+      lines.push("• Garde l'IDENTITÉ : même sujet, mêmes TEXTES (mot pour mot), même message, même format, même type d'affiche.");
+      lines.push("• Garde la PALETTE de couleurs principale (ou une version harmonisée plus raffinée).");
+      lines.push("• AMÉLIORE de façon visible et significative :");
+      lines.push("  → Typographie : titres avec effets pro (3D, ombres portées épaisses, contours, dégradés, glow, metallic, embossage).");
+      lines.push("  → Hiérarchie : titre 2x+ sous-titre, ratio 5:2:1, point focal renforcé.");
+      lines.push("  → Composition : grille pro, alignement parfait, espace blanc 30-50%, règle des tiers, golden ratio.");
+      lines.push("  → Profondeur : 5 couches visuelles (fond, formes décoratives, image/sujet, blocs texte, accents).");
+      lines.push("  → Décors graphiques : courbes, vagues, arcs, rubans 3D, formes organiques, bandeaux obliques.");
+      lines.push("  → Effets premium : ombres directionnelles cohérentes (135°), reflets, halos lumineux subtils, textures.");
+      lines.push("  → Contraste : dramatique 3:1 minimum entre niveaux, Bold vs Light.");
+      lines.push("  → Détails de finition : coins arrondis cohérents, bordures fines, micro-décorations.");
+      lines.push("• Respect du TEMPLATE source : on doit reconnaître la MÊME affiche, mais en version BEAUCOUP plus aboutie, plus pro, plus impressionnante.");
+      lines.push("");
+      lines.push("═══ 🚫 ANTI-HALLUCINATION TEXTE ═══");
+      lines.push("• REPRODUIRE chaque texte, chiffre, date, prix, nom, contact EXACTEMENT à l'identique. Aucune invention.");
+      lines.push("• Tu peux changer la TYPO, la TAILLE, les EFFETS visuels du texte, mais PAS le contenu littéral.");
+      lines.push("");
+      lines.push("═══ STANDARDS GRAPHISTE PRO À APPLIQUER ═══");
+      lines.push("Hiérarchie dramatique • Espace blanc maîtrisé • Typo pro avec effets • 60-30-10 couleurs • Contraste WCAG 4.5:1 • Grille invisible • Profondeur multi-couches.");
+      lines.push("");
+      lines.push("═══ CONTRÔLE QUALITÉ ═══");
+      lines.push("✓ Le résultat doit être VISIBLEMENT plus professionnel et plus impressionnant que la source.");
+      lines.push("✓ Un graphiste senior doit dire « oui, c'est un vrai upgrade » au premier coup d'œil.");
+      lines.push("✓ INTERDIT de renvoyer l'image source telle quelle ou avec des changements imperceptibles.");
+      lines.push("");
+      lines.push(`Format:${aspectRatio}|HD|Francais`);
+      lines.push("");
+      lines.push("═══ DEMANDE DU CLIENT ═══");
+      lines.push(modificationRequest);
+      return lines.join("\n");
+    }
+
+    // ====== (B) MODIFICATION CHIRURGICALE ======
     lines.push("🔧 MODE MODIFICATION CHIRURGICALE - LIRE ATTENTIVEMENT 🔧");
     lines.push("");
     lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE par toi. Le client demande UNE CORRECTION PRÉCISE.");
