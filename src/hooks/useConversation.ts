@@ -1400,13 +1400,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
 
-        setGeneratedImage(data.imageUrl);
+        const { url: modUrl, error: modErr } = await resolveImageUrl(data);
+        if (!modUrl) {
+          addMessage("assistant", `Désolé, la modification a échoué : ${modErr}. Décrivez à nouveau ce que vous voulez changer.`);
+          setConversationState((prev) => ({ ...prev, step: "complete" }));
+          toast.error(modErr || "Erreur lors de la modification");
+          return;
+        }
+        setGeneratedImage(modUrl);
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
           "J'ai appliqué vos modifications ! Si vous voulez d'autres changements, dites-le moi. Sinon, téléchargez votre affiche !"
         );
         toast.success("Modifications appliquées !");
+
       } catch (err) {
         console.error("Modification error:", err);
         removeLoadingMessage();
@@ -3340,10 +3348,18 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             return;
           }
 
-          setGeneratedImage(data.imageUrl);
+          const { url: qUrl, error: qErr } = await resolveImageUrl(data);
+          if (!qUrl) {
+            addMessage("assistant", `Désolé, la génération a échoué : ${qErr}. Voulez-vous réessayer ?`);
+            setConversationState((prev) => ({ ...prev, step: "quick_description" }));
+            toast.error(qErr || "Erreur lors de la génération");
+            return;
+          }
+          setGeneratedImage(qUrl);
           setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
           addMessage("assistant", "Votre affiche est prête ! 🎨 Souhaitez-vous la personnaliser davantage ?");
           toast.success("Affiche générée avec succès !");
+
         } catch (err) {
           console.error("Quick generation error:", err);
           addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
