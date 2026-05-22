@@ -29,6 +29,31 @@ import { detectContextMismatch, getDomainLabel as getContextDomainLabel } from "
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
+// Attente de la fin d'un job de génération asynchrone (poll image_jobs)
+async function waitForImageJob(jobId: string, maxAttempts = 200): Promise<{ url?: string; error?: string }> {
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  for (let i = 0; i < maxAttempts; i++) {
+    await delay(3000);
+    const { data: job } = await supabase
+      .from("image_jobs")
+      .select("status, result_url, error_message")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (!job) continue;
+    if (job.status === "completed" && job.result_url) return { url: job.result_url };
+    if (job.status === "failed") return { error: job.error_message || "Génération échouée" };
+  }
+  return { error: "La génération prend plus de temps que prévu. Réessayez." };
+}
+
+// Récupère l'imageUrl final que la réponse soit synchrone (imageUrl) ou asynchrone (jobId)
+async function resolveImageUrl(data: any): Promise<{ url?: string; error?: string }> {
+  if (data?.imageUrl) return { url: data.imageUrl };
+  if (data?.jobId) return await waitForImageJob(data.jobId);
+  return { error: "Aucune image retournée" };
+}
+
+
 // Domaines qui sont orientés produit/e-commerce (sans restaurant qui a un traitement spécial)
 const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestate"];
 
