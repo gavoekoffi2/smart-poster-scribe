@@ -1272,13 +1272,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
 
-        setGeneratedImage(data.imageUrl);
+        const { url: finalUrl, error: jobErr } = await resolveImageUrl(data);
+        if (!finalUrl) {
+          addMessage("assistant", `Désolé, la génération a échoué : ${jobErr}. Voulez-vous réessayer ?`);
+          toast.error(jobErr || "Erreur lors de la génération");
+          setConversationState((prev) => ({ ...prev, step: "content_image" }));
+          return;
+        }
+        setGeneratedImage(finalUrl);
         setConversationState((prev) => ({ ...prev, step: "complete" }));
         addMessage(
           "assistant",
           "Votre affiche est prête ! 🎨 Si vous souhaitez des modifications (changer un texte, ajuster les couleurs, déplacer un élément...), décrivez-les moi. Sinon, téléchargez-la ou créez-en une nouvelle !"
         );
         toast.success("Affiche générée avec succès !");
+
       } catch (err) {
         console.error("Generation error:", err);
         addMessage("assistant", "Une erreur inattendue est survenue. Veuillez réessayer.");
