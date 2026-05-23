@@ -1306,41 +1306,59 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const state = conversationStateRef.current;
-        // Build the original prompt for context, and send modification separately
-        const originalPrompt = buildPrompt(state);
-        // The modification prompt includes original context for the AI to understand,
-        // but the actual modification instruction is sent separately
-        const modificationPrompt = originalPrompt;
+
+        // GUARD: il faut OBLIGATOIREMENT une affiche déjà générée pour pouvoir la retravailler.
+        // Sinon le système retomberait sur le template brut (sans infos client) et renverrait
+        // une image générique. On bloque clairement.
+        if (!generatedImage) {
+          removeLoadingMessage();
+          addMessage(
+            "assistant",
+            "Je n'ai pas encore d'affiche générée à retravailler. Relancez d'abord la génération, puis demandez une modification."
+          );
+          setConversationState((prev) => ({ ...prev, step: "complete" }));
+          setIsProcessing(false);
+          return;
+        }
+
+        // Prompt court : la fonction edge ignore userPrompt en mode isModification,
+        // mais on garde les logs propres.
+        const modificationPrompt = `Modification d'affiche existante. Demande: ${request}`;
 
         console.log("Modification request:", request);
-        console.log("Original prompt for context:", originalPrompt.substring(0, 200));
 
         const logos = state.logos || [];
         const logoImages = logos.map((l) => l.imageUrl);
         const logoPositions = logos.map((l) => l.position);
 
-        // Même logique: si référence = template local, envoyer en base64
-        let referenceImageToSend: string | undefined = state.referenceImage || undefined;
-        if (referenceImageToSend && !referenceImageToSend.startsWith("data:image/")) {
-          const looksLikeLocalTemplate = referenceImageToSend.includes("/reference-templates/");
-          if (looksLikeLocalTemplate) {
-            try {
-              const res = await fetch(referenceImageToSend);
-              if (res.ok) {
-                const blob = await res.blob();
-                referenceImageToSend = await new Promise<string>((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(String(reader.result));
-                  reader.onerror = () => reject(new Error("Impossible de lire l'image de template"));
-                  reader.readAsDataURL(blob);
-                });
-              }
-            } catch (e) {
-              console.warn("Impossible de convertir le template en base64, envoi de l'URL:", e);
-            }
+        // TOUJOURS convertir l'affiche générée en base64 pour que les providers
+        // (OpenRouter/Gemini) reçoivent les vrais pixels et pas une URL distante.
+        let referenceImageToSend: string = generatedImage;
+        if (!referenceImageToSend.startsWith("data:image/")) {
+          try {
+            const res = await fetch(referenceImageToSend);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            referenceImageToSend = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(String(reader.result));
+              reader.onerror = () => reject(new Error("Impossible de lire l'affiche générée"));
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) {
+            console.error("Impossible de convertir l'affiche générée en base64:", e);
+            removeLoadingMessage();
+            addMessage(
+              "assistant",
+              "Je n'arrive pas à charger votre affiche pour la retravailler. Réessayez dans un instant."
+            );
+            setConversationState((prev) => ({ ...prev, step: "complete" }));
+            setIsProcessing(false);
+            return;
           }
         }
-        
+        console.log("Modification reference (base64) size:", Math.round(referenceImageToSend.length / 1024), "KB");
+
         // Rafraîchir la session avant l'appel pour éviter les tokens expirés
         const { error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
@@ -1359,7 +1377,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             aspectRatio,
             resolution,
             outputFormat,
-            referenceImage: generatedImage || referenceImageToSend,
+            referenceImage: referenceImageToSend,
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
