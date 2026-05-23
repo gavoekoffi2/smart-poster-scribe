@@ -1184,9 +1184,25 @@ serve(async (req) => {
     console.log("Request validated:");
     console.log("- Prompt length:", prompt.length);
     console.log("- Has reference image (raw):", !!rawReferenceImage);
+    console.log("- Reference image size:", rawReferenceImage ? Math.round((rawReferenceImage as string).length / 1024) + " KB" : "n/a");
+    console.log("- isModification:", !!isModification);
+    console.log("- modificationRequest:", typeof rawModificationRequest === "string" ? rawModificationRequest.slice(0, 120) : "n/a");
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Has content image:", !!contentImage);
     console.log("- Secondary images count:", secondaryImages?.length || 0);
+
+    // GARDE-FOU : en mode modification, il FAUT une image de référence (l'affiche déjà générée).
+    // Sans elle, on renverrait un design générique sans les infos client.
+    if (isModification && !userProvidedReferenceImage) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "MISSING_REFERENCE_FOR_MODIFICATION",
+          message: "Aucune affiche de référence n'a été fournie pour la modification.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const originHeader = req.headers.get("origin") || undefined;
     const refererHeader = req.headers.get("referer") || undefined;
