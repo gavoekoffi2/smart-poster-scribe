@@ -751,10 +751,7 @@ export default function AppPage() {
                       </span>
                     </div>
                   )}
-                  <div className="mb-2 flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[11px] text-muted-foreground">Qualité de génération :</span>
-                    <QualityToggle />
-                  </div>
+                  <QualityChoice />
                   <div className="flex gap-3 items-end">
                     <Textarea
                       value={inputValue}
