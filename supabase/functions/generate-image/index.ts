@@ -584,6 +584,8 @@ function buildProfessionalPrompt({
       lines.push("  → Contraste : dramatique 3:1 minimum entre niveaux, Bold vs Light.");
       lines.push("  → Détails de finition : coins arrondis cohérents, bordures fines, micro-décorations.");
       lines.push("• Respect du TEMPLATE source : on doit reconnaître la MÊME affiche, mais en version BEAUCOUP plus aboutie, plus pro, plus impressionnante.");
+      lines.push("• 🚫 INTERDIT ABSOLU : remplacer l'image jointe par un autre template, un design générique, ou une affiche vierge sans les infos client. L'image jointe EST l'affiche du client avec ses informations — tu dois la RETRAVAILLER, pas la remplacer.");
+      lines.push("• Toutes les informations client (noms, dates, lieux, prix, contacts, photos) présentes sur l'image jointe DOIVENT être conservées et bien visibles sur le résultat.");
       lines.push("");
       lines.push("═══ 🚫 ANTI-HALLUCINATION TEXTE ═══");
       lines.push("• REPRODUIRE chaque texte, chiffre, date, prix, nom, contact EXACTEMENT à l'identique. Aucune invention.");
@@ -1182,9 +1184,25 @@ serve(async (req) => {
     console.log("Request validated:");
     console.log("- Prompt length:", prompt.length);
     console.log("- Has reference image (raw):", !!rawReferenceImage);
+    console.log("- Reference image size:", rawReferenceImage ? Math.round((rawReferenceImage as string).length / 1024) + " KB" : "n/a");
+    console.log("- isModification:", !!isModification);
+    console.log("- modificationRequest:", typeof rawModificationRequest === "string" ? rawModificationRequest.slice(0, 120) : "n/a");
     console.log("- Logo images count:", logoImages?.length || 0);
     console.log("- Has content image:", !!contentImage);
     console.log("- Secondary images count:", secondaryImages?.length || 0);
+
+    // GARDE-FOU : en mode modification, il FAUT une image de référence (l'affiche déjà générée).
+    // Sans elle, on renverrait un design générique sans les infos client.
+    if (isModification && !userProvidedReferenceImage) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "MISSING_REFERENCE_FOR_MODIFICATION",
+          message: "Aucune affiche de référence n'a été fournie pour la modification.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const originHeader = req.headers.get("origin") || undefined;
     const refererHeader = req.headers.get("referer") || undefined;

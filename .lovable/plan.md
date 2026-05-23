@@ -1,70 +1,39 @@
+## Problème identifié
 
+Quand l'utilisateur clique « Modifier » puis tape « rends plus professionnel » :
 
-## Plan : Ajouter un Mode Rapide vs Mode Personnalisé
+1. Le client envoie `referenceImage: generatedImage || referenceImageToSend` (useConversation.ts, ligne 1362).
+2. **Si `generatedImage` est `null`** (cas qui se produit après un rechargement, ou si l'image générée n'a pas pu être lue), il bascule sur `referenceImageToSend` qui pointe vers le **template brut de la base** (`/reference-templates/...`) — donc sans aucune info client.
+3. Le moteur d'amélioration reçoit ce template brut, applique la consigne « conserve identiquement tous les textes » et renvoie le template tel quel.
 
-### Concept
+Résultat visible : une affiche template sans les informations de l'utilisateur, exactement ce que le rapport décrit.
 
-Au tout début de la conversation (après le message de bienvenue), l'utilisateur choisit entre :
-- **Mode Rapide** : Décrit son affiche → (optionnel : image de référence) → Génération immédiate (format Instagram Story 9:16 par défaut) → Après génération, proposer les personnalisations (logo, couleurs, format)
-- **Mode Personnalisé** : Le flux actuel inchangé (référence → format → couleurs → logo → images secondaires → génération)
+En plus, le `modificationPrompt` envoyé à la fonction edge contient l'ENTIER `buildPrompt(state)` (toute la description initiale du brief), ce qui n'est jamais utilisé en mode modification (la branche `isModification` du edge function ignore `userPrompt`). Ça pollue les logs et embrouille les fallbacks.
 
-### Modifications techniques
+## Plan de correction
 
-**1. Types (`src/types/generation.ts`)**
-- Ajouter `CreationMode = "quick" | "custom"` 
-- Ajouter étape `"mode_select"` dans les steps du `ConversationState`
-- Ajouter `creationMode?: CreationMode` dans `ConversationState`
-- Ajouter étape `"post_generation_options"` pour les personnalisations post-génération en mode rapide
+### 1. `src/hooks/useConversation.ts` — `handleModificationRequest`
 
-**2. Conversation flow (`src/hooks/useConversation.ts`)**
-- Modifier le message initial pour proposer le choix du mode
-- Après analyse de la description en mode rapide :
-  - Demander uniquement si l'utilisateur a une image de référence (oui/non)
-  - Si oui → upload puis génération directe
-  - Si non → génération directe avec format 9:16, sans logo, sans couleurs personnalisées
-- Après génération en mode rapide (`"complete"`) : afficher un message proposant des personnalisations optionnelles (logo, couleurs, format)
-- En mode personnalisé : le flux reste identique à l'actuel
+- **Bloquer** la modification si `generatedImage` est absent : afficher un message clair (« Je n'ai pas encore d'affiche générée à retravailler, relancez la génération ») au lieu de retomber sur le template brut.
+- **Toujours** utiliser l'affiche générée comme référence (ne plus faire `generatedImage || referenceImageToSend`).
+- Convertir systématiquement `generatedImage` en **base64** avant l'envoi (comme c'est déjà fait pour les templates), pour que les providers (OpenRouter, Gemini) reçoivent bien les pixels de l'affiche et pas seulement une URL Supabase qui peut être ignorée par certains modèles.
+- Remplacer `modificationPrompt = originalPrompt` par un court prompt contextuel ciblé (le contenu sera ignoré côté edge en mode `isModification`, mais ça gardera les logs propres et évitera tout effet de bord sur les fallbacks).
 
-**3. UI - Sélection du mode (`src/pages/AppPage.tsx`)**
-- Ajouter un composant de choix de mode (2 boutons/cards) quand `step === "mode_select"`
-- Bouton "Mode Rapide" avec icone éclair et description courte
-- Bouton "Mode Personnalisé" avec icone palette et description courte
+### 2. `supabase/functions/generate-image/index.ts` — sécurité côté serveur
 
-**4. Nouveau composant (`src/components/chat/ModeSelect.tsx`)**
-- Deux cartes cliquables : Rapide (éclair) et Personnalisé (palette)
-- Style cohérent avec les composants existants (DomainSelect, FormatSelect)
+- En mode `isModification = true`, **forcer** le rejet si aucune `referenceImage` n'est fournie (retourner une erreur explicite plutôt que tomber dans un autre mode).
+- Dans le bloc d'amélioration globale (lignes 567-604), renforcer la consigne anti-régression : ajouter une ligne explicite « INTERDIT de remplacer l'affiche fournie par un autre template ou un design générique. L'image jointe EST l'affiche du client, tu dois la retravailler ».
+- Logger explicitement `isModification`, `hasReferenceImage`, et la taille de la référence reçue pour faciliter le debug futur.
 
-**5. Post-génération rapide (`src/components/chat/PostGenerationOptions.tsx`)**
-- Après la génération en mode rapide, afficher des boutons :
-  - "Ajouter un logo"
-  - "Changer les couleurs" 
-  - "Changer le format"
-  - "C'est parfait !"
-- Chaque option lance une modification de l'affiche existante
+### 3. Vérification
 
-### Flux Mode Rapide résumé
+- Tester le flux : générer une affiche → cliquer « Modifier » → taper « rends plus professionnel » → vérifier que :
+  - les logs montrent `Has reference image (raw): true` ET une taille > 100 KB (donc base64 de l'affiche, pas une URL),
+  - le résultat conserve les infos client visibles sur l'affiche d'origine,
+  - le rendu est visiblement retravaillé (typo, profondeur, contraste).
 
-```text
-Bienvenue → Choix du mode → [Rapide]
-  → Description de l'affiche
-  → Analyse IA (détection domaine auto)
-  → "Avez-vous une image de référence ?" (oui/passer)
-  → Génération immédiate (format 9:16, pas de logo, couleurs auto)
-  → "Votre affiche est prête ! Souhaitez-vous :"
-      - Ajouter un logo
-      - Modifier les couleurs
-      - Changer le format
-      - C'est parfait !
-```
+## Détails techniques
 
-### Fichiers impactés
-
-| Fichier | Action |
-|---------|--------|
-| `src/types/generation.ts` | Ajouter types `CreationMode`, steps |
-| `src/hooks/useConversation.ts` | Logique mode rapide dans le flux |
-| `src/pages/AppPage.tsx` | Afficher ModeSelect et PostGenerationOptions |
-| `src/components/chat/ModeSelect.tsx` | Nouveau composant choix de mode |
-| `src/components/chat/PostGenerationOptions.tsx` | Nouveau composant options post-génération |
-| `src/components/chat/StepNavigation.tsx` | Ajouter le step mode_select |
-
+- Pas de changement de schéma BDD ni d'edge function nouvelle.
+- Pas de changement sur la première génération (le flux initial reste intact, comme demandé).
+- Pas de changement sur les boutons Mode rapide / Mode long déjà en place.
