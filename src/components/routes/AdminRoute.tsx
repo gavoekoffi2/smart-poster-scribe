@@ -9,7 +9,7 @@ interface AdminRouteProps {
 
 export default function AdminRoute({ children }: AdminRouteProps) {
   const { user, isLoading: authLoading } = useAuthContext();
-  const { userRole, isLoading: roleLoading } = useAdmin();
+  const { hasRole, isLoading: roleLoading } = useAdmin();
   const location = useLocation();
 
   if (authLoading || roleLoading) {
@@ -24,7 +24,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
     return <Navigate to="/auth" state={{ redirectTo: location.pathname }} replace />;
   }
 
-  if (!userRole) {
+  if (!hasRole("content_manager")) {
     return <Navigate to="/" replace />;
   }
 

@@ -32,16 +32,12 @@ interface MonerooPaymentResponse {
 }
 
 serve(async (req) => {
-  console.log("[create-payment] Request received:", req.method);
-  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const MONEROO_SECRET_KEY = Deno.env.get("MONEROO_SECRET_KEY");
-    console.log("[create-payment] MONEROO_SECRET_KEY present:", !!MONEROO_SECRET_KEY);
-    
     if (!MONEROO_SECRET_KEY) {
       console.error("[create-payment] MONEROO_SECRET_KEY not configured");
       throw new Error("MONEROO_SECRET_KEY non configurée");
@@ -49,49 +45,31 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    console.log("[create-payment] Supabase config present:", { 
-      url: !!supabaseUrl, 
-      serviceKey: !!supabaseServiceKey 
-    });
-    
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Variables Supabase non configurées");
     }
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get auth token from request
     const authHeader = req.headers.get("authorization");
-    console.log("[create-payment] Auth header present:", !!authHeader);
-    
     if (!authHeader) {
       throw new Error("Authentification requise");
     }
 
-    // Verify user
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    console.log("[create-payment] User verification:", { 
-      userId: user?.id, 
-      email: user?.email,
-      error: authError?.message 
-    });
-    
+
     if (authError || !user) {
       throw new Error("Utilisateur non authentifié");
     }
 
     const body = await req.json();
     const { planSlug, returnUrl } = body;
-    console.log("[create-payment] Request body:", { planSlug, returnUrl });
 
-    if (!planSlug) {
-      throw new Error("Plan non spécifié");
+    if (!planSlug || typeof planSlug !== "string" || planSlug.length > 64) {
+      throw new Error("Plan non spécifié ou invalide");
     }
 
-    // Get plan details
     const { data: plan, error: planError } = await supabase
       .from("subscription_plans")
       .select("*")
@@ -99,15 +77,8 @@ serve(async (req) => {
       .eq("is_active", true)
       .single();
 
-    console.log("[create-payment] Plan lookup:", { 
-      planId: plan?.id, 
-      planName: plan?.name,
-      planSlug: plan?.slug,
-      error: planError?.message 
-    });
-
     if (planError || !plan) {
-      throw new Error(`Plan introuvable: ${planSlug}`);
+      throw new Error("Plan introuvable");
     }
 
     if (plan.slug === "free") {
@@ -130,8 +101,6 @@ serve(async (req) => {
     const firstName = nameParts[0] || "Client";
     const lastName = nameParts.slice(1).join(" ") || "Graphiste GPT";
 
-    // Create payment transaction record
-    console.log("[create-payment] Creating transaction record...");
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
       .insert({
@@ -145,14 +114,9 @@ serve(async (req) => {
       .select()
       .single();
 
-    console.log("[create-payment] Transaction created:", { 
-      transactionId: transaction?.id, 
-      error: txError?.message 
-    });
-
     if (txError || !transaction) {
-      console.error("[create-payment] Error creating transaction:", txError);
-      throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
+      console.error("[create-payment] Error creating transaction:", txError?.message);
+      throw new Error("Erreur création transaction");
     }
 
     // Create Moneroo payment
@@ -174,8 +138,6 @@ serve(async (req) => {
       },
     };
 
-    console.log("Creating Moneroo payment:", JSON.stringify(monerooRequest, null, 2));
-
     const monerooResponse = await fetch(`${MONEROO_API_BASE}/payments/initialize`, {
       method: "POST",
       headers: {
@@ -187,15 +149,11 @@ serve(async (req) => {
     });
 
     const monerooData = await monerooResponse.json() as MonerooPaymentResponse;
-    console.log("Moneroo response:", JSON.stringify(monerooData, null, 2));
-    console.log("Moneroo response status:", monerooResponse.status);
 
     if (!monerooResponse.ok || !monerooData.data?.checkout_url) {
-      console.error("Moneroo error details:", {
+      console.error("[create-payment] Moneroo error:", {
         status: monerooResponse.status,
-        statusText: monerooResponse.statusText,
         message: monerooData.message,
-        data: monerooData
       });
       
       // Update transaction as failed

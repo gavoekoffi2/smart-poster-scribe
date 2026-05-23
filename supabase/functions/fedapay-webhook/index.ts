@@ -21,12 +21,12 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const payload = await req.json();
-    
-    console.log("FedaPay webhook received:", JSON.stringify(payload, null, 2));
 
     // FedaPay sends: { entity: "event", name: "transaction.approved", object: { ... } }
     const eventName = payload.name || payload.event;
     const transactionData = payload.object || payload.data;
+
+    console.log("FedaPay webhook event:", eventName, "tx:", transactionData?.id);
 
     if (!transactionData) {
       throw new Error("Payload invalide - pas de données de transaction");
@@ -35,10 +35,8 @@ serve(async (req) => {
     const customMetadata = transactionData.custom_metadata || transactionData.metadata || {};
     const { user_id, plan_id, transaction_id, plan_slug } = customMetadata;
 
-    console.log("Metadata:", { user_id, plan_id, transaction_id, plan_slug, eventName });
-
     if (!user_id || !plan_id || !transaction_id) {
-      console.error("Missing metadata:", customMetadata);
+      console.error("[fedapay-webhook] Missing metadata fields");
       throw new Error("Métadonnées manquantes");
     }
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import AppPage from "./pages/AppPage";
@@ -47,48 +48,50 @@ function PageLoader() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Toaster position="top-right" richColors />
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/app" element={<AppPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/account" element={<AccountPage />} />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" richColors />
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/app" element={<AppPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/account" element={<AccountPage />} />
 
-          {/* Admin routes with guard */}
-          <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
-          <Route path="/admin/designers" element={<AdminRoute><AdminDesigners /></AdminRoute>} />
-          <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
-          <Route path="/admin/marquee" element={<AdminRoute><AdminMarquee /></AdminRoute>} />
-          <Route path="/admin/showcase" element={<AdminRoute><AdminShowcase /></AdminRoute>} />
-          <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
-          <Route path="/admin/roles" element={<AdminRoute><AdminRoles /></AdminRoute>} />
-          <Route path="/admin/affiliates" element={<AdminRoute><AdminAffiliates /></AdminRoute>} />
-          <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+            {/* Admin routes with guard */}
+            <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
+            <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
+            <Route path="/admin/designers" element={<AdminRoute><AdminDesigners /></AdminRoute>} />
+            <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
+            <Route path="/admin/marquee" element={<AdminRoute><AdminMarquee /></AdminRoute>} />
+            <Route path="/admin/showcase" element={<AdminRoute><AdminShowcase /></AdminRoute>} />
+            <Route path="/admin/feedback" element={<AdminRoute><AdminFeedback /></AdminRoute>} />
+            <Route path="/admin/roles" element={<AdminRoute><AdminRoles /></AdminRoute>} />
+            <Route path="/admin/affiliates" element={<AdminRoute><AdminAffiliates /></AdminRoute>} />
+            <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
 
-          {/* Designer routes with guard */}
-          <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
-          <Route path="/designer/dashboard" element={<DesignerRoute><DesignerDashboard /></DesignerRoute>} />
-          <Route path="/designer/upload" element={<DesignerRoute><DesignerUpload /></DesignerRoute>} />
-          <Route path="/designer/profile" element={<DesignerRoute><DesignerProfile /></DesignerRoute>} />
-          <Route path="/designer/:designerId" element={<DesignerProfile />} />
+            {/* Designer routes with guard */}
+            <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
+            <Route path="/designer/dashboard" element={<DesignerRoute><DesignerDashboard /></DesignerRoute>} />
+            <Route path="/designer/upload" element={<DesignerRoute><DesignerUpload /></DesignerRoute>} />
+            <Route path="/designer/profile" element={<DesignerRoute><DesignerProfile /></DesignerRoute>} />
+            <Route path="/designer/:designerId" element={<DesignerProfile />} />
 
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/legal" element={<LegalPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
-  </QueryClientProvider>
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/legal" element={<LegalPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -256,7 +256,7 @@ async function generateWithOpenRouter(
   if (!response.ok) {
     const errorText = await response.text();
     console.error("OpenRouter API error:", response.status, errorText);
-    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    throw new Error(`Erreur génération image (code ${response.status})`);
   }
 
   const data = await response.json();
@@ -888,10 +888,10 @@ async function createTask(
       throw new Error("Limite de requêtes atteinte. Réessayez plus tard.");
     }
     if (response.status === 400) {
-      throw new Error(`Paramètres invalides: ${errorText}`);
+      throw new Error("Paramètres invalides pour la génération");
     }
-    
-    throw new Error(`Erreur création tâche: ${response.status} - ${errorText}`);
+
+    throw new Error(`Erreur création tâche (code ${response.status})`);
   }
 
   const data = (await response.json()) as KieCreateTaskResponse;

@@ -96,9 +96,8 @@ serve(async (req) => {
     }
 
     const payload = JSON.parse(rawBody) as MonerooWebhookPayload;
-    console.log("Webhook payload:", JSON.stringify(payload, null, 2));
-
     const { event, data } = payload;
+    console.log("Moneroo webhook event:", event, "payment:", data?.id);
 
     if (!event || !data) {
       throw new Error("Payload invalide");
