@@ -83,9 +83,9 @@ export function QualityChoice() {
   );
 
   return (
-    <div className="mb-3">
-      <p className="text-[11px] font-medium text-muted-foreground mb-2 px-1">
-        Choisissez votre mode de génération :
+    <div className="mb-2">
+      <p className="text-[10px] font-medium text-muted-foreground mb-1 px-1">
+        Mode de génération :
       </p>
       <div className="flex gap-2">
         <Card
