@@ -753,7 +753,7 @@ export default function AppPage() {
                     </div>
                   )}
                   <QualityChoice />
-                  <div className="flex gap-3 items-end">
+                  <div className="flex gap-3 items-start">
                     <Textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
@@ -766,7 +766,7 @@ export default function AppPage() {
                       }}
                       disabled={isProcessing}
                       rows={4}
-                      className="flex-1 min-h-[110px] max-h-[260px] resize-y bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all text-sm leading-relaxed"
+                      className="flex-1 min-h-[110px] max-h-[180px] resize-y bg-background/60 border-border/40 focus:border-brand-orange/50 focus:ring-brand-orange/20 transition-all text-sm leading-relaxed"
                     />
                     <div className="flex flex-col gap-2">
                       <VoiceInputButton
