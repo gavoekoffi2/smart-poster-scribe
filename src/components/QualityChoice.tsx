@@ -49,7 +49,7 @@ export function QualityChoice() {
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex-1 min-w-0 text-left rounded-xl border-2 p-3 transition-all duration-300",
+        "relative flex-1 min-w-1 text-left rounded-xl border-2 p-2 transition-all duration-300",
         "hover:scale-[1.02] hover:shadow-lg",
         active
           ? accent === "primary"
@@ -61,31 +61,31 @@ export function QualityChoice() {
       {active && (
         <span
           className={cn(
-            "absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center",
+            "absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center",
             accent === "primary" ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"
           )}
         >
-          <Check className="w-3 h-3" />
+          <Check className="w-2.5 h-2.5" />
         </span>
       )}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-1.5 mb-0.5">
         <Icon
           className={cn(
-            "w-4 h-4 shrink-0",
+            "w-3.5 h-3.5 shrink-0",
             active ? (accent === "primary" ? "text-primary" : "text-accent") : "text-muted-foreground"
           )}
         />
-        <span className="font-semibold text-sm">{title}</span>
+        <span className="font-semibold text-xs">{title}</span>
       </div>
-      <p className="text-[11px] font-medium text-foreground/80 mb-1">{subtitle}</p>
-      <p className="text-[10px] text-muted-foreground leading-snug">{description}</p>
+      <p className="text-[10px] font-medium text-foreground/80 mb-0.5">{subtitle}</p>
+      <p className="text-[9px] text-muted-foreground leading-tight">{description}</p>
     </button>
   );
 
   return (
-    <div className="mb-3">
-      <p className="text-[11px] font-medium text-muted-foreground mb-2 px-1">
-        Choisissez votre mode de génération :
+    <div className="mb-2">
+      <p className="text-[10px] font-medium text-muted-foreground mb-1 px-1">
+        Mode de génération :
       </p>
       <div className="flex gap-2">
         <Card
