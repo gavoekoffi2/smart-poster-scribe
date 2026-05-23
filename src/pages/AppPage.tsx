@@ -661,9 +661,9 @@ export default function AppPage() {
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl overflow-hidden">
         {/* Main Panel - Chat + Preview below */}
-        <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-6 overflow-y-auto min-h-1">
           {/* Chat Panel */}
-          <div className="flex flex-col glass-panel overflow-hidden animate-scale-in" style={{ minHeight: displayImage ? '40vh' : '70vh', maxHeight: displayImage ? '50vh' : '80vh' }}>
+          <div className="flex-1 flex flex-col glass-panel overflow-hidden min-h-1 animate-scale-in">
             {/* Step Indicator */}
             <StepIndicator currentStep={step} />
             
