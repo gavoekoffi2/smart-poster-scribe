@@ -1315,7 +1315,21 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // GUARD: il faut OBLIGATOIREMENT une affiche déjà générée pour pouvoir la retravailler.
         // Sinon le système retomberait sur le template brut (sans infos client) et renverrait
         // une image générique. On bloque clairement.
-        if (!generatedImage) {
+        // Récupérer l'affiche générée : d'abord via le ref (toujours à jour),
+        // sinon fallback sur la dernière image envoyée par l'assistant dans le chat.
+        let currentGenerated: string | null = generatedImageRef.current;
+        if (!currentGenerated) {
+          const lastAssistantWithImage = [...messages].reverse().find(
+            (m) => m.role === "assistant" && m.image
+          );
+          if (lastAssistantWithImage?.image) {
+            currentGenerated = lastAssistantWithImage.image;
+            generatedImageRef.current = currentGenerated;
+            _setGeneratedImage(currentGenerated);
+          }
+        }
+
+        if (!currentGenerated) {
           removeLoadingMessage();
           addMessage(
             "assistant",
@@ -1338,7 +1352,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         // TOUJOURS convertir l'affiche générée en base64 pour que les providers
         // (OpenRouter/Gemini) reçoivent les vrais pixels et pas une URL distante.
-        let referenceImageToSend: string = generatedImage;
+        let referenceImageToSend: string = currentGenerated;
         if (!referenceImageToSend.startsWith("data:image/")) {
           try {
             const res = await fetch(referenceImageToSend);
