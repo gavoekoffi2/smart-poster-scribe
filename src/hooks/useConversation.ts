@@ -759,7 +759,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   }, [conversationState]);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedImage, _setGeneratedImage] = useState<string | null>(null);
+  const generatedImageRef = useRef<string | null>(null);
+  const setGeneratedImage = useCallback((val: string | null) => {
+    generatedImageRef.current = val;
+    _setGeneratedImage(val);
+  }, []);
   const [suggestedDomain, setSuggestedDomain] = useState<string | null>(cloneTemplate?.domain || null);
   const [visitedSteps, setVisitedSteps] = useState<ConversationState["step"][]>(["mode_select"]);
   const [creditError, setCreditError] = useState<{
