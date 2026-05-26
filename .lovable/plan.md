@@ -1,39 +1,45 @@
-## Problème identifié
+## Problèmes identifiés
 
-Quand l'utilisateur clique « Modifier » puis tape « rends plus professionnel » :
+**1. « Améliorer » ne change pas vraiment le design**
+Aujourd'hui (lignes 567-606 de `supabase/functions/generate-image/index.ts`), le mode amélioration force le modèle à **garder l'identité visuelle, la palette et la structure** de l'affiche source. Résultat : on reconnaît "la même affiche en mieux", alors que le client voudrait un **design carrément différent** avec ses infos.
 
-1. Le client envoie `referenceImage: generatedImage || referenceImageToSend` (useConversation.ts, ligne 1362).
-2. **Si `generatedImage` est `null`** (cas qui se produit après un rechargement, ou si l'image générée n'a pas pu être lue), il bascule sur `referenceImageToSend` qui pointe vers le **template brut de la base** (`/reference-templates/...`) — donc sans aucune info client.
-3. Le moteur d'amélioration reçoit ce template brut, applique la consigne « conserve identiquement tous les textes » et renvoie le template tel quel.
-
-Résultat visible : une affiche template sans les informations de l'utilisateur, exactement ce que le rapport décrit.
-
-En plus, le `modificationPrompt` envoyé à la fonction edge contient l'ENTIER `buildPrompt(state)` (toute la description initiale du brief), ce qui n'est jamais utilisé en mode modification (la branche `isModification` du edge function ignore `userPrompt`). Ça pollue les logs et embrouille les fallbacks.
+**2. Icônes du template hors contexte**
+En mode clone (règle #5, ligne 695-698), la consigne sur les icônes est trop molle : « conserver les icônes décoratives cohérentes… remplacer si hors contexte ». Le modèle ne détecte pas qu'un logo Photoshop n'a rien à faire sur une affiche de comptabilité. Idem pour les logos partenaires/illustrations spécifiques au template d'origine.
 
 ## Plan de correction
 
-### 1. `src/hooks/useConversation.ts` — `handleModificationRequest`
+### 1. Mode amélioration : refonte complète du design (`buildProfessionalPrompt`, branche `isEnhancementRequest`)
 
-- **Bloquer** la modification si `generatedImage` est absent : afficher un message clair (« Je n'ai pas encore d'affiche générée à retravailler, relancez la génération ») au lieu de retomber sur le template brut.
-- **Toujours** utiliser l'affiche générée comme référence (ne plus faire `generatedImage || referenceImageToSend`).
-- Convertir systématiquement `generatedImage` en **base64** avant l'envoi (comme c'est déjà fait pour les templates), pour que les providers (OpenRouter, Gemini) reçoivent bien les pixels de l'affiche et pas seulement une URL Supabase qui peut être ignorée par certains modèles.
-- Remplacer `modificationPrompt = originalPrompt` par un court prompt contextuel ciblé (le contenu sera ignoré côté edge en mode `isModification`, mais ça gardera les logs propres et évitera tout effet de bord sur les fallbacks).
+Réécrire la branche (A) pour passer d'un mode "retouche pro" à un mode **"redesign complet à partir des infos client"** :
 
-### 2. `supabase/functions/generate-image/index.ts` — sécurité côté serveur
+- Nouveau cadrage : « L'image jointe sert UNIQUEMENT de source d'informations (textes, noms, dates, prix, contacts, logos, photos). Tu dois créer une **NOUVELLE affiche au design totalement différent**. »
+- Consignes explicites :
+  - Changer la mise en page, la palette, la typo, les formes, le style général.
+  - Conserver **uniquement** les informations textuelles et visuelles du client (extraites de l'image jointe), mot pour mot pour les textes.
+  - Si une photo client/logo client est identifiable, la réutiliser ; sinon générer un nouveau visuel cohérent avec le contexte détecté.
+  - Garder le **format** (aspect ratio) et la **langue** identiques.
+- Réutiliser les standards premium déjà présents dans le mode libre (typographie premium, 5 couches, hiérarchie dramatique) en appelant `buildExpertSkillsPrompt(detectedDomain)`, `getRandomTypographyStyle()`, `getRandomLayoutStyle()` pour garantir une vraie variation entre deux améliorations successives.
+- Maintien strict de l'anti-hallucination texte (mot pour mot, pas d'invention de date/prix/contact).
 
-- En mode `isModification = true`, **forcer** le rejet si aucune `referenceImage` n'est fournie (retourner une erreur explicite plutôt que tomber dans un autre mode).
-- Dans le bloc d'amélioration globale (lignes 567-604), renforcer la consigne anti-régression : ajouter une ligne explicite « INTERDIT de remplacer l'affiche fournie par un autre template ou un design générique. L'image jointe EST l'affiche du client, tu dois la retravailler ».
-- Logger explicitement `isModification`, `hasReferenceImage`, et la taille de la référence reçue pour faciliter le debug futur.
+### 2. Mode clone : adaptation contextuelle stricte des icônes/logos/illustrations (règle #5)
+
+Remplacer la règle #5 actuelle par une règle beaucoup plus exigeante :
+
+- **Détecter le contexte métier** de l'affiche cible à partir du `userPrompt` (déjà fait via `detectDomainFromPrompt`).
+- **Supprimer obligatoirement** toute icône, logo de marque tierce (ex : Photoshop, Illustrator, Figma, marques de produits), illustration ou symbole décoratif du template d'origine qui **n'appartient pas au domaine** de l'affiche cible.
+- **Remplacer** par des icônes / symboles / illustrations cohérents avec le domaine détecté (ex : comptabilité → calculatrice, graphiques, pièces, balance ; restauration → couverts, plats ; santé → croix médicale, stéthoscope). Même style graphique, même taille, même emplacement que l'élément remplacé.
+- Si aucun équivalent pertinent → supprimer proprement et reconstruire le fond local.
+- Ajouter des exemples concrets dans le prompt pour ancrer la règle (ex : « Si tu vois un logo Photoshop / Adobe / une marque sans rapport → SUPPRIMER et remplacer par une icône du domaine `<domaine>` »).
+- Renforcer également la directive sur les **logos partenaires fictifs** présents sur les templates : à supprimer sauf si le client a fourni explicitement des logos partenaires.
 
 ### 3. Vérification
 
-- Tester le flux : générer une affiche → cliquer « Modifier » → taper « rends plus professionnel » → vérifier que :
-  - les logs montrent `Has reference image (raw): true` ET une taille > 100 KB (donc base64 de l'affiche, pas une URL),
-  - le résultat conserve les infos client visibles sur l'affiche d'origine,
-  - le rendu est visiblement retravaillé (typo, profondeur, contraste).
+- Générer une affiche, cliquer « Modifier » → « rends plus pro » : vérifier que le design est **visiblement différent** (palette, layout) tout en conservant tous les textes/infos client.
+- Générer une affiche de comptabilité à partir d'un template contenant un logo type Photoshop : vérifier que ce logo a été **remplacé ou supprimé**, et qu'une icône/symbole en lien avec la comptabilité prend sa place.
 
 ## Détails techniques
 
-- Pas de changement de schéma BDD ni d'edge function nouvelle.
-- Pas de changement sur la première génération (le flux initial reste intact, comme demandé).
-- Pas de changement sur les boutons Mode rapide / Mode long déjà en place.
+- Fichier modifié : `supabase/functions/generate-image/index.ts` uniquement.
+- Pas de migration BDD, pas de changement client, pas de nouvelle edge function.
+- Branche modification chirurgicale (B) **inchangée** : les corrections ciblées (changer un texte, une couleur) gardent le comportement strict actuel.
+- Le mode libre (C) reste inchangé.
