@@ -394,52 +394,19 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     []
   );
 
-  // Add extracted text block to canvas (avec masque de fond pour masquer le texte original)
+  // Ajoute un bloc de texte extrait comme calque éditable (le fond est déjà nettoyé par l'IA)
   const addExtractedTextToCanvas = useCallback((block: ExtractedTextBlock) => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    // Conversion %  → pixels canvas
     const scaledX = (block.x / 100) * canvasSize.width;
     const scaledY = (block.y / 100) * canvasSize.height;
     const scaledW = (block.width / 100) * canvasSize.width;
     const scaledH = (block.height / 100) * canvasSize.height;
 
-    // Conversion %  → pixels image source (pour échantillonner la couleur)
-    const srcImg = sourceImageRef.current;
-    let bgColor = "#1a1a2e";
-    if (srcImg) {
-      const ix = (block.x / 100) * srcImg.width;
-      const iy = (block.y / 100) * srcImg.height;
-      const iw = (block.width / 100) * srcImg.width;
-      const ih = (block.height / 100) * srcImg.height;
-      bgColor = sampleBackgroundColor(ix, iy, iw, ih);
-    }
-
-    // Taille de police calibrée sur la hauteur du bbox (plus fiable que l'estimation IA)
-    const scaledFontSize = Math.max(12, Math.min(120, scaledH * 0.85));
-
+    const scaledFontSize = Math.max(12, Math.min(160, scaledH * 0.85));
     const textColor = block.color || "#FFFFFF";
 
-    console.log(`Text block "${block.text}" bbox=(${scaledX},${scaledY},${scaledW},${scaledH}) bg=${bgColor}`);
-
-    // 1) Rectangle de masquage légèrement plus grand que le bbox pour couvrir le texte original
-    const padX = Math.max(4, scaledW * 0.04);
-    const padY = Math.max(4, scaledH * 0.15);
-    const mask = new Rect({
-      left: scaledX - padX,
-      top: scaledY - padY,
-      width: scaledW + padX * 2,
-      height: scaledH + padY * 2,
-      fill: bgColor,
-      selectable: true,
-      evented: true,
-      objectCaching: false,
-    });
-    (mask as any).__isTextMask = true;
-    canvas.add(mask);
-
-    // 2) Texte éditable par-dessus le masque
     const text = new IText(block.text, {
       left: scaledX,
       top: scaledY,
@@ -448,42 +415,93 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       fontFamily: activeFont.value,
       fontWeight: "bold",
       width: scaledW,
-      shadow: new Shadow({ color: "rgba(0,0,0,0.45)", blur: 3, offsetX: 1, offsetY: 1 }),
     });
 
     canvas.add(text);
     return text;
-  }, [getCanvas, canvasSize, activeFont, sampleBackgroundColor]);
+  }, [getCanvas, canvasSize, activeFont]);
 
-  // Run AI text extraction and add detected text as editable layers
+  // Convertit l'affiche en calques éditables (façon Canva)
+  // 1) Demande à l'IA d'extraire les textes avec leurs positions
+  // 2) Demande à l'IA de générer un fond propre (sans aucun texte)
+  // 3) Remplace l'arrière-plan par le fond propre et ajoute les textes comme calques éditables
   const handleTextExtraction = useCallback(async () => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    toast.info("Extraction du texte en cours avec l'IA...");
+    toast.info("Conversion de l'affiche en calques éditables (peut prendre 20-40s)...", { duration: 5000 });
 
     try {
-      const textBlocks = await extractTextFromImage(imageUrl);
+      // Préparer l'image en base64 (les edge functions n'ont pas accès à toutes les URLs)
+      let imageData = imageUrl;
+      if (!imageUrl.startsWith("data:")) {
+        try {
+          const resp = await fetch(imageUrl, { mode: "cors" });
+          const blob = await resp.blob();
+          imageData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) {
+          console.warn("Conversion base64 échouée, on essaie avec l'URL telle quelle", e);
+        }
+      }
+
+      // Lancer extraction texte + nettoyage du fond en parallèle
+      const { supabase } = await import("@/integrations/supabase/client");
+
+      const [textBlocks, cleanResult] = await Promise.all([
+        extractTextFromImage(imageData),
+        supabase.functions.invoke<{ success: boolean; cleanImage?: string; error?: string }>(
+          "clean-image-text",
+          { body: { imageData } }
+        ),
+      ]);
+
+      // Remplacer l'arrière-plan par le fond nettoyé si dispo
+      const cleanImage = cleanResult.data?.cleanImage;
+      if (cleanImage) {
+        try {
+          const cleanImg = await loadImage(cleanImage, 15000);
+          sourceImageRef.current = cleanImg;
+          const fabricClean = new FabricImage(cleanImg);
+          fabricClean.scaleToWidth(canvasSize.width);
+          fabricClean.scaleToHeight(canvasSize.height);
+          canvas.backgroundImage = fabricClean;
+          console.log("Fond nettoyé appliqué");
+        } catch (e) {
+          console.error("Impossible de charger le fond nettoyé:", e);
+          toast.warning("Fond nettoyé indisponible — les textes vont se superposer à l'original");
+        }
+      } else {
+        console.warn("clean-image-text n'a pas retourné d'image", cleanResult);
+        toast.warning("Nettoyage du fond indisponible — édition possible mais le texte original restera visible");
+      }
+
+      // Ajouter les calques de texte éditables
+      if (textBlocks.length > 0) {
+        textBlocks.forEach((block) => addExtractedTextToCanvas(block));
+      }
+
+      canvas.renderAll();
+      saveToHistory();
+      setActiveTool("select");
 
       if (textBlocks.length > 0) {
-        // Add each text block as an editable layer
-        textBlocks.forEach((block) => {
-          addExtractedTextToCanvas(block);
-        });
-
-        canvas.renderAll();
-        saveToHistory();
-        setActiveTool("select");
         toast.success(
-          `${textBlocks.length} texte(s) détecté(s) ! Double-cliquez sur un texte pour le modifier (ajouter, enlever, corriger des lettres). Le design d'origine est conservé.`,
+          `${textBlocks.length} texte(s) converti(s) en calques éditables. Double-cliquez sur un texte pour le modifier.`,
           { duration: 6000 }
         );
+      } else {
+        toast.info("Aucun texte détecté à éditer");
       }
     } catch (error) {
       console.error("Text Extraction Error:", error);
-      toast.error("Erreur lors de l'extraction du texte");
+      toast.error("Erreur lors de la conversion en calques");
     }
-  }, [getCanvas, imageUrl, extractTextFromImage, addExtractedTextToCanvas, saveToHistory]);
+  }, [getCanvas, imageUrl, extractTextFromImage, addExtractedTextToCanvas, saveToHistory, canvasSize]);
   // Apply font to selected text
   const applyFontToSelected = useCallback((font: typeof FONTS[0]) => {
     const canvas = getCanvas();
