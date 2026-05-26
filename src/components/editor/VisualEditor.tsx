@@ -117,6 +117,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [imageScale, setImageScale] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const sourceImageRef = useRef<HTMLImageElement | null>(null);
 
   // AI Text Extraction hook (replaces OCR)
   const { isProcessing: isTextExtracting, progress: extractProgress, extractTextFromImage } = useAITextExtraction();
