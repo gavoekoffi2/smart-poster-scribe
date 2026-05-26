@@ -565,39 +565,43 @@ function buildProfessionalPrompt({
     const lines: string[] = [];
 
     if (isEnhancementRequest) {
-      // ====== (A) AMÉLIORATION GLOBALE ======
-      lines.push("✨ MODE AMÉLIORATION PROFESSIONNELLE - LIRE ATTENTIVEMENT ✨");
+      // ====== (A) REDESIGN COMPLET À PARTIR DES INFOS CLIENT ======
+      const typoStyle = getRandomTypographyStyle();
+      const layoutStyle = getRandomLayoutStyle();
+      const expertSkills = buildExpertSkillsPrompt(detectedDomain);
+
+      lines.push("🎨 MODE REDESIGN COMPLET - LIRE ATTENTIVEMENT 🎨");
       lines.push("");
-      lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE. Le client la trouve insuffisante et demande un RENDU NETTEMENT PLUS PROFESSIONNEL.");
+      lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE. Le client la trouve insuffisante et demande une TOUTE NOUVELLE AFFICHE, avec un DESIGN COMPLÈTEMENT DIFFÉRENT.");
       lines.push("");
-      lines.push("═══ MISSION : RETRAVAILLER ET ÉLEVER LA QUALITÉ ═══");
-      lines.push("• Tu DOIS RETRAVAILLER l'affiche. INTERDIT de renvoyer la même image quasi inchangée.");
-      lines.push("• Garde l'IDENTITÉ : même sujet, mêmes TEXTES (mot pour mot), même message, même format, même type d'affiche.");
-      lines.push("• Garde la PALETTE de couleurs principale (ou une version harmonisée plus raffinée).");
-      lines.push("• AMÉLIORE de façon visible et significative :");
-      lines.push("  → Typographie : titres avec effets pro (3D, ombres portées épaisses, contours, dégradés, glow, metallic, embossage).");
-      lines.push("  → Hiérarchie : titre 2x+ sous-titre, ratio 5:2:1, point focal renforcé.");
-      lines.push("  → Composition : grille pro, alignement parfait, espace blanc 30-50%, règle des tiers, golden ratio.");
-      lines.push("  → Profondeur : 5 couches visuelles (fond, formes décoratives, image/sujet, blocs texte, accents).");
-      lines.push("  → Décors graphiques : courbes, vagues, arcs, rubans 3D, formes organiques, bandeaux obliques.");
-      lines.push("  → Effets premium : ombres directionnelles cohérentes (135°), reflets, halos lumineux subtils, textures.");
-      lines.push("  → Contraste : dramatique 3:1 minimum entre niveaux, Bold vs Light.");
-      lines.push("  → Détails de finition : coins arrondis cohérents, bordures fines, micro-décorations.");
-      lines.push("• Respect du TEMPLATE source : on doit reconnaître la MÊME affiche, mais en version BEAUCOUP plus aboutie, plus pro, plus impressionnante.");
-      lines.push("• 🚫 INTERDIT ABSOLU : remplacer l'image jointe par un autre template, un design générique, ou une affiche vierge sans les infos client. L'image jointe EST l'affiche du client avec ses informations — tu dois la RETRAVAILLER, pas la remplacer.");
-      lines.push("• Toutes les informations client (noms, dates, lieux, prix, contacts, photos) présentes sur l'image jointe DOIVENT être conservées et bien visibles sur le résultat.");
+      lines.push("═══ MISSION : CRÉER UNE NOUVELLE AFFICHE FROM SCRATCH ═══");
+      lines.push("• L'image jointe sert UNIQUEMENT de SOURCE D'INFORMATIONS (textes, noms, dates, prix, lieux, contacts, logos, photos client).");
+      lines.push("• Tu dois CRÉER UNE NOUVELLE AFFICHE au design TOTALEMENT DIFFÉRENT de la source.");
+      lines.push("• CHANGE OBLIGATOIREMENT : la mise en page, la palette de couleurs, la typographie, les formes décoratives, le style général, la composition.");
+      lines.push("• Le résultat NE DOIT PAS ressembler visuellement à la source. Un observateur doit voir DEUX affiches différentes pour le même contenu.");
+      lines.push("• 🚫 INTERDIT : reproduire la même mise en page, la même palette, les mêmes formes ou la même typographie que l'image jointe.");
       lines.push("");
-      lines.push("═══ 🚫 ANTI-HALLUCINATION TEXTE ═══");
-      lines.push("• REPRODUIRE chaque texte, chiffre, date, prix, nom, contact EXACTEMENT à l'identique. Aucune invention.");
-      lines.push("• Tu peux changer la TYPO, la TAILLE, les EFFETS visuels du texte, mais PAS le contenu littéral.");
+      lines.push("═══ CONSERVATION DES INFOS CLIENT (CRITIQUE) ═══");
+      lines.push("• Conserver UNIQUEMENT et INTÉGRALEMENT les informations textuelles visibles sur l'image jointe : titres, sous-titres, dates, heures, lieux, prix, contacts, noms, slogans, hashtags.");
+      lines.push("• REPRODUIRE chaque texte MOT POUR MOT, caractère par caractère. Aucune invention, aucune paraphrase, aucune date/prix/contact ajouté.");
+      lines.push("• Si une photo du client ou un logo client est identifiable sur la source, le RÉUTILISER. Sinon, générer un visuel cohérent avec le contexte détecté.");
+      lines.push("• Format/aspect ratio : IDENTIQUE à la source. Langue : IDENTIQUE (français par défaut).");
       lines.push("");
-      lines.push("═══ STANDARDS GRAPHISTE PRO À APPLIQUER ═══");
-      lines.push("Hiérarchie dramatique • Espace blanc maîtrisé • Typo pro avec effets • 60-30-10 couleurs • Contraste WCAG 4.5:1 • Grille invisible • Profondeur multi-couches.");
+      lines.push("═══ STANDARDS PREMIUM À APPLIQUER ═══");
+      lines.push(expertSkills);
+      lines.push("");
+      lines.push(`Style typographique: ${typoStyle}`);
+      lines.push(`Structure de mise en page: ${layoutStyle}`);
+      lines.push("• Composition en 5 couches : fond riche → formes décoratives → visuels → blocs texte → effets finaux.");
+      lines.push("• Hiérarchie dramatique : titre 3x+ sous-titre, sous-titre 2x+ corps de texte.");
+      lines.push("• Typographie premium avec effets (3D, ombres, contours, dégradés métalliques, glow).");
+      lines.push("• Palette 60-30-10, contraste WCAG 4.5:1 minimum.");
+      lines.push("• Icônes/symboles décoratifs cohérents avec le DOMAINE de l'affiche (pas avec le template source).");
       lines.push("");
       lines.push("═══ CONTRÔLE QUALITÉ ═══");
-      lines.push("✓ Le résultat doit être VISIBLEMENT plus professionnel et plus impressionnant que la source.");
-      lines.push("✓ Un graphiste senior doit dire « oui, c'est un vrai upgrade » au premier coup d'œil.");
-      lines.push("✓ INTERDIT de renvoyer l'image source telle quelle ou avec des changements imperceptibles.");
+      lines.push("✓ Le nouveau design est-il VISIBLEMENT DIFFÉRENT (palette, layout, typo) de la source ? Si non → ÉCHEC.");
+      lines.push("✓ Toutes les infos client de la source sont-elles présentes mot pour mot ? Si non → ÉCHEC.");
+      lines.push("✓ Aucune info inventée (date, prix, contact) ? Si non → ÉCHEC.");
       lines.push("");
       lines.push(`Format:${aspectRatio}|HD|Francais`);
       lines.push("");
@@ -692,10 +696,18 @@ function buildProfessionalPrompt({
     lines.push("• Si une zone est vide faute d'info client → la laisser VIDE ou la remplir avec le FOND, JAMAIS avec du texte inventé.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
-    lines.push("Conserver les icônes décoratives cohérentes avec le nouveau contenu.");
-    lines.push("Icône hors contexte → remplacer par équivalent de MÊME style, MÊME taille, MÊME emplacement.");
-    lines.push("Si aucune icône pertinente → supprimer proprement et restaurer le fond local.");
+    lines.push("═══ RÈGLE #5: ICÔNES, LOGOS TIERS, ILLUSTRATIONS — ADAPTATION CONTEXTUELLE OBLIGATOIRE ═══");
+    lines.push(`DOMAINE DÉTECTÉ DE L'AFFICHE CIBLE : ${detectedDomain}`);
+    lines.push("Le template source contient souvent des icônes, logos de marques tierces et illustrations qui ne correspondent PAS au domaine de l'affiche du client.");
+    lines.push("• SUPPRIMER OBLIGATOIREMENT tout élément graphique hors-contexte :");
+    lines.push("  → Logos de marques tierces (Photoshop, Illustrator, Adobe, Figma, Canva, marques de produits, partenaires fictifs, etc.) sauf si le client a explicitement fourni ce logo.");
+    lines.push("  → Icônes/symboles décoratifs sans rapport avec le domaine de l'affiche (ex : diplôme sur une affiche de comptabilité, casque audio sur une affiche médicale).");
+    lines.push("  → Illustrations / personnages / objets spécifiques au sujet d'origine du template qui n'ont rien à voir avec l'affiche du client.");
+    lines.push(`• REMPLACER ces éléments par des icônes/symboles/illustrations cohérents avec le domaine « ${detectedDomain} ». MÊME style graphique, MÊME taille, MÊME couleur, MÊME emplacement, MÊME effet (ombre, glow, etc.) que l'élément remplacé.`);
+    lines.push("  → Exemples : comptabilité → calculatrice, graphiques, pièces, balance, document financier. Restauration → couverts, plats, ustensiles. Santé → croix médicale, stéthoscope, capsule. Éducation → livre, chapeau de diplômé, crayon. Sport → ballon, trophée, chronomètre. Église → croix, colombe, Bible. Immobilier → maison, clé, plan.");
+    lines.push("• Si AUCUN équivalent pertinent n'existe → SUPPRIMER proprement et reconstruire le fond local d'origine.");
+    lines.push("• 🚫 INTERDIT ABSOLU : laisser sur l'affiche finale un logo de marque tierce ou une icône qui n'a aucun rapport avec le sujet du client.");
+    lines.push("• Les logos « partenaires » présents sur le template par défaut sont FICTIFS → les SUPPRIMER, sauf si le client a fourni des logos partenaires explicites.");
 
     if (hasContentImage) {
       lines.push("");
