@@ -475,7 +475,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         saveToHistory();
         setActiveTool("select");
         toast.success(
-          `${textBlocks.length} texte(s) détecté(s) ! Vous pouvez maintenant modifier les calques texte. L'ancien texte reste visible sur l'image de fond - modifiez les calques pour personnaliser.`,
+          `${textBlocks.length} texte(s) détecté(s) ! Double-cliquez sur un texte pour le modifier (ajouter, enlever, corriger des lettres). Le design d'origine est conservé.`,
           { duration: 6000 }
         );
       }
