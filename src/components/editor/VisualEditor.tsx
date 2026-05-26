@@ -214,6 +214,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       }
 
       console.log("Image loaded:", img.width, "x", img.height);
+      sourceImageRef.current = img;
 
       // Calculate canvas size
       const aspectRatio = img.width / img.height;
