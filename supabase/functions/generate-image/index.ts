@@ -696,10 +696,18 @@ function buildProfessionalPrompt({
     lines.push("• Si une zone est vide faute d'info client → la laisser VIDE ou la remplir avec le FOND, JAMAIS avec du texte inventé.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #5: ICÔNES ET SYMBOLES ═══");
-    lines.push("Conserver les icônes décoratives cohérentes avec le nouveau contenu.");
-    lines.push("Icône hors contexte → remplacer par équivalent de MÊME style, MÊME taille, MÊME emplacement.");
-    lines.push("Si aucune icône pertinente → supprimer proprement et restaurer le fond local.");
+    lines.push("═══ RÈGLE #5: ICÔNES, LOGOS TIERS, ILLUSTRATIONS — ADAPTATION CONTEXTUELLE OBLIGATOIRE ═══");
+    lines.push(`DOMAINE DÉTECTÉ DE L'AFFICHE CIBLE : ${detectedDomain}`);
+    lines.push("Le template source contient souvent des icônes, logos de marques tierces et illustrations qui ne correspondent PAS au domaine de l'affiche du client.");
+    lines.push("• SUPPRIMER OBLIGATOIREMENT tout élément graphique hors-contexte :");
+    lines.push("  → Logos de marques tierces (Photoshop, Illustrator, Adobe, Figma, Canva, marques de produits, partenaires fictifs, etc.) sauf si le client a explicitement fourni ce logo.");
+    lines.push("  → Icônes/symboles décoratifs sans rapport avec le domaine de l'affiche (ex : diplôme sur une affiche de comptabilité, casque audio sur une affiche médicale).");
+    lines.push("  → Illustrations / personnages / objets spécifiques au sujet d'origine du template qui n'ont rien à voir avec l'affiche du client.");
+    lines.push(`• REMPLACER ces éléments par des icônes/symboles/illustrations cohérents avec le domaine « ${detectedDomain} ». MÊME style graphique, MÊME taille, MÊME couleur, MÊME emplacement, MÊME effet (ombre, glow, etc.) que l'élément remplacé.`);
+    lines.push("  → Exemples : comptabilité → calculatrice, graphiques, pièces, balance, document financier. Restauration → couverts, plats, ustensiles. Santé → croix médicale, stéthoscope, capsule. Éducation → livre, chapeau de diplômé, crayon. Sport → ballon, trophée, chronomètre. Église → croix, colombe, Bible. Immobilier → maison, clé, plan.");
+    lines.push("• Si AUCUN équivalent pertinent n'existe → SUPPRIMER proprement et reconstruire le fond local d'origine.");
+    lines.push("• 🚫 INTERDIT ABSOLU : laisser sur l'affiche finale un logo de marque tierce ou une icône qui n'a aucun rapport avec le sujet du client.");
+    lines.push("• Les logos « partenaires » présents sur le template par défaut sont FICTIFS → les SUPPRIMER, sauf si le client a fourni des logos partenaires explicites.");
 
     if (hasContentImage) {
       lines.push("");
