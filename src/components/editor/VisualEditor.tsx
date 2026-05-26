@@ -117,6 +117,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [imageScale, setImageScale] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const sourceImageRef = useRef<HTMLImageElement | null>(null);
 
   // AI Text Extraction hook (replaces OCR)
   const { isProcessing: isTextExtracting, progress: extractProgress, extractTextFromImage } = useAITextExtraction();
@@ -213,6 +214,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
       }
 
       console.log("Image loaded:", img.width, "x", img.height);
+      sourceImageRef.current = img;
 
       // Calculate canvas size
       const aspectRatio = img.width / img.height;
@@ -343,40 +345,115 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     toast.success("Texte ajouté - Double-cliquez pour éditer");
   }, [getCanvas, canvasSize, activeColor, activeFont, saveToHistory]);
 
-  // Add extracted text block to canvas
+  // Échantillonne la couleur dominante autour d'un bbox (en pixels image source)
+  // afin de masquer proprement le texte original avec la couleur du fond environnant.
+  const sampleBackgroundColor = useCallback(
+    (imgX: number, imgY: number, imgW: number, imgH: number): string => {
+      const srcImg = sourceImageRef.current;
+      if (!srcImg) return "#1a1a2e";
+      try {
+        const off = document.createElement("canvas");
+        off.width = srcImg.width;
+        off.height = srcImg.height;
+        const ctx = off.getContext("2d");
+        if (!ctx) return "#1a1a2e";
+        ctx.drawImage(srcImg, 0, 0);
+
+        // Échantillonner sur une fine bande juste à l'extérieur du bbox
+        const pad = Math.max(4, Math.floor(Math.min(imgW, imgH) * 0.15));
+        const samples: Array<[number, number]> = [];
+        const stepX = Math.max(2, Math.floor(imgW / 10));
+        const stepY = Math.max(2, Math.floor(imgH / 10));
+        for (let x = imgX; x < imgX + imgW; x += stepX) {
+          samples.push([x, Math.max(0, imgY - pad)]);
+          samples.push([x, Math.min(srcImg.height - 1, imgY + imgH + pad)]);
+        }
+        for (let y = imgY; y < imgY + imgH; y += stepY) {
+          samples.push([Math.max(0, imgX - pad), y]);
+          samples.push([Math.min(srcImg.width - 1, imgX + imgW + pad), y]);
+        }
+
+        let r = 0, g = 0, b = 0, n = 0;
+        for (const [sx, sy] of samples) {
+          const px = ctx.getImageData(
+            Math.max(0, Math.min(srcImg.width - 1, sx)),
+            Math.max(0, Math.min(srcImg.height - 1, sy)),
+            1,
+            1
+          ).data;
+          r += px[0]; g += px[1]; b += px[2]; n++;
+        }
+        if (!n) return "#1a1a2e";
+        r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+        return `rgb(${r}, ${g}, ${b})`;
+      } catch (e) {
+        console.warn("sampleBackgroundColor failed:", e);
+        return "#1a1a2e";
+      }
+    },
+    []
+  );
+
+  // Add extracted text block to canvas (avec masque de fond pour masquer le texte original)
   const addExtractedTextToCanvas = useCallback((block: ExtractedTextBlock) => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    // The AI returns positions as percentages (0-100)
-    // Convert percentage to canvas pixels
+    // Conversion %  → pixels canvas
     const scaledX = (block.x / 100) * canvasSize.width;
     const scaledY = (block.y / 100) * canvasSize.height;
-    
-    // Scale font size based on canvas/image ratio
-    // The AI estimates font size for the original image, we need to scale it
-    const scaledFontSize = Math.max(14, Math.min(80, (block.fontSize || 32) * imageScale));
+    const scaledW = (block.width / 100) * canvasSize.width;
+    const scaledH = (block.height / 100) * canvasSize.height;
 
-    // Use the color extracted by AI, default to white if not available
+    // Conversion %  → pixels image source (pour échantillonner la couleur)
+    const srcImg = sourceImageRef.current;
+    let bgColor = "#1a1a2e";
+    if (srcImg) {
+      const ix = (block.x / 100) * srcImg.width;
+      const iy = (block.y / 100) * srcImg.height;
+      const iw = (block.width / 100) * srcImg.width;
+      const ih = (block.height / 100) * srcImg.height;
+      bgColor = sampleBackgroundColor(ix, iy, iw, ih);
+    }
+
+    // Taille de police calibrée sur la hauteur du bbox (plus fiable que l'estimation IA)
+    const scaledFontSize = Math.max(12, Math.min(120, scaledH * 0.85));
+
     const textColor = block.color || "#FFFFFF";
-    
-    console.log(`Adding text block: "${block.text}" at (${scaledX}, ${scaledY}) fontSize: ${scaledFontSize} color: ${textColor}`);
 
+    console.log(`Text block "${block.text}" bbox=(${scaledX},${scaledY},${scaledW},${scaledH}) bg=${bgColor}`);
+
+    // 1) Rectangle de masquage légèrement plus grand que le bbox pour couvrir le texte original
+    const padX = Math.max(4, scaledW * 0.04);
+    const padY = Math.max(4, scaledH * 0.15);
+    const mask = new Rect({
+      left: scaledX - padX,
+      top: scaledY - padY,
+      width: scaledW + padX * 2,
+      height: scaledH + padY * 2,
+      fill: bgColor,
+      selectable: true,
+      evented: true,
+      objectCaching: false,
+    });
+    (mask as any).__isTextMask = true;
+    canvas.add(mask);
+
+    // 2) Texte éditable par-dessus le masque
     const text = new IText(block.text, {
       left: scaledX,
       top: scaledY,
       fontSize: scaledFontSize,
-      fill: textColor, // Use original color from AI extraction
+      fill: textColor,
       fontFamily: activeFont.value,
       fontWeight: "bold",
-      shadow: new Shadow({ color: "rgba(0,0,0,0.8)", blur: 4, offsetX: 2, offsetY: 2 }),
-      stroke: "#000000",
-      strokeWidth: 0.5,
+      width: scaledW,
+      shadow: new Shadow({ color: "rgba(0,0,0,0.45)", blur: 3, offsetX: 1, offsetY: 1 }),
     });
 
     canvas.add(text);
     return text;
-  }, [getCanvas, canvasSize, activeFont, imageScale]);
+  }, [getCanvas, canvasSize, activeFont, sampleBackgroundColor]);
 
   // Run AI text extraction and add detected text as editable layers
   const handleTextExtraction = useCallback(async () => {
@@ -398,7 +475,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
         saveToHistory();
         setActiveTool("select");
         toast.success(
-          `${textBlocks.length} texte(s) détecté(s) ! Vous pouvez maintenant modifier les calques texte. L'ancien texte reste visible sur l'image de fond - modifiez les calques pour personnaliser.`,
+          `${textBlocks.length} texte(s) détecté(s) ! Double-cliquez sur un texte pour le modifier (ajouter, enlever, corriger des lettres). Le design d'origine est conservé.`,
           { duration: 6000 }
         );
       }
