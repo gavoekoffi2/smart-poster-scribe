@@ -1,45 +1,66 @@
-## Problèmes identifiés
+## Objectif
 
-**1. « Améliorer » ne change pas vraiment le design**
-Aujourd'hui (lignes 567-606 de `supabase/functions/generate-image/index.ts`), le mode amélioration force le modèle à **garder l'identité visuelle, la palette et la structure** de l'affiche source. Résultat : on reconnaît "la même affiche en mieux", alors que le client voudrait un **design carrément différent** avec ses infos.
-
-**2. Icônes du template hors contexte**
-En mode clone (règle #5, ligne 695-698), la consigne sur les icônes est trop molle : « conserver les icônes décoratives cohérentes… remplacer si hors contexte ». Le modèle ne détecte pas qu'un logo Photoshop n'a rien à faire sur une affiche de comptabilité. Idem pour les logos partenaires/illustrations spécifiques au template d'origine.
+Garantir que chaque affiche utilise uniquement un template correspondant au domaine réel de la demande utilisateur. Exemple : une demande de formation doit choisir un template `formation` ou, à défaut, un template très proche comme `education/service`, mais jamais `restaurant`.
 
 ## Plan de correction
 
-### 1. Mode amélioration : refonte complète du design (`buildProfessionalPrompt`, branche `isEnhancementRequest`)
+### 1. Utiliser un seul domaine de référence
 
-Réécrire la branche (A) pour passer d'un mode "retouche pro" à un mode **"redesign complet à partir des infos client"** :
+Dans `supabase/functions/generate-image/index.ts`, remplacer la détection locale de domaine utilisée pour choisir le template par la même logique que celle utilisée dans le prompt de génération : `detectDomainFromPrompt(userPrompt)`.
 
-- Nouveau cadrage : « L'image jointe sert UNIQUEMENT de source d'informations (textes, noms, dates, prix, contacts, logos, photos). Tu dois créer une **NOUVELLE affiche au design totalement différent**. »
-- Consignes explicites :
-  - Changer la mise en page, la palette, la typo, les formes, le style général.
-  - Conserver **uniquement** les informations textuelles et visuelles du client (extraites de l'image jointe), mot pour mot pour les textes.
-  - Si une photo client/logo client est identifiable, la réutiliser ; sinon générer un nouveau visuel cohérent avec le contexte détecté.
-  - Garder le **format** (aspect ratio) et la **langue** identiques.
-- Réutiliser les standards premium déjà présents dans le mode libre (typographie premium, 5 couches, hiérarchie dramatique) en appelant `buildExpertSkillsPrompt(detectedDomain)`, `getRandomTypographyStyle()`, `getRandomLayoutStyle()` pour garantir une vraie variation entre deux améliorations successives.
-- Maintien strict de l'anti-hallucination texte (mot pour mot, pas d'invention de date/prix/contact).
+Résultat attendu : le domaine détecté pour les consignes IA et le domaine utilisé pour choisir le template seront toujours alignés.
 
-### 2. Mode clone : adaptation contextuelle stricte des icônes/logos/illustrations (règle #5)
+### 2. Supprimer les fallbacks hors contexte
 
-Remplacer la règle #5 actuelle par une règle beaucoup plus exigeante :
+Modifier la sélection automatique de templates pour respecter ces règles :
 
-- **Détecter le contexte métier** de l'affiche cible à partir du `userPrompt` (déjà fait via `detectDomainFromPrompt`).
-- **Supprimer obligatoirement** toute icône, logo de marque tierce (ex : Photoshop, Illustrator, Figma, marques de produits), illustration ou symbole décoratif du template d'origine qui **n'appartient pas au domaine** de l'affiche cible.
-- **Remplacer** par des icônes / symboles / illustrations cohérents avec le domaine détecté (ex : comptabilité → calculatrice, graphiques, pièces, balance ; restauration → couverts, plats ; santé → croix médicale, stéthoscope). Même style graphique, même taille, même emplacement que l'élément remplacé.
-- Si aucun équivalent pertinent → supprimer proprement et reconstruire le fond local.
-- Ajouter des exemples concrets dans le prompt pour ancrer la règle (ex : « Si tu vois un logo Photoshop / Adobe / une marque sans rapport → SUPPRIMER et remplacer par une icône du domaine `<domaine>` »).
-- Renforcer également la directive sur les **logos partenaires fictifs** présents sur les templates : à supprimer sauf si le client a fourni explicitement des logos partenaires.
+- chercher d’abord uniquement les templates du domaine détecté ;
+- si aucun template exact n’existe, chercher seulement dans une famille proche du domaine ;
+- ne jamais utiliser `restaurant` comme fallback pour `formation`, `education`, `service`, `technology`, etc. ;
+- si aucun template pertinent n’existe, générer en mode libre au lieu de cloner un template d’un autre domaine.
 
-### 3. Vérification
+Exemple de familles proches :
 
-- Générer une affiche, cliquer « Modifier » → « rends plus pro » : vérifier que le design est **visiblement différent** (palette, layout) tout en conservant tous les textes/infos client.
-- Générer une affiche de comptabilité à partir d'un template contenant un logo type Photoshop : vérifier que ce logo a été **remplacé ou supprimé**, et qu'une icône/symbole en lien avec la comptabilité prend sa place.
+```text
+formation -> education, service, event
+education -> formation, service, event
+restaurant -> ecommerce, event
+church -> event
+sport -> event
+technology -> service, education
+```
 
-## Détails techniques
+### 3. Renforcer les mots-clés ambigus
 
-- Fichier modifié : `supabase/functions/generate-image/index.ts` uniquement.
-- Pas de migration BDD, pas de changement client, pas de nouvelle edge function.
-- Branche modification chirurgicale (B) **inchangée** : les corrections ciblées (changer un texte, une couleur) gardent le comportement strict actuel.
-- Le mode libre (C) reste inchangé.
+Retirer ou durcir les mots-clés trop génériques qui peuvent déclencher `restaurant` par erreur, comme `menu`, `plat`, `buffet`, `food`.
+
+Ils ne compteront comme restaurant que si le contexte contient aussi un signal fort : `restaurant`, `chef`, `cuisine`, `traiteur`, `maquis`, etc.
+
+### 4. Ajouter un garde-fou dans le prompt de clonage
+
+Quand un template proche mais non identique est utilisé, ajouter une consigne explicite :
+
+- supprimer tout élément visuel appartenant au domaine du template source ;
+- remplacer par des éléments du domaine cible ;
+- refuser toute ambiance visuelle qui évoque un autre domaine.
+
+Exemple : si la cible est `formation`, interdire les assiettes, plats, couverts, ambiance menu/restaurant, et imposer des signes visuels liés à la formation : ordinateur, tableau, cahier, apprenants, certificat uniquement si demandé.
+
+### 5. Ajouter des logs de diagnostic
+
+Ajouter des logs clairs dans la fonction de génération :
+
+```text
+detectedDomain
+selectedTemplateDomain
+isAutoSelectedTemplate
+fallbackFamilyUsed
+```
+
+Cela permettra de vérifier rapidement, dans les prochains signalements, si le bon domaine a été détecté et quel template a été choisi.
+
+## Fichier concerné
+
+- `supabase/functions/generate-image/index.ts`
+
+Aucune migration de base de données, aucun changement UI, aucune nouvelle fonction backend.
