@@ -527,6 +527,7 @@ function buildProfessionalPrompt({
   referenceMode = "none",
   isModification = false,
   modificationRequest = "",
+  templateSourceDomain = null,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -537,9 +538,11 @@ function buildProfessionalPrompt({
   referenceMode?: ReferenceMode;
   isModification?: boolean;
   modificationRequest?: string;
+  templateSourceDomain?: string | null;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
-  console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+  console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt (templateSourceDomain="${templateSourceDomain}")`);
+
 
   // ====== MODE MODIFICATION ======
   // Deux sous-modes :
@@ -709,6 +712,45 @@ function buildProfessionalPrompt({
     lines.push("• 🚫 INTERDIT ABSOLU : laisser sur l'affiche finale un logo de marque tierce ou une icône qui n'a aucun rapport avec le sujet du client.");
     lines.push("• Les logos « partenaires » présents sur le template par défaut sont FICTIFS → les SUPPRIMER, sauf si le client a fourni des logos partenaires explicites.");
 
+    // ===== GARDE-FOU ANTI-MÉLANGE DE DOMAINES =====
+    if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
+      const FORBIDDEN_VISUAL_LANGUAGE: Record<string, string> = {
+        restaurant: "assiettes, plats, couverts, verres, vapeur de cuisson, ambiance gastronomique, palette chaude type menu de restaurant",
+        fashion: "mannequins en pose défilé, portants de vêtements, ambiance boutique de mode, étiquettes de prix mode",
+        music: "platines DJ, micros de concert, ondes sonores, scène de concert",
+        sport: "ballons, terrains, trophées, équipement sportif, maillots",
+        church: "croix, colombes, Bible, ambiance liturgique",
+        restaurant_food: "nourriture, plats, couverts",
+      };
+      const REQUIRED_VISUAL_LANGUAGE: Record<string, string> = {
+        formation: "ordinateur portable, tableau/whiteboard, livre ouvert, capuche de diplômé (uniquement si certification mentionnée), apprenants en situation, environnement studio/bureau moderne",
+        education: "livre, cahier, crayon, chapeau de diplômé, bibliothèque, environnement scolaire/universitaire",
+        service: "icônes business propres, ambiance corporate moderne, environnement bureau",
+        technology: "écran, code, circuit, ambiance tech/digital, interface UI stylisée",
+        health: "croix médicale, stéthoscope, capsule, ambiance clinique propre",
+        realestate: "maison, clé, plan d'architecte, ambiance immobilier haut de gamme",
+        church: "croix, colombe, Bible ouverte, ambiance spirituelle",
+        event: "ambiance festive cohérente avec le type d'événement (sans nourriture sauf si gala/dîner explicite)",
+        music: "instruments, micro, ondes sonores, ambiance scène",
+        sport: "équipement sportif cohérent avec la discipline mentionnée",
+        restaurant: "plats, couverts, ambiance culinaire",
+        youtube: "miniature dynamique, expressions fortes, éléments graphiques YouTube",
+      };
+      const forbidden = FORBIDDEN_VISUAL_LANGUAGE[templateSourceDomain];
+      const required = REQUIRED_VISUAL_LANGUAGE[detectedDomain];
+      lines.push("");
+      lines.push("═══ ⚠️ ANTI-MÉLANGE DE DOMAINES — CRITIQUE ⚠️ ═══");
+      lines.push(`Le template source vient du domaine « ${templateSourceDomain} », mais l'affiche cible est dans le domaine « ${detectedDomain} ».`);
+      lines.push("Tu DOIS effacer toute trace visuelle du domaine source et imposer le vocabulaire visuel du domaine cible.");
+      if (forbidden) {
+        lines.push(`🚫 INTERDIT ABSOLU (vient du template source "${templateSourceDomain}") : ${forbidden}.`);
+      }
+      if (required) {
+        lines.push(`✅ OBLIGATOIRE (vocabulaire visuel du domaine "${detectedDomain}") : ${required}.`);
+      }
+      lines.push("Si un élément visuel ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond local.");
+    }
+
     if (hasContentImage) {
       lines.push("");
       lines.push("═══ VISUEL CLIENT ═══");
@@ -732,6 +774,10 @@ function buildProfessionalPrompt({
     lines.push("✓ Seules les infos CLIENT apparaissent? Si non → ÉCHEC.");
     lines.push("✓ Le fond, les formes, la palette sont identiques? Si non → ÉCHEC.");
     lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
+    if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
+      lines.push(`✓ Aucun élément visuel n'évoque le domaine « ${templateSourceDomain} » ? Sinon → ÉCHEC. L'affiche doit appartenir clairement au domaine « ${detectedDomain} ».`);
+    }
+
 
     lines.push("");
     lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / INVENTER DU CONTENU / S'inspirer au lieu de copier / Paraphraser le texte client / Ajouter des dates, prix ou infos non fournies.");
@@ -1415,138 +1461,109 @@ serve(async (req) => {
     // Cette logique garantit qu'on utilise TOUJOURS un template de référence pour le design
     // NOUVEAU: On suit si le template a été auto-sélectionné pour le traiter comme un CLONAGE
     let isAutoSelectedTemplate = false;
-    
+    let pickedTemplateDomain: string | null = null;
+
     if (!referenceImage) {
       console.log("No reference image provided. Selecting best matching template...");
-      console.log("🎯 Mode: Template auto-sélectionné sera traité comme CLONAGE");
       try {
-        // Analyser le prompt pour détecter le domaine et les mots-clés
+        // Source de vérité unique : on utilise EXACTEMENT la même détection que pour les consignes IA.
         const promptLower = prompt.toLowerCase();
-        
-        // Mapping domaine -> mots-clés associés
-        const domainKeywords: Record<string, string[]> = {
-          church: ["église", "culte", "prière", "louange", "adoration", "pasteur", "évêque", "prophète", "jeûne", "veillée", "crusade", "convention", "revival", "worship", "gospel"],
-          event: ["événement", "concert", "soirée", "fête", "célébration", "show", "spectacle", "gala", "festival", "cérémonie", "inauguration"],
-          formation: ["formation", "séminaire", "atelier", "workshop", "cours", "coaching", "masterclass", "webinaire", "conférence", "certification"],
-          restaurant: ["restaurant", "menu", "cuisine", "chef", "manger", "plat", "repas", "déjeuner", "dîner", "buffet", "traiteur", "food"],
-          fashion: ["mode", "fashion", "collection", "vêtement", "style", "couture", "défilé", "boutique", "prêt-à-porter"],
-          music: ["musique", "music", "album", "single", "artiste", "chanteur", "chanteuse", "rap", "afrobeat", "concert"],
-          sport: ["sport", "football", "basket", "match", "tournoi", "compétition", "athlète", "équipe", "marathon"],
-          technology: ["technologie", "tech", "digital", "numérique", "application", "startup", "innovation", "hackathon"],
-          health: ["santé", "health", "médical", "hôpital", "clinique", "consultation", "bien-être", "fitness", "pharmacie"],
-          realestate: ["immobilier", "appartement", "maison", "terrain", "location", "vente", "agence"],
-          ecommerce: ["vente", "promo", "soldes", "offre", "produit", "boutique", "shop", "achat", "livraison"],
-          service: ["service", "professionnel", "design", "graphique", "marketing", "agence", "entreprise"],
-          education: ["école", "université", "étudiant", "inscription", "académie", "formation", "diplôme"],
+        const detected = detectDomainFromPrompt(prompt);
+        const bestDomain: string | null = detected && detected !== "other" ? detected : null;
+
+        // Familles strictes : seuls les domaines visuellement compatibles peuvent servir de fallback.
+        // Restaurant / fashion / food NE SONT JAMAIS un fallback pour les autres domaines.
+        const DOMAIN_FAMILY: Record<string, string[]> = {
+          formation:  ["formation", "education", "service", "event"],
+          education:  ["education", "formation", "service", "event"],
+          service:    ["service", "formation", "education", "technology", "event"],
+          technology: ["technology", "service", "formation", "education"],
+          health:     ["health", "service"],
+          realestate: ["realestate", "service"],
+          church:     ["church", "event"],
+          event:      ["event", "church", "music", "sport"],
+          music:      ["music", "event"],
+          sport:      ["sport", "event"],
+          youtube:    ["youtube", "event", "music"],
+          restaurant: ["restaurant", "ecommerce"],
+          ecommerce:  ["ecommerce", "restaurant", "fashion"],
+          fashion:    ["fashion", "ecommerce"],
+          other:      ["service", "event"],
         };
-        
-        // Calculer un score pour chaque domaine
-        const domainScores: Record<string, number> = {};
-        for (const [domain, keywords] of Object.entries(domainKeywords)) {
-          let score = 0;
-          for (const keyword of keywords) {
-            if (promptLower.includes(keyword)) {
-              score += keyword.length > 5 ? 3 : 2; // Mots plus longs = plus de poids
-            }
-          }
-          if (score > 0) {
-            domainScores[domain] = score;
-          }
-        }
-        
-        // Trouver le meilleur domaine correspondant
-        let bestDomain: string | null = null;
-        let bestScore = 0;
-        for (const [domain, score] of Object.entries(domainScores)) {
-          if (score > bestScore) {
-            bestScore = score;
-            bestDomain = domain;
-          }
-        }
-        
-        console.log("Domain scores:", domainScores);
-        console.log("Best matching domain:", bestDomain, "with score:", bestScore);
-        
-        // Récupérer les templates du domaine correspondant
+
+        console.log(`🎯 Template selection — detectedDomain="${detected}", bestDomain="${bestDomain}"`);
+
         let tplCandidates: any[] = [];
-        
+        let fallbackFamilyUsed: string[] = [];
+
+        // 1) Domaine exact uniquement
         if (bestDomain) {
           const { data: domainTemplates } = await supabase
             .from("reference_templates")
             .select("image_url, domain, description, tags")
             .eq("domain", bestDomain)
             .limit(20);
-          
+
           if (domainTemplates && domainTemplates.length > 0) {
             tplCandidates = domainTemplates;
-            console.log(`Found ${tplCandidates.length} templates for domain: ${bestDomain}`);
+            fallbackFamilyUsed = [bestDomain];
+            console.log(`✅ Found ${tplCandidates.length} exact-domain templates for "${bestDomain}"`);
           }
         }
-        
-        // Si pas de templates pour le domaine exact, chercher des domaines similaires
+
+        // 2) Famille proche uniquement (jamais restaurant/fashion pour formation, etc.)
+        if (tplCandidates.length === 0 && bestDomain) {
+          const family = DOMAIN_FAMILY[bestDomain] || [bestDomain];
+          fallbackFamilyUsed = family;
+          const { data: familyTemplates } = await supabase
+            .from("reference_templates")
+            .select("image_url, domain, description, tags")
+            .in("domain", family)
+            .limit(20);
+          if (familyTemplates && familyTemplates.length > 0) {
+            tplCandidates = familyTemplates;
+            console.log(`⚠️ Using family fallback [${family.join(", ")}] → ${tplCandidates.length} templates`);
+          }
+        }
+
+        // 3) Aucun candidat pertinent → on NE clone PAS un template hors contexte.
+        //    On laisse la génération basculer en mode libre (referenceImage reste null).
         if (tplCandidates.length === 0) {
-          // Domaines de fallback par ordre de polyvalence (event et church sont très polyvalents)
-          const fallbackOrder = ["event", "church", "formation", "service", "ecommerce"];
-          
-          for (const fallbackDomain of fallbackOrder) {
-            const { data: fallbackTemplates } = await supabase
-              .from("reference_templates")
-              .select("image_url, domain, description, tags")
-              .eq("domain", fallbackDomain)
-              .limit(15);
-            
-            if (fallbackTemplates && fallbackTemplates.length > 0) {
-              tplCandidates = [...tplCandidates, ...fallbackTemplates];
-            }
-          }
-          
-          console.log(`Fallback: gathered ${tplCandidates.length} templates from similar domains`);
-        }
-        
-        // Sélectionner le meilleur template basé sur les mots-clés du prompt
-        if (tplCandidates.length > 0) {
-          // Scorer chaque template selon sa pertinence
+          console.log(`🚫 No in-context template found for domain "${bestDomain ?? "unknown"}" — falling back to FREE creation mode (no cloning).`);
+        } else {
+          // Scoring : bonus si domaine exact + match de mots-clés du prompt.
           const scoredTemplates = tplCandidates.map(t => {
             let score = 0;
             const desc = (t.description || "").toLowerCase();
-            const tags = (t.tags || []).map((tag: string) => tag.toLowerCase()).join(" ");
+            const tags = (t.tags || []).map((tag: string) => String(tag).toLowerCase()).join(" ");
             const allText = desc + " " + tags;
-            
-            // Bonus si le template est du meilleur domaine
-            if (t.domain === bestDomain) score += 10;
-            
-            // Bonus pour match de mots-clés
+            if (bestDomain && t.domain === bestDomain) score += 10;
             const promptWords = promptLower.split(/\s+/).filter(w => w.length > 4);
             for (const word of promptWords) {
               if (allText.includes(word)) score += 2;
             }
-            
-            // Bonus pour templates avec descriptions (mieux documentés = meilleure qualité)
             if (t.description && t.description.length > 20) score += 3;
-            
             return { template: t, score };
           });
-          
-          // Trier par score et prendre un des meilleurs (avec légère randomisation)
+
           scoredTemplates.sort((a, b) => b.score - a.score);
           const topN = Math.min(5, scoredTemplates.length);
           const topTemplates = scoredTemplates.slice(0, topN);
           const picked = topTemplates[Math.floor(Math.random() * topTemplates.length)].template;
-          
-          // Convertir le chemin relatif en URL absolue
+
           referenceImage = resolveTemplateUrl(picked.image_url);
-          
-          // NOUVEAU: Marquer que ce template a été auto-sélectionné
-          // Il sera traité comme un CLONAGE, pas une création libre
           isAutoSelectedTemplate = true;
-          
-          console.log(`✅ Selected template from domain "${picked.domain}" with URL: ${referenceImage}`);
-          console.log(`🎯 isAutoSelectedTemplate = true → Mode CLONAGE activé`);
+          pickedTemplateDomain = picked.domain || null;
+
+          console.log(`✅ Selected template — domain="${picked.domain}", isAutoSelected=true, fallbackFamilyUsed=[${fallbackFamilyUsed.join(", ")}]`);
+          console.log(`   URL: ${referenceImage}`);
         }
       } catch (e) {
         console.warn("Error selecting intelligent fallback:", e);
       }
     }
+
+
 
     const imageInputs: string[] = [];
     const tempFilePaths: string[] = [];
@@ -1685,6 +1702,8 @@ serve(async (req) => {
       referenceMode,
       isModification: !!isModification,
       modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
+      templateSourceDomain: pickedTemplateDomain,
+
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);

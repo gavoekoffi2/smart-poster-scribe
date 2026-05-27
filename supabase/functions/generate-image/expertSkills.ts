@@ -590,10 +590,10 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
     "dimanche", "nuit de prière", "intercession", "onction", "ministère", "ministere"
   ],
   restaurant: [
-    "restaurant", "menu", "plat", "cuisine", "chef", "manger", "repas", "déjeuner", "dejeuner",
-    "dîner", "diner", "buffet", "traiteur", "food", "gastronomie", "recette", "saveur",
-    "délice", "delice", "gourmand", "culinaire", "table", "réservation", "reservation",
-    "livraison", "commande", "prix", "promotion", "offre", "promo", "réduction", "reduction"
+    "restaurant", "cuisine", "chef", "repas", "déjeuner", "dejeuner",
+    "dîner", "diner", "buffet", "traiteur", "gastronomie", "recette", "saveur",
+    "délice", "delice", "gourmand", "culinaire", "maquis", "brunch", "fast-food",
+    "pizzeria", "burger", "cocktail", "boisson", "boissons"
   ],
   formation: [
     "formation", "séminaire", "seminaire", "atelier", "workshop", "cours", "coaching",
