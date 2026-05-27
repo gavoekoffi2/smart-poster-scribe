@@ -1702,6 +1702,8 @@ serve(async (req) => {
       referenceMode,
       isModification: !!isModification,
       modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
+      templateSourceDomain: pickedTemplateDomain,
+
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
