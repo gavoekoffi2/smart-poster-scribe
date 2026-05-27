@@ -751,6 +751,9 @@ function buildProfessionalPrompt({
       lines.push("Si un élément visuel ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond local.");
     }
 
+    if (hasContentImage) {
+      lines.push("");
+      lines.push("═══ VISUEL CLIENT ═══");
       lines.push("Insérer le visuel client dans la zone image EXISTANTE de la référence, MÊME cadrage, MÊME taille, MÊME masque/découpage.");
     } else {
       lines.push("");
@@ -771,6 +774,10 @@ function buildProfessionalPrompt({
     lines.push("✓ Seules les infos CLIENT apparaissent? Si non → ÉCHEC.");
     lines.push("✓ Le fond, les formes, la palette sont identiques? Si non → ÉCHEC.");
     lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
+    if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
+      lines.push(`✓ Aucun élément visuel n'évoque le domaine « ${templateSourceDomain} » ? Sinon → ÉCHEC. L'affiche doit appartenir clairement au domaine « ${detectedDomain} ».`);
+    }
+
 
     lines.push("");
     lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / INVENTER DU CONTENU / S'inspirer au lieu de copier / Paraphraser le texte client / Ajouter des dates, prix ou infos non fournies.");
