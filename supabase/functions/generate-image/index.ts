@@ -527,6 +527,7 @@ function buildProfessionalPrompt({
   referenceMode = "none",
   isModification = false,
   modificationRequest = "",
+  templateSourceDomain = null,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -537,9 +538,11 @@ function buildProfessionalPrompt({
   referenceMode?: ReferenceMode;
   isModification?: boolean;
   modificationRequest?: string;
+  templateSourceDomain?: string | null;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
-  console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt`);
+  console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt (templateSourceDomain="${templateSourceDomain}")`);
+
 
   // ====== MODE MODIFICATION ======
   // Deux sous-modes :
