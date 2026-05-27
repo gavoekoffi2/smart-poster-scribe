@@ -712,9 +712,45 @@ function buildProfessionalPrompt({
     lines.push("• 🚫 INTERDIT ABSOLU : laisser sur l'affiche finale un logo de marque tierce ou une icône qui n'a aucun rapport avec le sujet du client.");
     lines.push("• Les logos « partenaires » présents sur le template par défaut sont FICTIFS → les SUPPRIMER, sauf si le client a fourni des logos partenaires explicites.");
 
-    if (hasContentImage) {
+    // ===== GARDE-FOU ANTI-MÉLANGE DE DOMAINES =====
+    if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
+      const FORBIDDEN_VISUAL_LANGUAGE: Record<string, string> = {
+        restaurant: "assiettes, plats, couverts, verres, vapeur de cuisson, ambiance gastronomique, palette chaude type menu de restaurant",
+        fashion: "mannequins en pose défilé, portants de vêtements, ambiance boutique de mode, étiquettes de prix mode",
+        music: "platines DJ, micros de concert, ondes sonores, scène de concert",
+        sport: "ballons, terrains, trophées, équipement sportif, maillots",
+        church: "croix, colombes, Bible, ambiance liturgique",
+        restaurant_food: "nourriture, plats, couverts",
+      };
+      const REQUIRED_VISUAL_LANGUAGE: Record<string, string> = {
+        formation: "ordinateur portable, tableau/whiteboard, livre ouvert, capuche de diplômé (uniquement si certification mentionnée), apprenants en situation, environnement studio/bureau moderne",
+        education: "livre, cahier, crayon, chapeau de diplômé, bibliothèque, environnement scolaire/universitaire",
+        service: "icônes business propres, ambiance corporate moderne, environnement bureau",
+        technology: "écran, code, circuit, ambiance tech/digital, interface UI stylisée",
+        health: "croix médicale, stéthoscope, capsule, ambiance clinique propre",
+        realestate: "maison, clé, plan d'architecte, ambiance immobilier haut de gamme",
+        church: "croix, colombe, Bible ouverte, ambiance spirituelle",
+        event: "ambiance festive cohérente avec le type d'événement (sans nourriture sauf si gala/dîner explicite)",
+        music: "instruments, micro, ondes sonores, ambiance scène",
+        sport: "équipement sportif cohérent avec la discipline mentionnée",
+        restaurant: "plats, couverts, ambiance culinaire",
+        youtube: "miniature dynamique, expressions fortes, éléments graphiques YouTube",
+      };
+      const forbidden = FORBIDDEN_VISUAL_LANGUAGE[templateSourceDomain];
+      const required = REQUIRED_VISUAL_LANGUAGE[detectedDomain];
       lines.push("");
-      lines.push("═══ VISUEL CLIENT ═══");
+      lines.push("═══ ⚠️ ANTI-MÉLANGE DE DOMAINES — CRITIQUE ⚠️ ═══");
+      lines.push(`Le template source vient du domaine « ${templateSourceDomain} », mais l'affiche cible est dans le domaine « ${detectedDomain} ».`);
+      lines.push("Tu DOIS effacer toute trace visuelle du domaine source et imposer le vocabulaire visuel du domaine cible.");
+      if (forbidden) {
+        lines.push(`🚫 INTERDIT ABSOLU (vient du template source "${templateSourceDomain}") : ${forbidden}.`);
+      }
+      if (required) {
+        lines.push(`✅ OBLIGATOIRE (vocabulaire visuel du domaine "${detectedDomain}") : ${required}.`);
+      }
+      lines.push("Si un élément visuel ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond local.");
+    }
+
       lines.push("Insérer le visuel client dans la zone image EXISTANTE de la référence, MÊME cadrage, MÊME taille, MÊME masque/découpage.");
     } else {
       lines.push("");
