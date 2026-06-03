@@ -1445,7 +1445,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
         setGeneratedImage(modUrl);
-        setConversationState((prev) => ({ ...prev, step: "complete" }));
+        setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
         addMessage(
           "assistant",
           "J'ai appliqué vos modifications ! Si vous voulez d'autres changements, dites-le moi. Sinon, téléchargez votre affiche !"
