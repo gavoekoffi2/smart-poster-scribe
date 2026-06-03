@@ -649,68 +649,65 @@ function buildProfessionalPrompt({
     return lines.join("\n");
   }
 
-  // ====== MODE CLONE (Cas A & B) : ÉDITEUR D'IMAGE STRICT ======
+  // ====== MODE CLONE (Cas A & B) : GABARIT VISUEL + CONTENU 100% CLIENT ======
   if (isCloneMode || hasReferenceImage) {
     const lines: string[] = [];
     const isStrictUserReference = referenceMode === "user";
 
-    lines.push("🚨🚨🚨 DIRECTIVE SUPREME - LIRE AVANT TOUTE ACTION 🚨🚨🚨");
+    // 🔥 LES INFOS CLIENT EN PREMIER — c'est LE contenu de l'affiche finale
+    lines.push("🚨🚨🚨 MISSION ABSOLUE 🚨🚨🚨");
+    lines.push("Tu dois produire une affiche PROFESSIONNELLE qui contient EXCLUSIVEMENT les informations du CLIENT ci-dessous.");
+    lines.push("L'image de référence sert UNIQUEMENT de gabarit visuel (style, palette, mise en page). Son CONTENU (textes, dates, prix, noms, icônes thématiques, logos tiers) doit être ENTIÈREMENT REMPLACÉ par les informations du client.");
+    lines.push("");
+    lines.push("═══ 📋 INFORMATIONS CLIENT — SEULES INFOS AUTORISÉES SUR L'AFFICHE FINALE ═══");
+    lines.push(userPrompt);
+    lines.push("═══ FIN INFOS CLIENT ═══");
+    lines.push("");
+    lines.push("⚠️ TOUT texte de l'affiche finale doit provenir EXCLUSIVEMENT du bloc ci-dessus. Aucun mot, aucune date, aucun prix, aucun nom, aucun numéro de l'image de référence ne doit subsister.");
+    lines.push("");
+
+    lines.push("═══ RÈGLE #1 : RÔLE DE L'IMAGE DE RÉFÉRENCE ═══");
+    lines.push("La PREMIÈRE image jointe = GABARIT de design (style graphique, palette, typographie, composition, formes décoratives).");
+    lines.push("Tu RÉUTILISES son style visuel, MAIS tu remplaces 100% de son contenu informationnel par les infos client ci-dessus.");
+    lines.push("Les autres images jointes = éléments à insérer (photos, logos client).");
     lines.push(
       isStrictUserReference
-        ? "Tu es un ÉDITEUR D'IMAGE. PAS un créateur. PAS un designer. Tu ÉDITES l'image de référence fournie. Tu ne crées RIEN de nouveau. Le résultat final DOIT être visuellement IDENTIQUE à la référence sauf le contenu textuel."
-        : "Tu es un ÉDITEUR D'IMAGE PROFESSIONNEL. Tu modifies l'image de référence fournie. Le design original est SACRÉ et INTOUCHABLE."
+        ? "L'utilisateur a fourni cette référence : respecter au maximum sa structure (mise en page, palette, ambiance), mais le CONTENU doit être 100% celui du client."
+        : "Adapter librement la structure du gabarit pour qu'elle serve PARFAITEMENT les infos du client (hiérarchie, lisibilité, typographie)."
     );
 
     lines.push("");
-    lines.push("═══ RÈGLE #1: IDENTIFICATION DE LA RÉFÉRENCE ═══");
-    lines.push("La PREMIÈRE image jointe = affiche de référence MAÎTRESSE. Elle dicte 100% du design.");
-    lines.push("Toutes les autres images = éléments de contenu à INSÉRER (photos, logos). JAMAIS des inspirations de style.");
+    lines.push("═══ RÈGLE #2 : STYLE VISUEL À CONSERVER ═══");
+    lines.push("PALETTE & AMBIANCE : conserver les couleurs dominantes et l'ambiance (sauf si les infos client imposent un autre univers).");
+    lines.push("TYPOGRAPHIE : conserver la même famille de polices, hiérarchie et graisses.");
+    lines.push("COMPOSITION : conserver l'esprit de mise en page (équilibre, zones, rythme), avec ajustements autorisés pour que les vraies infos client tiennent proprement.");
+    lines.push("FORMES DÉCORATIVES : garder les formes (vagues, cercles, bandeaux) si elles servent le nouveau contenu, sinon supprimer proprement.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #2: DESIGN 100% INTOUCHABLE ═══");
-    lines.push("FOND: couleurs, dégradés, textures, motifs, images de fond = STRICTEMENT IDENTIQUES pixel par pixel.");
-    lines.push("FORMES: courbes, vagues, cercles, bandeaux, rectangles, triangles = MÊME position, MÊME taille, MÊME couleur.");
-    lines.push("MISE EN PAGE: disposition, marges, espacements, grille, proportions = IDENTIQUES. Ne déplace RIEN.");
-    lines.push("EFFETS: ombres, lumières, reflets, flous, overlays, brillances = IDENTIQUES.");
-    lines.push("PALETTE: conserver EXACTEMENT les couleurs et contrastes de l'affiche source.");
-    lines.push("STRUCTURE: nombre de blocs, zones, sections = IDENTIQUE. Ne fusionne pas, ne sépare pas.");
+    lines.push("═══ RÈGLE #3 : REMPLACEMENT DU CONTENU (ÉTAPE PAR ÉTAPE) ═══");
+    lines.push("1) Identifier CHAQUE zone de texte de la référence (titre, sous-titre, date, lieu, prix, contact, slogan, hashtag, etc.).");
+    lines.push("2) Pour chaque zone, chercher l'info CORRESPONDANTE dans le bloc INFOS CLIENT.");
+    lines.push("   • Si une info client correspond → insérer le TEXTE EXACT du client (mot pour mot, caractère pour caractère).");
+    lines.push("   • Si AUCUNE info client ne correspond → SUPPRIMER la zone et reconstruire le fond local. NE JAMAIS garder le texte d'origine. NE JAMAIS inventer.");
+    lines.push("3) Vérifier qu'AUCUN texte de la référence (même partiel : un mot, un chiffre, une date, un @) n'a survécu sur l'affiche finale.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #3: REMPLACEMENT DU CONTENU ═══");
-    lines.push("Remplacer chaque texte original par l'information CLIENT correspondante UNIQUEMENT.");
-    lines.push("Conserver EXACTEMENT: polices, graisses, effets, tailles, couleurs, rotations, alignements, interlignages et placements.");
-    lines.push("Micro-ajustements UNIQUEMENT pour faire tenir le nouveau texte dans LA MÊME zone.");
-    lines.push("Ne crée AUCUNE nouvelle zone de texte. Ne fusionne AUCUN bloc.");
+    lines.push("═══ RÈGLE #4 : SUPPRESSION TOTALE & ANTI-HALLUCINATION ═══");
+    lines.push("TOUT élément non fourni par le client DOIT DISPARAÎTRE : textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos tiers, photos de personnes non fournies.");
+    lines.push("🚫 NE JAMAIS INVENTER de texte, date, prix, numéro, adresse, slogan.");
+    lines.push("🚫 NE JAMAIS PARAPHRASER : utiliser les mots EXACTS du client.");
+    lines.push("🚫 NE JAMAIS conserver un texte du template 'parce qu'il sonne bien'.");
+    lines.push("Si une zone reste sans contenu client → la SUPPRIMER et reconstruire le fond.");
 
     lines.push("");
-    lines.push("═══ RÈGLE #4: SUPPRESSION TOTALE & ANTI-HALLUCINATION ═══");
-    lines.push("TOUT élément ancien sans équivalent fourni par le client DOIT DISPARAÎTRE COMPLÈTEMENT:");
-    lines.push("→ textes, prix, slogans, dates, adresses, téléphones, hashtags, réseaux sociaux, QR codes, watermarks, logos, photos.");
-    lines.push("Après suppression: RECONSTRUIRE le fond local d'origine à l'identique. Ne déplace, n'étire, ne grossis AUCUN autre élément.");
-    lines.push("ZÉRO texte résiduel. ZÉRO placeholder. ZÉRO information inventée. ZÉRO texte de l'ancienne affiche.");
-    lines.push("⚠️ AUCUN contenu du template original ne doit apparaître sur l'affiche finale. Seul le contenu fourni par le client est affiché.");
-    lines.push("");
-    lines.push("🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫");
-    lines.push("• NE JAMAIS INVENTER de texte, date, prix, numéro de téléphone, adresse, slogan, ou toute information NON FOURNIE par le client.");
-    lines.push("• NE JAMAIS PARAPHRASER ou REFORMULER le texte du client. Utiliser ses mots EXACTS, caractère par caractère.");
-    lines.push("• NE JAMAIS AJOUTER de contenu 'pour compléter' ou 'pour faire joli' : si le client n'a pas donné l'info, elle N'EXISTE PAS.");
-    lines.push("• NE JAMAIS CHANGER une date (ex: client dit '15 Mars' → écrire '15 Mars', PAS '16 Mars' ni 'Mars 2025').");
-    lines.push("• NE JAMAIS MÉLANGER les domaines (ex: e-commerce → PAS de texte sur l'impression ou les services religieux).");
-    lines.push("• Si une zone est vide faute d'info client → la laisser VIDE ou la remplir avec le FOND, JAMAIS avec du texte inventé.");
-
-    lines.push("");
-    lines.push("═══ RÈGLE #5: ICÔNES, LOGOS TIERS, ILLUSTRATIONS — ADAPTATION CONTEXTUELLE OBLIGATOIRE ═══");
-    lines.push(`DOMAINE DÉTECTÉ DE L'AFFICHE CIBLE : ${detectedDomain}`);
-    lines.push("Le template source contient souvent des icônes, logos de marques tierces et illustrations qui ne correspondent PAS au domaine de l'affiche du client.");
-    lines.push("• SUPPRIMER OBLIGATOIREMENT tout élément graphique hors-contexte :");
-    lines.push("  → Logos de marques tierces (Photoshop, Illustrator, Adobe, Figma, Canva, marques de produits, partenaires fictifs, etc.) sauf si le client a explicitement fourni ce logo.");
-    lines.push("  → Icônes/symboles décoratifs sans rapport avec le domaine de l'affiche (ex : diplôme sur une affiche de comptabilité, casque audio sur une affiche médicale).");
-    lines.push("  → Illustrations / personnages / objets spécifiques au sujet d'origine du template qui n'ont rien à voir avec l'affiche du client.");
-    lines.push(`• REMPLACER ces éléments par des icônes/symboles/illustrations cohérents avec le domaine « ${detectedDomain} ». MÊME style graphique, MÊME taille, MÊME couleur, MÊME emplacement, MÊME effet (ombre, glow, etc.) que l'élément remplacé.`);
-    lines.push("  → Exemples : comptabilité → calculatrice, graphiques, pièces, balance, document financier. Restauration → couverts, plats, ustensiles. Santé → croix médicale, stéthoscope, capsule. Éducation → livre, chapeau de diplômé, crayon. Sport → ballon, trophée, chronomètre. Église → croix, colombe, Bible. Immobilier → maison, clé, plan.");
-    lines.push("• Si AUCUN équivalent pertinent n'existe → SUPPRIMER proprement et reconstruire le fond local d'origine.");
-    lines.push("• 🚫 INTERDIT ABSOLU : laisser sur l'affiche finale un logo de marque tierce ou une icône qui n'a aucun rapport avec le sujet du client.");
-    lines.push("• Les logos « partenaires » présents sur le template par défaut sont FICTIFS → les SUPPRIMER, sauf si le client a fourni des logos partenaires explicites.");
+    lines.push("═══ RÈGLE #5 : ICÔNES & ILLUSTRATIONS — ADAPTATION AU DOMAINE CLIENT ═══");
+    lines.push(`DOMAINE DE L'AFFICHE CIBLE : ${detectedDomain}`);
+    lines.push("Le gabarit contient probablement des icônes/illustrations liées à SON sujet d'origine. Ces éléments doivent OBLIGATOIREMENT être adaptés au domaine client :");
+    lines.push("• SUPPRIMER toute icône, logo de marque tiers, illustration, personnage, objet qui ne correspond PAS au contenu fourni par le client.");
+    lines.push(`• REMPLACER par des icônes/illustrations cohérentes avec « ${detectedDomain} » et avec les infos client (même style graphique, même taille, même emplacement, même effet visuel).`);
+    lines.push("• Exemples : comptabilité → calculatrice, graphiques, balance. Restauration → couverts, plats. Santé → croix médicale, stéthoscope. Éducation/formation → livre, tableau, ordinateur, chapeau de diplômé. Sport → ballon, trophée. Église → croix, colombe, Bible. Immobilier → maison, clé, plan.");
+    lines.push("• Si aucun équivalent pertinent → SUPPRIMER proprement et reconstruire le fond.");
+    lines.push("• 🚫 INTERDIT : laisser une icône/logo/illustration sans rapport avec le contenu client.");
 
     // ===== GARDE-FOU ANTI-MÉLANGE DE DOMAINES =====
     if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
@@ -740,51 +737,46 @@ function buildProfessionalPrompt({
       const required = REQUIRED_VISUAL_LANGUAGE[detectedDomain];
       lines.push("");
       lines.push("═══ ⚠️ ANTI-MÉLANGE DE DOMAINES — CRITIQUE ⚠️ ═══");
-      lines.push(`Le template source vient du domaine « ${templateSourceDomain} », mais l'affiche cible est dans le domaine « ${detectedDomain} ».`);
+      lines.push(`Le gabarit source vient du domaine « ${templateSourceDomain} », mais l'affiche cible est dans le domaine « ${detectedDomain} ».`);
       lines.push("Tu DOIS effacer toute trace visuelle du domaine source et imposer le vocabulaire visuel du domaine cible.");
-      if (forbidden) {
-        lines.push(`🚫 INTERDIT ABSOLU (vient du template source "${templateSourceDomain}") : ${forbidden}.`);
-      }
-      if (required) {
-        lines.push(`✅ OBLIGATOIRE (vocabulaire visuel du domaine "${detectedDomain}") : ${required}.`);
-      }
-      lines.push("Si un élément visuel ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond local.");
+      if (forbidden) lines.push(`🚫 INTERDIT ABSOLU (vient du gabarit "${templateSourceDomain}") : ${forbidden}.`);
+      if (required) lines.push(`✅ OBLIGATOIRE (vocabulaire du domaine "${detectedDomain}") : ${required}.`);
+      lines.push("Si un élément ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond.");
     }
 
     if (hasContentImage) {
       lines.push("");
       lines.push("═══ VISUEL CLIENT ═══");
-      lines.push("Insérer le visuel client dans la zone image EXISTANTE de la référence, MÊME cadrage, MÊME taille, MÊME masque/découpage.");
+      lines.push("Insérer le visuel client dans la zone image principale, en respectant le cadrage et la composition du gabarit.");
     } else {
       lines.push("");
       lines.push("═══ PAS DE VISUEL CLIENT ═══");
-      lines.push("Si la référence contient une zone photo essentielle: générer un sujet photoréaliste africain adapté au contexte, DANS cette même zone.");
-      lines.push("Si pas de zone photo dans la référence: N'EN AJOUTE AUCUNE.");
+      lines.push("Si le gabarit contient une zone photo importante : générer un sujet photoréaliste africain cohérent avec les infos client, dans la même zone.");
+      lines.push("Sinon : ne pas ajouter de photo.");
     }
 
     if (hasLogoImage) {
-      lines.push("LOGO CLIENT: remplacer le logo existant à son emplacement exact.");
+      lines.push("LOGO CLIENT : remplacer le logo existant à son emplacement exact.");
     } else {
-      lines.push("PAS DE LOGO: supprimer le logo existant, reconstruire le fond sous-jacent.");
+      lines.push("PAS DE LOGO : supprimer tout logo présent dans le gabarit et reconstruire le fond.");
     }
 
     lines.push("");
-    lines.push("═══ CONTRÔLE QUALITÉ ═══");
-    lines.push("✓ Le résultat ressemble-t-il à la MÊME affiche? Si non → ÉCHEC.");
-    lines.push("✓ Seules les infos CLIENT apparaissent? Si non → ÉCHEC.");
-    lines.push("✓ Le fond, les formes, la palette sont identiques? Si non → ÉCHEC.");
-    lines.push("✓ Aucun ancien texte visible? Si non → ÉCHEC.");
+    lines.push("═══ CONTRÔLE QUALITÉ FINAL (vérifier mentalement avant de générer) ═══");
+    lines.push("✓ Toutes les infos client sont-elles présentes et lisibles ? (sinon → ÉCHEC)");
+    lines.push("✓ Aucun texte/date/prix/nom de la référence n'a survécu ? (sinon → ÉCHEC)");
+    lines.push("✓ Les icônes et illustrations correspondent-elles au domaine client ? (sinon → ÉCHEC)");
+    lines.push("✓ Le style visuel (palette, typo, ambiance) ressemble au gabarit ? (sinon → ÉCHEC)");
     if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
-      lines.push(`✓ Aucun élément visuel n'évoque le domaine « ${templateSourceDomain} » ? Sinon → ÉCHEC. L'affiche doit appartenir clairement au domaine « ${detectedDomain} ».`);
+      lines.push(`✓ Aucun élément n'évoque le domaine « ${templateSourceDomain} » ? (sinon → ÉCHEC)`);
     }
 
-
     lines.push("");
-    lines.push("🚫 INTERDICTIONS: Nouveau design / Modifier la palette / Modifier la mise en page / Ajouter des éléments / INVENTER DU CONTENU / S'inspirer au lieu de copier / Paraphraser le texte client / Ajouter des dates, prix ou infos non fournies.");
-
+    lines.push("🚫 INTERDICTIONS : Recopier la référence telle quelle / Garder un seul mot de la référence / Inventer du contenu / Paraphraser le client / Laisser des icônes hors-sujet / Laisser des logos tiers.");
     lines.push("");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
-    lines.push("═══ INFOS CLIENT (UNIQUEMENT CES INFORMATIONS SUR L'AFFICHE) ═══");
+    lines.push("");
+    lines.push("═══ RAPPEL FINAL — INFOS CLIENT À AFFICHER (et UNIQUEMENT celles-ci) ═══");
     lines.push(userPrompt);
     return lines.join("\n");
   }
