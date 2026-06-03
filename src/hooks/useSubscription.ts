@@ -255,6 +255,8 @@ export function useSubscription() {
     if (!subscription) return resolution === "1K";
     const isFree = subscription.plan?.slug === "free";
     if (isFree) return resolution === "1K" && subscription.free_generations_used < 3;
+    // Plan illimité : credits_per_month sentinelle >= 9999
+    if ((subscription.plan?.credits_per_month ?? 0) >= 9999) return true;
     return subscription.credits_remaining >= 2;
   }, [subscription]);
 
