@@ -1704,14 +1704,22 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   }, [addMessage]);
 
   // Handler pour les options post-génération en mode rapide
-  const handlePostGenerationOption = useCallback((option: "logo" | "colors" | "format" | "keep") => {
+  const handlePostGenerationOption = useCallback((option: "logo" | "colors" | "format" | "keep" | "enhance") => {
     if (option === "keep") {
       addMessage("user", "C'est parfait !");
       addMessage("assistant", "Super ! Votre affiche est finalisée. 🎉 Vous pouvez la télécharger ou demander d'autres modifications en les décrivant ci-dessous.");
       setConversationState(prev => ({ ...prev, step: "complete" }));
       return;
     }
-    
+
+    if (option === "enhance") {
+      const enhanceRequest =
+        "Améliore le design de cette affiche pour le rendre encore plus professionnel, plus moderne et plus impactant (typographie raffinée, hiérarchie visuelle plus claire, mise en page plus élégante, finitions premium, profondeur et contrastes maîtrisés). CONTRAINTE STRICTE : NE CHANGE AUCUN CONTENU. Garde rigoureusement tous les textes, noms, dates, prix, horaires, lieux, contacts, logos et informations exactement identiques (mêmes mots, mêmes chiffres, même langue, aucune invention, aucune suppression d'information du client). Améliore uniquement le design.";
+      addMessage("user", "Améliorer le design");
+      handleModificationRequest(enhanceRequest);
+      return;
+    }
+
     if (option === "logo") {
       addMessage("user", "Ajouter un logo");
       setConversationState(prev => ({ ...prev, step: "logo" }));
@@ -1731,7 +1739,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         addMessage("assistant", "Choisissez le format souhaité :");
       }, 250);
     }
-  }, [addMessage]);
+  }, [addMessage, handleModificationRequest]);
 
   const handleUserMessage = useCallback(
     async (content: string) => {
