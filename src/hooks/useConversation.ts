@@ -1285,7 +1285,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           return;
         }
         setGeneratedImage(finalUrl);
-        setConversationState((prev) => ({ ...prev, step: "complete" }));
+        setConversationState((prev) => ({ ...prev, step: "post_generation_options" }));
         addMessage(
           "assistant",
           "Votre affiche est prête ! 🎨 Si vous souhaitez des modifications (changer un texte, ajuster les couleurs, déplacer un élément...), décrivez-les moi. Sinon, téléchargez-la ou créez-en une nouvelle !"
