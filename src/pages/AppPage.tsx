@@ -893,6 +893,7 @@ export default function AppPage() {
                     onChangeColors={() => handlePostGenerationOption("colors")}
                     onChangeFormat={() => handlePostGenerationOption("format")}
                     onKeepAsIs={() => handlePostGenerationOption("keep")}
+                    onEnhance={() => handlePostGenerationOption("enhance")}
                     disabled={isProcessing}
                   />
                 </div>
