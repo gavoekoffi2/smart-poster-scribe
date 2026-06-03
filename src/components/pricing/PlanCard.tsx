@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Sparkles, Crown, Building2, Zap } from "lucide-react";
+import { Check, Sparkles, Crown, Infinity as InfinityIcon, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import type { SubscriptionPlan } from "@/hooks/useSubscription";
 
@@ -16,45 +14,27 @@ interface PlanCardProps {
 
 const planIcons: Record<string, React.ReactNode> = {
   free: <Zap className="w-6 h-6" />,
-  pro: <Sparkles className="w-6 h-6" />,
-  business: <Crown className="w-6 h-6" />,
+  essentiel: <Sparkles className="w-6 h-6" />,
+  illimite: <Crown className="w-6 h-6" />,
 };
 
 const planColors: Record<string, string> = {
   free: "from-muted to-muted/50",
-  pro: "from-primary to-accent",
-  business: "from-amber-500 to-orange-600",
+  essentiel: "from-primary to-accent",
+  illimite: "from-amber-500 to-orange-600",
 };
-
-const BASE_BUSINESS_POSTERS = 30;
-const BASE_BUSINESS_PRICE_USD = 17;
-const BASE_BUSINESS_PRICE_FCFA = 9900;
-const PRICE_PER_POSTER_USD = BASE_BUSINESS_PRICE_USD / BASE_BUSINESS_POSTERS;
-const PRICE_PER_POSTER_FCFA = BASE_BUSINESS_PRICE_FCFA / BASE_BUSINESS_POSTERS;
-const MAX_POSTERS = 50;
 
 export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }: PlanCardProps) {
   const isFree = plan.slug === "free";
-  const isBusiness = plan.slug === "business";
-  const [businessPosters, setBusinessPosters] = useState(BASE_BUSINESS_POSTERS);
-
-  const businessPriceUSD = Math.round(businessPosters * PRICE_PER_POSTER_USD);
-  const businessPriceFCFA = Math.round(businessPosters * PRICE_PER_POSTER_FCFA);
-  const businessCredits = businessPosters * 2;
+  const isUnlimited = plan.credits_per_month >= 9999;
 
   const formatPrice = () => {
     if (isFree) {
       return { main: "Gratuit", sub: "Pour commencer" };
     }
-    if (isBusiness) {
-      return {
-        main: `$${businessPriceUSD}/mois`,
-        sub: `(≈ ${businessPriceFCFA.toLocaleString("fr-FR")} FCFA)`,
-      };
-    }
     return {
-      main: `$${plan.price_usd}/mois`,
-      sub: `(≈ ${plan.price_fcfa.toLocaleString("fr-FR")} FCFA)`,
+      main: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA/mois`,
+      sub: `(≈ $${plan.price_usd})`,
     };
   };
 
@@ -129,39 +109,7 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
           </div>
 
           {/* Credits info */}
-          {isBusiness ? (
-            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Nombre d'affiches</span>
-                <span className="text-xl font-bold text-primary">{businessPosters}</span>
-              </div>
-              <Slider
-                value={[businessPosters]}
-                onValueChange={(v) => setBusinessPosters(v[0])}
-                min={30}
-                max={MAX_POSTERS}
-                step={1}
-                className="mb-2"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>30</span>
-                <span>{MAX_POSTERS}</span>
-              </div>
-              <div className="mt-2 text-xs text-center text-muted-foreground">
-                {businessCredits} crédits • 1 affiche = 2 crédits
-              </div>
-            </div>
-          ) : !isFree ? (
-            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Crédits</span>
-                <span className="text-xl font-bold text-primary">{plan.credits_per_month}</span>
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                1 affiche = 2 crédits ≈ {Math.floor(plan.credits_per_month / 2)} affiches
-              </div>
-            </div>
-          ) : (
+          {isFree ? (
             <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Affiches offertes</span>
@@ -169,6 +117,30 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
                 3 affiches gratuites • Modifications illimitées
+              </div>
+            </div>
+          ) : isUnlimited ? (
+            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Affiches / mois</span>
+                <span className="text-xl font-bold text-primary flex items-center gap-1">
+                  <InfinityIcon className="w-5 h-5" /> Illimité
+                </span>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Générations illimitées • Modifications gratuites
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 p-4 rounded-xl bg-muted/50 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Affiches / mois</span>
+                <span className="text-xl font-bold text-primary">
+                  {Math.floor(plan.credits_per_month / 2)}
+                </span>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Modifications illimitées incluses
               </div>
             </div>
           )}
@@ -202,7 +174,7 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
                 ? "bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/30"
                 : isFree
                   ? "bg-muted hover:bg-muted/80 text-foreground"
-                  : isBusiness
+                  : isUnlimited
                     ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:opacity-90"
                     : "bg-card border border-primary/50 text-primary hover:bg-primary/10"
             )}

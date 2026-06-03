@@ -15,8 +15,8 @@ export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { plans, subscription, isProcessingPayment } = useSubscription();
-  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string }>({
-    open: false, planName: "", planSlug: ""
+  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
+    open: false, planName: "", planSlug: "", planPrice: ""
   });
 
   const handleSubscribe = (planSlug: string) => {
@@ -32,7 +32,13 @@ export default function PricingPage() {
     }
 
     const plan = plans.find(p => p.slug === planSlug);
-    setRequestModal({ open: true, planName: plan?.name || planSlug, planSlug });
+    const priceLabel = plan ? `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois` : "";
+    setRequestModal({
+      open: true,
+      planName: plan?.name || planSlug,
+      planSlug,
+      planPrice: priceLabel,
+    });
   };
 
   const features = [
@@ -175,18 +181,18 @@ export default function PricingPage() {
               className="text-center mb-10"
             >
               <h2 className="text-3xl font-bold mb-4">
-                Comment fonctionnent les <span className="gradient-text">crédits</span> ?
+                Comment fonctionnent les <span className="gradient-text">affiches</span> ?
               </h2>
               <p className="text-muted-foreground">
-                Simple : <span className="text-primary font-medium">1 affiche = 2 crédits</span>, quelle que soit la résolution
+                Choisissez votre modèle : <span className="text-primary font-medium">Rapide (NanoBanana Pro)</span> pour des résultats instantanés, ou <span className="text-primary font-medium">Pro (GPT Image 2)</span> pour la qualité maximale.
               </p>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { plan: "Essai", credits: 5, posters: "~2", desc: "Bonus unique offert" },
-                { plan: "Populaire", credits: 10, posters: "~5", desc: "$7/mois (≈ 3 900 FCFA)" },
-                { plan: "Business", credits: "24+", posters: "12+", desc: "À partir de $17/mois, ajustable" },
+                { plan: "Essai", credits: "3 affiches", posters: "Pour découvrir", desc: "Aucune carte requise" },
+                { plan: "Essentiel", credits: "20 affiches", posters: "5 000 FCFA/mois", desc: "Tous modèles, tous domaines" },
+                { plan: "Illimité", credits: "∞ illimité", posters: "25 000 FCFA/mois", desc: "Qualité Pro + Templates premium" },
               ].map((item, index) => (
                 <motion.div
                   key={item.plan}
@@ -198,7 +204,7 @@ export default function PricingPage() {
                 >
                   <div className="text-2xl font-bold gradient-text mb-2">{item.plan}</div>
                   <div className="text-lg font-semibold text-foreground mb-1">
-                    {item.credits} crédits → {item.posters} affiches
+                    {item.credits} • {item.posters}
                   </div>
                   <div className="text-sm text-muted-foreground">{item.desc}</div>
                 </motion.div>
@@ -288,6 +294,7 @@ export default function PricingPage() {
         onOpenChange={(open) => setRequestModal(prev => ({ ...prev, open }))}
         planName={requestModal.planName}
         planSlug={requestModal.planSlug}
+        planPrice={requestModal.planPrice}
       />
     </div>
   );
