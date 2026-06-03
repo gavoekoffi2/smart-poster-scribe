@@ -204,7 +204,7 @@ export default function PricingPage() {
                 >
                   <div className="text-2xl font-bold gradient-text mb-2">{item.plan}</div>
                   <div className="text-lg font-semibold text-foreground mb-1">
-                    {item.credits} crédits → {item.posters} affiches
+                    {item.credits} • {item.posters}
                   </div>
                   <div className="text-sm text-muted-foreground">{item.desc}</div>
                 </motion.div>
