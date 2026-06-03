@@ -1,4 +1,4 @@
-import { ImagePlus, Palette, RectangleHorizontal, Check } from "lucide-react";
+import { ImagePlus, Palette, RectangleHorizontal, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PostGenerationOptionsProps {
@@ -6,6 +6,7 @@ interface PostGenerationOptionsProps {
   onChangeColors: () => void;
   onChangeFormat: () => void;
   onKeepAsIs: () => void;
+  onEnhance: () => void;
   disabled?: boolean;
 }
 
@@ -14,6 +15,7 @@ export function PostGenerationOptions({
   onChangeColors,
   onChangeFormat,
   onKeepAsIs,
+  onEnhance,
   disabled,
 }: PostGenerationOptionsProps) {
   return (
@@ -21,6 +23,18 @@ export function PostGenerationOptions({
       <p className="text-sm text-muted-foreground font-medium">
         Souhaitez-vous personnaliser davantage ?
       </p>
+
+      <Button
+        variant="neon"
+        size="sm"
+        onClick={onEnhance}
+        disabled={disabled}
+        className="w-full flex items-center gap-2"
+      >
+        <Sparkles className="w-4 h-4" />
+        Améliorer (design plus professionnel)
+      </Button>
+
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant="outline"
