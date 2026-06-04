@@ -22,6 +22,8 @@ import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
+import { YesNoChoice } from "@/components/chat/YesNoChoice";
+import { getDomainQuestions } from "@/config/domainQuestions";
 import { ModeSelect } from "@/components/chat/ModeSelect";
 import { PostGenerationOptions } from "@/components/chat/PostGenerationOptions";
 import { HistoryPanel } from "@/components/HistoryPanel";
@@ -493,7 +495,27 @@ export default function AppPage() {
   };
 
   const { step } = conversationState;
-  const showTextInput = step === "greeting" || step === "quick_description" || step === "ai_suggestions" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "speakers_check" || step === "main_speaker_name" || step === "guests_check" || step === "guest_name" || step === "product_character_check" || step === "product_character_interaction" || step === "restaurant_menu_check" || step === "restaurant_menu_content" || step === "restaurant_beverages_check" || step === "restaurant_dishes_check" || step === "style_preferences" || step === "domain_questions" || step === "domain_question_text";
+
+  // Steps qui sont des questions fermées oui/non
+  const currentDomainQuestion = (() => {
+    if (step !== "domain_questions") return null;
+    const dq = conversationState.domainQuestionState;
+    const dom = conversationState.domain;
+    if (!dq?.currentQuestionId || !dom) return null;
+    return getDomainQuestions(dom).find(q => q.id === dq.currentQuestionId) || null;
+  })();
+  const isYesNoStep =
+    step === "restaurant_menu_check" ||
+    step === "restaurant_beverages_check" ||
+    step === "restaurant_dishes_check" ||
+    step === "product_character_check" ||
+    step === "speakers_check" ||
+    step === "guests_check" ||
+    (step === "domain_questions" && currentDomainQuestion?.type === "boolean");
+
+  const showTextInput = !isYesNoStep && (
+    step === "greeting" || step === "quick_description" || step === "ai_suggestions" || step === "clone_gathering" || step === "confirm_missing_zones" || step === "confirm_context_mismatch" || step === "details" || step === "custom_domain" || step === "complete" || step === "post_generation_options" || step === "main_speaker_name" || step === "guest_name" || step === "product_character_interaction" || step === "restaurant_menu_content" || step === "style_preferences" || step === "domain_question_text"
+  );
   const showModeSelect = step === "mode_select";
   const showDomainSelect = step === "domain";
   const showQuickReference = step === "quick_reference";
@@ -508,10 +530,10 @@ export default function AppPage() {
   const showSecondaryImages = step === "secondary_images";
   const showMainSpeakerPhotoUpload = step === "main_speaker_photo";
   const showGuestPhotoUpload = step === "guest_photo";
-  const showProductCharacterSkip = step === "product_character_check";
   const showStylePreferencesSkip = step === "style_preferences";
   const showDomainQuestionImages = step === "domain_question_images";
   const showFormatSelect = step === "format";
+  const showYesNoChoice = isYesNoStep;
 
   const displayImage = generatedImage || selectedHistoryImage?.imageUrl;
 
@@ -789,13 +811,12 @@ export default function AppPage() {
                 </div>
               )}
 
-              {showProductCharacterSkip && (
-                <div className="flex flex-wrap gap-3 mt-2">
-                  <Button variant="ghost" size="sm" onClick={handleSkipProductCharacter} disabled={isProcessing} className="hover:bg-muted/50">
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Non, pas de personnage
-                  </Button>
-                </div>
+              {showYesNoChoice && (
+                <YesNoChoice
+                  onYes={() => handleUserMessage("oui")}
+                  onNo={() => handleUserMessage("non")}
+                  disabled={isProcessing}
+                />
               )}
 
               {showStylePreferencesSkip && (
