@@ -1254,7 +1254,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
-            prompt,
+            prompt: finalPrompt,
             aspectRatio,
             resolution,
             referenceImage: referenceImageToSend,
