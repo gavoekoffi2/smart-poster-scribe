@@ -146,6 +146,7 @@ export interface RestaurantInfo {
   menuContent?: string;
   hasBeverages: boolean;
   beverageImages?: string[];
+  freeBeverageGeneration?: boolean;
   hasDishes: boolean;
   dishImages?: string[];
 }

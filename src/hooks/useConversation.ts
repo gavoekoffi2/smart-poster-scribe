@@ -1246,9 +1246,15 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           });
         });
 
+        // Mode "génération libre" pour les boissons : aucune image fournie, l'IA crée une boisson cohérente
+        let finalPrompt = prompt;
+        if (state.restaurantInfo?.freeBeverageGeneration && userBeverageImages.length === 0) {
+          finalPrompt = `${prompt}\n\nINSTRUCTION BOISSON (génération libre): Génère librement une image de boisson photoréaliste haut de gamme qui s'accorde parfaitement avec les plats et l'ambiance de l'affiche (cocktail, jus, vin, soda, etc. selon le contexte). La boisson doit être appétissante, bien éclairée et cohérente avec le style culinaire du restaurant. Intègre-la harmonieusement dans la composition.`;
+        }
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
-            prompt,
+            prompt: finalPrompt,
             aspectRatio,
             resolution,
             referenceImage: referenceImageToSend,
@@ -2635,15 +2641,33 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       // Restaurant beverages check
       if (step === "restaurant_beverages_check") {
         const lower = content.toLowerCase().trim();
-        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
-        
-        if (isYes) {
+        const isFreeGen = lower.includes("libre") || lower.includes("génération libre") || lower.includes("generation libre");
+        const isYes = !isFreeGen && (lower.includes("oui") || lower === "yes" || lower === "o");
+
+        if (isFreeGen) {
+          setConversationState((prev) => ({
+            ...prev,
+            step: "restaurant_dishes_check",
+            restaurantInfo: {
+              ...prev.restaurantInfo,
+              hasBeverages: true,
+              freeBeverageGeneration: true,
+            },
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Parfait ! L'IA générera elle-même une boisson cohérente avec vos plats et l'ambiance de l'affiche. ✨\n\nSouhaitez-vous inclure des images de plats/repas sur l'affiche ?"
+            );
+          }, 250);
+        } else if (isYes) {
           setConversationState((prev) => ({ 
             ...prev, 
             step: "restaurant_beverages_photos",
             restaurantInfo: { 
               ...prev.restaurantInfo,
               hasBeverages: true,
+              freeBeverageGeneration: false,
             },
             currentBeverageImages: [],
           }));
@@ -2660,6 +2684,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             restaurantInfo: { 
               ...prev.restaurantInfo,
               hasBeverages: false,
+              freeBeverageGeneration: false,
             }
           }));
           setTimeout(() => {

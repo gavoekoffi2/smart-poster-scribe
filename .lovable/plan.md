@@ -1,101 +1,28 @@
+## Objectif
 
-## 1. Nouveau flux de paiement — Redirection WhatsApp
+Ajouter un **troisième bouton "Génération libre"** à l'étape boissons du parcours restaurant. Quand l'utilisateur clique dessus, l'IA génère elle-même une image de boisson cohérente avec les plats/l'affiche, sans demander d'upload.
 
-Remplacer Moneroo/FedaPay par un formulaire simple qui ouvre WhatsApp.
+## Étape concernée
 
-**Composant : `src/components/pricing/SubscriptionRequestModal.tsx`**
+Step `restaurant_beverages_check` — actuellement deux choix (Oui / Non) via `YesNoChoice`.
 
-Au clic « S'abonner » sur une carte de plan, modal avec :
-- Nom complet
-- Numéro de téléphone
-- Plan choisi (lecture seule)
-- Bouton **« S'abonner via WhatsApp »**
+## Changements
 
-Au clic :
-1. Insert dans `subscription_requests` (pour suivi admin).
-2. Ouvre `https://wa.me/22893708178?text=...` (nouvel onglet) avec message pré-rempli :
-   ```
-   Bonjour, je souhaite souscrire au plan {PLAN}.
-   Nom: {NOM}
-   Téléphone: {TEL}
-   ```
+### 1. `src/pages/AppPage.tsx`
+- À l'étape `restaurant_beverages_check` uniquement, ne plus rendre `YesNoChoice` mais un bloc de **3 boutons** :
+  - **Oui, j'ai des photos** → `handleUserMessage("oui")`
+  - **Non, pas de boissons** → `handleUserMessage("non")`
+  - **Génération libre (IA choisit)** → `handleUserMessage("génération libre")`
+- Retirer `restaurant_beverages_check` de la condition `isYesNoStep` (ou court-circuiter avant) pour éviter le double rendu.
 
-Numéro WhatsApp : **+228 93 70 81 78**
+### 2. `src/types/generation.ts`
+- Ajouter un champ optionnel `freeBeverageGeneration?: boolean` dans `restaurantInfo`.
 
-**`src/components/pricing/PlanCard.tsx`** : retirer slider Business + calcul dynamique, brancher la modale WhatsApp à la place de `create-payment`.
+### 3. `src/hooks/useConversation.ts`
+- Dans le handler `restaurant_beverages_check` (~ligne 2636), détecter `content` contenant `"libre"` ou `"génération libre"` :
+  - `hasBeverages: true`, `freeBeverageGeneration: true`, **pas** de passage à `restaurant_beverages_photos` — aller directement à `restaurant_dishes_check`.
+- Dans la phase d'injection des images secondaires (~ligne 1241), si `freeBeverageGeneration === true` **et** aucune image utilisateur de boisson, **ne pas pousser d'image** mais ajouter une instruction texte au prompt (ex. dans la description enrichie) : « Génère librement une image de boisson photoréaliste cohérente avec les plats présentés sur l'affiche ». Pour rester minimal, on injecte cette instruction dans `secondaryImagesData` sans `imageUrl` n'est pas valide → on l'ajoute plutôt à `state.restaurantInfo.menuContent` ou via un champ de prompt déjà transmis. Le mécanisme exact (champ texte côté backend `generate-image`) sera choisi à l'implémentation en réutilisant la voie de prompt existante la plus proche.
 
-Les fonctions edge Moneroo/FedaPay restent en place mais ne sont plus appelées depuis le pricing.
-
----
-
-## 2. Coûts API réels (recherche effectuée ce jour)
-
-| Modèle | Coût officiel par image |
-|---|---|
-| **Nano Banana Pro** (`gemini-3-pro-image-preview`) — rapide & bon | **$0.134** / image (1K-2K) |
-| **GPT Image 2** (`openai/gpt-image-2`) — lent, qualité top | **$0.06** (low) → **$0.211** (high) — moyenne réaliste **~$0.15** en qualité standard |
-
-**Hypothèse par affiche livrée** (génération + ~1 modification/amélioration moyenne) :
-- Coût Nano Banana Pro × 2 ≈ **$0.27** (≈ 165 FCFA)
-- Coût GPT Image 2 × 2 ≈ **$0.30** (≈ 185 FCFA)
-- **Coût moyen mixte par affiche : ~$0.28 → ~170 FCFA**
-
----
-
-## 3. Plans proposés (basés sur ces coûts réels)
-
-L'utilisateur choisit le modèle au moment de la création :
-- **Mode Rapide** → Nano Banana Pro
-- **Mode Pro (long, qualité max)** → GPT Image 2
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ FREE (garder pour conversion)                                 │
-│ • 3 affiches offertes • Modifications illimitées             │
-├──────────────────────────────────────────────────────────────┤
-│ ESSENTIEL — 5 000 FCFA / mois (~$8)                          │
-│ • 20 affiches / mois (n'importe quel modèle)                  │
-│ • Modifications illimitées (incluses, ne consomment pas)      │
-│ Coût API pire cas : 20 × $0.30 = $6 → marge ~$2 (25%)        │
-│ Coût API cas moyen : 20 × $0.20 = $4 → marge ~$4 (50%)       │
-├──────────────────────────────────────────────────────────────┤
-│ ILLIMITÉ — 25 000 FCFA / mois (~$42) ⭐ Le plus populaire    │
-│ • Générations ILLIMITÉES (fair-use 250/mois en interne)       │
-│ • Choix libre Nano Banana Pro / GPT Image 2                   │
-│ • Templates premium + support prioritaire                     │
-│ Hypothèse usage moyen 60/mois × $0.28 = $17 → marge $25 (60%)│
-│ Pire cas réaliste (150 × $0.28) = $42 → break-even           │
-│ Fair-use à 250 = $70 max → couvert par 95% des users qui     │
-│ consomment beaucoup moins (loi de Pareto)                    │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Justification chiffrée
-
-- **Essentiel à 5 000 FCFA** : prix d'entrée raisonnable pour le marché ouest-africain. Marge confortable (50%) en usage normal. Quota de 20 protège contre l'abus.
-- **Illimité à 25 000 FCFA (~$42)** : couvre le coût API même pour les utilisateurs intensifs grâce à la **loi de Pareto** : 80% des abonnés consommeront moins de 40 affiches/mois (marge 70%+), 15% consommeront 40-100 (marge 30-50%), 5% iront jusqu'au fair-use (break-even). Au total, marge moyenne nette estimée **~55-60%**.
-- Le « fair-use 250/mois » est interne (CGU), pas affiché en gros — protège uniquement contre les abus extrêmes.
-
----
-
-## 4. Changements techniques
-
-**Migration SQL — `subscription_plans` :**
-- `is_active = false` pour `pro` et `business`.
-- Insert `essentiel` : 5000 FCFA / $8 / 40 crédits (20 affiches × 2).
-- Insert `illimite` : 25000 FCFA / $42 / 9999 crédits sentinelle, `is_popular = true`.
-
-**Frontend :**
-- `SubscriptionRequestModal.tsx` → formulaire WhatsApp
-- `PlanCard.tsx` → retirer slider, affichage « ∞ Illimité » si `credits_per_month >= 9999`, ouvrir modale WhatsApp
-- `PricingPage.tsx` → copy mise à jour
-- `useSubscription.ts` → si `credits >= 9999`, pas de décrément ; log fair-use à 250
-
----
-
-## 5. Questions avant implémentation
-
-1. **Prix OK ?** 5 000 / 25 000 FCFA te conviennent, ou tu préfères ajuster (ex: 4 000 / 20 000 plus accessible, ou 6 000 / 30 000 plus de marge) ?
-2. **Garder le plan Free** (3 affiches) ? Recommandé pour la conversion.
-3. **Fair-use 250/mois** sur l'illimité (caché en CGU) : OK ou vraiment 100% illimité sans aucun garde-fou ?
-4. **Message WhatsApp pré-rempli** : le texte proposé te va, ou tu veux le personnaliser ?
+## Hors scope
+- Aucune modification du backend `generate-image` au-delà du passage de l'instruction texte via les canaux existants.
+- Pas de changement pour les autres étapes Oui/Non (plats, etc.).

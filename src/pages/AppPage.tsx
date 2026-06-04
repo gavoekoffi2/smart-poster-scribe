@@ -811,7 +811,21 @@ export default function AppPage() {
                 </div>
               )}
 
-              {showYesNoChoice && (
+              {showYesNoChoice && step === "restaurant_beverages_check" && (
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={() => handleUserMessage("oui")} disabled={isProcessing}>
+                    Oui, j'ai des photos
+                  </Button>
+                  <Button variant="outline" onClick={() => handleUserMessage("non")} disabled={isProcessing}>
+                    Non, pas de boissons
+                  </Button>
+                  <Button variant="secondary" onClick={() => handleUserMessage("génération libre")} disabled={isProcessing}>
+                    ✨ Génération libre (IA choisit)
+                  </Button>
+                </div>
+              )}
+
+              {showYesNoChoice && step !== "restaurant_beverages_check" && (
                 <YesNoChoice
                   onYes={() => handleUserMessage("oui")}
                   onNo={() => handleUserMessage("non")}
