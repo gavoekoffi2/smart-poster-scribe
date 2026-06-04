@@ -1246,6 +1246,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           });
         });
 
+        // Mode "génération libre" pour les boissons : aucune image fournie, l'IA crée une boisson cohérente
+        let finalPrompt = prompt;
+        if (state.restaurantInfo?.freeBeverageGeneration && userBeverageImages.length === 0) {
+          finalPrompt = `${prompt}\n\nINSTRUCTION BOISSON (génération libre): Génère librement une image de boisson photoréaliste haut de gamme qui s'accorde parfaitement avec les plats et l'ambiance de l'affiche (cocktail, jus, vin, soda, etc. selon le contexte). La boisson doit être appétissante, bien éclairée et cohérente avec le style culinaire du restaurant. Intègre-la harmonieusement dans la composition.`;
+        }
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
