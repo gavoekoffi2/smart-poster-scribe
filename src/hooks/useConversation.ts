@@ -3585,12 +3585,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         );
       }, 250);
     } else {
-      // Demander des instructions de style optionnelles avant de sélectionner un template
-      setConversationState((prev) => ({ ...prev, step: "style_preferences" }));
+      // Demander si l'utilisateur souhaite préciser des préférences de style
+      setConversationState((prev) => ({ ...prev, step: "style_preferences_check" }));
       setTimeout(() => {
         addMessage(
           "assistant",
-          "Avez-vous des préférences de style particulières ? (Par exemple : style moderne, coloré, sobre, élégant, festif...) Décrivez brièvement ou cliquez sur 'Continuer' pour que je choisisse automatiquement."
+          "Avez-vous une préférence de style particulière pour l'affiche ?"
         );
       }, 250);
     }
