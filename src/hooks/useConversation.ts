@@ -2774,13 +2774,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         if (isYes) {
           setConversationState((prev) => ({ 
             ...prev, 
-            step: "product_character_interaction",
+            step: "product_character_interaction_check",
             productDisplay: { hasCharacter: true }
           }));
           setTimeout(() => {
             addMessage(
               "assistant",
-              "Comment le personnage doit-il mettre en valeur le produit ? Décrivez la scène (ex: \"une femme élégante qui boit le jus\", \"un homme assis sur le canapé\", \"une personne qui tient le téléphone\"):"
+              "Aimeriez-vous décrire la manière dont la personne va tenir/présenter le produit sur l'affiche ?"
             );
           }, 250);
         } else {
@@ -2793,6 +2793,35 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             addMessage(
               "assistant",
               "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+            );
+          }, 250);
+        }
+        return;
+      }
+
+      // Closed question: does the user want to describe the character interaction?
+      if (step === "product_character_interaction_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+
+        if (isYes) {
+          setConversationState((prev) => ({ ...prev, step: "product_character_interaction" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Décrivez la scène (ex: \"une femme élégante qui boit le jus\", \"un homme assis sur le canapé\", \"une personne qui tient le téléphone\") :"
+            );
+          }, 250);
+        } else {
+          setConversationState((prev) => ({
+            ...prev,
+            step: "reference",
+            productDisplay: { hasCharacter: true },
+          }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Très bien, je choisirai une mise en scène appropriée. Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
             );
           }, 250);
         }
@@ -2817,6 +2846,26 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         }, 250);
         return;
       }
+
+      // Closed question: does the user want to provide style preferences?
+      if (step === "style_preferences_check") {
+        const lower = content.toLowerCase().trim();
+        const isYes = lower.includes("oui") || lower === "yes" || lower === "o";
+
+        if (isYes) {
+          setConversationState((prev) => ({ ...prev, step: "style_preferences" }));
+          setTimeout(() => {
+            addMessage(
+              "assistant",
+              "Décrivez vos préférences de style (par exemple : moderne, coloré, sobre, élégant, festif...) :"
+            );
+          }, 250);
+        } else {
+          handleStylePreferencesAndSelectTemplate(undefined);
+        }
+        return;
+      }
+
 
       // Speakers check - user responds yes/no
       if (step === "speakers_check") {
