@@ -1420,22 +1420,23 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const resolution = formatPreset?.resolution || "2K";
         const outputFormat = "png";
 
-        // Réinjecter les photos utilisateur (plats / boissons) en images secondaires
+        // Réinjecter les photos utilisateur (boissons / plats) en images secondaires
         // pour qu'elles soient RÉUTILISÉES TELLES QUELLES lors de l'amélioration,
-        // et empêcher le modèle de régénérer/inventer d'autres plats.
+        // et empêcher le modèle de régénérer/inventer d'autres plats ou boissons.
+        // Les boissons passent d'abord pour rester dans les images prioritaires du moteur.
         const modSecondaryImages: Array<{ imageUrl: string; instructions: string }> = [];
         const userDishImages = state.restaurantInfo?.dishImages || [];
         const userBeverageImages = state.restaurantInfo?.beverageImages || [];
+        userBeverageImages.forEach((imageUrl, idx) => {
+          modSecondaryImages.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: cette boisson DOIT rester visible sur l'affiche améliorée et être réutilisée EXACTEMENT telle quelle. INTERDICTION FORMELLE de la régénérer, de l'inventer autrement ou de la remplacer.`,
+          });
+        });
         userDishImages.forEach((imageUrl, idx) => {
           modSecondaryImages.push({
             imageUrl,
             instructions: `PHOTO RÉELLE DE PLAT FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée (même plat, mêmes pixels, intégration fidèle). INTERDICTION FORMELLE de régénérer/remplacer/styliser différemment ce plat.`,
-          });
-        });
-        userBeverageImages.forEach((imageUrl, idx) => {
-          modSecondaryImages.push({
-            imageUrl,
-            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée. INTERDICTION FORMELLE de la régénérer ou de la remplacer.`,
           });
         });
 
