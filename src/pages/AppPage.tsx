@@ -509,6 +509,8 @@ export default function AppPage() {
     step === "restaurant_beverages_check" ||
     step === "restaurant_dishes_check" ||
     step === "product_character_check" ||
+    step === "product_character_interaction_check" ||
+    step === "style_preferences_check" ||
     step === "speakers_check" ||
     step === "guests_check" ||
     (step === "domain_questions" && currentDomainQuestion?.type === "boolean");

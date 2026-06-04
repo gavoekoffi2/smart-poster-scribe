@@ -354,6 +354,7 @@ export interface ConversationState {
     | "guest_photo"
     | "guest_name"
     | "product_character_check"
+    | "product_character_interaction_check"
     | "product_character_interaction"
     | "restaurant_menu_check"
     | "restaurant_menu_content"
@@ -361,6 +362,7 @@ export interface ConversationState {
     | "restaurant_beverages_photos"
     | "restaurant_dishes_check"
     | "restaurant_dishes_photos"
+    | "style_preferences_check"
     | "style_preferences"
     | "domain_questions" // Nouvelle étape pour les questions intelligentes par domaine
     | "domain_question_images" // Collecte d'images suite à une question
