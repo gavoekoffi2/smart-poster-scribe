@@ -811,13 +811,12 @@ export default function AppPage() {
                 </div>
               )}
 
-              {showProductCharacterSkip && (
-                <div className="flex flex-wrap gap-3 mt-2">
-                  <Button variant="ghost" size="sm" onClick={handleSkipProductCharacter} disabled={isProcessing} className="hover:bg-muted/50">
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Non, pas de personnage
-                  </Button>
-                </div>
+              {showYesNoChoice && (
+                <YesNoChoice
+                  onYes={() => handleUserMessage("oui")}
+                  onNo={() => handleUserMessage("non")}
+                  disabled={isProcessing}
+                />
               )}
 
               {showStylePreferencesSkip && (
