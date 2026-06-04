@@ -587,7 +587,7 @@ function buildProfessionalPrompt({
       lines.push("═══ CONSERVATION DES INFOS CLIENT (CRITIQUE) ═══");
       lines.push("• Conserver UNIQUEMENT et INTÉGRALEMENT les informations textuelles visibles sur l'image jointe : titres, sous-titres, dates, heures, lieux, prix, contacts, noms, slogans, hashtags.");
       lines.push("• REPRODUIRE chaque texte MOT POUR MOT, caractère par caractère. Aucune invention, aucune paraphrase, aucune date/prix/contact ajouté.");
-      lines.push("• 🛑 PHOTOS DU CLIENT (plats, boissons, produits, personnes, logos) visibles sur l'image jointe ou fournies en images secondaires : OBLIGATION ABSOLUE de les RÉUTILISER À L'IDENTIQUE (mêmes pixels, même cadrage, même apparence). INTERDICTION FORMELLE de les régénérer, remplacer, inventer d'autres plats/produits, ou de les styliser différemment. Si une photo de plat/produit est présente, elle DOIT apparaître telle quelle sur la nouvelle affiche.");
+      lines.push("• 🛑 PHOTOS DU CLIENT (plats, boissons, produits, personnes, logos) visibles sur l'image jointe ou fournies en images secondaires : OBLIGATION ABSOLUE de les RÉUTILISER À L'IDENTIQUE (mêmes pixels, même cadrage, même apparence). INTERDICTION FORMELLE de les régénérer, remplacer, inventer d'autres plats/boissons/produits, ou de les styliser différemment. Si une photo de plat, boisson ou produit est présente, elle DOIT apparaître telle quelle sur la nouvelle affiche.");
       lines.push("• Tu peux uniquement repositionner, redimensionner ou recadrer harmonieusement ces photos client — JAMAIS les remplacer par d'autres visuels générés.");
       lines.push("• Format/aspect ratio : IDENTIQUE à la source. Langue : IDENTIQUE (français par défaut).");
       lines.push("");
@@ -1675,6 +1675,7 @@ serve(async (req) => {
       secondaryImagesPromptSection += `\nIntégrer harmonieusement ces images supplémentaires sur l'affiche:`;
       secondaryImagesPromptSection += secondaryImageInstructions;
       secondaryImagesPromptSection += `\n⚠️ Positionner ces images de manière cohérente avec le design global.`;
+      secondaryImagesPromptSection += `\n🛑 Toutes les images secondaires fournies par le client sont OBLIGATOIRES: ne pas ignorer les boissons, plats, produits ou logos, ne pas les remplacer par des visuels générés.`;
     }
     
     // Smart condensation of user prompt to fit within API limits
