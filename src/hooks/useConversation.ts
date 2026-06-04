@@ -1223,14 +1223,20 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const youtubeScenePreference = state.domainSpecificInfo?.youtube?.scenePreference 
           || state.domainQuestionState?.collectedTexts?.scene_preference;
         
-        // Préparer les images secondaires
-        const secondaryImagesData = state.secondaryImages?.map(img => ({
-          imageUrl: img.imageUrl,
-          instructions: img.instructions || "",
-        })) || [];
+        // Préparer les images secondaires.
+        // IMPORTANT: les boissons passent AVANT les plats et les autres images pour éviter
+        // qu'elles soient ignorées lorsque le moteur limite le nombre d'images d'entrée.
+        const secondaryImagesData: Array<{ imageUrl: string; instructions: string }> = [];
 
-        // Injecter automatiquement les photos de plats et boissons fournies par l'utilisateur (restaurant)
+        // Injecter automatiquement les photos de boissons et plats fournies par l'utilisateur (restaurant)
         // OBLIGATION: utiliser EXACTEMENT ces photos, NE PAS générer d'autres plats/boissons
+        const userBeverageImages = state.restaurantInfo?.beverageImages || [];
+        userBeverageImages.forEach((imageUrl, idx) => {
+          secondaryImagesData.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: cette boisson DOIT apparaître clairement sur l'affiche, utilisée EXACTEMENT telle quelle (même boisson, même apparence). INTERDICTION FORMELLE de générer/inventer/remplacer par une autre boisson.`,
+          });
+        });
         const userDishImages = state.restaurantInfo?.dishImages || [];
         userDishImages.forEach((imageUrl, idx) => {
           secondaryImagesData.push({
@@ -1238,17 +1244,18 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             instructions: `PHOTO RÉELLE DE PLAT FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: utiliser EXACTEMENT cette photo de plat telle quelle sur l'affiche (intégration fidèle, sans modifier le plat). INTERDICTION FORMELLE de générer/inventer/remplacer ce plat par une autre image. C'est le plat réel du restaurant, il doit apparaître à l'identique.`,
           });
         });
-        const userBeverageImages = state.restaurantInfo?.beverageImages || [];
-        userBeverageImages.forEach((imageUrl, idx) => {
+        (state.secondaryImages || []).forEach((img) => {
           secondaryImagesData.push({
-            imageUrl,
-            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: utiliser EXACTEMENT cette photo de boisson telle quelle sur l'affiche. INTERDICTION FORMELLE de générer/inventer une autre boisson.`,
+            imageUrl: img.imageUrl,
+            instructions: img.instructions || "",
           });
         });
 
         // Mode "génération libre" pour les boissons : aucune image fournie, l'IA crée une boisson cohérente
         let finalPrompt = prompt;
-        if (state.restaurantInfo?.freeBeverageGeneration && userBeverageImages.length === 0) {
+        if (userBeverageImages.length > 0) {
+          finalPrompt = `${prompt}\n\nINSTRUCTION CRITIQUE BOISSONS CLIENT: ${userBeverageImages.length} photo(s) réelle(s) de boisson ont été fournies par le client en images secondaires. Elles ne sont PAS optionnelles: les intégrer clairement sur l'affiche, sans les remplacer, sans inventer d'autres boissons.`;
+        } else if (state.restaurantInfo?.freeBeverageGeneration) {
           finalPrompt = `${prompt}\n\nINSTRUCTION BOISSON (génération libre): Génère librement une image de boisson photoréaliste haut de gamme qui s'accorde parfaitement avec les plats et l'ambiance de l'affiche (cocktail, jus, vin, soda, etc. selon le contexte). La boisson doit être appétissante, bien éclairée et cohérente avec le style culinaire du restaurant. Intègre-la harmonieusement dans la composition.`;
         }
 
@@ -1413,22 +1420,23 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const resolution = formatPreset?.resolution || "2K";
         const outputFormat = "png";
 
-        // Réinjecter les photos utilisateur (plats / boissons) en images secondaires
+        // Réinjecter les photos utilisateur (boissons / plats) en images secondaires
         // pour qu'elles soient RÉUTILISÉES TELLES QUELLES lors de l'amélioration,
-        // et empêcher le modèle de régénérer/inventer d'autres plats.
+        // et empêcher le modèle de régénérer/inventer d'autres plats ou boissons.
+        // Les boissons passent d'abord pour rester dans les images prioritaires du moteur.
         const modSecondaryImages: Array<{ imageUrl: string; instructions: string }> = [];
         const userDishImages = state.restaurantInfo?.dishImages || [];
         const userBeverageImages = state.restaurantInfo?.beverageImages || [];
+        userBeverageImages.forEach((imageUrl, idx) => {
+          modSecondaryImages.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: cette boisson DOIT rester visible sur l'affiche améliorée et être réutilisée EXACTEMENT telle quelle. INTERDICTION FORMELLE de la régénérer, de l'inventer autrement ou de la remplacer.`,
+          });
+        });
         userDishImages.forEach((imageUrl, idx) => {
           modSecondaryImages.push({
             imageUrl,
             instructions: `PHOTO RÉELLE DE PLAT FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée (même plat, mêmes pixels, intégration fidèle). INTERDICTION FORMELLE de régénérer/remplacer/styliser différemment ce plat.`,
-          });
-        });
-        userBeverageImages.forEach((imageUrl, idx) => {
-          modSecondaryImages.push({
-            imageUrl,
-            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée. INTERDICTION FORMELLE de la régénérer ou de la remplacer.`,
           });
         });
 
