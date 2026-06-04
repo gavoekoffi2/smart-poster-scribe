@@ -22,6 +22,8 @@ import { DefaultLogoSelect } from "@/components/chat/DefaultLogoSelect";
 import { SecondaryImagesInput, SecondaryImage } from "@/components/chat/SecondaryImagesInput";
 import { StepNavigation, StepIndicator } from "@/components/chat/StepNavigation";
 import { VoiceInputButton } from "@/components/chat/VoiceInputButton";
+import { YesNoChoice } from "@/components/chat/YesNoChoice";
+import { getDomainQuestions } from "@/config/domainQuestions";
 import { ModeSelect } from "@/components/chat/ModeSelect";
 import { PostGenerationOptions } from "@/components/chat/PostGenerationOptions";
 import { HistoryPanel } from "@/components/HistoryPanel";
