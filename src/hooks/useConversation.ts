@@ -1229,6 +1229,23 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           instructions: img.instructions || "",
         })) || [];
 
+        // Injecter automatiquement les photos de plats et boissons fournies par l'utilisateur (restaurant)
+        // OBLIGATION: utiliser EXACTEMENT ces photos, NE PAS générer d'autres plats/boissons
+        const userDishImages = state.restaurantInfo?.dishImages || [];
+        userDishImages.forEach((imageUrl, idx) => {
+          secondaryImagesData.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE PLAT FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: utiliser EXACTEMENT cette photo de plat telle quelle sur l'affiche (intégration fidèle, sans modifier le plat). INTERDICTION FORMELLE de générer/inventer/remplacer ce plat par une autre image. C'est le plat réel du restaurant, il doit apparaître à l'identique.`,
+          });
+        });
+        const userBeverageImages = state.restaurantInfo?.beverageImages || [];
+        userBeverageImages.forEach((imageUrl, idx) => {
+          secondaryImagesData.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: utiliser EXACTEMENT cette photo de boisson telle quelle sur l'affiche. INTERDICTION FORMELLE de générer/inventer une autre boisson.`,
+          });
+        });
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt,
