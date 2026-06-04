@@ -1413,6 +1413,25 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         const resolution = formatPreset?.resolution || "2K";
         const outputFormat = "png";
 
+        // Réinjecter les photos utilisateur (plats / boissons) en images secondaires
+        // pour qu'elles soient RÉUTILISÉES TELLES QUELLES lors de l'amélioration,
+        // et empêcher le modèle de régénérer/inventer d'autres plats.
+        const modSecondaryImages: Array<{ imageUrl: string; instructions: string }> = [];
+        const userDishImages = state.restaurantInfo?.dishImages || [];
+        const userBeverageImages = state.restaurantInfo?.beverageImages || [];
+        userDishImages.forEach((imageUrl, idx) => {
+          modSecondaryImages.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE PLAT FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée (même plat, mêmes pixels, intégration fidèle). INTERDICTION FORMELLE de régénérer/remplacer/styliser différemment ce plat.`,
+          });
+        });
+        userBeverageImages.forEach((imageUrl, idx) => {
+          modSecondaryImages.push({
+            imageUrl,
+            instructions: `PHOTO RÉELLE DE BOISSON FOURNIE PAR LE CLIENT #${idx + 1}. OBLIGATION ABSOLUE: réutiliser EXACTEMENT cette photo telle quelle sur l'affiche améliorée. INTERDICTION FORMELLE de la régénérer ou de la remplacer.`,
+          });
+        });
+
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
             prompt: modificationPrompt,
@@ -1423,6 +1442,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             logoImages: logoImages.length > 0 ? logoImages : undefined,
             logoPositions: logoPositions.length > 0 ? logoPositions : undefined,
             contentImage: state.contentImage || undefined,
+            secondaryImages: modSecondaryImages.length > 0 ? modSecondaryImages : undefined,
             isCloneMode: true,
             isModification: true,
             modificationRequest: request,
