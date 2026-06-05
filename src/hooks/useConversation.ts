@@ -354,8 +354,11 @@ function buildPrompt(state: ConversationState) {
   }
 
   // ====== SECTION 6: PERSONNAGES ======
-  if (domain !== "youtube" && (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter)) {
+  if (domain !== "youtube" && (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter || state.freeCharacterGeneration)) {
     lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
+    if (state.freeCharacterGeneration && !mainSpeaker) {
+      lines.push("🎭 GÉNÉRATION LIBRE DU PERSONNAGE PRINCIPAL: Aucune photo fournie par le client. Génère librement un personnage photoréaliste parfaitement adapté au contenu, au thème et au ton de l'affiche (rôle, tenue, expression, posture cohérents avec le sujet). Le personnage doit s'intégrer naturellement à la composition.");
+    }
     lines.push("");
   }
 
@@ -2139,8 +2142,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           }
           if (step === "speakers_check") {
             return isSkipAction
-              ? "Compris ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
-              : "Merci ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+              ? "Compris ! Souhaitez-vous l'image d'un **personnage principal** sur l'affiche ?"
+              : "Merci ! Souhaitez-vous l'image d'un **personnage principal** sur l'affiche ?";
           }
           if (step === "product_character_check") {
             return isSkipAction
@@ -2875,7 +2878,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         if (isYes) {
           setConversationState((prev) => ({ ...prev, step: "main_speaker_photo", hasSpeakers: true }));
           setTimeout(() => {
-            addMessage("assistant", "Envoyez la photo de l'orateur/artiste principal :");
+            addMessage("assistant", "Envoyez la photo du personnage principal :");
           }, 250);
         } else {
           setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
@@ -3053,21 +3056,38 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage]
   );
 
-  // Handler pour la photo de l'orateur principal
+  // Handler pour la photo du personnage principal
   const handleMainSpeakerPhoto = useCallback(
     (imageDataUrl: string) => {
-      addMessage("user", "Photo de l'orateur principal", imageDataUrl);
+      addMessage("user", "Photo du personnage principal", imageDataUrl);
       setConversationState((prev) => ({
         ...prev,
         step: "main_speaker_name",
         currentSpeakerImage: imageDataUrl,
       }));
       setTimeout(() => {
-        addMessage("assistant", "Quel est le nom de cet orateur/artiste ? (Ce nom apparaîtra sur l'affiche)");
+        addMessage("assistant", "Quel est le nom de ce personnage ? (Ce nom apparaîtra sur l'affiche, ou tapez '-' si aucun nom)");
       }, 250);
     },
     [addMessage]
   );
+
+  // Handler pour génération libre d'un personnage par l'IA
+  const handleFreeCharacterGeneration = useCallback(() => {
+    addMessage("user", "Génère toi-même un personnage adapté");
+    setConversationState((prev) => ({
+      ...prev,
+      step: "reference",
+      hasSpeakers: true,
+      freeCharacterGeneration: true,
+    }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Parfait ! Je choisirai un personnage adapté au contenu de votre affiche. Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
 
   // Handler pour la photo d'un invité
   const handleGuestPhoto = useCallback(
@@ -3085,9 +3105,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage]
   );
 
-  // Handler pour passer les orateurs
+  // Handler pour passer (pas de personnage)
   const handleSkipSpeakers = useCallback(() => {
-    addMessage("user", "Pas d'orateur principal");
+    addMessage("user", "Pas de personnage");
     setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
     setTimeout(() => {
       addMessage(
@@ -4128,6 +4148,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     handleMainSpeakerPhoto,
     handleGuestPhoto,
     handleSkipSpeakers,
+    handleFreeCharacterGeneration,
     handleSkipGuests,
     handleSkipProductCharacter,
     // Restaurant handlers
