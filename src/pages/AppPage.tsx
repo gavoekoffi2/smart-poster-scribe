@@ -131,6 +131,7 @@ export default function AppPage() {
     handleMainSpeakerPhoto,
     handleGuestPhoto,
     handleSkipSpeakers,
+    handleFreeCharacterGeneration,
     handleSkipGuests,
     handleSkipProductCharacter,
     // Restaurant handlers
