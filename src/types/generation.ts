@@ -400,6 +400,8 @@ export interface ConversationState {
   needsContentImage?: boolean;
   // Speakers/Artists
   hasSpeakers?: boolean;
+  // Si true, l'IA génère librement un personnage cohérent avec l'affiche
+  freeCharacterGeneration?: boolean;
   mainSpeaker?: Speaker;
   currentSpeakerImage?: string;
   guests?: Speaker[];
