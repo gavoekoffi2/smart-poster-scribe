@@ -3053,21 +3053,38 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage]
   );
 
-  // Handler pour la photo de l'orateur principal
+  // Handler pour la photo du personnage principal
   const handleMainSpeakerPhoto = useCallback(
     (imageDataUrl: string) => {
-      addMessage("user", "Photo de l'orateur principal", imageDataUrl);
+      addMessage("user", "Photo du personnage principal", imageDataUrl);
       setConversationState((prev) => ({
         ...prev,
         step: "main_speaker_name",
         currentSpeakerImage: imageDataUrl,
       }));
       setTimeout(() => {
-        addMessage("assistant", "Quel est le nom de cet orateur/artiste ? (Ce nom apparaîtra sur l'affiche)");
+        addMessage("assistant", "Quel est le nom de ce personnage ? (Ce nom apparaîtra sur l'affiche, ou tapez '-' si aucun nom)");
       }, 250);
     },
     [addMessage]
   );
+
+  // Handler pour génération libre d'un personnage par l'IA
+  const handleFreeCharacterGeneration = useCallback(() => {
+    addMessage("user", "Génère toi-même un personnage adapté");
+    setConversationState((prev) => ({
+      ...prev,
+      step: "reference",
+      hasSpeakers: true,
+      freeCharacterGeneration: true,
+    }));
+    setTimeout(() => {
+      addMessage(
+        "assistant",
+        "Parfait ! Je choisirai un personnage adapté au contenu de votre affiche. Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'."
+      );
+    }, 250);
+  }, [addMessage]);
 
   // Handler pour la photo d'un invité
   const handleGuestPhoto = useCallback(
