@@ -4145,6 +4145,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     handleMainSpeakerPhoto,
     handleGuestPhoto,
     handleSkipSpeakers,
+    handleFreeCharacterGeneration,
     handleSkipGuests,
     handleSkipProductCharacter,
     // Restaurant handlers
