@@ -850,11 +850,14 @@ export default function AppPage() {
                   <ImageUploadButton
                     onImageSelect={handleMainSpeakerPhoto}
                     disabled={isProcessing}
-                    label="Envoyer photo de l'orateur"
+                    label="Photo du personnage"
                   />
+                  <Button variant="secondary" onClick={handleFreeCharacterGeneration} disabled={isProcessing}>
+                    ✨ Génère toi-même
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={handleSkipSpeakers} disabled={isProcessing} className="hover:bg-muted/50">
                     <SkipForward className="w-4 h-4 mr-2" />
-                    Pas d'orateur
+                    Pas de personnage
                   </Button>
                 </div>
               )}
