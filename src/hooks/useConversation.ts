@@ -3102,9 +3102,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     [addMessage]
   );
 
-  // Handler pour passer les orateurs
+  // Handler pour passer (pas de personnage)
   const handleSkipSpeakers = useCallback(() => {
-    addMessage("user", "Pas d'orateur principal");
+    addMessage("user", "Pas de personnage");
     setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
     setTimeout(() => {
       addMessage(
