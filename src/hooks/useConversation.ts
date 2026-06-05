@@ -354,8 +354,11 @@ function buildPrompt(state: ConversationState) {
   }
 
   // ====== SECTION 6: PERSONNAGES ======
-  if (domain !== "youtube" && (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter)) {
+  if (domain !== "youtube" && (needsContentImage || mainSpeaker || (guests && guests.length > 0) || productDisplay?.hasCharacter || state.freeCharacterGeneration)) {
     lines.push("PERSONNAGES: Générer des personnes africaines avec traits authentiques.");
+    if (state.freeCharacterGeneration && !mainSpeaker) {
+      lines.push("🎭 GÉNÉRATION LIBRE DU PERSONNAGE PRINCIPAL: Aucune photo fournie par le client. Génère librement un personnage photoréaliste parfaitement adapté au contenu, au thème et au ton de l'affiche (rôle, tenue, expression, posture cohérents avec le sujet). Le personnage doit s'intégrer naturellement à la composition.");
+    }
     lines.push("");
   }
 
