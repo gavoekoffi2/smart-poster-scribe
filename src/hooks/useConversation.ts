@@ -2139,8 +2139,8 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           }
           if (step === "speakers_check") {
             return isSkipAction
-              ? "Compris ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?"
-              : "Merci ! Y a-t-il un **orateur principal**, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?";
+              ? "Compris ! Souhaitez-vous l'image d'un **personnage principal** sur l'affiche ?"
+              : "Merci ! Souhaitez-vous l'image d'un **personnage principal** sur l'affiche ?";
           }
           if (step === "product_character_check") {
             return isSkipAction
