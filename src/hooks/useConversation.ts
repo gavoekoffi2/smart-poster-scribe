@@ -4034,7 +4034,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     // afin que l'utilisateur puisse corriger une réponse précise sans perdre le reste.
     setConversationState((prev) => ({ ...prev, step: targetStep }));
 
-    addMessage("user", `↩️ Retour à l'étape : ${STEP_BACK_LABELS[targetStep] || targetStep}`);
+    addMessage("user", `↩️ Retour à l'étape : ${targetStep}`);
     setTimeout(() => {
       addMessage("assistant", stepMessages[targetStep] || "Reprenons à cette étape. Vous pouvez modifier votre réponse.");
     }, 250);
