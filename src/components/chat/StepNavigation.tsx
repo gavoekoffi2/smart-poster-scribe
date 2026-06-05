@@ -74,32 +74,30 @@ export function StepNavigation({ currentStep, onGoBack, onGoForward, visitedStep
     return null;
   }
 
-  const currentIndex = STEP_ORDER.indexOf(currentStep as typeof STEP_ORDER[number]);
-  
-  // Trouver l'étape précédente valide
+  // Étapes vers lesquelles on n'autorise pas de retour (transitoires/terminales)
+  const NON_BACKABLE = new Set<string>([
+    "analyzing",
+    "analyzing_template",
+    "generating",
+    "modifying",
+    "missing_elements",
+    "confirm_missing_zones",
+    "confirm_context_mismatch",
+    "ai_suggestions",
+  ]);
+
+  // L'étape précédente est dérivée de l'historique réel des étapes visitées,
+  // ce qui garantit qu'on revient exactement à une étape déjà parcourue sans
+  // sauter ou casser des étapes propres au domaine (restaurant, formation...).
   const getPreviousStep = (): ConversationState["step"] | null => {
-    if (currentStep === "custom_domain") return "domain";
-    if (currentStep === "logo_position") return "logo";
-    if (currentStep === "details") return "domain";
-    if (currentStep === "speakers_check") return "details";
-    if (currentStep === "main_speaker_photo") return "speakers_check";
-    if (currentStep === "main_speaker_name") return "main_speaker_photo";
-    if (currentStep === "guests_check") return "main_speaker_photo";
-    if (currentStep === "guest_photo") return "guests_check";
-    if (currentStep === "guest_name") return "guest_photo";
-    if (currentStep === "product_character_check") return "details";
-    if (currentStep === "product_character_interaction") return "product_character_check";
-    
-    if (currentIndex > 0) {
-      const previousSteps = STEP_ORDER.slice(0, currentIndex).reverse();
-      for (const step of previousSteps) {
-        if (step === "greeting" || step === "domain" || step === "details" || 
-            step === "speakers_check" || step === "main_speaker_photo" || step === "guests_check" || step === "guest_photo" ||
-            step === "product_character_check" || step === "product_character_interaction" ||
-            step === "reference" || step === "colors" || step === "logo" || step === "content_image") {
-          return step;
-        }
-      }
+    if (!visitedSteps || visitedSteps.length === 0) return null;
+    const currentVisitedIndex = visitedSteps.lastIndexOf(currentStep);
+    const startIndex = currentVisitedIndex === -1 ? visitedSteps.length - 1 : currentVisitedIndex - 1;
+    for (let i = startIndex; i >= 0; i--) {
+      const candidate = visitedSteps[i];
+      if (NON_BACKABLE.has(candidate)) continue;
+      if (candidate === "mode_select") continue;
+      return candidate;
     }
     return null;
   };
