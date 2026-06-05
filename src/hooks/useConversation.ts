@@ -2875,7 +2875,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         if (isYes) {
           setConversationState((prev) => ({ ...prev, step: "main_speaker_photo", hasSpeakers: true }));
           setTimeout(() => {
-            addMessage("assistant", "Envoyez la photo de l'orateur/artiste principal :");
+            addMessage("assistant", "Envoyez la photo du personnage principal :");
           }, 250);
         } else {
           setConversationState((prev) => ({ ...prev, step: "reference", hasSpeakers: false }));
