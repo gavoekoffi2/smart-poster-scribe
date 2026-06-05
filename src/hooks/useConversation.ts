@@ -3995,106 +3995,48 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
     setSuggestedDomain(null);
   }, []);
 
-  // Fonction pour revenir à une étape précédente
+  // Fonction pour revenir à une étape précédente sans rien casser :
+  // on change uniquement de step et on conserve toutes les données collectées,
+  // ce qui permet à l'utilisateur de corriger une réponse puis de reprendre.
   const goBackToStep = useCallback((targetStep: ConversationState["step"]) => {
     const stepMessages: Record<string, string> = {
       greeting: "Décrivez-moi l'affiche que vous souhaitez créer :",
       domain: "Sélectionnez le domaine de l'affiche :",
+      custom_domain: "Précisez votre domaine personnalisé :",
       details: "Quelles informations souhaitez-vous ajouter ou modifier ?",
-      speakers_check: "Y a-t-il un orateur principal, un artiste ou un intervenant dont la photo doit apparaître sur l'affiche ?",
-      main_speaker_photo: "Envoyez la photo de l'orateur/artiste principal :",
+      speakers_check: "Souhaitez-vous l'image d'un personnage principal sur l'affiche ?",
+      main_speaker_photo: "Envoyez la photo du personnage principal (ou choisissez une autre option) :",
+      main_speaker_name: "Quel est le nom de ce personnage ?",
       guests_check: "Y a-t-il des invités ou d'autres intervenants à ajouter sur l'affiche ?",
       guest_photo: "Envoyez la photo d'un invité :",
-      reference: "Avez-vous une image de référence (style à reproduire) ? Envoyez-la ou cliquez sur 'Passer'.",
-      colors: "Choisissez une palette de couleurs pour votre affiche :",
+      guest_name: "Quel est le nom de cet invité ?",
+      product_character_check: "Souhaitez-vous qu'un personnage mette en valeur votre produit ?",
+      product_character_interaction_check: "Voulez-vous décrire la manière dont le personnage tient le produit ?",
+      product_character_interaction: "Décrivez l'interaction du personnage avec le produit :",
+      restaurant_menu_check: "Souhaitez-vous inclure un menu sur l'affiche ?",
+      restaurant_menu_content: "Décrivez votre menu (plats, prix...) :",
+      restaurant_beverages_check: "Souhaitez-vous inclure des boissons ?",
+      restaurant_beverages_photos: "Envoyez les photos de vos boissons :",
+      restaurant_dishes_check: "Souhaitez-vous inclure des plats ?",
+      restaurant_dishes_photos: "Envoyez les photos de vos plats :",
+      style_preferences_check: "Avez-vous des préférences de style ?",
+      style_preferences: "Décrivez vos préférences de style :",
+      reference: "Avez-vous une image de référence ? Envoyez-la ou cliquez sur 'Passer'.",
+      format: "Choisissez un format pour votre affiche :",
+      colors: "Choisissez une palette de couleurs :",
       logo: "Souhaitez-vous ajouter ou modifier un logo ?",
-      content_image: "Avez-vous une image à intégrer dans l'affiche ? Envoyez-la, ou cliquez sur 'Générer automatiquement'.",
+      logo_position: "Choisissez la position du logo :",
+      content_image: "Avez-vous une image à intégrer dans l'affiche ?",
+      secondary_images: "Souhaitez-vous ajouter d'autres images secondaires ?",
     };
 
-    // Définir quelles données garder selon l'étape cible
-    setConversationState((prev) => {
-      const newState: ConversationState = { ...prev, step: targetStep };
-      
-      // Nettoyer les données des étapes après l'étape cible
-      if (targetStep === "greeting") {
-        return { step: "greeting" };
-      }
-      if (targetStep === "domain") {
-        return { 
-          step: "domain", 
-          description: prev.description,
-          extractedInfo: prev.extractedInfo,
-          missingInfo: prev.missingInfo,
-        };
-      }
-      if (targetStep === "details") {
-        return { 
-          step: "details", 
-          description: prev.description,
-          domain: prev.domain,
-          customDomain: prev.customDomain,
-          extractedInfo: prev.extractedInfo,
-          missingInfo: prev.missingInfo,
-        };
-      }
-      if (targetStep === "speakers_check" || targetStep === "main_speaker_photo") {
-        return { 
-          step: targetStep, 
-          description: prev.description,
-          domain: prev.domain,
-          customDomain: prev.customDomain,
-          extractedInfo: prev.extractedInfo,
-          hasSpeakers: undefined,
-          mainSpeaker: undefined,
-          guests: undefined,
-        };
-      }
-      if (targetStep === "guests_check" || targetStep === "guest_photo") {
-        return { 
-          ...newState,
-          guests: targetStep === "guest_photo" ? prev.guests : undefined,
-          currentSpeakerImage: undefined,
-        };
-      }
-      if (targetStep === "reference") {
-        return { 
-          step: "reference", 
-          description: prev.description,
-          domain: prev.domain,
-          customDomain: prev.customDomain,
-          extractedInfo: prev.extractedInfo,
-          mainSpeaker: prev.mainSpeaker,
-          guests: prev.guests,
-          hasSpeakers: prev.hasSpeakers,
-          missingInfo: [],
-        };
-      }
-      if (targetStep === "colors") {
-        return { 
-          ...newState,
-          logos: undefined,
-          currentLogoImage: undefined,
-          contentImage: undefined,
-          needsContentImage: undefined,
-        };
-      }
-      if (targetStep === "logo") {
-        return { 
-          ...newState,
-          logos: prev.logos,
-          currentLogoImage: undefined,
-          contentImage: undefined,
-          needsContentImage: undefined,
-        };
-      }
-      
-      return newState;
-    });
+    // On ne change QUE l'étape. Toutes les données déjà collectées sont préservées,
+    // afin que l'utilisateur puisse corriger une réponse précise sans perdre le reste.
+    setConversationState((prev) => ({ ...prev, step: targetStep }));
 
-    // Ajouter un message système pour indiquer le retour
     addMessage("user", `↩️ Retour à l'étape : ${targetStep}`);
     setTimeout(() => {
-      addMessage("assistant", stepMessages[targetStep] || "Continuons...");
+      addMessage("assistant", stepMessages[targetStep] || "Reprenons à cette étape. Vous pouvez modifier votre réponse.");
     }, 250);
   }, [addMessage]);
 
