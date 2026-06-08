@@ -693,7 +693,12 @@ export default function AccountPage() {
           <TabsContent value="affiliation">
             <AffiliateTab />
           </TabsContent>
+
+          <TabsContent value="api">
+            <ApiKeysTab />
+          </TabsContent>
         </Tabs>
+
 
         {/* Support Section */}
         <motion.div
