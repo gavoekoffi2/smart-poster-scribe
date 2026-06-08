@@ -35,6 +35,8 @@ const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
 const DesignerUpload = lazy(() => import("./pages/DesignerUpload"));
 const DesignerProfile = lazy(() => import("./pages/DesignerProfile"));
+const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
+
 
 const queryClient = new QueryClient();
 
