@@ -347,7 +347,12 @@ export default function AccountPage() {
               <Gift className="w-4 h-4" />
               Affiliation
             </TabsTrigger>
+            <TabsTrigger value="api" className="gap-2">
+              <KeyRound className="w-4 h-4" />
+              API
+            </TabsTrigger>
           </TabsList>
+
 
           {/* Preferences Tab */}
           <TabsContent value="preferences" className="space-y-6">
