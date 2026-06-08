@@ -1129,8 +1129,16 @@ serve(async (req) => {
     // ===== AUTHENTIFICATION UTILISATEUR =====
     let userId: string | null = null;
     const authHeader = req.headers.get("authorization");
-    
-    if (authHeader && authHeader.startsWith("Bearer ")) {
+    const internalUserId = req.headers.get("x-internal-user-id");
+
+    // Voie interne : api-v1 nous appelle avec le service_role + un user_id de confiance
+    if (
+      internalUserId &&
+      authHeader === `Bearer ${supabaseServiceKey}`
+    ) {
+      userId = internalUserId;
+      console.log("Internal API call for user:", userId);
+    } else if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
       
       try {
@@ -1152,6 +1160,7 @@ serve(async (req) => {
         console.error("Auth exception:", authException);
       }
     }
+
 
     const body = await req.json();
     const {
