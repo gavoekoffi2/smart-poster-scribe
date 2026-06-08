@@ -330,7 +330,7 @@ export default function AccountPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="preferences" className="space-y-6">
-          <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1">
+          <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 w-full sm:w-auto flex overflow-x-auto whitespace-nowrap justify-start">
             <TabsTrigger value="preferences" className="gap-2">
               <Settings className="w-4 h-4" />
               Préférences
