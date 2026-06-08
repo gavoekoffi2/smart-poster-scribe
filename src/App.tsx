@@ -82,11 +82,13 @@ const App = () => (
           <Route path="/designer/:designerId" element={<DesignerProfile />} />
 
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/docs/api" element={<ApiDocsPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </Suspense>
     </BrowserRouter>
