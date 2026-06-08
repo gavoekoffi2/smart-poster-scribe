@@ -22,7 +22,8 @@ import {
   Check,
   Pencil,
   Shield,
-  Gift
+  Gift,
+  KeyRound
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { ColorPalette } from "@/components/chat/ColorPalette";
 import { AffiliateTab } from "@/components/affiliate/AffiliateTab";
+import ApiKeysTab from "@/components/account/ApiKeysTab";
+
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -344,7 +347,12 @@ export default function AccountPage() {
               <Gift className="w-4 h-4" />
               Affiliation
             </TabsTrigger>
+            <TabsTrigger value="api" className="gap-2">
+              <KeyRound className="w-4 h-4" />
+              API
+            </TabsTrigger>
           </TabsList>
+
 
           {/* Preferences Tab */}
           <TabsContent value="preferences" className="space-y-6">
@@ -685,7 +693,12 @@ export default function AccountPage() {
           <TabsContent value="affiliation">
             <AffiliateTab />
           </TabsContent>
+
+          <TabsContent value="api">
+            <ApiKeysTab />
+          </TabsContent>
         </Tabs>
+
 
         {/* Support Section */}
         <motion.div

@@ -47,6 +47,108 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          environment: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          credits_used: number
+          duration_ms: number | null
+          endpoint: string
+          error_code: string | null
+          id: string
+          ip: string | null
+          method: string
+          mode: string | null
+          request_id: string | null
+          status_code: number
+          template_used_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          credits_used?: number
+          duration_ms?: number | null
+          endpoint: string
+          error_code?: string | null
+          id?: string
+          ip?: string | null
+          method?: string
+          mode?: string | null
+          request_id?: string | null
+          status_code: number
+          template_used_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          credits_used?: number
+          duration_ms?: number | null
+          endpoint?: string
+          error_code?: string | null
+          id?: string
+          ip?: string | null
+          method?: string
+          mode?: string | null
+          request_id?: string | null
+          status_code?: number
+          template_used_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string
@@ -885,6 +987,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      match_reference_template: {
+        Args: { p_domain: string; p_subject: string }
+        Returns: {
+          design_category: string
+          domain: string
+          id: string
+          image_url: string
+          score: number
+        }[]
+      }
       submit_generation_feedback: {
         Args: {
           p_comment: string
@@ -893,6 +1005,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      validate_api_key: {
+        Args: { p_key_hash: string }
+        Returns: {
+          api_key_id: string
+          environment: string
+          scopes: string[]
+          user_id: string
+        }[]
       }
     }
     Enums: {

@@ -35,6 +35,8 @@ const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
 const DesignerUpload = lazy(() => import("./pages/DesignerUpload"));
 const DesignerProfile = lazy(() => import("./pages/DesignerProfile"));
+const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
+
 
 const queryClient = new QueryClient();
 
@@ -80,11 +82,13 @@ const App = () => (
           <Route path="/designer/:designerId" element={<DesignerProfile />} />
 
           <Route path="/faq" element={<FAQPage />} />
+          <Route path="/docs/api" element={<ApiDocsPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </Suspense>
     </BrowserRouter>
