@@ -59,6 +59,14 @@ export default function AccountPage() {
   } = useUserProfile();
 
   const [editMode, setEditMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") === "api" ? "api" : "preferences");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && ["preferences","subscription","history","affiliation","api"].includes(t)) {
+      setActiveTab(t);
+    }
+  }, [searchParams]);
   const [formData, setFormData] = useState({
     full_name: "",
     company_name: "",
@@ -347,11 +355,7 @@ export default function AccountPage() {
             <Button variant="outline" size="sm" onClick={() => navigate("/docs/api")} className="flex-1 sm:flex-none">
               Documentation
             </Button>
-            <Button variant="neon" size="sm" onClick={() => {
-              const el = document.querySelector('[data-state][value="api"]') as HTMLElement;
-              const trigger = document.querySelector('button[role="tab"][value="api"]') as HTMLElement;
-              trigger?.click();
-            }} className="flex-1 sm:flex-none gap-2">
+            <Button variant="neon" size="sm" onClick={() => setActiveTab("api")} className="flex-1 sm:flex-none gap-2">
               <KeyRound className="w-4 h-4" />
               Ma clé API
             </Button>
@@ -359,7 +363,7 @@ export default function AccountPage() {
         </motion.div>
 
         {/* Tabs */}
-        <Tabs defaultValue={searchParams.get("tab") === "api" ? "api" : "preferences"} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 w-full sm:w-auto flex overflow-x-auto whitespace-nowrap justify-start">
             <TabsTrigger value="preferences" className="gap-2">
               <Settings className="w-4 h-4" />
