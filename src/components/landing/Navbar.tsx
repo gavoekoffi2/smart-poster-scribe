@@ -29,12 +29,13 @@ export function Navbar({ onGetStarted }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { href: "#", label: "Accueil", active: true },
-    { href: "#showcase", label: "Réalisations" },
-    { href: "#templates", label: "Templates" },
-    { href: "#features", label: "Services" },
-    { href: "#pricing", label: "Tarifs" },
-    { href: "#contact", label: "Contact" },
+    { href: "/#", label: "Accueil", active: true },
+    { href: "/#showcase", label: "Réalisations" },
+    { href: "/#templates", label: "Templates" },
+    { href: "/#features", label: "Services" },
+    { href: "/#pricing", label: "Tarifs" },
+    { href: "/docs/api", label: "API" },
+    { href: "/#contact", label: "Contact" },
   ];
 
   return (
