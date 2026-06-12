@@ -231,7 +231,7 @@ export function PricingSection() {
                 "Sans filigrane",
                 "Templates premium",
                 "Support prioritaire",
-                "Accès API (si applicable)",
+                "Accès API complet (intégration tierce)",
               ].map((feature) => (
                 <li key={feature} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
