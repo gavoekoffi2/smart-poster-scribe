@@ -8,7 +8,11 @@ export function Footer() {
       { label: "Fonctionnalités", href: "/#features" },
       { label: "Tarifs", href: "/#pricing" },
       { label: "Templates", href: "/#templates" },
-      { label: "API Développeurs", href: "/docs/api" },
+    ],
+    developers: [
+      { label: "API & Documentation", href: "/docs/api" },
+      { label: "Obtenir une clé API", href: "/account?tab=api" },
+      { label: "Démarrage rapide", href: "/docs/api#quickstart" },
     ],
     company: [
       { label: "À propos", href: "/#about" },
@@ -27,7 +31,7 @@ export function Footer() {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[150px]" />
 
       <div className="container mx-auto max-w-7xl px-4 py-16 relative z-10">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
@@ -66,6 +70,20 @@ export function Footer() {
             <h4 className="font-display font-semibold text-foreground mb-4">Produit</h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Developers Links */}
+          <div>
+            <h4 className="font-display font-semibold text-foreground mb-4">Développeurs</h4>
+            <ul className="space-y-3">
+              {footerLinks.developers.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}

@@ -59,6 +59,14 @@ export default function AccountPage() {
   } = useUserProfile();
 
   const [editMode, setEditMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") === "api" ? "api" : "preferences");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && ["preferences","subscription","history","affiliation","api"].includes(t)) {
+      setActiveTab(t);
+    }
+  }, [searchParams]);
   const [formData, setFormData] = useState({
     full_name: "",
     company_name: "",
@@ -328,8 +336,34 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* API Promo Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border border-primary/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+              <KeyRound className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Intégrez Graphiste GPT dans votre app</h3>
+              <p className="text-sm text-muted-foreground">Générez votre clé API et accédez à la documentation complète.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={() => navigate("/docs/api")} className="flex-1 sm:flex-none">
+              Documentation
+            </Button>
+            <Button variant="neon" size="sm" onClick={() => setActiveTab("api")} className="flex-1 sm:flex-none gap-2">
+              <KeyRound className="w-4 h-4" />
+              Ma clé API
+            </Button>
+          </div>
+        </motion.div>
+
         {/* Tabs */}
-        <Tabs defaultValue="preferences" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 w-full sm:w-auto flex overflow-x-auto whitespace-nowrap justify-start">
             <TabsTrigger value="preferences" className="gap-2">
               <Settings className="w-4 h-4" />
