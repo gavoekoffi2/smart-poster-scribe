@@ -6,12 +6,17 @@ export default function LegalPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto max-w-4xl px-4 py-12">
-        <Link to="/">
-          <Button variant="ghost" className="mb-8 gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Retour à l'accueil
-          </Button>
-        </Link>
+        <div className="flex items-center justify-between mb-8 gap-2 flex-wrap">
+          <Link to="/">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Retour à l'accueil
+            </Button>
+          </Link>
+          <Link to="/docs/api">
+            <Button variant="outline" size="sm">API & Documentation</Button>
+          </Link>
+        </div>
 
         <h1 className="font-display text-4xl font-bold mb-2">Mentions Légales</h1>
         <p className="text-muted-foreground mb-10">Dernière mise à jour : 2 mars 2026</p>
