@@ -30,6 +30,12 @@ export default function ApiDocsPage() {
           <Link to="/" className="flex items-center gap-2 text-sm">
             <ArrowLeft className="w-4 h-4" /> Retour
           </Link>
+          <nav className="hidden md:flex items-center gap-1 text-sm">
+            <Link to="/" className="px-3 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary">Accueil</Link>
+            <Link to="/pricing" className="px-3 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary">Tarifs</Link>
+            <Link to="/docs/api" className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground">API</Link>
+            <Link to="/faq" className="px-3 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary">FAQ</Link>
+          </nav>
           <Button asChild size="sm">
             <Link to="/account?tab=api"><KeyRound className="w-4 h-4 mr-2" />Mes clés API</Link>
           </Button>
