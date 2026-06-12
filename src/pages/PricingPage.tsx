@@ -85,15 +85,20 @@ export default function PricingPage() {
               <span className="font-bold text-foreground">Graphiste GPT</span>
             </div>
 
-            {user ? (
-              <Button variant="outline" onClick={() => navigate("/account")}>
-                Mon compte
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/docs/api")} className="hidden sm:inline-flex">
+                API
               </Button>
-            ) : (
-              <Button variant="outline" onClick={() => navigate("/auth")}>
-                Connexion
-              </Button>
-            )}
+              {user ? (
+                <Button variant="outline" size="sm" onClick={() => navigate("/account")}>
+                  Mon compte
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+                  Connexion
+                </Button>
+              )}
+            </div>
           </div>
         </header>
 
