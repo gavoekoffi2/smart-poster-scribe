@@ -60,12 +60,25 @@ export default function ApiDocsPage() {
 
         {/* Main content */}
         <main className="space-y-10 min-w-0">
-          <div>
+          <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/10 via-card/50 to-accent/10 p-8 md:p-12">
             <Badge className="mb-3" variant="secondary">v1 — stable</Badge>
-            <h1 className="text-4xl font-bold mb-3 flex items-center gap-2"><BookOpen className="w-8 h-8 text-primary" />API GraphisteGPT</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 flex items-center gap-3 flex-wrap">
+              <BookOpen className="w-10 h-10 text-primary" />API GraphisteGPT
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mb-6">
               Intégrez la génération d'affiches professionnelles dans vos propres applications.
               Envoyez juste un domaine et un sujet — nous nous occupons de tout le reste.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild size="lg" variant="neon">
+                <Link to="/account?tab=api"><KeyRound className="w-5 h-5 mr-2" />Obtenir ma clé API</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a href="#quickstart">Voir le démarrage rapide</a>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              Connexion requise. Clés sandbox gratuites disponibles immédiatement.
             </p>
           </div>
 
