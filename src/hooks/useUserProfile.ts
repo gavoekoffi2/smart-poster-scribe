@@ -99,8 +99,8 @@ export function useUserProfile() {
 
     const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    // Use flat structure for better compatibility with storage policies
-    const fileName = `${type}_${user.id}_${uniqueId}.${fileExt}`;
+    // Scope path to user's folder so storage RLS enforces per-user ownership
+    const fileName = `${user.id}/${type}_${uniqueId}.${fileExt}`;
     const bucket = "temp-images";
 
     try {

@@ -215,6 +215,13 @@ export type Database = {
             referencedRelation: "generated_images"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_transactions_related_image_id_fkey"
+            columns: ["related_image_id"]
+            isOneToOne: false
+            referencedRelation: "public_showcase_images"
+            referencedColumns: ["id"]
+          },
         ]
       }
       design_categories: {
@@ -338,6 +345,13 @@ export type Database = {
             columns: ["image_id"]
             isOneToOne: false
             referencedRelation: "generated_images"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_feedback_image_id_fkey"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "public_showcase_images"
             referencedColumns: ["id"]
           },
         ]
@@ -886,7 +900,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_showcase_images: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string | null
+          domain: string | null
+          id: string | null
+          image_url: string | null
+          resolution: string | null
+          showcase_order: number | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          domain?: string | null
+          id?: string | null
+          image_url?: string | null
+          resolution?: string | null
+          showcase_order?: number | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string | null
+          domain?: string | null
+          id?: string | null
+          image_url?: string | null
+          resolution?: string | null
+          showcase_order?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_get_financial_stats: { Args: { p_admin_id: string }; Returns: Json }
