@@ -39,7 +39,7 @@ export function AffiliateTab() {
           Programme d'affiliation
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto mb-6">
-          Recommandez Graphiste GPT et gagnez <strong className="text-primary">10% de commission</strong> sur chaque abonnement de vos filleuls. Les commissions sont récurrentes à chaque renouvellement.
+          Recommandez Graphiste GPT et gagnez <strong className="text-primary">30% de commission récurrente</strong> sur chaque abonnement de vos filleuls, à chaque renouvellement, à vie.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-lg mx-auto">
           <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
@@ -55,7 +55,7 @@ export function AffiliateTab() {
           <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
             <DollarSign className="w-5 h-5 text-primary mx-auto mb-2" />
             <p className="text-sm font-medium">3. Vous gagnez</p>
-            <p className="text-xs text-muted-foreground">10% à vie</p>
+            <p className="text-xs text-muted-foreground">30% à vie</p>
           </div>
         </div>
         <Button
@@ -118,8 +118,8 @@ export function AffiliateTab() {
             </div>
             <span className="text-sm text-muted-foreground">Commission</span>
           </div>
-          <p className="text-3xl font-bold text-foreground">10%</p>
-          <p className="text-xs text-muted-foreground">récurrente</p>
+          <p className="text-3xl font-bold text-foreground">30%</p>
+          <p className="text-xs text-muted-foreground">récurrente à vie</p>
         </motion.div>
       </div>
 
@@ -146,7 +146,7 @@ export function AffiliateTab() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Partagez ce lien sur vos réseaux sociaux, WhatsApp, ou par email. Toute personne qui s'inscrit et s'abonne via ce lien vous rapporte 10% de commission.
+          Partagez ce lien sur vos réseaux sociaux, WhatsApp, ou par email. Toute personne qui s'inscrit et s'abonne via ce lien vous rapporte 30% de commission, à chaque paiement.
         </p>
       </motion.div>
 
