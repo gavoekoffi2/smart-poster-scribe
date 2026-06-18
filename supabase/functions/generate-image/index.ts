@@ -1178,8 +1178,11 @@ serve(async (req) => {
       isModification, // Flag pour les modifications (pas de débit de crédits)
       modificationRequest: rawModificationRequest, // Description de la modification demandée
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
+      apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
     } = body;
-    const quality: "fast" | "premium" = rawQuality === "premium" ? "premium" : "fast";
+    const apiStrictPremium: boolean = rawApiStrictPremium === true;
+    // Public API requests are always forced to premium (gpt-image-2)
+    const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
