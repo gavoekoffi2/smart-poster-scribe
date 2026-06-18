@@ -1,46 +1,53 @@
-## Problème
+## Problème identifié
 
-Les nouveaux plans ont bien été enregistrés en base de données le 03/06 :
+L'API `POST /v1/posters/generate` appelle en interne `generate-image`, qui est **asynchrone** : elle renvoie immédiatement `{ success: true, jobId, status: 'processing' }` (HTTP 202) et fabrique l'affiche en arrière-plan.
 
-| Plan | Prix | Crédits | Affiches |
-|------|------|---------|----------|
-| Gratuit | 0 $ / 0 FCFA | 6 | ≈ 3 |
-| Essentiel | 8 $ / 5 000 FCFA / mois | 40 | 20 |
-| Illimité (populaire) | 42 $ / 25 000 FCFA / mois | ∞ | Illimité |
+Le wrapper `api-v1/index.ts` traite ce 202 comme un succès final et essaie d'extraire `imageUrl` d'une réponse qui n'en contient pas encore. Résultat côté développeur intégrateur :
+- `image_url` vide ou absente
+- `credits_used: 0`
+- seul `template_used.image_url` (rempli localement par le wrapper) apparaît
 
-La page `/pricing` charge déjà ces plans depuis la base, mais **la section « Tarifs » de la page d'accueil** (`src/components/landing/PricingSection.tsx`) affiche encore les ANCIENS prix codés en dur : *Essai gratuit*, *Populaire 7 $*, et un *Business 17 $* avec un slider. C'est ce que voit le visiteur depuis l'accueil — d'où l'impression que rien n'a été mis à jour.
+C'est exactement ce qu'il décrit : « ça retourne un template, pas l'affiche finale ».
 
-## Objectif
+## Correctifs à apporter dans `supabase/functions/api-v1/index.ts`
 
-Faire afficher à la page d'accueil exactement les mêmes plans que ceux en base, sans toucher aux prix ni au flux de paiement (formulaire + WhatsApp) qui sont déjà corrects sur `/pricing`.
+### 1. Rendre `POST /v1/posters/generate` réellement synchrone (par défaut)
 
-## Changements
+Après l'appel à `generate-image` :
+- Récupérer le `jobId` renvoyé.
+- Boucler (poll) la table `image_jobs` via le client admin jusqu'à `status === 'completed'` ou `'failed'`, avec :
+  - intervalle ~1.5 s
+  - timeout total ~110 s (en-dessous de la limite Edge Function de 150 s)
+- Si `completed` → renvoyer `image_url = result_url`, `status: "completed"`, `job_id: <jobId>`, `credits_used` (lu depuis `params` ou via une requête `user_subscriptions` avant/après — version simple : laisser 1 en mode `quality`, 0 en `fast`/test).
+- Si `failed` → renvoyer `GENERATION_FAILED` avec `error_message`.
+- Si timeout → renvoyer `status: "processing"` + `job_id` pour que le client puisse poller `/v1/posters/:jobId` (voir point 2). HTTP 202.
 
-### 1. `src/components/landing/PricingSection.tsx` (refonte de l'affichage)
+### 2. Implémenter le endpoint manquant `GET /v1/posters/:jobId`
 
-- Supprimer les constantes codées en dur (`BASE_BUSINESS_POSTERS`, prix Business, slider).
-- Charger les plans actifs depuis le hook `useSubscription` (déjà disponible), au lieu du tableau `plans` codé en dur.
-- Afficher 3 cartes correspondant aux slugs `free`, `essentiel`, `illimite` :
-  - **Gratuit** : 0 $ (0 FCFA), « 6 crédits offerts (≈ 3 affiches) », features depuis la base.
-  - **Essentiel** : 8 $ / mois (≈ 5 000 FCFA), « 20 affiches / mois », features depuis la base.
-  - **Illimité** (badge « Le plus populaire ») : 42 $ / mois (≈ 25 000 FCFA), affichage `∞ Illimité` quand `credits_per_month >= 9999`.
-- Retirer entièrement le slider Business et son calcul au prorata.
-- CTA :
-  - Gratuit → redirige vers `/auth`.
-  - Essentiel / Illimité → redirige vers `/pricing` (où le `SubscriptionRequestModal` WhatsApp existe déjà).
-- Bloc « Consommation des crédits » : garder « 1 affiche = 2 crédits ».
+Déjà annoncé dans l'en-tête du fichier mais jamais routé. Ajouter :
+- Route `GET /v1/posters/<uuid>` qui lit `image_jobs` (filtré par `user_id = ctx.userId`) et renvoie `{ job_id, status, image_url, error_message }`.
+- Scope requis : `posters:generate` (ou nouveau `posters:read`).
+- 404 si le job n'existe pas / n'appartient pas à la clé.
 
-### 2. Vérifications passives (lecture seule, pas de modif si OK)
+### 3. Petit nettoyage de l'extraction de réponse
 
-- `src/pages/PricingPage.tsx` : déjà branché sur la base — vérifier qu'il n'y a pas de texte résiduel parlant de « Populaire / Business / 12 affiches ».
-- `src/components/pricing/PlanCard.tsx` : vérifier qu'il gère bien les slugs `essentiel` et `illimite` (affichage ∞).
-- `src/components/credits/CreditBalance.tsx` : vérifier que le quota affiché correspond au nouveau plan (≈ 3 affiches pour 6 crédits gratuits, etc.).
-- `src/components/credits/UpgradeModal.tsx` : remplacer toute mention résiduelle de l'ancien Pro/Business par Essentiel/Illimité si présente.
+Le code actuel essaie `imageUrl || image_url || url || data?.imageUrl`. Une fois le poll en place, on lit directement `result_url` de `image_jobs` → plus de devinette de champ.
 
-Si l'un de ces fichiers contient encore des libellés des anciens plans, je les corrigerai dans le même passage (libellés uniquement, pas de logique).
+### 4. Mettre à jour la doc API (`src/pages/ApiDocsPage.tsx`)
+
+Documenter :
+- Que `POST /v1/posters/generate` attend la fin de la génération (jusqu'à ~110 s) et renvoie l'`image_url` finale.
+- Que si la réponse est `status: "processing"` + `job_id`, il faut poller `GET /v1/posters/:jobId`.
+- Exemple de polling.
 
 ## Hors-scope
 
-- Pas de changement des montants en base (déjà corrects).
-- Pas de changement du flux de paiement WhatsApp.
-- Pas de changement de la fonction SQL `check_and_debit_credits` (déjà à 2 crédits / affiche).
+- Pas de changement de `generate-image` (le flux asynchrone reste utile pour l'app principale).
+- Pas de modification de la facturation/crédits.
+- Pas de touche à `src/integrations/supabase/client.ts` ni aux types auto-générés.
+
+## Vérification après implémentation
+
+- `supabase--curl_edge_functions` sur `/api-v1/v1/posters/generate` avec une vraie clé `gpt_live_...` pour vérifier qu'on reçoit bien `image_url` final.
+- Test du `GET /v1/posters/:jobId` sur un job existant.
+- Vérifier les logs `api-v1` et `generate-image` en cas d'échec.
