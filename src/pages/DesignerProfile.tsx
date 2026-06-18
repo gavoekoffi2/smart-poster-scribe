@@ -29,7 +29,7 @@ interface DesignerProfile {
   portfolio_url: string | null;
   is_verified: boolean;
   templates_count: number;
-  total_earnings: number;
+  total_earnings?: number;
   created_at: string;
   user_id: string;
 }
