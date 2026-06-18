@@ -211,7 +211,10 @@ export default function ApiDocsPage() {
     subject: "Webinaire IA pour PME",
     title: "Boostez votre PME avec l'IA",
     date: "20 mars 2026",
-    mode: "quality",
+  }),
+});
+const { data } = await res.json();
+console.log(data.image_url, data.model, data.provider, data.fallback_used);`}
   }),
 });
 const { data } = await res.json();
