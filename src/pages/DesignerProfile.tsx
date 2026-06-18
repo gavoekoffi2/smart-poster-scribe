@@ -66,7 +66,7 @@ const DesignerProfile = () => {
   const fetchProfile = async () => {
     try {
       let query = supabase
-        .from("partner_designers")
+        .from("partner_designers_public")
         .select("*");
 
       // If designerId provided, fetch that specific designer
@@ -131,7 +131,7 @@ const DesignerProfile = () => {
 
     try {
       const { error } = await supabase
-        .from("partner_designers")
+        .from("partner_designers_public")
         .update({
           display_name: editData.display_name.trim(),
           bio: editData.bio.trim() || null,

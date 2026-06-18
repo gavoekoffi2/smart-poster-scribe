@@ -1543,7 +1543,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         
         if (currentDomain) {
           const { data, error } = await supabase
-            .from("reference_templates")
+            .from("reference_templates_public")
             .select("*")
             .eq("domain", currentDomain);
           
@@ -1555,7 +1555,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // If no templates for this domain, get all templates for inspiration
         if (templates.length === 0) {
           const { data: allTemplates, error } = await supabase
-            .from("reference_templates")
+            .from("reference_templates_public")
             .select("*")
             .limit(30);
           
@@ -3605,11 +3605,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       try {
         let templates: any[] = [];
         if (currentDomain) {
-          const { data } = await supabase.from("reference_templates").select("*").eq("domain", currentDomain).limit(10);
+          const { data } = await supabase.from("reference_templates_public").select("*").eq("domain", currentDomain).limit(10);
           if (data) templates = data;
         }
         if (templates.length === 0) {
-          const { data } = await supabase.from("reference_templates").select("*").limit(20);
+          const { data } = await supabase.from("reference_templates_public").select("*").limit(20);
           if (data) templates = data;
         }
 
