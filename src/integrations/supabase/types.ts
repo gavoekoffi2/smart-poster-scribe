@@ -361,8 +361,11 @@ export type Database = {
           created_at: string
           error_code: string | null
           error_message: string | null
+          fallback_used: boolean
           id: string
+          model_used: string | null
           params: Json | null
+          provider_used: string | null
           result_url: string | null
           status: string
           task_id: string | null
@@ -373,8 +376,11 @@ export type Database = {
           created_at?: string
           error_code?: string | null
           error_message?: string | null
+          fallback_used?: boolean
           id?: string
+          model_used?: string | null
           params?: Json | null
+          provider_used?: string | null
           result_url?: string | null
           status?: string
           task_id?: string | null
@@ -385,8 +391,11 @@ export type Database = {
           created_at?: string
           error_code?: string | null
           error_message?: string | null
+          fallback_used?: boolean
           id?: string
+          model_used?: string | null
           params?: Json | null
+          provider_used?: string | null
           result_url?: string | null
           status?: string
           task_id?: string | null
