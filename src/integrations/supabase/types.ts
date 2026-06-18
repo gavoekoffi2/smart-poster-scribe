@@ -637,6 +637,13 @@ export type Database = {
             referencedRelation: "partner_designers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reference_templates_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       referral_commissions: {
@@ -822,6 +829,13 @@ export type Database = {
             referencedRelation: "reference_templates"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "template_earnings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reference_templates_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -900,6 +914,42 @@ export type Database = {
       }
     }
     Views: {
+      partner_designers_public: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          is_verified: boolean | null
+          portfolio_url: string | null
+          templates_count: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          portfolio_url?: string | null
+          templates_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          portfolio_url?: string | null
+          templates_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       public_showcase_images: {
         Row: {
           aspect_ratio: string | null
@@ -929,6 +979,60 @@ export type Database = {
           showcase_order?: number | null
         }
         Relationships: []
+      }
+      reference_templates_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          design_category: string | null
+          designer_id: string | null
+          domain: string | null
+          id: string | null
+          image_url: string | null
+          is_active: boolean | null
+          tags: string[] | null
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          design_category?: string | null
+          designer_id?: string | null
+          domain?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          tags?: string[] | null
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          design_category?: string | null
+          designer_id?: string | null
+          domain?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          tags?: string[] | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_templates_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reference_templates_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
