@@ -51,7 +51,7 @@ export default function ApiDocsPage() {
             ["quickstart", "Démarrage rapide"],
             ["auth", "Authentification"],
             ["template-selection", "Sélection auto du template"],
-            ["modes", "Modes : fast vs quality"],
+            ["modes", "Qualité (toujours premium)"],
             ["endpoint-generate", "POST /posters/generate"],
             ["endpoint-templates", "GET /templates"],
             ["endpoint-suggest", "POST /templates/suggest"],
@@ -162,25 +162,31 @@ export default function ApiDocsPage() {
 }`}</Code>
           </Section>
 
-          <Section id="modes" title="Modes : fast vs quality">
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="p-4 rounded-lg border border-border/50 bg-card/50">
-                <p className="font-semibold">quality <Badge className="ml-2">recommandé</Badge></p>
-                <p className="text-sm text-muted-foreground mt-1">GPT-Image-2, qualité haute. Idéal pour la production. ~30–60s.</p>
-              </div>
-              <div className="p-4 rounded-lg border border-border/50 bg-card/50">
-                <p className="font-semibold">fast</p>
-                <p className="text-sm text-muted-foreground mt-1">Aperçu rapide, qualité moindre. ~5–10s.</p>
-              </div>
+          <Section id="modes" title="Qualité : toujours premium (GPT Image 2)">
+            <div className="p-4 rounded-lg border border-border/50 bg-card/50">
+              <p className="font-semibold">premium <Badge className="ml-2">forcé</Badge></p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Toutes les requêtes API utilisent <code>openai/gpt-image-2</code> en mode haute qualité.
+                Le champ <code>quality</code> (ou <code>mode</code>) du body est ignoré : <code>quality: "fast"</code> est
+                automatiquement écrasé en <code>"premium"</code>. Aucun fallback Gemini / Nano Banana / Kie / Lovable AI
+                n'est utilisé sur l'API publique. Si GPT Image 2 n'est pas disponible, l'API retourne l'erreur{" "}
+                <code>PREMIUM_MODEL_UNAVAILABLE</code> au lieu de générer avec un modèle inférieur.
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                La réponse contient toujours <code>quality</code>, <code>model</code>, <code>provider</code> et{" "}
+                <code>fallback_used</code>. Le champ <code>template_used.image_url</code> est une référence interne et n'est
+                jamais retourné comme image finale — l'image finale est dans <code>data.image_url</code>.
+              </p>
             </div>
           </Section>
+
 
           <Section id="endpoint-generate" title="POST /v1/posters/generate">
             <p>Génère une affiche. Champs supportés :</p>
             <Code>{`{
   "domain": "restaurant" | "evenement" | "formation" | "youtube_thumbnail" | ...,
   "subject": "Description détaillée du sujet",
-  "mode": "quality" | "fast",         // défaut: quality
+  "quality": "premium",               // ignoré : toujours forcé à "premium" (gpt-image-2)
   "title": "Titre principal",
   "date": "15 mars 2026",
   "location": "Cotonou, Bénin",
@@ -205,11 +211,10 @@ export default function ApiDocsPage() {
     subject: "Webinaire IA pour PME",
     title: "Boostez votre PME avec l'IA",
     date: "20 mars 2026",
-    mode: "quality",
   }),
 });
 const { data } = await res.json();
-console.log(data.image_url);`}</Code>
+console.log(data.image_url, data.model, data.provider, data.fallback_used);`}</Code>
             <p className="text-sm">Exemple Python :</p>
             <Code>{`import requests, os
 r = requests.post(

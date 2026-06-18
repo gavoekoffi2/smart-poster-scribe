@@ -1,53 +1,68 @@
-## Problème identifié
+# Forcer GPT Image 2 (premium) sur l'API publique
 
-L'API `POST /v1/posters/generate` appelle en interne `generate-image`, qui est **asynchrone** : elle renvoie immédiatement `{ success: true, jobId, status: 'processing' }` (HTTP 202) et fabrique l'affiche en arrière-plan.
+L'endpoint `POST /v1/posters/generate` doit toujours générer en mode premium avec `openai/gpt-5.4-image-2` via OpenRouter, sans fallback Gemini / Nano Banana / Kie / Lovable AI, et sans jamais renvoyer le template comme image finale.
 
-Le wrapper `api-v1/index.ts` traite ce 202 comme un succès final et essaie d'extraire `imageUrl` d'une réponse qui n'en contient pas encore. Résultat côté développeur intégrateur :
-- `image_url` vide ou absente
-- `credits_used: 0`
-- seul `template_used.image_url` (rempli localement par le wrapper) apparaît
+## 1. `supabase/functions/api-v1/index.ts` — `routeGenerate`
 
-C'est exactement ce qu'il décrit : « ça retourne un template, pas l'affiche finale ».
+- Ignorer `body.mode` / `body.quality` : forcer en interne `mode = "quality"` et `quality = "premium"`.
+- Si l'appelant envoie explicitement `quality: "fast"` ou `mode: "fast"`, soit l'écraser silencieusement en premium (option retenue), soit retourner `400 QUALITY_NOT_ALLOWED`. → on écrase silencieusement pour ne pas casser les clients existants, mais on log `requested_quality` vs `forced_quality`.
+- Ajouter au payload envoyé à `generate-image` un flag `apiStrictPremium: true` (nouveau).
+- Adapter l'extraction de l'image finale : ne JAMAIS retomber sur `referenceImage` / `template_used.image_url`. Si le job termine sans `result_url`, retourner `PREMIUM_MODEL_UNAVAILABLE`.
+- Réponse enrichie sur succès et sur polling terminé :
+  ```json
+  {
+    "job_id": "...",
+    "status": "completed",
+    "image_url": "...",
+    "quality": "premium",
+    "model": "gpt-image-2",
+    "provider": "openai",
+    "fallback_used": false,
+    "credits_used": 2,
+    "template_used": { "id": "...", "image_url": "..." }
+  }
+  ```
+- Réponse async (timeout polling) : ajouter `quality`, `model`, `provider`, `fallback_used: false`.
+- Idem dans `routePosterStatus` : enrichir avec `quality/model/provider/fallback_used` (lire depuis `image_jobs` si disponible, sinon valeurs constantes pour les jobs API).
+- Logs structurés par requête : `{ request_id, job_id, requested_quality, forced_quality: "premium", actual_model, actual_provider, fallback_used, template_id, status }`.
+- Quand un template auto-sélectionné est cassé (erreur `Impossible de charger l'image de référence`), réessayer une fois avec un autre template (`suggestTemplate` doit retourner le N+1) avant d'échouer ; ne pas renvoyer cette erreur si elle vient d'un template interne.
 
-## Correctifs à apporter dans `supabase/functions/api-v1/index.ts`
+## 2. `supabase/functions/generate-image/index.ts`
 
-### 1. Rendre `POST /v1/posters/generate` réellement synchrone (par défaut)
+- Lire `apiStrictPremium` dans le body. Quand vrai :
+  - Forcer `quality = "premium"`.
+  - Skip `tryGoogle`, `tryKie`, `tryLovable` : si OpenRouter échoue ou si `OPENROUTER_API_KEY` est absent, marquer `error = "PREMIUM_MODEL_UNAVAILABLE"` avec message « GPT Image 2 is required for all API generations. No fast or fallback model was used. » et déclencher le remboursement automatique existant.
+  - Écrire sur le job (`image_jobs`) deux nouvelles colonnes optionnelles ou champs dans `metadata` : `model_used = "gpt-image-2"`, `provider_used = "openai"`, `fallback_used = false`. Si la colonne n'existe pas, écrire un JSON dans `error_message` n'est pas idéal → préférer ajouter ces champs via une migration légère sur `image_jobs` (nullable) **ou** stocker dans un champ JSON existant. À confirmer après lecture de la table.
+- Pour les appels NON-API (mode actuel), comportement inchangé : fallback chaîne Gemini→Kie→Lovable conservé.
 
-Après l'appel à `generate-image` :
-- Récupérer le `jobId` renvoyé.
-- Boucler (poll) la table `image_jobs` via le client admin jusqu'à `status === 'completed'` ou `'failed'`, avec :
-  - intervalle ~1.5 s
-  - timeout total ~110 s (en-dessous de la limite Edge Function de 150 s)
-- Si `completed` → renvoyer `image_url = result_url`, `status: "completed"`, `job_id: <jobId>`, `credits_used` (lu depuis `params` ou via une requête `user_subscriptions` avant/après — version simple : laisser 1 en mode `quality`, 0 en `fast`/test).
-- Si `failed` → renvoyer `GENERATION_FAILED` avec `error_message`.
-- Si timeout → renvoyer `status: "processing"` + `job_id` pour que le client puisse poller `/v1/posters/:jobId` (voir point 2). HTTP 202.
+## 3. `image_jobs` — colonnes additionnelles
 
-### 2. Implémenter le endpoint manquant `GET /v1/posters/:jobId`
+Migration : ajouter `model_used text`, `provider_used text`, `fallback_used boolean default false` (nullable, sans changement RLS). Permet à `routePosterStatus` de renvoyer ces champs fidèlement.
 
-Déjà annoncé dans l'en-tête du fichier mais jamais routé. Ajouter :
-- Route `GET /v1/posters/<uuid>` qui lit `image_jobs` (filtré par `user_id = ctx.userId`) et renvoie `{ job_id, status, image_url, error_message }`.
-- Scope requis : `posters:generate` (ou nouveau `posters:read`).
-- 404 si le job n'existe pas / n'appartient pas à la clé.
+## 4. Limitation du texte dans l'affiche (point 7 du brief)
 
-### 3. Petit nettoyage de l'extraction de réponse
+Dans `routeGenerate`, quand on construit le prompt via `buildPromptFromStructured`, append une consigne stricte :
+« L'image doit contenir : un titre court (≤6 mots), 2 à 5 mots-clés, 1 CTA court. Aucun paragraphe long. » — uniquement pour les requêtes API.
 
-Le code actuel essaie `imageUrl || image_url || url || data?.imageUrl`. Une fois le poll en place, on lit directement `result_url` de `image_jobs` → plus de devinette de champ.
+## 5. Tests Deno (`supabase/functions/api-v1/index.test.ts`)
 
-### 4. Mettre à jour la doc API (`src/pages/ApiDocsPage.tsx`)
+Nouveaux cas (mock de `callGenerateImage`) :
+- Requête sans `quality` → `forced_quality === "premium"`, `model === "gpt-image-2"`.
+- Requête avec `quality: "fast"` → également forcée en premium.
+- Réponse contient toujours `model`, `provider`, `quality`, `fallback_used`.
+- Si `generate-image` retourne `PREMIUM_MODEL_UNAVAILABLE` → propagé tel quel avec status 502.
+- `template_used.image_url` ≠ `data.image_url` ; si pas d'image finale → erreur, jamais le template.
+- Async : `job_id` retourné puis `GET /v1/posters/:jobId` renvoie l'image finale enrichie.
 
-Documenter :
-- Que `POST /v1/posters/generate` attend la fin de la génération (jusqu'à ~110 s) et renvoie l'`image_url` finale.
-- Que si la réponse est `status: "processing"` + `job_id`, il faut poller `GET /v1/posters/:jobId`.
-- Exemple de polling.
+## 6. Documentation `src/pages/ApiDocsPage.tsx`
+
+Mettre à jour la doc :
+- Indiquer que `quality` est ignoré et toujours `premium` (`gpt-image-2`).
+- Documenter le code d'erreur `PREMIUM_MODEL_UNAVAILABLE`.
+- Documenter les champs de réponse `quality/model/provider/fallback_used`.
 
 ## Hors-scope
 
-- Pas de changement de `generate-image` (le flux asynchrone reste utile pour l'app principale).
-- Pas de modification de la facturation/crédits.
-- Pas de touche à `src/integrations/supabase/client.ts` ni aux types auto-générés.
-
-## Vérification après implémentation
-
-- `supabase--curl_edge_functions` sur `/api-v1/v1/posters/generate` avec une vraie clé `gpt_live_...` pour vérifier qu'on reçoit bien `image_url` final.
-- Test du `GET /v1/posters/:jobId` sur un job existant.
-- Vérifier les logs `api-v1` et `generate-image` en cas d'échec.
+- Pas de changement à l'UI `/app` (mode rapide reste disponible pour les utilisateurs connectés).
+- Pas de changement aux webhooks de paiement, à l'auth, ni aux autres edge functions.
+- Pas de modification de la chaîne de fallback pour les générations internes (non-API).

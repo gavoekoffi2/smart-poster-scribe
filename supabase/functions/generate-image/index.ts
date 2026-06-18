@@ -1178,8 +1178,11 @@ serve(async (req) => {
       isModification, // Flag pour les modifications (pas de débit de crédits)
       modificationRequest: rawModificationRequest, // Description de la modification demandée
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
+      apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
     } = body;
-    const quality: "fast" | "premium" = rawQuality === "premium" ? "premium" : "fast";
+    const apiStrictPremium: boolean = rawApiStrictPremium === true;
+    // Public API requests are always forced to premium (gpt-image-2)
+    const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
 
     const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
@@ -1340,7 +1343,7 @@ serve(async (req) => {
       .insert({
         user_id: userId,
         status: 'processing',
-        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat },
+        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat, apiStrictPremium },
       })
       .select('id')
       .single();
@@ -1758,7 +1761,26 @@ serve(async (req) => {
       resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
     };
 
-    if (OPENROUTER_API_KEY) {
+    if (apiStrictPremium) {
+      // ===== MODE STRICT API: GPT Image 2 uniquement, AUCUN fallback =====
+      if (!OPENROUTER_API_KEY) {
+        generationError = new Error(
+          "PREMIUM_MODEL_UNAVAILABLE: GPT Image 2 is required for all API generations. No fast or fallback model was used.",
+        );
+      } else {
+        try {
+          console.log("🔒 [API strict] Génération avec OpenRouter GPT Image 2 uniquement (aucun fallback)...");
+          taskId = `openrouter-${crypto.randomUUID()}`;
+          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium");
+          console.log("✅ OpenRouter (gpt-image-2) succeeded — strict API mode.");
+        } catch (orError) {
+          console.warn("⚠️ OpenRouter (gpt-image-2) failed in strict API mode:", getErrorMessage(orError));
+          generationError = new Error(
+            "PREMIUM_MODEL_UNAVAILABLE: GPT Image 2 is required for all API generations. No fast or fallback model was used.",
+          );
+        }
+      }
+    } else if (OPENROUTER_API_KEY) {
       try {
         console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
         taskId = `openrouter-${crypto.randomUUID()}`;
@@ -1880,18 +1902,44 @@ serve(async (req) => {
       console.warn("Image persistence failed, using temp URL:", persistErr);
     }
 
+        // Détermination du provider/model réellement utilisé d'après taskId
+        const tid = taskId || "";
+        const providerUsed = tid.startsWith("openrouter-")
+          ? (quality === "premium" ? "openai" : "openrouter")
+          : tid.startsWith("gemini-")
+            ? "google"
+            : tid.startsWith("lovable-")
+              ? "lovable"
+              : "kie";
+        const modelUsed = tid.startsWith("openrouter-")
+          ? (quality === "premium" ? "gpt-image-2" : "gemini-3-pro-image-preview")
+          : tid.startsWith("gemini-")
+            ? "gemini-2.5-flash-image"
+            : tid.startsWith("lovable-")
+              ? "lovable-ai"
+              : "nano-banana-pro";
+        const fallbackUsed = apiStrictPremium ? false : !tid.startsWith("openrouter-");
         await supabase.from('image_jobs').update({
           status: 'completed',
           result_url: permanentUrl,
           task_id: taskId,
+          model_used: modelUsed,
+          provider_used: providerUsed,
+          fallback_used: fallbackUsed,
         }).eq('id', jobId);
-        console.log("✅ Job completed:", jobId);
+        console.log("✅ Job completed:", jobId, { modelUsed, providerUsed, fallbackUsed });
       } catch (bgErr) {
         console.error("❌ Background job error:", bgErr);
+        const msg = getErrorMessage(bgErr);
+        const isPremiumUnavailable = msg.startsWith("PREMIUM_MODEL_UNAVAILABLE");
         await supabase.from('image_jobs').update({
           status: 'failed',
-          error_message: getErrorMessage(bgErr).slice(0, 1000),
+          error_message: msg.slice(0, 1000),
+          model_used: apiStrictPremium ? 'gpt-image-2' : null,
+          provider_used: apiStrictPremium ? 'openai' : null,
+          fallback_used: false,
         }).eq('id', jobId);
+        if (isPremiumUnavailable) console.warn("🔒 [API strict] PREMIUM_MODEL_UNAVAILABLE recorded on job", jobId);
       }
     };
 
