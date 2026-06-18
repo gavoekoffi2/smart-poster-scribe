@@ -186,7 +186,7 @@ export default function ApiDocsPage() {
             <Code>{`{
   "domain": "restaurant" | "evenement" | "formation" | "youtube_thumbnail" | ...,
   "subject": "Description détaillée du sujet",
-  "mode": "quality" | "fast",         // défaut: quality
+  "quality": "premium",               // ignoré : toujours forcé à "premium" (gpt-image-2)
   "title": "Titre principal",
   "date": "15 mars 2026",
   "location": "Cotonou, Bénin",
