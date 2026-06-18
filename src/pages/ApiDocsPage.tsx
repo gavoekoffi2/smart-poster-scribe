@@ -214,11 +214,7 @@ export default function ApiDocsPage() {
   }),
 });
 const { data } = await res.json();
-console.log(data.image_url, data.model, data.provider, data.fallback_used);`}
-  }),
-});
-const { data } = await res.json();
-console.log(data.image_url);`}</Code>
+console.log(data.image_url, data.model, data.provider, data.fallback_used);`}</Code>
             <p className="text-sm">Exemple Python :</p>
             <Code>{`import requests, os
 r = requests.post(
