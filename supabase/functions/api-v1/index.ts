@@ -466,6 +466,9 @@ serve(async (req) => {
   try {
     if (path === "/v1/posters/generate" && req.method === "POST") {
       response = await routeGenerate(req, ctx, requestId);
+    } else if (path.startsWith("/v1/posters/") && req.method === "GET") {
+      const jobId = path.slice("/v1/posters/".length).split("/")[0];
+      response = await routePosterStatus(jobId, ctx, requestId);
     } else if (path === "/v1/templates" && req.method === "GET") {
       response = await routeTemplates(req, url, ctx, requestId);
     } else if (path === "/v1/templates/suggest" && req.method === "POST") {
