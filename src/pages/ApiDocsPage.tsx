@@ -218,6 +218,35 @@ r = requests.post(
     json={"domain": "restaurant", "subject": "Soirée DJ rooftop"},
 )
 print(r.json()["data"]["image_url"])`}</Code>
+            <p className="text-sm mt-4">
+              <strong>Réponse synchrone :</strong> l'endpoint attend la fin de la génération (jusqu'à ~110s) et renvoie directement <code>data.image_url</code> avec <code>status: "completed"</code>.
+            </p>
+            <p className="text-sm">
+              <strong>Si la génération dépasse 110s :</strong> la réponse HTTP 202 contient <code>status: "processing"</code> + <code>job_id</code>. Il faut alors poller <code>GET /v1/posters/&lt;job_id&gt;</code> jusqu'à <code>status: "completed"</code>.
+            </p>
+            <Code>{`// Polling exemple
+const { data } = await (await fetch("${API_BASE}/v1/posters/generate", { /* ... */ })).json();
+if (data.status === "completed") return data.image_url;
+
+while (true) {
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await fetch(\`${API_BASE}/v1/posters/\${data.job_id}\`, {
+    headers: { Authorization: "Bearer " + API_KEY },
+  });
+  const j = (await r.json()).data;
+  if (j.status === "completed") return j.image_url;
+  if (j.status === "failed") throw new Error(j.error_message);
+}`}</Code>
+          </Section>
+
+          <Section id="endpoint-poster-status" title="GET /v1/posters/:jobId">
+            <p>Retourne l'état d'un job de génération. À utiliser pour poller quand <code>generate</code> renvoie <code>status: "processing"</code>.</p>
+            <Code>{`{
+  "job_id": "uuid",
+  "status": "processing" | "completed" | "failed",
+  "image_url": "https://..." | null,
+  "error_message": null | "..."
+}`}</Code>
           </Section>
 
           <Section id="endpoint-templates" title="GET /v1/templates">

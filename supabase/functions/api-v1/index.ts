@@ -253,16 +253,108 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     return errorResponse(typeof code === "string" ? code : "GENERATION_FAILED", msg, status >= 400 ? status : 502, requestId);
   }
 
-  const imageUrl = (respBody as any)?.imageUrl || (respBody as any)?.image_url || (respBody as any)?.url || (respBody as any)?.data?.imageUrl;
-  const creditsUsed = (respBody as any)?.credits_used ?? (respBody as any)?.creditsUsed ?? 0;
+  // generate-image is async: it returns { success: true, jobId, status: 'processing' }
+  // and runs the actual generation in the background. Poll image_jobs for the final result.
+  let imageUrl: string | undefined =
+    (respBody as any)?.imageUrl ||
+    (respBody as any)?.image_url ||
+    (respBody as any)?.url ||
+    (respBody as any)?.result_url ||
+    (respBody as any)?.data?.imageUrl;
+  const jobId: string | undefined = (respBody as any)?.jobId || (respBody as any)?.job_id;
+  let jobStatus: "completed" | "failed" | "processing" = "completed";
+  let creditsUsed = (respBody as any)?.credits_used ?? (respBody as any)?.creditsUsed ?? 0;
+  let errorMessage: string | null = null;
+
+  if (!imageUrl && jobId) {
+    const pollStart = Date.now();
+    const timeoutMs = 110_000;
+    const intervalMs = 1500;
+    jobStatus = "processing";
+    while (Date.now() - pollStart < timeoutMs) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+      const { data: job, error: jobErr } = await admin
+        .from("image_jobs")
+        .select("status, result_url, error_message")
+        .eq("id", jobId)
+        .maybeSingle();
+      if (jobErr) {
+        console.error("image_jobs poll error:", jobErr);
+        continue;
+      }
+      if (!job) continue;
+      if (job.status === "completed" && job.result_url) {
+        imageUrl = job.result_url;
+        jobStatus = "completed";
+        break;
+      }
+      if (job.status === "failed") {
+        errorMessage = job.error_message || "Generation failed";
+        jobStatus = "failed";
+        break;
+      }
+    }
+  }
+
+  if (jobStatus === "failed") {
+    return errorResponse("GENERATION_FAILED", errorMessage || "Generation failed", 502, requestId);
+  }
+
+  if (jobStatus === "processing") {
+    return jsonResponse({
+      success: true,
+      data: {
+        job_id: jobId,
+        status: "processing",
+        image_url: null,
+        mode,
+        credits_used: creditsUsed,
+        template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
+        poll_url: `/v1/posters/${jobId}`,
+        message: "Generation still in progress. Poll GET /v1/posters/{job_id} to retrieve the final image.",
+      },
+      request_id: requestId,
+    }, 202);
+  }
+
+  // Best-effort credit count when downstream didn't report it (matches check_and_debit_credits).
+  if (!creditsUsed || creditsUsed === 0) {
+    creditsUsed = mode === "quality" ? 2 : 1;
+  }
 
   return successResponse({
-    job_id: requestId,
+    job_id: jobId || requestId,
     status: "completed",
     image_url: imageUrl,
     mode,
     credits_used: creditsUsed,
     template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
+  }, requestId);
+}
+
+async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: string) {
+  if (!hasScope(ctx, "posters:generate") && !hasScope(ctx, "posters:read")) {
+    return errorResponse("FORBIDDEN", "Missing scope 'posters:generate' or 'posters:read'.", 403, requestId);
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId)) {
+    return errorResponse("INVALID_JOB_ID", "Job id must be a UUID.", 400, requestId);
+  }
+  const { data: job, error } = await admin
+    .from("image_jobs")
+    .select("id, status, result_url, error_message, user_id, created_at, updated_at")
+    .eq("id", jobId)
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  if (error) return errorResponse("DB_ERROR", error.message, 500, requestId);
+  if (!job) return errorResponse("NOT_FOUND", "Job not found.", 404, requestId);
+  const normStatus = job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing";
+  return successResponse({
+    job_id: job.id,
+    status: normStatus,
+    image_url: job.result_url || null,
+    error_message: job.error_message || null,
+    created_at: job.created_at,
+    updated_at: job.updated_at,
   }, requestId);
 }
 
@@ -374,6 +466,9 @@ serve(async (req) => {
   try {
     if (path === "/v1/posters/generate" && req.method === "POST") {
       response = await routeGenerate(req, ctx, requestId);
+    } else if (path.startsWith("/v1/posters/") && req.method === "GET") {
+      const jobId = path.slice("/v1/posters/".length).split("/")[0];
+      response = await routePosterStatus(jobId, ctx, requestId);
     } else if (path === "/v1/templates" && req.method === "GET") {
       response = await routeTemplates(req, url, ctx, requestId);
     } else if (path === "/v1/templates/suggest" && req.method === "POST") {
