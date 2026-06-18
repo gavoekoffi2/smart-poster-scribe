@@ -1343,7 +1343,7 @@ serve(async (req) => {
       .insert({
         user_id: userId,
         status: 'processing',
-        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat },
+        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat, apiStrictPremium },
       })
       .select('id')
       .single();
