@@ -201,7 +201,12 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     return errorResponse("MISSING_SUBJECT", "Provide at least 'subject', 'title' or 'prompt'.", 400, requestId);
   }
 
-  const mode: "fast" | "quality" = body.mode === "fast" ? "fast" : "quality";
+  // 🔒 STRICT PREMIUM POLICY: every API request is forced to gpt-image-2.
+  // `mode` / `quality` from the body are recorded for logging but ignored.
+  const requestedQuality = typeof body.quality === "string"
+    ? body.quality
+    : (body.mode === "fast" ? "fast" : (body.mode === "quality" ? "quality" : "unspecified"));
+  const mode: "quality" = "quality";
   const aspectRatio = typeof body.aspect_ratio === "string" ? body.aspect_ratio : "9:16";
   const resolution = typeof body.resolution === "string" ? body.resolution : "2K";
 
@@ -217,12 +222,13 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   }
 
   // Build prompt
-  const prompt = typeof body.prompt === "string" && body.prompt.trim().length > 0
+  const basePrompt = typeof body.prompt === "string" && body.prompt.trim().length > 0
     ? body.prompt
     : buildPromptFromStructured({ ...body, domain, subject });
+  // Short-text policy for API posters
+  const prompt = `${basePrompt}\n\n[Règle texte stricte] L'affiche doit contenir : un titre court (≤6 mots), 2 à 5 mots-clés courts, 1 CTA court. Aucun paragraphe long. Le texte long reste hors de l'image.`;
 
-  // Quality maps to "premium" downstream (= gpt-image-2 / long mode); "fast" stays fast
-  const quality = mode === "quality" ? "premium" : "fast";
+  const quality: "premium" = "premium";
 
   const payload: Record<string, unknown> = {
     prompt,
@@ -230,9 +236,19 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     aspectRatio,
     resolution,
     quality,
+    apiStrictPremium: true,
     referenceImage,
     logoImages: Array.isArray(body.logo_urls) ? body.logo_urls : (body.logo_url ? [body.logo_url] : undefined),
   };
+
+  console.log(JSON.stringify({
+    request_id: requestId,
+    requested_quality: requestedQuality,
+    forced_quality: "premium",
+    expected_model: "gpt-image-2",
+    expected_provider: "openai",
+    template_id: templateUsedId,
+  }));
 
   // Test mode: simulate without consuming credits
   if (ctx.environment === "test") {
