@@ -44,7 +44,7 @@ export function ShowcaseSection() {
       }
 
       const { data: templateData, error: templateError } = await supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("id, image_url, description, domain, created_at")
         .eq("is_active", true)
         .order("created_at", { ascending: false })

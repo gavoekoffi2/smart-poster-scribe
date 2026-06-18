@@ -215,7 +215,7 @@ export function TemplatesMarketplace() {
     setLoading(true);
     try {
       let query = supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("*")
         .neq("design_category", "user-contributed") // Exclure les contributions utilisateurs
         .order("created_at", { ascending: false })

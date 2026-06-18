@@ -28,7 +28,7 @@ export function useReferenceTemplates() {
 
     try {
       let query = supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -58,7 +58,7 @@ export function useReferenceTemplates() {
   const getRandomTemplate = useCallback(async (domain: Domain): Promise<ReferenceTemplate | null> => {
     try {
       const { data, error: queryError } = await supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("*")
         .eq("domain", domain);
 
@@ -82,7 +82,7 @@ export function useReferenceTemplates() {
   const getStats = useCallback(async (): Promise<TemplateStats> => {
     try {
       const { data, error: queryError } = await supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("domain");
 
       if (queryError) {

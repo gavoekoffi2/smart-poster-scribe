@@ -66,7 +66,7 @@ const DesignerProfile = () => {
   const fetchProfile = async () => {
     try {
       let query = supabase
-        .from("partner_designers")
+        .from("partner_designers_public")
         .select("*");
 
       // If designerId provided, fetch that specific designer
@@ -104,7 +104,7 @@ const DesignerProfile = () => {
 
       // Fetch public templates (only active ones for public view)
       const templateQuery = supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("id, image_url, domain, design_category, description, is_active")
         .eq("designer_id", designerData.id)
         .order("created_at", { ascending: false });
@@ -131,7 +131,7 @@ const DesignerProfile = () => {
 
     try {
       const { error } = await supabase
-        .from("partner_designers")
+        .from("partner_designers_public")
         .update({
           display_name: editData.display_name.trim(),
           bio: editData.bio.trim() || null,
