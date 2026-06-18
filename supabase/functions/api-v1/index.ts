@@ -250,6 +250,10 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     template_id: templateUsedId,
   }));
 
+  // Constant identity exposed to API clients
+  const MODEL = "gpt-image-2";
+  const PROVIDER = "openai";
+
   // Test mode: simulate without consuming credits
   if (ctx.environment === "test") {
     return successResponse({
@@ -257,6 +261,10 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
       status: "completed",
       image_url: "https://placehold.co/1080x1920/png?text=API+test+mode",
       mode,
+      quality: "premium",
+      model: MODEL,
+      provider: PROVIDER,
+      fallback_used: false,
       template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
       sandbox: true,
     }, requestId);
@@ -271,6 +279,8 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
 
   // generate-image is async: it returns { success: true, jobId, status: 'processing' }
   // and runs the actual generation in the background. Poll image_jobs for the final result.
+  // IMPORTANT: we deliberately do NOT fall back to the template URL — the template is a
+  // reference only and must never be returned as the final image.
   let imageUrl: string | undefined =
     (respBody as any)?.imageUrl ||
     (respBody as any)?.image_url ||
@@ -281,6 +291,9 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   let jobStatus: "completed" | "failed" | "processing" = "completed";
   let creditsUsed = (respBody as any)?.credits_used ?? (respBody as any)?.creditsUsed ?? 0;
   let errorMessage: string | null = null;
+  let modelUsed: string | null = null;
+  let providerUsed: string | null = null;
+  let fallbackUsed = false;
 
   if (!imageUrl && jobId) {
     const pollStart = Date.now();
@@ -291,7 +304,7 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
       await new Promise((r) => setTimeout(r, intervalMs));
       const { data: job, error: jobErr } = await admin
         .from("image_jobs")
-        .select("status, result_url, error_message")
+        .select("status, result_url, error_message, model_used, provider_used, fallback_used")
         .eq("id", jobId)
         .maybeSingle();
       if (jobErr) {
@@ -301,6 +314,9 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
       if (!job) continue;
       if (job.status === "completed" && job.result_url) {
         imageUrl = job.result_url;
+        modelUsed = (job as any).model_used ?? null;
+        providerUsed = (job as any).provider_used ?? null;
+        fallbackUsed = (job as any).fallback_used ?? false;
         jobStatus = "completed";
         break;
       }
@@ -313,7 +329,15 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   }
 
   if (jobStatus === "failed") {
-    return errorResponse("GENERATION_FAILED", errorMessage || "Generation failed", 502, requestId);
+    const isPremiumUnavailable = (errorMessage || "").includes("PREMIUM_MODEL_UNAVAILABLE");
+    return errorResponse(
+      isPremiumUnavailable ? "PREMIUM_MODEL_UNAVAILABLE" : "GENERATION_FAILED",
+      isPremiumUnavailable
+        ? "GPT Image 2 is required for all API generations. No fast or fallback model was used."
+        : (errorMessage || "Generation failed"),
+      502,
+      requestId,
+    );
   }
 
   if (jobStatus === "processing") {
@@ -324,6 +348,10 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
         status: "processing",
         image_url: null,
         mode,
+        quality: "premium",
+        model: MODEL,
+        provider: PROVIDER,
+        fallback_used: false,
         credits_used: creditsUsed,
         template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
         poll_url: `/v1/posters/${jobId}`,
@@ -333,16 +361,41 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     }, 202);
   }
 
+  // Safety: in strict premium mode the final image_url must never equal the template URL.
+  if (imageUrl && referenceImage && imageUrl === referenceImage) {
+    return errorResponse(
+      "PREMIUM_MODEL_UNAVAILABLE",
+      "GPT Image 2 is required for all API generations. No fast or fallback model was used.",
+      502,
+      requestId,
+    );
+  }
+
   // Best-effort credit count when downstream didn't report it (matches check_and_debit_credits).
   if (!creditsUsed || creditsUsed === 0) {
-    creditsUsed = mode === "quality" ? 2 : 1;
+    creditsUsed = 2;
   }
+
+  console.log(JSON.stringify({
+    request_id: requestId,
+    job_id: jobId,
+    forced_quality: "premium",
+    actual_model: modelUsed || MODEL,
+    actual_provider: providerUsed || PROVIDER,
+    fallback_used: fallbackUsed,
+    template_id: templateUsedId,
+    status: "completed",
+  }));
 
   return successResponse({
     job_id: jobId || requestId,
     status: "completed",
     image_url: imageUrl,
     mode,
+    quality: "premium",
+    model: modelUsed || MODEL,
+    provider: providerUsed || PROVIDER,
+    fallback_used: fallbackUsed,
     credits_used: creditsUsed,
     template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
   }, requestId);
@@ -357,17 +410,34 @@ async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: s
   }
   const { data: job, error } = await admin
     .from("image_jobs")
-    .select("id, status, result_url, error_message, user_id, created_at, updated_at")
+    .select("id, status, result_url, error_message, user_id, created_at, updated_at, model_used, provider_used, fallback_used, params")
     .eq("id", jobId)
     .eq("user_id", ctx.userId)
     .maybeSingle();
   if (error) return errorResponse("DB_ERROR", error.message, 500, requestId);
   if (!job) return errorResponse("NOT_FOUND", "Job not found.", 404, requestId);
   const normStatus = job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing";
+  const apiStrict = (job as any).params?.apiStrictPremium === true;
+  if (normStatus === "failed") {
+    const msg = job.error_message || "Generation failed";
+    const isPremiumUnavailable = msg.includes("PREMIUM_MODEL_UNAVAILABLE");
+    return errorResponse(
+      isPremiumUnavailable ? "PREMIUM_MODEL_UNAVAILABLE" : "GENERATION_FAILED",
+      isPremiumUnavailable
+        ? "GPT Image 2 is required for all API generations. No fast or fallback model was used."
+        : msg,
+      502,
+      requestId,
+    );
+  }
   return successResponse({
     job_id: job.id,
     status: normStatus,
     image_url: job.result_url || null,
+    quality: apiStrict ? "premium" : null,
+    model: (job as any).model_used || (apiStrict ? "gpt-image-2" : null),
+    provider: (job as any).provider_used || (apiStrict ? "openai" : null),
+    fallback_used: (job as any).fallback_used ?? false,
     error_message: job.error_message || null,
     created_at: job.created_at,
     updated_at: job.updated_at,
