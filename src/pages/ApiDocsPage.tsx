@@ -51,7 +51,7 @@ export default function ApiDocsPage() {
             ["quickstart", "Démarrage rapide"],
             ["auth", "Authentification"],
             ["template-selection", "Sélection auto du template"],
-            ["modes", "Modes : fast vs quality"],
+            ["modes", "Qualité (toujours premium)"],
             ["endpoint-generate", "POST /posters/generate"],
             ["endpoint-templates", "GET /templates"],
             ["endpoint-suggest", "POST /templates/suggest"],
