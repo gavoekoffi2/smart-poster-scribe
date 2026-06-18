@@ -1761,7 +1761,26 @@ serve(async (req) => {
       resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
     };
 
-    if (OPENROUTER_API_KEY) {
+    if (apiStrictPremium) {
+      // ===== MODE STRICT API: GPT Image 2 uniquement, AUCUN fallback =====
+      if (!OPENROUTER_API_KEY) {
+        generationError = new Error(
+          "PREMIUM_MODEL_UNAVAILABLE: GPT Image 2 is required for all API generations. No fast or fallback model was used.",
+        );
+      } else {
+        try {
+          console.log("🔒 [API strict] Génération avec OpenRouter GPT Image 2 uniquement (aucun fallback)...");
+          taskId = `openrouter-${crypto.randomUUID()}`;
+          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium");
+          console.log("✅ OpenRouter (gpt-image-2) succeeded — strict API mode.");
+        } catch (orError) {
+          console.warn("⚠️ OpenRouter (gpt-image-2) failed in strict API mode:", getErrorMessage(orError));
+          generationError = new Error(
+            "PREMIUM_MODEL_UNAVAILABLE: GPT Image 2 is required for all API generations. No fast or fallback model was used.",
+          );
+        }
+      }
+    } else if (OPENROUTER_API_KEY) {
       try {
         console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
         taskId = `openrouter-${crypto.randomUUID()}`;
