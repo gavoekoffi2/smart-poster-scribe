@@ -307,16 +307,38 @@ export default function AdminSubscriptions() {
                                     <Input type="number" placeholder="Crédits du plan par défaut" value={customCredits} onChange={(e) => setCustomCredits(e.target.value)} />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label>Durée (mois)</Label>
-                                    <Select value={durationMonths} onValueChange={setDurationMonths}>
-                                      <SelectTrigger><SelectValue /></SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="1">1 mois</SelectItem>
-                                        <SelectItem value="3">3 mois</SelectItem>
-                                        <SelectItem value="6">6 mois</SelectItem>
-                                        <SelectItem value="12">12 mois</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                    <Label>Durée de l'abonnement (en mois)</Label>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="120"
+                                      placeholder="Ex: 1, 3, 6, 12, 24..."
+                                      value={durationMonths}
+                                      onChange={(e) => setDurationMonths(e.target.value)}
+                                    />
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                      {[
+                                        { label: "1 mois", value: "1" },
+                                        { label: "3 mois", value: "3" },
+                                        { label: "6 mois", value: "6" },
+                                        { label: "1 an", value: "12" },
+                                        { label: "2 ans", value: "24" },
+                                        { label: "5 ans", value: "60" },
+                                      ].map((preset) => (
+                                        <Button
+                                          key={preset.value}
+                                          type="button"
+                                          variant={durationMonths === preset.value ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setDurationMonths(preset.value)}
+                                        >
+                                          {preset.label}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Saisissez librement le nombre de mois (1 = 1 mois, 12 = 1 an, 24 = 2 ans, etc.)
+                                    </p>
                                   </div>
                                 </div>
                                 <DialogFooter>
