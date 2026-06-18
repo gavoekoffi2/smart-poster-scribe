@@ -104,7 +104,7 @@ const DesignerProfile = () => {
 
       // Fetch public templates (only active ones for public view)
       const templateQuery = supabase
-        .from("reference_templates")
+        .from("reference_templates_public")
         .select("id, image_url, domain, design_category, description, is_active")
         .eq("designer_id", designerData.id)
         .order("created_at", { ascending: false });
