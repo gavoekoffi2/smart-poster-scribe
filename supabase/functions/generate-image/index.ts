@@ -1902,18 +1902,44 @@ serve(async (req) => {
       console.warn("Image persistence failed, using temp URL:", persistErr);
     }
 
+        // Détermination du provider/model réellement utilisé d'après taskId
+        const tid = taskId || "";
+        const providerUsed = tid.startsWith("openrouter-")
+          ? (quality === "premium" ? "openai" : "openrouter")
+          : tid.startsWith("gemini-")
+            ? "google"
+            : tid.startsWith("lovable-")
+              ? "lovable"
+              : "kie";
+        const modelUsed = tid.startsWith("openrouter-")
+          ? (quality === "premium" ? "gpt-image-2" : "gemini-3-pro-image-preview")
+          : tid.startsWith("gemini-")
+            ? "gemini-2.5-flash-image"
+            : tid.startsWith("lovable-")
+              ? "lovable-ai"
+              : "nano-banana-pro";
+        const fallbackUsed = apiStrictPremium ? false : !tid.startsWith("openrouter-");
         await supabase.from('image_jobs').update({
           status: 'completed',
           result_url: permanentUrl,
           task_id: taskId,
+          model_used: modelUsed,
+          provider_used: providerUsed,
+          fallback_used: fallbackUsed,
         }).eq('id', jobId);
-        console.log("✅ Job completed:", jobId);
+        console.log("✅ Job completed:", jobId, { modelUsed, providerUsed, fallbackUsed });
       } catch (bgErr) {
         console.error("❌ Background job error:", bgErr);
+        const msg = getErrorMessage(bgErr);
+        const isPremiumUnavailable = msg.startsWith("PREMIUM_MODEL_UNAVAILABLE");
         await supabase.from('image_jobs').update({
           status: 'failed',
-          error_message: getErrorMessage(bgErr).slice(0, 1000),
+          error_message: msg.slice(0, 1000),
+          model_used: apiStrictPremium ? 'gpt-image-2' : null,
+          provider_used: apiStrictPremium ? 'openai' : null,
+          fallback_used: false,
         }).eq('id', jobId);
+        if (isPremiumUnavailable) console.warn("🔒 [API strict] PREMIUM_MODEL_UNAVAILABLE recorded on job", jobId);
       }
     };
 
