@@ -132,7 +132,8 @@ export default function ApiDocsPage() {
             </div>
           </Section>
 
-
+          <Section id="quickstart" title="Démarrage rapide">
+            <p>Une seule requête suffit pour générer une affiche :</p>
             <Code>{`curl -X POST ${API_BASE}/v1/posters/generate \\
   -H "Authorization: Bearer VOTRE_CLE_API" \\
   -H "Content-Type: application/json" \\
