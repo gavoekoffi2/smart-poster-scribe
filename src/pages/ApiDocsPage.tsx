@@ -167,7 +167,96 @@ export default function ApiDocsPage() {
             </p>
           </Section>
 
+          <Section id="subject-vs-title" title="subject vs title (et pas de prompt)">
+            <p className="text-sm">
+              <code>subject</code> est le seul champ de direction créative. Il décrit librement ce que doit raconter l'affiche.
+              <code>title</code> est juste le texte qui apparaîtra en gros. Le champ <code>prompt</code> de certains SDK
+              concurrents <strong>n'existe pas ici</strong> ; s'il est envoyé il finit dans <code>warnings[]</code> sans effet.
+            </p>
+            <Code>{`{
+  "domain": "evenement",
+  "title": "Soirée Gala 2026",
+  "subject": "Gala de charité élégant, dress code black-tie, ambiance dorée, public urbain africain"
+}`}</Code>
+          </Section>
+
+          <Section id="aspect-ratios" title="Formats supportés (aspect_ratio)">
+            <p className="text-sm">
+              <strong>Si vous omettez <code>aspect_ratio</code>, le défaut est <code>9:16</code></strong> (story/TikTok).
+              Une valeur invalide retourne <code>400 INVALID_ASPECT_RATIO</code>. La réponse renvoie toujours
+              <code>aspect_ratio</code>, <code>width</code>, <code>height</code>, <code>format: "png"</code>.
+            </p>
+            <table className="w-full text-sm border-collapse mt-2">
+              <thead><tr className="border-b border-border/50"><th className="text-left py-2">Ratio</th><th className="text-left py-2">Usage</th><th className="text-left py-2">Dimensions (2K)</th></tr></thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b border-border/30"><td><code>9:16</code></td><td>Story IG, TikTok, Reels, Shorts</td><td>1152 × 2048</td></tr>
+                <tr className="border-b border-border/30"><td><code>16:9</code></td><td>YouTube, présentation, bannière X</td><td>2048 × 1152</td></tr>
+                <tr className="border-b border-border/30"><td><code>1:1</code></td><td>Feed Instagram, Facebook, LinkedIn</td><td>2048 × 2048</td></tr>
+                <tr className="border-b border-border/30"><td><code>4:5</code></td><td>Feed IG portrait</td><td>1640 × 2048</td></tr>
+                <tr className="border-b border-border/30"><td><code>1.91:1</code></td><td>LinkedIn link preview, Facebook OG</td><td>2048 × 1072</td></tr>
+                <tr className="border-b border-border/30"><td><code>4:3</code> / <code>3:4</code></td><td>Affiche classique</td><td>2048 × 1536 / 1536 × 2048</td></tr>
+                <tr className="border-b border-border/30"><td><code>2:3</code> / <code>3:2</code></td><td>Print A4-like</td><td>1368 × 2048 / 2048 × 1368</td></tr>
+              </tbody>
+            </table>
+          </Section>
+
+          <Section id="sync-async" title="Sync vs Async">
+            <p className="text-sm">
+              Le mode est explicite via <code>mode: "sync" | "async"</code>. Défaut : <code>sync</code>.
+            </p>
+            <ul className="list-disc pl-6 text-sm space-y-1">
+              <li><strong>sync</strong> : la requête attend jusqu'à ~110 s. Si la génération dépasse ce délai, la réponse devient <code>202</code> avec <code>status_url</code> absolue à poller.</li>
+              <li><strong>async</strong> : réponse <code>202</code> immédiate avec <code>job_id</code> + <code>status_url</code>. Recommandé pour les plateformes serverless (<strong>Netlify ~26 s, Vercel ~60 s, Supabase ~150 s</strong>).</li>
+            </ul>
+            <Code>{`// 1) Démarrer en async
+const start = await fetch("${API_BASE}/v1/posters/generate", {
+  method: "POST",
+  headers: { Authorization: "Bearer " + KEY, "Content-Type": "application/json" },
+  body: JSON.stringify({ domain: "restaurant", subject: "Brunch dominical", aspect_ratio: "1:1", mode: "async" }),
+});
+const { data } = await start.json();              // { job_id, status_url, ... }
+
+// 2) Poller status_url (URL absolue déjà fournie)
+while (true) {
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await fetch(data.status_url, { headers: { Authorization: "Bearer " + KEY } });
+  const j = (await r.json()).data;
+  if (j.status === "completed") return j.image_url;
+  if (j.status === "failed") throw new Error("failed");
+}`}</Code>
+          </Section>
+
+          <Section id="idempotency" title="Idempotence (anti-double-facturation)">
+            <p className="text-sm">
+              Envoyez un header <code>Idempotency-Key: &lt;votre-uuid&gt;</code> sur <code>POST /v1/posters/generate</code>.
+              Tout retry avec la même clé (≤ 24 h) renvoie la réponse mise en cache <strong>sans re-débiter</strong> les crédits.
+              La réponse rejouée contient <code>idempotent_replay: true</code>.
+            </p>
+            <Code>{`curl -X POST ${API_BASE}/v1/posters/generate \\
+  -H "Authorization: Bearer $KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: 9b1f...c7e2" \\
+  -d '{ "domain": "restaurant", "subject": "Promo burger" }'`}</Code>
+          </Section>
+
+          <Section id="warnings" title="Warnings & champs inconnus">
+            <p className="text-sm">
+              Pour ne jamais casser une intégration existante, les champs inconnus ne renvoient pas un 400 mais
+              sont listés dans <code>warnings[]</code>. <strong>Loggez ce tableau en intégration continue.</strong>
+            </p>
+            <Code>{`{
+  "success": true,
+  "data": { "...": "..." },
+  "warnings": [
+    "champ 'prompt' ignoré : utilisez 'subject' pour la direction créative",
+    "aspect_ratio non fourni, défaut 9:16 appliqué"
+  ],
+  "request_id": "..."
+}`}</Code>
+          </Section>
+
           <Section id="template-selection" title="Sélection automatique du template">
+
             <p>
               Si vous n'envoyez pas <code className="bg-muted px-1 rounded">reference_image_url</code>,
               l'API choisit le meilleur template de référence depuis notre base, en fonction du domaine et du sujet.
