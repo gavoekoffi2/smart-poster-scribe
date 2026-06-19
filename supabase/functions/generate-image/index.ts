@@ -1302,7 +1302,10 @@ serve(async (req) => {
       creditCheckResult = creditCheck;
       
       if (!creditCheck.success) {
-        // Retourner une erreur 402 (Payment Required) avec les détails
+        // IMPORTANT: on retourne 200 (au lieu de 402) pour que le client supabase-js
+        // expose toujours le corps dans `data`. Cela permet d'afficher le modal d'upgrade
+        // de manière fiable au lieu d'un toast d'erreur générique.
+        // Pour l'API publique (api-v1), c'est ce dernier qui re-map vers 402.
         return new Response(
           JSON.stringify({
             success: false,
@@ -1311,9 +1314,10 @@ serve(async (req) => {
             remaining: creditCheck.remaining,
             needed: creditCheck.needed,
             is_free: creditCheck.is_free,
+            upgrade_required: true,
           }),
           {
-            status: 402,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
