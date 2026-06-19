@@ -356,13 +356,25 @@ while (true) {
           </Section>
 
           <Section id="endpoint-poster-status" title="GET /v1/posters/:jobId">
-            <p>Retourne l'état d'un job de génération. À utiliser pour poller quand <code>generate</code> renvoie <code>status: "processing"</code>.</p>
+            <p>Endpoint canonique de polling. Toujours retourné via <code>status_url</code> dans les réponses 202.</p>
             <Code>{`{
-  "job_id": "uuid",
-  "status": "processing" | "completed" | "failed",
-  "image_url": "https://..." | null,
-  "error_message": null | "..."
+  "success": true,
+  "data": {
+    "job_id": "uuid",
+    "status": "processing" | "completed" | "failed",
+    "image_url": "https://..." | null,
+    "aspect_ratio": "1:1",
+    "width": 2048, "height": 2048, "format": "png",
+    "quality": "premium", "model": "gpt-image-2",
+    "provider": "openai", "fallback_used": false,
+    "error": null
+  }
 }`}</Code>
+          </Section>
+
+          <Section id="endpoint-domains" title="GET /v1/domains">
+            <p>Liste les valeurs valides pour <code>domain</code>. Toujours préférer <code>business</code> comme défaut générique fiable.</p>
+            <Code>{`{ "domains": [{ "id": "restaurant", "label": "Restaurant" }, ...], "default": "business" }`}</Code>
           </Section>
 
           <Section id="endpoint-templates" title="GET /v1/templates">
@@ -393,7 +405,18 @@ while (true) {
 }`}</Code>
           </Section>
 
+          <Section id="openapi" title="OpenAPI 3.1">
+            <p className="text-sm">
+              Une spec machine-lisible est servie en JSON pour générer un client sans deviner un seul nom de champ.
+            </p>
+            <Code>{`GET ${API_BASE}/v1/openapi.json`}</Code>
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <a href={`${API_BASE}/v1/openapi.json`} target="_blank" rel="noreferrer">Télécharger la spec OpenAPI 3.1</a>
+            </Button>
+          </Section>
+
           <Section id="errors" title="Codes d'erreur">
+            <p className="text-sm text-muted-foreground">Toutes les erreurs suivent le même format : <code>{`{ success: false, error: { code, message, request_id } }`}</code>.</p>
             <table className="w-full text-sm border-collapse">
               <thead><tr className="border-b border-border/50"><th className="text-left py-2">Code</th><th className="text-left py-2">HTTP</th><th className="text-left py-2">Description</th></tr></thead>
               <tbody className="text-muted-foreground">
@@ -401,24 +424,51 @@ while (true) {
                 <tr className="border-b border-border/30"><td className="py-2"><code>INVALID_API_KEY</code></td><td>401</td><td>Clé révoquée, expirée ou inconnue</td></tr>
                 <tr className="border-b border-border/30"><td className="py-2"><code>FORBIDDEN</code></td><td>403</td><td>Scope manquant pour l'endpoint</td></tr>
                 <tr className="border-b border-border/30"><td className="py-2"><code>MISSING_DOMAIN</code></td><td>400</td><td>Champ <code>domain</code> obligatoire</td></tr>
+                <tr className="border-b border-border/30"><td className="py-2"><code>MISSING_SUBJECT</code></td><td>400</td><td>Fournir au moins <code>subject</code> ou <code>title</code></td></tr>
+                <tr className="border-b border-border/30"><td className="py-2"><code>INVALID_ASPECT_RATIO</code></td><td>400</td><td>Valeur non supportée. La réponse liste les valeurs autorisées.</td></tr>
                 <tr className="border-b border-border/30"><td className="py-2"><code>INSUFFICIENT_CREDITS</code></td><td>402</td><td>Crédits épuisés</td></tr>
-                <tr className="border-b border-border/30"><td className="py-2"><code>RATE_LIMITED</code></td><td>429</td><td>Plus de 60 requêtes/min</td></tr>
-                <tr className="border-b border-border/30"><td className="py-2"><code>GENERATION_FAILED</code></td><td>502</td><td>Échec du moteur de génération (sera retenté)</td></tr>
+                <tr className="border-b border-border/30"><td className="py-2"><code>RATE_LIMITED</code></td><td>429</td><td>Plus de 60 requêtes/min. Headers <code>Retry-After</code> + <code>X-RateLimit-*</code>.</td></tr>
+                <tr className="border-b border-border/30"><td className="py-2"><code>PREMIUM_MODEL_UNAVAILABLE</code></td><td>502</td><td>GPT Image 2 indisponible — aucun fallback autorisé sur l'API.</td></tr>
+                <tr className="border-b border-border/30"><td className="py-2"><code>GENERATION_FAILED</code></td><td>502</td><td>Échec moteur. Réessayez avec <code>Idempotency-Key</code> pour éviter une double facturation.</td></tr>
               </tbody>
             </table>
           </Section>
 
           <Section id="limits" title="Limites & tarification">
             <ul className="list-disc pl-6 space-y-1 text-sm">
-              <li><strong>Rate limit</strong> : 60 requêtes/minute par clé.</li>
-              <li><strong>Génération d'affiche</strong> : 2 crédits (mode <code>quality</code> ou <code>fast</code>).</li>
-              <li><strong>Lecture (templates, account)</strong> : gratuit.</li>
-              <li><strong>Sandbox (clés <code>gpt_test_…</code>)</strong> : aucune consommation, image fictive.</li>
+              <li><strong>Rate limit</strong> : 60 requêtes/minute par clé. Headers : <code>X-RateLimit-Limit/Remaining/Reset</code>, <code>Retry-After</code> sur 429.</li>
+              <li><strong>Génération d'affiche</strong> : 2 crédits (toujours premium).</li>
+              <li><strong>Lecture (templates, domains, account)</strong> : gratuit.</li>
+              <li><strong>Sandbox (clés <code>gpt_test_…</code>)</strong> : aucune consommation, image fictive qui <em>respecte</em> l'<code>aspect_ratio</code> demandé.</li>
+              <li><strong>Délais</strong> : sync ≤ ~110 s, sinon passe en 202 avec <code>status_url</code>. Sur Netlify (~26 s) / Vercel (~60 s) / Supabase (~150 s), préférez <code>mode: "async"</code>.</li>
+              <li><strong>Server-to-server uniquement</strong> : ne jamais exposer la clé côté navigateur (clé jamais loggée côté serveur non plus).</li>
             </ul>
-            <p className="text-sm">
-              Les crédits sont débités sur le compte propriétaire de la clé. Voir <Link to="/pricing" className="underline text-primary">les abonnements</Link>.
-            </p>
           </Section>
+
+          <Section id="changelog" title="Changelog & versioning">
+            <p className="text-sm">
+              <code>/v1</code> est stable. Tout changement cassant donnera lieu à <code>/v2</code> avec une période
+              de dépréciation publique. Les nouveautés ci-dessous sont <strong>additives</strong> et n'exigent
+              aucune modification des intégrations existantes.
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-sm">
+              <li><strong>v1.1</strong> — Champs inconnus listés dans <code>warnings[]</code> ; <code>mode: sync|async</code> explicite ; <code>status_url</code> absolue ; écho complet du format (<code>aspect_ratio/width/height/format</code>) ; header <code>Idempotency-Key</code> ; nouveaux endpoints <code>/v1/domains</code> et <code>/v1/openapi.json</code> ; header <code>Retry-After</code> sur 429.</li>
+              <li><strong>v1.0</strong> — Lancement. Forçage premium (GPT Image 2), <code>data.image_url</code> canonique.</li>
+            </ul>
+          </Section>
+
+          <Section id="migration" title="Migration guide (intégrateurs existants)">
+            <p className="text-sm">Rien à changer pour continuer à fonctionner. Pour bénéficier de v1.1, opt-in progressif :</p>
+            <ol className="list-decimal pl-6 space-y-1 text-sm">
+              <li>Loggez le tableau <code>warnings</code> en CI — vous y verrez vos champs ignorés (probablement <code>prompt</code> ou camelCase).</li>
+              <li>Envoyez toujours un <code>aspect_ratio</code> explicite adapté au réseau cible.</li>
+              <li>Sur serverless, passez en <code>mode: "async"</code> et pollez <code>status_url</code>.</li>
+              <li>Ajoutez un header <code>Idempotency-Key</code> sur chaque génération pour rendre les retries gratuits.</li>
+              <li>Lisez l'image finale via <code>data.image_url</code>, jamais via <code>template_used.image_url</code>.</li>
+            </ol>
+          </Section>
+
+
 
           <div className="p-6 rounded-2xl border border-border/50 bg-card/50">
             <p className="font-semibold mb-2">Besoin d'aide ?</p>
