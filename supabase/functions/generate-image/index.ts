@@ -156,13 +156,23 @@ async function generateWithGoogleGemini(
         });
       }
     } else if (imgUrl.startsWith("http")) {
-      // Download and convert to base64 for Gemini API
+      // Download and convert to base64 for Gemini API (chunked to avoid stack overflow)
       try {
         const imgResp = await fetch(imgUrl);
         if (imgResp.ok) {
           const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-          const buffer = await imgResp.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+          const buffer = new Uint8Array(await imgResp.arrayBuffer());
+          // Chunked base64 conversion: `String.fromCharCode(...arr)` overflows the call stack
+          // on images larger than ~100KB. We build the binary string in 32KB slices.
+          let binary = "";
+          const CHUNK = 0x8000;
+          for (let i = 0; i < buffer.length; i += CHUNK) {
+            binary += String.fromCharCode.apply(
+              null,
+              Array.from(buffer.subarray(i, i + CHUNK)) as unknown as number[],
+            );
+          }
+          const base64 = btoa(binary);
           parts.push({
             inlineData: {
               mimeType: contentType,
