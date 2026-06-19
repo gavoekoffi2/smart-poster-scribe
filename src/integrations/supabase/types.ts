@@ -47,6 +47,44 @@ export type Database = {
         }
         Relationships: []
       }
+      api_idempotency_keys: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          response_body: Json
+          status_code: number
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key: string
+          response_body: Json
+          status_code: number
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          response_body?: Json
+          status_code?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_idempotency_keys_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
