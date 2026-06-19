@@ -121,8 +121,18 @@ export default function ApiDocsPage() {
             </div>
           </Section>
 
-          <Section id="quickstart" title="Démarrage rapide">
-            <p>Une seule requête suffit pour générer une affiche :</p>
+          <Section id="pitfalls" title="Erreurs d'intégration fréquentes">
+            <div className="p-4 rounded-lg border border-destructive/40 bg-destructive/5 space-y-2 text-sm">
+              <p>❌ <strong>Ne pas envoyer <code>prompt</code></strong> — ce champ est ignoré. Utilisez <code>subject</code> pour la direction créative.</p>
+              <p>❌ <strong>Ne pas omettre <code>aspect_ratio</code></strong> — défaut <code>9:16</code>. Une affiche LinkedIn doit explicitement demander <code>1.91:1</code> ou <code>1:1</code>.</p>
+              <p>❌ <strong>Appels navigateur interdits</strong> — la clé <code>gpt_live_*</code> doit rester serveur-à-serveur.</p>
+              <p>❌ <strong>Ne pas confondre <code>template_used.image_url</code> et <code>data.image_url</code></strong> — l'image finale est <strong>toujours</strong> dans <code>data.image_url</code>.</p>
+              <p>❌ <strong>Ne pas retry sans <code>Idempotency-Key</code></strong> — un retry sans clé d'idempotence peut être re-facturé.</p>
+              <p>✅ <strong>Tout champ inconnu</strong> apparaît dans le tableau <code>warnings[]</code> de la réponse. Lisez-le en CI.</p>
+            </div>
+          </Section>
+
+
             <Code>{`curl -X POST ${API_BASE}/v1/posters/generate \\
   -H "Authorization: Bearer VOTRE_CLE_API" \\
   -H "Content-Type: application/json" \\
