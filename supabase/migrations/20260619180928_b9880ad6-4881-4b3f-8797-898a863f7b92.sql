@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Service role manages idempotency keys" ON public.api_idempotency_keys;
