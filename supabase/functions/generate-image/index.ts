@@ -156,13 +156,23 @@ async function generateWithGoogleGemini(
         });
       }
     } else if (imgUrl.startsWith("http")) {
-      // Download and convert to base64 for Gemini API
+      // Download and convert to base64 for Gemini API (chunked to avoid stack overflow)
       try {
         const imgResp = await fetch(imgUrl);
         if (imgResp.ok) {
           const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-          const buffer = await imgResp.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+          const buffer = new Uint8Array(await imgResp.arrayBuffer());
+          // Chunked base64 conversion: `String.fromCharCode(...arr)` overflows the call stack
+          // on images larger than ~100KB. We build the binary string in 32KB slices.
+          let binary = "";
+          const CHUNK = 0x8000;
+          for (let i = 0; i < buffer.length; i += CHUNK) {
+            binary += String.fromCharCode.apply(
+              null,
+              Array.from(buffer.subarray(i, i + CHUNK)) as unknown as number[],
+            );
+          }
+          const base64 = btoa(binary);
           parts.push({
             inlineData: {
               mimeType: contentType,
@@ -745,15 +755,25 @@ function buildProfessionalPrompt({
       lines.push("Si un élément ne peut pas être transformé proprement → SUPPRIMER et reconstruire le fond.");
     }
 
+    // ====== RÈGLE #6 : PERSONNAGES / VISAGES — JAMAIS RECOPIER CEUX DU TEMPLATE ======
+    lines.push("");
+    lines.push("═══ 👤 RÈGLE #6 : PERSONNAGES — INTERDICTION DE RECOPIER LES PERSONNES DU GABARIT ═══");
+    lines.push("🚫 INTERDICTION ABSOLUE de réutiliser les visages, têtes, corps ou silhouettes des personnages présents sur l'image de référence.");
+    lines.push("Les personnages visibles sur le gabarit appartiennent à un AUTRE projet : ils ne doivent JAMAIS apparaître sur l'affiche finale.");
     if (hasContentImage) {
       lines.push("");
       lines.push("═══ VISUEL CLIENT ═══");
-      lines.push("Insérer le visuel client dans la zone image principale, en respectant le cadrage et la composition du gabarit.");
+      lines.push("Insérer le visuel client fourni (photo client) dans la zone image principale, en respectant le cadrage et la composition du gabarit. Les personnes visibles sur le résultat final = UNIQUEMENT celles de la photo client. Aucun visage du template ne doit être conservé.");
     } else {
       lines.push("");
-      lines.push("═══ PAS DE VISUEL CLIENT ═══");
-      lines.push("Si le gabarit contient une zone photo importante : générer un sujet photoréaliste africain cohérent avec les infos client, dans la même zone.");
-      lines.push("Sinon : ne pas ajouter de photo.");
+      lines.push("═══ PAS DE VISUEL CLIENT FOURNI — GÉNÉRER DE NOUVEAUX PERSONNAGES ═══");
+      lines.push(`Le client n'a pas fourni de photo. Si le gabarit contient un ou plusieurs personnages, tu DOIS :`);
+      lines.push(`• SUPPRIMER complètement les personnages d'origine du gabarit (visages, corps, poses).`);
+      lines.push(`• GÉNÉRER de NOUVEAUX personnages photoréalistes, africains par défaut, parfaitement adaptés au domaine « ${detectedDomain} » et au contenu/sujet décrit par le client.`);
+      lines.push(`• Choisir des âges, tenues, expressions et postures cohérentes avec le contexte (ex : église → fidèles/pasteur en tenue digne ; formation → apprenants/formateur ; sport → athlètes en action ; restaurant → chef ou clients ; mode → modèles stylisés ; etc.).`);
+      lines.push(`• Éclairage studio professionnel 3 points, détourage net, ombres réalistes, expressions engageantes.`);
+      lines.push(`• Si le gabarit n'avait pas de personnage et qu'aucun n'est nécessaire au sujet client : NE PAS en ajouter.`);
+      lines.push(`🚫 Il est INTERDIT de conserver, recolorer, vieillir ou habiller différemment les personnages du gabarit — ils doivent être totalement remplacés.`);
     }
 
     if (hasLogoImage) {
@@ -768,6 +788,7 @@ function buildProfessionalPrompt({
     lines.push("✓ Aucun texte/date/prix/nom de la référence n'a survécu ? (sinon → ÉCHEC)");
     lines.push("✓ Les icônes et illustrations correspondent-elles au domaine client ? (sinon → ÉCHEC)");
     lines.push("✓ Le style visuel (palette, typo, ambiance) ressemble au gabarit ? (sinon → ÉCHEC)");
+    lines.push("✓ Aucun personnage / visage / silhouette du gabarit n'a survécu ? (sinon → ÉCHEC)");
     if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
       lines.push(`✓ Aucun élément n'évoque le domaine « ${templateSourceDomain} » ? (sinon → ÉCHEC)`);
     }
@@ -1302,7 +1323,10 @@ serve(async (req) => {
       creditCheckResult = creditCheck;
       
       if (!creditCheck.success) {
-        // Retourner une erreur 402 (Payment Required) avec les détails
+        // IMPORTANT: on retourne 200 (au lieu de 402) pour que le client supabase-js
+        // expose toujours le corps dans `data`. Cela permet d'afficher le modal d'upgrade
+        // de manière fiable au lieu d'un toast d'erreur générique.
+        // Pour l'API publique (api-v1), c'est ce dernier qui re-map vers 402.
         return new Response(
           JSON.stringify({
             success: false,
@@ -1311,9 +1335,10 @@ serve(async (req) => {
             remaining: creditCheck.remaining,
             needed: creditCheck.needed,
             is_free: creditCheck.is_free,
+            upgrade_required: true,
           }),
           {
-            status: 402,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
