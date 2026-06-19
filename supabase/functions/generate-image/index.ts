@@ -778,6 +778,7 @@ function buildProfessionalPrompt({
     lines.push("✓ Aucun texte/date/prix/nom de la référence n'a survécu ? (sinon → ÉCHEC)");
     lines.push("✓ Les icônes et illustrations correspondent-elles au domaine client ? (sinon → ÉCHEC)");
     lines.push("✓ Le style visuel (palette, typo, ambiance) ressemble au gabarit ? (sinon → ÉCHEC)");
+    lines.push("✓ Aucun personnage / visage / silhouette du gabarit n'a survécu ? (sinon → ÉCHEC)");
     if (templateSourceDomain && templateSourceDomain !== detectedDomain) {
       lines.push(`✓ Aucun élément n'évoque le domaine « ${templateSourceDomain} » ? (sinon → ÉCHEC)`);
     }
