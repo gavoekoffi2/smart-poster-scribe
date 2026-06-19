@@ -48,17 +48,28 @@ export default function ApiDocsPage() {
           <p className="font-semibold mb-2 text-muted-foreground uppercase tracking-wide text-xs">Documentation API</p>
           {[
             ["intro", "Introduction"],
+            ["pitfalls", "Erreurs fréquentes"],
             ["quickstart", "Démarrage rapide"],
             ["auth", "Authentification"],
+            ["subject-vs-title", "subject vs title"],
+            ["aspect-ratios", "Formats (aspect_ratio)"],
+            ["sync-async", "Sync vs Async"],
+            ["idempotency", "Idempotence"],
+            ["warnings", "Warnings & champs inconnus"],
             ["template-selection", "Sélection auto du template"],
             ["modes", "Qualité (toujours premium)"],
             ["endpoint-generate", "POST /posters/generate"],
+            ["endpoint-poster-status", "GET /posters/:jobId"],
+            ["endpoint-domains", "GET /domains"],
             ["endpoint-templates", "GET /templates"],
             ["endpoint-suggest", "POST /templates/suggest"],
             ["endpoint-analyze", "POST /images/analyze"],
             ["endpoint-credits", "GET /account/credits"],
+            ["openapi", "OpenAPI 3.1"],
             ["errors", "Codes d'erreur"],
             ["limits", "Limites & tarification"],
+            ["changelog", "Changelog & versioning"],
+            ["migration", "Migration guide"],
           ].map(([id, label]) => (
             <a key={id} href={`#${id}`} className="block px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground">{label}</a>
           ))}
