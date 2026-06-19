@@ -7,6 +7,8 @@
 //   POST /v1/images/analyze
 //   GET  /v1/account/credits
 //   GET  /v1/account/usage
+//   GET  /v1/domains
+//   GET  /v1/openapi.json
 //
 // Auth: Bearer <api_key>  (key format gpt_live_... or gpt_test_...)
 
@@ -15,7 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, idempotency-key",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
@@ -38,12 +40,14 @@ function jsonResponse(body: unknown, status = 200, extra: Record<string, string>
   });
 }
 
-function errorResponse(code: string, message: string, status: number, requestId: string) {
-  return jsonResponse({ success: false, error: { code, message }, request_id: requestId }, status);
+function errorResponse(code: string, message: string, status: number, requestId: string, extra: Record<string, unknown> = {}) {
+  return jsonResponse({ success: false, error: { code, message, request_id: requestId, ...extra } }, status);
 }
 
-function successResponse(data: unknown, requestId: string, status = 200) {
-  return jsonResponse({ success: true, data, request_id: requestId }, status);
+function successResponse(data: unknown, requestId: string, status = 200, warnings?: string[]) {
+  const body: any = { success: true, data, request_id: requestId };
+  if (warnings && warnings.length) body.warnings = warnings;
+  return jsonResponse(body, status);
 }
 
 interface ApiKeyContext {
@@ -68,7 +72,6 @@ async function authenticate(req: Request, requestId: string): Promise<ApiKeyCont
     return errorResponse("INVALID_API_KEY", "API key is invalid, expired, or revoked.", 401, requestId);
   }
   const row = Array.isArray(data) ? data[0] : data;
-  // touch last_used_at (fire-and-forget)
   admin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", row.api_key_id).then(() => {});
   return {
     apiKeyId: row.api_key_id,
@@ -127,6 +130,78 @@ function checkRateLimit(apiKeyId: string, limit = 60, windowMs = 60_000): { ok: 
   return { ok: true, remaining: limit - b.count, reset: b.reset };
 }
 
+// --- aspect ratio handling ---
+const ASPECT_RATIOS = ["9:16", "16:9", "1:1", "4:5", "5:4", "4:3", "3:4", "2:3", "3:2", "1.91:1"] as const;
+type AspectRatio = typeof ASPECT_RATIOS[number];
+
+function dimensionsFor(aspect: string, resolution: string): { width: number; height: number } {
+  // base "long edge" by resolution
+  const longEdge = resolution === "4K" ? 3840 : resolution === "2K" ? 2048 : 1024;
+  const map: Record<string, [number, number]> = {
+    "9:16": [9, 16],
+    "16:9": [16, 9],
+    "1:1": [1, 1],
+    "4:5": [4, 5],
+    "5:4": [5, 4],
+    "4:3": [4, 3],
+    "3:4": [3, 4],
+    "2:3": [2, 3],
+    "3:2": [3, 2],
+    "1.91:1": [1.91, 1],
+  };
+  const [w, h] = map[aspect] || [9, 16];
+  const scale = longEdge / Math.max(w, h);
+  const round = (n: number) => Math.round(n / 8) * 8;
+  return { width: round(w * scale), height: round(h * scale) };
+}
+
+// --- allowed-fields validation (warnings, non-breaking) ---
+const ALLOWED_FIELDS = new Set([
+  "domain", "subject", "title", "date", "location", "contact",
+  "prices", "speakers", "colors", "extra_instructions",
+  "aspect_ratio", "resolution", "reference_image_url",
+  "logo_url", "logo_urls",
+  "mode", "webhook_url", "idempotency_key",
+  // tolerated (forced internally):
+  "quality",
+  // tolerated legacy:
+  "prompt",
+]);
+
+const SNAKE_ALIASES: Record<string, string> = {
+  aspectRatio: "aspect_ratio",
+  logoUrl: "logo_url",
+  logoUrls: "logo_urls",
+  referenceImageUrl: "reference_image_url",
+  webhookUrl: "webhook_url",
+  idempotencyKey: "idempotency_key",
+  extraInstructions: "extra_instructions",
+};
+
+function normalizeAndValidate(body: any): { normalized: any; warnings: string[] } {
+  const warnings: string[] = [];
+  const normalized: any = {};
+  for (const [k, v] of Object.entries(body || {})) {
+    let key = k;
+    if (SNAKE_ALIASES[k]) {
+      warnings.push(`champ '${k}' renommé en '${SNAKE_ALIASES[k]}' (utilisez snake_case)`);
+      key = SNAKE_ALIASES[k];
+    }
+    if (!ALLOWED_FIELDS.has(key)) {
+      warnings.push(`champ '${k}' ignoré : non supporté. Voir la doc /docs/api ou GET /v1/openapi.json`);
+      continue;
+    }
+    normalized[key] = v;
+  }
+  if ("prompt" in normalized) {
+    warnings.push("champ 'prompt' ignoré : utilisez 'subject' pour la direction créative");
+  }
+  if ("quality" in normalized && normalized.quality && normalized.quality !== "premium") {
+    warnings.push(`'quality' demandé = '${normalized.quality}' ; forcé à 'premium' (politique API)`);
+  }
+  return { normalized, warnings };
+}
+
 // --- domain logic ---
 async function suggestTemplate(domain: string, subject: string) {
   const { data, error } = await admin.rpc("match_reference_template", { p_domain: domain, p_subject: subject });
@@ -136,11 +211,6 @@ async function suggestTemplate(domain: string, subject: string) {
   }
   const rows = Array.isArray(data) ? data : [];
   if (!rows.length) return null;
-  // Only return if score > 0; otherwise fallback handled by caller
-  if (Number(rows[0].score) <= 0) {
-    // still return first as soft fallback (same domain)
-    return rows[0];
-  }
   return rows[0];
 }
 
@@ -186,31 +256,80 @@ async function callGenerateImage(payload: Record<string, unknown>, userId: strin
   return { ok: res.ok, status: res.status, body: parsed ?? text };
 }
 
+// --- idempotency cache ---
+async function getIdempotent(apiKeyId: string, key: string): Promise<{ status: number; body: any } | null> {
+  if (!key) return null;
+  const { data } = await admin
+    .from("api_idempotency_keys")
+    .select("response_body, status_code, expires_at")
+    .eq("api_key_id", apiKeyId)
+    .eq("idempotency_key", key)
+    .maybeSingle();
+  if (!data) return null;
+  if (new Date(data.expires_at).getTime() < Date.now()) return null;
+  return { status: data.status_code, body: data.response_body };
+}
+async function saveIdempotent(apiKeyId: string, key: string, status: number, body: any) {
+  if (!key) return;
+  await admin.from("api_idempotency_keys").upsert({
+    api_key_id: apiKeyId,
+    idempotency_key: key,
+    response_body: body,
+    status_code: status,
+  }, { onConflict: "api_key_id,idempotency_key" });
+}
+
 // --- routes ---
-async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string) {
+async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string, baseUrl: string, idemHeader: string) {
   if (!hasScope(ctx, "posters:generate")) {
     return errorResponse("FORBIDDEN", "Missing scope 'posters:generate'.", 403, requestId);
   }
-  let body: any;
-  try { body = await req.json(); } catch { return errorResponse("INVALID_BODY", "Body must be JSON.", 400, requestId); }
+  let raw: any;
+  try { raw = await req.json(); } catch { return errorResponse("INVALID_BODY", "Body must be JSON.", 400, requestId); }
+
+  const { normalized: body, warnings } = normalizeAndValidate(raw);
+
+  // Idempotency check
+  const idemKey = idemHeader || (typeof body.idempotency_key === "string" ? body.idempotency_key : "");
+  if (idemKey) {
+    const hit = await getIdempotent(ctx.apiKeyId, idemKey);
+    if (hit) {
+      return jsonResponse({ ...hit.body, request_id: requestId, idempotent_replay: true }, hit.status);
+    }
+  }
 
   const domain = typeof body.domain === "string" ? body.domain.trim() : "";
   const subject = typeof body.subject === "string" ? body.subject.trim() : "";
   if (!domain) return errorResponse("MISSING_DOMAIN", "Field 'domain' is required.", 400, requestId);
-  if (!subject && !body.title && !body.prompt) {
-    return errorResponse("MISSING_SUBJECT", "Provide at least 'subject', 'title' or 'prompt'.", 400, requestId);
+  if (!subject && !body.title) {
+    return errorResponse("MISSING_SUBJECT", "Provide at least 'subject' or 'title'.", 400, requestId);
   }
 
-  // 🔒 STRICT PREMIUM POLICY: every API request is forced to gpt-image-2.
-  // `mode` / `quality` from the body are recorded for logging but ignored.
-  const requestedQuality = typeof body.quality === "string"
-    ? body.quality
-    : (body.mode === "fast" ? "fast" : (body.mode === "quality" ? "quality" : "unspecified"));
-  const mode: "quality" = "quality";
-  const aspectRatio = typeof body.aspect_ratio === "string" ? body.aspect_ratio : "9:16";
-  const resolution = typeof body.resolution === "string" ? body.resolution : "2K";
+  // Aspect ratio: strict whitelist; default 9:16 with warning
+  let aspectRatio: string;
+  if (typeof body.aspect_ratio !== "string" || body.aspect_ratio.length === 0) {
+    aspectRatio = "9:16";
+    warnings.push("aspect_ratio non fourni, défaut 9:16 appliqué");
+  } else if (!ASPECT_RATIOS.includes(body.aspect_ratio as AspectRatio)) {
+    return errorResponse(
+      "INVALID_ASPECT_RATIO",
+      `aspect_ratio '${body.aspect_ratio}' non supporté.`,
+      400,
+      requestId,
+      { allowed: ASPECT_RATIOS },
+    );
+  } else {
+    aspectRatio = body.aspect_ratio;
+  }
 
-  // Reference image: explicit URL provided OR auto-pick from DB
+  const resolution = typeof body.resolution === "string" ? body.resolution : "2K";
+  const { width, height } = dimensionsFor(aspectRatio, resolution);
+
+  // Mode
+  const mode: "sync" | "async" = body.mode === "async" ? "async" : "sync";
+  const webhookUrl = typeof body.webhook_url === "string" ? body.webhook_url : undefined;
+
+  // Reference image
   let referenceImage: string | undefined = typeof body.reference_image_url === "string" ? body.reference_image_url : undefined;
   let templateUsedId: string | null = null;
   if (!referenceImage) {
@@ -221,53 +340,49 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     }
   }
 
-  // Build prompt
-  const basePrompt = typeof body.prompt === "string" && body.prompt.trim().length > 0
-    ? body.prompt
-    : buildPromptFromStructured({ ...body, domain, subject });
-  // Short-text policy for API posters
+  // Build prompt (legacy `prompt` field is ignored — warned above)
+  const basePrompt = buildPromptFromStructured({ ...body, domain, subject });
   const prompt = `${basePrompt}\n\n[Règle texte stricte] L'affiche doit contenir : un titre court (≤6 mots), 2 à 5 mots-clés courts, 1 CTA court. Aucun paragraphe long. Le texte long reste hors de l'image.`;
-
-  const quality: "premium" = "premium";
 
   const payload: Record<string, unknown> = {
     prompt,
     domain,
     aspectRatio,
     resolution,
-    quality,
+    quality: "premium",
     apiStrictPremium: true,
     referenceImage,
     logoImages: Array.isArray(body.logo_urls) ? body.logo_urls : (body.logo_url ? [body.logo_url] : undefined),
+    webhookUrl,
   };
 
-  console.log(JSON.stringify({
-    request_id: requestId,
-    requested_quality: requestedQuality,
-    forced_quality: "premium",
-    expected_model: "gpt-image-2",
-    expected_provider: "openai",
-    template_id: templateUsedId,
-  }));
-
-  // Constant identity exposed to API clients
   const MODEL = "gpt-image-2";
   const PROVIDER = "openai";
+  const FORMAT = "png";
 
-  // Test mode: simulate without consuming credits
+  // Sandbox / test mode: respect requested aspect ratio
   if (ctx.environment === "test") {
-    return successResponse({
+    const body = {
       job_id: `test_${requestId}`,
       status: "completed",
-      image_url: "https://placehold.co/1080x1920/png?text=API+test+mode",
+      image_url: `https://placehold.co/${width}x${height}/png?text=API+test+mode`,
       mode,
       quality: "premium",
       model: MODEL,
       provider: PROVIDER,
       fallback_used: false,
-      template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
+      aspect_ratio: aspectRatio,
+      width,
+      height,
+      format: FORMAT,
+      bytes: null,
+      credits_used: 0,
+      template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage, note: "Reference only — NOT the final image." } : null,
       sandbox: true,
-    }, requestId);
+    };
+    const resp = { success: true, data: body, request_id: requestId, warnings: warnings.length ? warnings : undefined };
+    if (idemKey) await saveIdempotent(ctx.apiKeyId, idemKey, 200, resp);
+    return jsonResponse(resp, 200);
   }
 
   const { ok, status, body: respBody } = await callGenerateImage(payload, ctx.userId);
@@ -277,16 +392,11 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     return errorResponse(typeof code === "string" ? code : "GENERATION_FAILED", msg, status >= 400 ? status : 502, requestId);
   }
 
-  // generate-image is async: it returns { success: true, jobId, status: 'processing' }
-  // and runs the actual generation in the background. Poll image_jobs for the final result.
-  // IMPORTANT: we deliberately do NOT fall back to the template URL — the template is a
-  // reference only and must never be returned as the final image.
   let imageUrl: string | undefined =
     (respBody as any)?.imageUrl ||
     (respBody as any)?.image_url ||
     (respBody as any)?.url ||
-    (respBody as any)?.result_url ||
-    (respBody as any)?.data?.imageUrl;
+    (respBody as any)?.result_url;
   const jobId: string | undefined = (respBody as any)?.jobId || (respBody as any)?.job_id;
   let jobStatus: "completed" | "failed" | "processing" = "completed";
   let creditsUsed = (respBody as any)?.credits_used ?? (respBody as any)?.creditsUsed ?? 0;
@@ -295,6 +405,37 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   let providerUsed: string | null = null;
   let fallbackUsed = false;
 
+  // ASYNC mode: return 202 immediately if we got a job_id
+  if (mode === "async" && jobId) {
+    const statusUrl = `${baseUrl}/v1/posters/${jobId}`;
+    const respAsync = {
+      success: true,
+      data: {
+        job_id: jobId,
+        status: "processing",
+        image_url: null,
+        status_url: statusUrl,
+        webhook_url: webhookUrl ?? null,
+        mode: "async",
+        quality: "premium",
+        model: MODEL,
+        provider: PROVIDER,
+        fallback_used: false,
+        aspect_ratio: aspectRatio,
+        width,
+        height,
+        format: FORMAT,
+        credits_used: 2,
+        template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage, note: "Reference only — NOT the final image." } : null,
+      },
+      request_id: requestId,
+      warnings: warnings.length ? warnings : undefined,
+    };
+    if (idemKey) await saveIdempotent(ctx.apiKeyId, idemKey, 202, respAsync);
+    return jsonResponse(respAsync, 202);
+  }
+
+  // SYNC mode: poll until completion or timeout
   if (!imageUrl && jobId) {
     const pollStart = Date.now();
     const timeoutMs = 110_000;
@@ -307,10 +448,7 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
         .select("status, result_url, error_message, model_used, provider_used, fallback_used")
         .eq("id", jobId)
         .maybeSingle();
-      if (jobErr) {
-        console.error("image_jobs poll error:", jobErr);
-        continue;
-      }
+      if (jobErr) { console.error("image_jobs poll error:", jobErr); continue; }
       if (!job) continue;
       if (job.status === "completed" && job.result_url) {
         imageUrl = job.result_url;
@@ -341,27 +479,36 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   }
 
   if (jobStatus === "processing") {
-    return jsonResponse({
+    // sync mode timeout — return 202 + status_url so the client can poll
+    const statusUrl = `${baseUrl}/v1/posters/${jobId}`;
+    const respTimeout = {
       success: true,
       data: {
         job_id: jobId,
         status: "processing",
         image_url: null,
-        mode,
+        status_url: statusUrl,
+        mode: "sync",
         quality: "premium",
         model: MODEL,
         provider: PROVIDER,
         fallback_used: false,
+        aspect_ratio: aspectRatio,
+        width,
+        height,
+        format: FORMAT,
         credits_used: creditsUsed,
-        template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
-        poll_url: `/v1/posters/${jobId}`,
-        message: "Generation still in progress. Poll GET /v1/posters/{job_id} to retrieve the final image.",
+        template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage, note: "Reference only — NOT the final image." } : null,
+        message: "Generation still in progress. Poll status_url to retrieve the final image.",
       },
       request_id: requestId,
-    }, 202);
+      warnings: warnings.length ? warnings : undefined,
+    };
+    if (idemKey) await saveIdempotent(ctx.apiKeyId, idemKey, 202, respTimeout);
+    return jsonResponse(respTimeout, 202);
   }
 
-  // Safety: in strict premium mode the final image_url must never equal the template URL.
+  // Safety: template URL must never be returned as final image
   if (imageUrl && referenceImage && imageUrl === referenceImage) {
     return errorResponse(
       "PREMIUM_MODEL_UNAVAILABLE",
@@ -371,34 +518,32 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     );
   }
 
-  // Best-effort credit count when downstream didn't report it (matches check_and_debit_credits).
-  if (!creditsUsed || creditsUsed === 0) {
-    creditsUsed = 2;
-  }
+  if (!creditsUsed || creditsUsed === 0) creditsUsed = 2;
 
-  console.log(JSON.stringify({
+  const respOk = {
+    success: true,
+    data: {
+      job_id: jobId || requestId,
+      status: "completed",
+      image_url: imageUrl,
+      mode,
+      quality: "premium",
+      model: modelUsed || MODEL,
+      provider: providerUsed || PROVIDER,
+      fallback_used: fallbackUsed,
+      aspect_ratio: aspectRatio,
+      width,
+      height,
+      format: FORMAT,
+      bytes: null,
+      credits_used: creditsUsed,
+      template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage, note: "Reference only — NOT the final image." } : null,
+    },
     request_id: requestId,
-    job_id: jobId,
-    forced_quality: "premium",
-    actual_model: modelUsed || MODEL,
-    actual_provider: providerUsed || PROVIDER,
-    fallback_used: fallbackUsed,
-    template_id: templateUsedId,
-    status: "completed",
-  }));
-
-  return successResponse({
-    job_id: jobId || requestId,
-    status: "completed",
-    image_url: imageUrl,
-    mode,
-    quality: "premium",
-    model: modelUsed || MODEL,
-    provider: providerUsed || PROVIDER,
-    fallback_used: fallbackUsed,
-    credits_used: creditsUsed,
-    template_used: templateUsedId ? { id: templateUsedId, image_url: referenceImage } : null,
-  }, requestId);
+    warnings: warnings.length ? warnings : undefined,
+  };
+  if (idemKey) await saveIdempotent(ctx.apiKeyId, idemKey, 200, respOk);
+  return jsonResponse(respOk, 200);
 }
 
 async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: string) {
@@ -417,7 +562,12 @@ async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: s
   if (error) return errorResponse("DB_ERROR", error.message, 500, requestId);
   if (!job) return errorResponse("NOT_FOUND", "Job not found.", 404, requestId);
   const normStatus = job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing";
-  const apiStrict = (job as any).params?.apiStrictPremium === true;
+  const params = (job as any).params || {};
+  const apiStrict = params.apiStrictPremium === true;
+  const aspectRatio = typeof params.aspectRatio === "string" ? params.aspectRatio : "9:16";
+  const resolution = typeof params.resolution === "string" ? params.resolution : "2K";
+  const { width, height } = dimensionsFor(aspectRatio, resolution);
+
   if (normStatus === "failed") {
     const msg = job.error_message || "Generation failed";
     const isPremiumUnavailable = msg.includes("PREMIUM_MODEL_UNAVAILABLE");
@@ -438,7 +588,11 @@ async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: s
     model: (job as any).model_used || (apiStrict ? "gpt-image-2" : null),
     provider: (job as any).provider_used || (apiStrict ? "openai" : null),
     fallback_used: (job as any).fallback_used ?? false,
-    error_message: job.error_message || null,
+    aspect_ratio: aspectRatio,
+    width,
+    height,
+    format: "png",
+    error: null,
     created_at: job.created_at,
     updated_at: job.updated_at,
   }, requestId);
@@ -503,29 +657,217 @@ async function routeAnalyze(req: Request, ctx: ApiKeyContext, requestId: string)
   return successResponse(parsed ?? { raw: text }, requestId);
 }
 
+async function routeDomains(_ctx: ApiKeyContext, requestId: string) {
+  const { data } = await admin
+    .from("reference_templates")
+    .select("domain")
+    .eq("is_active", true);
+  const seen = new Set<string>();
+  for (const r of data || []) {
+    if (r.domain && typeof r.domain === "string") seen.add(r.domain.toLowerCase());
+  }
+  seen.add("business");
+  const domains = Array.from(seen).sort().map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+  return successResponse({ domains, default: "business" }, requestId);
+}
+
+// --- OpenAPI 3.1 spec ---
+function buildOpenApiSpec(baseUrl: string) {
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "GraphisteGPT API",
+      version: "1.1.0",
+      description:
+        "API publique pour générer des affiches premium via GPT Image 2.\n\n" +
+        "**Important** : appel server-to-server uniquement. Ne jamais exposer la clé `gpt_live_*` côté navigateur.",
+      contact: { url: "https://graphistegpt.pro/docs/api" },
+    },
+    servers: [{ url: baseUrl, description: "Production" }],
+    security: [{ bearerAuth: [] }],
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "API key (gpt_live_* or gpt_test_*)" },
+      },
+      schemas: {
+        AspectRatio: { type: "string", enum: ASPECT_RATIOS },
+        Mode: { type: "string", enum: ["sync", "async"], default: "sync" },
+        Resolution: { type: "string", enum: ["1K", "2K", "4K"], default: "2K" },
+        Error: {
+          type: "object",
+          properties: {
+            success: { const: false },
+            error: {
+              type: "object",
+              properties: {
+                code: { type: "string" },
+                message: { type: "string" },
+                request_id: { type: "string" },
+              },
+              required: ["code", "message", "request_id"],
+            },
+          },
+        },
+        GenerateRequest: {
+          type: "object",
+          required: ["domain"],
+          properties: {
+            domain: { type: "string", description: "Voir GET /v1/domains pour la liste valide." },
+            subject: { type: "string", description: "Direction créative principale. À utiliser à la place de 'prompt'." },
+            title: { type: "string" },
+            date: { type: "string" },
+            location: { type: "string" },
+            contact: { type: "string" },
+            prices: { type: "array", items: { type: "string" } },
+            speakers: { type: "array", items: { type: "string" } },
+            colors: { type: "array", items: { type: "string" } },
+            extra_instructions: { type: "string" },
+            aspect_ratio: { $ref: "#/components/schemas/AspectRatio" },
+            resolution: { $ref: "#/components/schemas/Resolution" },
+            reference_image_url: { type: "string", format: "uri" },
+            logo_url: { type: "string", format: "uri" },
+            logo_urls: { type: "array", items: { type: "string", format: "uri" } },
+            mode: { $ref: "#/components/schemas/Mode" },
+            webhook_url: { type: "string", format: "uri", description: "(à venir) Notification de fin de job." },
+            idempotency_key: { type: "string", description: "Aussi acceptable via header Idempotency-Key." },
+          },
+          additionalProperties: false,
+        },
+        GenerateResponse: {
+          type: "object",
+          properties: {
+            success: { const: true },
+            data: {
+              type: "object",
+              properties: {
+                job_id: { type: "string" },
+                status: { type: "string", enum: ["completed", "processing", "failed"] },
+                image_url: { type: ["string", "null"], description: "URL PNG raster publique. Champ canonique unique." },
+                status_url: { type: "string", description: "URL absolue de polling (async/timeout)." },
+                mode: { type: "string" },
+                quality: { type: "string", enum: ["premium"] },
+                model: { type: "string", enum: ["gpt-image-2"] },
+                provider: { type: "string", enum: ["openai"] },
+                fallback_used: { type: "boolean", enum: [false] },
+                aspect_ratio: { $ref: "#/components/schemas/AspectRatio" },
+                width: { type: "integer" },
+                height: { type: "integer" },
+                format: { type: "string", enum: ["png"] },
+                credits_used: { type: "integer" },
+                template_used: {
+                  type: ["object", "null"],
+                  properties: {
+                    id: { type: "string" },
+                    image_url: { type: "string" },
+                    note: { type: "string" },
+                  },
+                },
+              },
+            },
+            warnings: { type: "array", items: { type: "string" } },
+            request_id: { type: "string" },
+          },
+        },
+      },
+    },
+    paths: {
+      "/v1/posters/generate": {
+        post: {
+          summary: "Générer une affiche premium",
+          description:
+            "Génère une affiche via GPT Image 2.\n\n" +
+            "- En mode `sync` (défaut), attente jusqu'à ~110 s.\n" +
+            "- En mode `async`, réponse 202 immédiate avec `status_url` absolue.\n" +
+            "- Tous les champs inconnus produisent un `warnings[]` (jamais d'ignore silencieux).\n" +
+            "- `aspect_ratio` omis : défaut `9:16` documenté + warning. Valeur invalide : 400.",
+          parameters: [
+            { name: "Idempotency-Key", in: "header", required: false, schema: { type: "string" } },
+          ],
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: { $ref: "#/components/schemas/GenerateRequest" } } },
+          },
+          responses: {
+            "200": { description: "Sync completed", content: { "application/json": { schema: { $ref: "#/components/schemas/GenerateResponse" } } } },
+            "202": { description: "Async accepted / sync timed out", content: { "application/json": { schema: { $ref: "#/components/schemas/GenerateResponse" } } } },
+            "400": { description: "Validation error", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "401": { description: "Auth error", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "403": { description: "Forbidden / missing scope" },
+            "429": { description: "Rate limited (headers: Retry-After, X-RateLimit-*)" },
+            "502": { description: "Generation failed / PREMIUM_MODEL_UNAVAILABLE" },
+          },
+        },
+      },
+      "/v1/posters/{job_id}": {
+        get: {
+          summary: "Statut canonique d'un job",
+          parameters: [{ name: "job_id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "Job status" }, "404": { description: "Not found" } },
+        },
+      },
+      "/v1/domains": {
+        get: { summary: "Liste des domaines valides", responses: { "200": { description: "OK" } } },
+      },
+      "/v1/templates": {
+        get: {
+          summary: "Lister les templates de référence",
+          parameters: [
+            { name: "domain", in: "query", schema: { type: "string" } },
+            { name: "category", in: "query", schema: { type: "string" } },
+            { name: "limit", in: "query", schema: { type: "integer", maximum: 100 } },
+          ],
+          responses: { "200": { description: "OK" } },
+        },
+      },
+      "/v1/templates/suggest": {
+        post: { summary: "Suggérer un template", responses: { "200": { description: "OK" } } },
+      },
+      "/v1/images/analyze": {
+        post: { summary: "Analyser une image", responses: { "200": { description: "OK" } } },
+      },
+      "/v1/account/credits": {
+        get: { summary: "Crédits restants", responses: { "200": { description: "OK" } } },
+      },
+      "/v1/account/usage": {
+        get: { summary: "Historique d'usage (30j)", responses: { "200": { description: "OK" } } },
+      },
+    },
+  };
+}
+
 // --- entrypoint ---
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const url = new URL(req.url);
-  // Strip the function name prefix (anything before /v1/)
   const v1Idx = url.pathname.indexOf("/v1/");
   const path = v1Idx >= 0 ? url.pathname.slice(v1Idx) : url.pathname;
   const requestId = crypto.randomUUID();
   const t0 = Date.now();
+  // Absolute base URL exposed to clients (preserves the /functions/v1/api-v1 prefix).
+  const baseUrl = v1Idx >= 0 ? `${url.origin}${url.pathname.slice(0, v1Idx)}` : url.origin;
+
+  // Public: OpenAPI spec (no auth)
+  if (path === "/v1/openapi.json" && req.method === "GET") {
+    return jsonResponse(buildOpenApiSpec(baseUrl), 200);
+  }
 
   if (!path.startsWith("/v1/")) {
     return successResponse({
       name: "GraphisteGPT API",
-      version: "v1",
+      version: "v1.1",
       docs: "https://graphistegpt.pro/docs/api",
+      openapi: `${baseUrl}/v1/openapi.json`,
       endpoints: [
         "POST /v1/posters/generate",
+        "GET /v1/posters/{job_id}",
         "GET /v1/templates",
         "POST /v1/templates/suggest",
         "POST /v1/images/analyze",
         "GET /v1/account/credits",
         "GET /v1/account/usage",
+        "GET /v1/domains",
+        "GET /v1/openapi.json",
       ],
     }, requestId);
   }
@@ -538,23 +880,32 @@ serve(async (req) => {
   // Rate limit
   const rl = checkRateLimit(ctx.apiKeyId);
   if (!rl.ok) {
+    const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
     return jsonResponse(
-      { success: false, error: { code: "RATE_LIMITED", message: "Too many requests." }, request_id: requestId },
+      { success: false, error: { code: "RATE_LIMITED", message: "Too many requests.", request_id: requestId } },
       429,
-      { "X-RateLimit-Limit": "60", "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": String(rl.reset) }
+      {
+        "X-RateLimit-Limit": "60",
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": String(rl.reset),
+        "Retry-After": String(retryAfter),
+      },
     );
   }
 
   const ip = req.headers.get("x-forwarded-for") || undefined;
   const ua = req.headers.get("user-agent") || undefined;
+  const idemHeader = req.headers.get("idempotency-key") || "";
 
   let response: Response;
   try {
     if (path === "/v1/posters/generate" && req.method === "POST") {
-      response = await routeGenerate(req, ctx, requestId);
+      response = await routeGenerate(req, ctx, requestId, baseUrl, idemHeader);
     } else if (path.startsWith("/v1/posters/") && req.method === "GET") {
       const jobId = path.slice("/v1/posters/".length).split("/")[0];
       response = await routePosterStatus(jobId, ctx, requestId);
+    } else if (path === "/v1/domains" && req.method === "GET") {
+      response = await routeDomains(ctx, requestId);
     } else if (path === "/v1/templates" && req.method === "GET") {
       response = await routeTemplates(req, url, ctx, requestId);
     } else if (path === "/v1/templates/suggest" && req.method === "POST") {
@@ -573,21 +924,12 @@ serve(async (req) => {
     response = errorResponse("INTERNAL_ERROR", (err as Error).message || "Unknown error", 500, requestId);
   }
 
-  // log usage async
   const duration = Date.now() - t0;
-  let parsedStatus = response.status;
   logUsage({
-    ctx,
-    endpoint: path,
-    method: req.method,
-    statusCode: parsedStatus,
-    requestId,
-    ip,
-    ua,
-    durationMs: duration,
+    ctx, endpoint: path, method: req.method, statusCode: response.status,
+    requestId, ip, ua, durationMs: duration,
   });
 
-  // Inject rate-limit headers
   const headers = new Headers(response.headers);
   headers.set("X-RateLimit-Limit", "60");
   headers.set("X-RateLimit-Remaining", String(rl.remaining));
