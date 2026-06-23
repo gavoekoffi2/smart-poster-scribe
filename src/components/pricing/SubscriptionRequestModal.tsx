@@ -28,9 +28,11 @@ export function SubscriptionRequestModal({
   planPrice,
 }: SubscriptionRequestModalProps) {
   const { user } = useAuth();
+  const { openGeniusPayCheckout } = useSubscription();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPayingOnline, setIsPayingOnline] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,17 +122,50 @@ export function SubscriptionRequestModal({
           </div>
 
           <Button
-            type="submit"
-            disabled={isSubmitting || !fullName.trim() || !phone.trim()}
-            className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white"
+            type="button"
+            onClick={async () => {
+              if (!fullName.trim() || !phone.trim()) {
+                toast.error("Renseignez votre nom et téléphone");
+                return;
+              }
+              setIsPayingOnline(true);
+              try {
+                await openGeniusPayCheckout(planSlug, {
+                  customerName: fullName.trim(),
+                  customerPhone: phone.trim(),
+                });
+              } catch (err) {
+                console.error(err);
+                toast.error(err instanceof Error ? err.message : "Erreur paiement");
+                setIsPayingOnline(false);
+              }
+            }}
+            disabled={isPayingOnline || isSubmitting || !fullName.trim() || !phone.trim()}
+            className="w-full gap-2 bg-gradient-to-r from-primary to-accent text-primary-foreground"
           >
-            <MessageCircle className="w-5 h-5" />
-            {isSubmitting ? "Envoi..." : "S'abonner via WhatsApp"}
+            {isPayingOnline ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
+            {isPayingOnline ? "Redirection..." : "Payer en ligne (Wave, Orange, MTN, Carte)"}
+          </Button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">ou</span>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isSubmitting || isPayingOnline || !fullName.trim() || !phone.trim()}
+            variant="outline"
+            className="w-full gap-2"
+          >
+            <MessageCircle className="w-5 h-5 text-[#25D366]" />
+            {isSubmitting ? "Envoi..." : "Activation manuelle via WhatsApp"}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Vous serez redirigé vers WhatsApp pour finaliser le paiement et activer
-            votre abonnement.
+            Paiement en ligne sécurisé via GeniusPay, ou activation manuelle via WhatsApp.
           </p>
         </form>
       </DialogContent>
