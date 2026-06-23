@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, CreditCard, Loader2 } from "lucide-react";
 
 // Numéro WhatsApp destinataire des demandes d'abonnement
 const WHATSAPP_NUMBER = "22893708178";
