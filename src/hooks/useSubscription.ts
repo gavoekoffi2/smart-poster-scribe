@@ -239,6 +239,35 @@ export function useSubscription() {
     }
   }, [user, plans, fetchSubscription]);
 
+  // Pay via GeniusPay (hosted checkout)
+  const openGeniusPayCheckout = useCallback(async (planSlug: string, opts?: { customerName?: string; customerPhone?: string }) => {
+    if (!user) throw new Error("Vous devez être connecté pour souscrire");
+    const plan = plans.find(p => p.slug === planSlug);
+    if (!plan) throw new Error("Plan introuvable");
+    if (plan.slug === "free") throw new Error("Le plan gratuit ne nécessite pas de paiement");
+
+    setIsProcessingPayment(true);
+    try {
+      const returnUrl = `${window.location.origin}/account?payment=success`;
+      const { data, error } = await supabase.functions.invoke("create-geniuspay-payment", {
+        body: {
+          planSlug,
+          returnUrl,
+          customerName: opts?.customerName,
+          customerPhone: opts?.customerPhone,
+        },
+      });
+      if (error) throw new Error(error.message || "Erreur d'initialisation du paiement");
+      if (!data?.success || !data?.checkoutUrl) {
+        throw new Error(data?.error || "Impossible d'ouvrir la page de paiement");
+      }
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      setIsProcessingPayment(false);
+      throw err;
+    }
+  }, [user, plans]);
+
   const getRemainingCredits = useCallback(() => {
     if (!subscription) {
       return { credits: 0, freeRemaining: 3, isFree: true };
@@ -293,6 +322,7 @@ export function useSubscription() {
     isLoading,
     isProcessingPayment,
     openFedaPayCheckout,
+    openGeniusPayCheckout,
     getRemainingCredits,
     canGenerate,
     getCreditsNeeded,
