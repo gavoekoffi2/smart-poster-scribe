@@ -61,7 +61,7 @@ export default function AuthPage() {
 
   const handleSuccessfulAuth = async (isNewUser: boolean = false) => {
     // Only proceed if this was user-initiated or initial session check
-    if (!isUserInitiatedAuth.current && hasCheckedSession.current) {
+    if (!isUserInitiatedAuth.current && hasCheckedSession.current && !getRequestedRedirect()) {
       return;
     }
     
