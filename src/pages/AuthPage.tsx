@@ -47,10 +47,15 @@ export default function AuthPage() {
 
   const getRequestedRedirect = () => {
     const queryRedirect = new URLSearchParams(location.search).get("redirect");
+    const pendingPlan = sessionStorage.getItem("pendingSubscriptionPlan");
+    const pendingSubscriptionRedirect = pendingPlan && pendingPlan !== "free"
+      ? `/pricing?plan=${encodeURIComponent(pendingPlan)}&subscribe=1`
+      : null;
     return (
       getSafeRedirectPath(locationState?.redirectTo) ||
       getSafeRedirectPath(queryRedirect) ||
-      getSafeRedirectPath(sessionStorage.getItem("authRedirectTo"))
+      getSafeRedirectPath(sessionStorage.getItem("authRedirectTo")) ||
+      getSafeRedirectPath(pendingSubscriptionRedirect)
     );
   };
 

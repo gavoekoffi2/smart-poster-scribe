@@ -22,10 +22,11 @@ export function PricingSection() {
 
   const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
-      navigate("/auth");
+      navigate("/auth?redirect=/app", { state: { redirectTo: "/app" } });
       return;
     }
-    navigate("/pricing");
+    const params = new URLSearchParams({ plan: planSlug, subscribe: "1" });
+    navigate(`/pricing?${params.toString()}`);
   };
 
   // Order: free, essentiel, illimite

@@ -14,12 +14,13 @@ export default function PricingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
-  const { plans, subscription, isProcessingPayment } = useSubscription();
+  const { plans, subscription, isProcessingPayment, openGeniusPayCheckout } = useSubscription();
   const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
     open: false, planName: "", planSlug: "", planPrice: ""
   });
 
   const [hasOpenedRequestedPlan, setHasOpenedRequestedPlan] = useState(false);
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
 
   const openSubscriptionModal = useCallback((planSlug: string) => {
     const plan = plans.find(p => p.slug === planSlug);
@@ -53,44 +54,62 @@ export default function PricingPage() {
     navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`, { state: { redirectTo }, replace: true });
   }, [authLoading, navigate, searchParams, user]);
 
-  useEffect(() => {
-    if (authLoading || !user || hasOpenedRequestedPlan || plans.length === 0) return;
+  const buildCheckoutRedirect = useCallback((planSlug: string) => {
+    const params = new URLSearchParams({ plan: planSlug, subscribe: "1" });
+    const promo = searchParams.get("promo");
+    if (promo) params.set("promo", promo);
+    return `/pricing?${params.toString()}`;
+  }, [searchParams]);
 
-    const shouldAutoSubscribe = searchParams.get("subscribe") === "1";
-    const requestedPlan = searchParams.get("plan") || sessionStorage.getItem("pendingSubscriptionPlan");
-
-    if (!shouldAutoSubscribe || !requestedPlan || requestedPlan === "free") return;
-
-    openSubscriptionModal(requestedPlan);
-    sessionStorage.removeItem("pendingSubscriptionPlan");
-    setHasOpenedRequestedPlan(true);
-  }, [authLoading, hasOpenedRequestedPlan, openSubscriptionModal, plans.length, searchParams, user]);
-
-  const handleSubscribe = (planSlug: string) => {
+  const startCheckout = useCallback(async (planSlug: string) => {
     if (planSlug === "free") {
       if (authLoading) return;
       navigate(user ? "/app" : "/auth?redirect=/app", { state: { redirectTo: "/app" } });
       return;
     }
 
-    if (authLoading) {
-      toast.info("Connexion en cours de vérification, réessayez dans un instant.");
+    if (authLoading || isStartingCheckout || isProcessingPayment) {
+      if (authLoading) toast.info("Connexion en cours de vérification, réessayez dans un instant.");
       return;
     }
 
     if (!user) {
-      const params = new URLSearchParams({ plan: planSlug, subscribe: "1" });
-      const promo = searchParams.get("promo");
-      if (promo) params.set("promo", promo);
-      const redirectTo = `/pricing?${params.toString()}`;
-
+      const redirectTo = buildCheckoutRedirect(planSlug);
       sessionStorage.setItem("pendingSubscriptionPlan", planSlug);
+      sessionStorage.setItem("authRedirectTo", redirectTo);
       toast.info("Connectez-vous pour finaliser votre abonnement");
       navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`, { state: { redirectTo } });
       return;
     }
 
-    openSubscriptionModal(planSlug);
+    setIsStartingCheckout(true);
+    sessionStorage.setItem("pendingSubscriptionPlan", planSlug);
+    try {
+      await openGeniusPayCheckout(planSlug);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Impossible d'ouvrir le paiement");
+      openSubscriptionModal(planSlug);
+    } finally {
+      setIsStartingCheckout(false);
+    }
+  }, [authLoading, buildCheckoutRedirect, isProcessingPayment, isStartingCheckout, navigate, openGeniusPayCheckout, openSubscriptionModal, user]);
+
+  useEffect(() => {
+    if (authLoading || !user || hasOpenedRequestedPlan) return;
+
+    const shouldAutoSubscribe = searchParams.get("subscribe") === "1";
+    const requestedPlan = searchParams.get("plan") || sessionStorage.getItem("pendingSubscriptionPlan");
+
+    if (!shouldAutoSubscribe || !requestedPlan || requestedPlan === "free") return;
+
+    setHasOpenedRequestedPlan(true);
+    startCheckout(requestedPlan);
+    sessionStorage.removeItem("pendingSubscriptionPlan");
+  }, [authLoading, hasOpenedRequestedPlan, searchParams, startCheckout, user]);
+
+  const handleSubscribe = (planSlug: string) => {
+    startCheckout(planSlug);
   };
 
   const features = [
@@ -201,7 +220,7 @@ export default function PricingPage() {
                   plan={plan}
                   isCurrentPlan={subscription?.plan_id === plan.id}
                   onSubscribe={handleSubscribe}
-                  isLoading={isProcessingPayment}
+                  isLoading={isProcessingPayment || isStartingCheckout}
                   index={index}
                 />
               ))}
