@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
@@ -8,7 +8,6 @@ import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionReque
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { lazy, Suspense } from "react";
 const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
 export default function PricingPage() {
