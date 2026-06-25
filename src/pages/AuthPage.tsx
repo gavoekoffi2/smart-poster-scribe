@@ -22,6 +22,11 @@ interface LocationState {
   pendingClone?: boolean;
 }
 
+function getSafeRedirectPath(value?: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,9 +45,28 @@ export default function AuthPage() {
   const isUserInitiatedAuth = useRef(false);
   const hasCheckedSession = useRef(false);
 
+  const getRequestedRedirect = () => {
+    const queryRedirect = new URLSearchParams(location.search).get("redirect");
+    return (
+      getSafeRedirectPath(locationState?.redirectTo) ||
+      getSafeRedirectPath(queryRedirect) ||
+      getSafeRedirectPath(sessionStorage.getItem("authRedirectTo"))
+    );
+  };
+
+  const getRequestedRedirectRef = useRef(getRequestedRedirect);
+  getRequestedRedirectRef.current = getRequestedRedirect;
+
+  const rememberRequestedRedirect = () => {
+    const redirectTo = getRequestedRedirect();
+    if (redirectTo) sessionStorage.setItem("authRedirectTo", redirectTo);
+  };
+
   const handleSuccessfulAuth = async (isNewUser: boolean = false) => {
+    const requestedRedirect = getRequestedRedirectRef.current();
+
     // Only proceed if this was user-initiated or initial session check
-    if (!isUserInitiatedAuth.current && hasCheckedSession.current) {
+    if (!isUserInitiatedAuth.current && hasCheckedSession.current && !requestedRedirect) {
       return;
     }
     
@@ -79,9 +103,16 @@ export default function AuthPage() {
       }
     }
     
-    // For new users, redirect to onboarding
-    if (isNewUser) {
+    // For new users, redirect to onboarding unless they came from a subscription checkout flow
+    if (isNewUser && !requestedRedirect?.startsWith("/pricing")) {
       navigate("/onboarding");
+      return;
+    }
+
+    // Subscription checkout must continue directly to payment, not to onboarding/account.
+    if (requestedRedirect?.startsWith("/pricing")) {
+      sessionStorage.removeItem("authRedirectTo");
+      navigate(requestedRedirect);
       return;
     }
     
@@ -101,7 +132,8 @@ export default function AuthPage() {
     }
     
     // Default redirect
-    const redirectTo = locationState?.redirectTo || "/app";
+    const redirectTo = requestedRedirect || "/app";
+    sessionStorage.removeItem("authRedirectTo");
     navigate(redirectTo);
   };
 
@@ -181,7 +213,7 @@ export default function AuthPage() {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth?confirmed=true`
+          emailRedirectTo: `${window.location.origin}/auth?confirmed=true${getRequestedRedirect() ? `&redirect=${encodeURIComponent(getRequestedRedirect()!)}` : ""}`
         }
       });
 
@@ -221,9 +253,12 @@ export default function AuthPage() {
 
     setIsLoading(true);
     isUserInitiatedAuth.current = true;
+    rememberRequestedRedirect();
     
     try {
-      const redirectUrl = `${window.location.origin}/auth?confirmed=true`;
+      const requestedRedirect = getRequestedRedirect();
+      const redirectParam = requestedRedirect ? `&redirect=${encodeURIComponent(requestedRedirect)}` : "";
+      const redirectUrl = `${window.location.origin}/auth?confirmed=true${redirectParam}`;
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -270,6 +305,7 @@ export default function AuthPage() {
 
     setIsLoading(true);
     isUserInitiatedAuth.current = true;
+    rememberRequestedRedirect();
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -305,10 +341,11 @@ export default function AuthPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     isUserInitiatedAuth.current = true;
+    rememberRequestedRedirect();
     
     try {
       const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth`,
       });
 
       if (error) {

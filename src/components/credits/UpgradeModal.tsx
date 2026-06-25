@@ -52,7 +52,9 @@ export function UpgradeModal({ open, onClose, creditError }: UpgradeModalProps) 
 
   const handleUpgrade = () => {
     onClose();
-    navigate(promoActive ? `/pricing?promo=${PROMO_CODE}` : "/pricing");
+    const params = new URLSearchParams({ plan: "essentiel", subscribe: "1" });
+    if (promoActive) params.set("promo", PROMO_CODE);
+    navigate(`/pricing?${params.toString()}`);
   };
 
   const copyCode = async () => {

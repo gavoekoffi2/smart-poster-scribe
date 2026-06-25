@@ -48,7 +48,6 @@ export function useSubscription() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
 
   const fetchPlans = useCallback(async () => {
     const { data, error } = await supabase
@@ -112,6 +111,25 @@ export function useSubscription() {
     }
   }, [user]);
 
+  const getPlanBySlug = useCallback(async (planSlug: string) => {
+    const existingPlan = plans.find(p => p.slug === planSlug);
+    if (existingPlan) return existingPlan;
+
+    const { data, error } = await supabase
+      .from("subscription_plans")
+      .select("*")
+      .eq("slug", planSlug)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      ...data,
+      features: Array.isArray(data.features) ? data.features as string[] : []
+    } as SubscriptionPlan;
+  }, [plans]);
+
   // Open FedaPay Checkout widget
   const openFedaPayCheckout = useCallback(async (planSlug: string, options?: { customPriceFcfa?: number; customCredits?: number }) => {
     if (!user) {
@@ -122,8 +140,8 @@ export function useSubscription() {
       throw new Error("Le module de paiement n'est pas chargé. Veuillez rafraîchir la page.");
     }
 
-    // Find the plan
-    const plan = plans.find(p => p.slug === planSlug);
+    // Find the plan, even if the local plans cache has not loaded yet
+    const plan = await getPlanBySlug(planSlug);
     if (!plan) {
       throw new Error("Plan introuvable");
     }
@@ -237,12 +255,12 @@ export function useSubscription() {
       setIsProcessingPayment(false);
       throw err;
     }
-  }, [user, plans, fetchSubscription]);
+  }, [user, getPlanBySlug, fetchSubscription]);
 
   // Pay via GeniusPay (hosted checkout)
   const openGeniusPayCheckout = useCallback(async (planSlug: string, opts?: { customerName?: string; customerPhone?: string }) => {
     if (!user) throw new Error("Vous devez être connecté pour souscrire");
-    const plan = plans.find(p => p.slug === planSlug);
+    const plan = await getPlanBySlug(planSlug);
     if (!plan) throw new Error("Plan introuvable");
     if (plan.slug === "free") throw new Error("Le plan gratuit ne nécessite pas de paiement");
 
@@ -266,7 +284,7 @@ export function useSubscription() {
       setIsProcessingPayment(false);
       throw err;
     }
-  }, [user, plans]);
+  }, [user, getPlanBySlug]);
 
   const getRemainingCredits = useCallback(() => {
     if (!subscription) {
@@ -294,26 +312,26 @@ export function useSubscription() {
   }, []);
 
   useEffect(() => {
-    if (hasFetchedInitial) return;
+    let isMounted = true;
+
     const loadData = async () => {
       setIsLoading(true);
       await fetchPlans();
       if (user) {
         await Promise.all([fetchSubscription(), fetchTransactions()]);
+      } else {
+        setSubscription(null);
+        setTransactions([]);
       }
-      setIsLoading(false);
-      setHasFetchedInitial(true);
+      if (isMounted) setIsLoading(false);
     };
-    loadData();
-  }, [user, hasFetchedInitial, fetchPlans, fetchSubscription, fetchTransactions]);
 
-  useEffect(() => {
-    if (!user) {
-      setSubscription(null);
-      setTransactions([]);
-      setHasFetchedInitial(false);
-    }
-  }, [user]);
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, fetchPlans, fetchSubscription, fetchTransactions]);
 
   return {
     plans,
