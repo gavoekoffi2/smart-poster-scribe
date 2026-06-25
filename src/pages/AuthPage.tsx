@@ -105,6 +105,13 @@ export default function AuthPage() {
       navigate("/onboarding");
       return;
     }
+
+    // Subscription checkout must continue directly to payment, not to onboarding/account.
+    if (requestedRedirect?.startsWith("/pricing")) {
+      sessionStorage.removeItem("authRedirectTo");
+      navigate(requestedRedirect);
+      return;
+    }
     
     // For existing users, check if they completed onboarding
     const { data: { session } } = await supabase.auth.getSession();
