@@ -133,6 +133,40 @@ export default function AccountPage() {
     }
   }, [profile]);
 
+  // Fetch user payment/subscription history
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const fetchPayments = async () => {
+      setLoadingPayments(true);
+      const { data, error } = await supabase
+        .from("payment_transactions")
+        .select("id, amount_fcfa, status, payment_method, created_at, metadata, plan:subscription_plans(name, slug, credits_per_month)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!cancelled && !error && data) {
+        setPaymentHistory(
+          data.map((t: any) => {
+            const metaCredits = t.metadata && typeof t.metadata === "object" ? Number((t.metadata as any).custom_credits) : NaN;
+            return {
+              id: t.id,
+              plan_name: t.plan?.name ?? null,
+              plan_slug: t.plan?.slug ?? null,
+              credits: Number.isFinite(metaCredits) ? metaCredits : (t.plan?.credits_per_month ?? 0),
+              amount_fcfa: t.amount_fcfa,
+              status: t.status,
+              payment_method: t.payment_method,
+              created_at: t.created_at,
+            };
+          })
+        );
+      }
+      if (!cancelled) setLoadingPayments(false);
+    };
+    fetchPayments();
+    return () => { cancelled = true; };
+  }, [user, subscription?.id]);
+
   // Show loading while checking auth
   if (authLoading) {
     return (
