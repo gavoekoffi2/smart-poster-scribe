@@ -47,6 +47,17 @@ export default function AccountPage() {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { hasPermission, isLoading: adminLoading } = useAdmin();
   const { subscription, transactions, refreshSubscription } = useSubscription();
+  const [paymentHistory, setPaymentHistory] = useState<Array<{
+    id: string;
+    plan_name: string | null;
+    plan_slug: string | null;
+    credits: number;
+    amount_fcfa: number;
+    status: string;
+    payment_method: string | null;
+    created_at: string;
+  }>>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
   const { 
     profile, 
     isLoading: profileLoading, 
