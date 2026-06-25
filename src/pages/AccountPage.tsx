@@ -38,6 +38,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -47,6 +48,17 @@ export default function AccountPage() {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { hasPermission, isLoading: adminLoading } = useAdmin();
   const { subscription, transactions, refreshSubscription } = useSubscription();
+  const [paymentHistory, setPaymentHistory] = useState<Array<{
+    id: string;
+    plan_name: string | null;
+    plan_slug: string | null;
+    credits: number;
+    amount_fcfa: number;
+    status: string;
+    payment_method: string | null;
+    created_at: string;
+  }>>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
   const { 
     profile, 
     isLoading: profileLoading, 
@@ -120,6 +132,40 @@ export default function AccountPage() {
       setSelectedColors(profile.default_color_palette || []);
     }
   }, [profile]);
+
+  // Fetch user payment/subscription history
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const fetchPayments = async () => {
+      setLoadingPayments(true);
+      const { data, error } = await supabase
+        .from("payment_transactions")
+        .select("id, amount_fcfa, status, payment_method, created_at, metadata, plan:subscription_plans(name, slug, credits_per_month)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!cancelled && !error && data) {
+        setPaymentHistory(
+          data.map((t: any) => {
+            const metaCredits = t.metadata && typeof t.metadata === "object" ? Number((t.metadata as any).custom_credits) : NaN;
+            return {
+              id: t.id,
+              plan_name: t.plan?.name ?? null,
+              plan_slug: t.plan?.slug ?? null,
+              credits: Number.isFinite(metaCredits) ? metaCredits : (t.plan?.credits_per_month ?? 0),
+              amount_fcfa: t.amount_fcfa,
+              status: t.status,
+              payment_method: t.payment_method,
+              created_at: t.created_at,
+            };
+          })
+        );
+      }
+      if (!cancelled) setLoadingPayments(false);
+    };
+    fetchPayments();
+    return () => { cancelled = true; };
+  }, [user, subscription?.id]);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -671,7 +717,86 @@ export default function AccountPage() {
                 )}
               </motion.div>
             </div>
+
+            {/* Mes abonnements - historique complet */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50"
+            >
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  Mes abonnements
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {paymentHistory.length} transaction{paymentHistory.length > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {loadingPayments ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">Chargement…</div>
+              ) : paymentHistory.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">Aucun abonnement souscrit pour le moment</p>
+                  <Button size="sm" className="mt-4" onClick={() => navigate("/pricing")}>
+                    Voir les plans
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                  {paymentHistory.map((p) => {
+                    const statusMap: Record<string, { label: string; cls: string }> = {
+                      completed:  { label: "Actif",     cls: "bg-green-500/10 text-green-500 border-green-500/30" },
+                      processing: { label: "En attente", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
+                      pending:    { label: "En attente", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
+                      failed:     { label: "Échoué",    cls: "bg-red-500/10 text-red-500 border-red-500/30" },
+                      cancelled:  { label: "Annulé",    cls: "bg-muted text-muted-foreground border-border" },
+                      refunded:   { label: "Remboursé", cls: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
+                    };
+                    const st = statusMap[p.status] || { label: p.status, cls: "bg-muted text-muted-foreground border-border" };
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-3 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors flex-wrap"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                            <Crown className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-foreground truncate">
+                              {p.plan_name || "Abonnement"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(p.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
+                              {p.payment_method ? ` • ${p.payment_method}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-foreground">
+                              {p.credits > 0 ? `${p.credits >= 9999 ? "∞" : p.credits} crédits` : "—"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {p.amount_fcfa.toLocaleString("fr-FR")} FCFA
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${st.cls}`}>
+                            {st.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
           </TabsContent>
+
 
           {/* History Tab */}
           <TabsContent value="history" className="space-y-6">
