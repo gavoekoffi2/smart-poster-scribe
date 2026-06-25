@@ -37,6 +37,23 @@ export default function PricingPage() {
   }, [plans]);
 
   useEffect(() => {
+    if (authLoading || user) return;
+
+    const shouldAutoSubscribe = searchParams.get("subscribe") === "1";
+    const requestedPlan = searchParams.get("plan") || sessionStorage.getItem("pendingSubscriptionPlan");
+
+    if (!shouldAutoSubscribe || !requestedPlan || requestedPlan === "free") return;
+
+    const params = new URLSearchParams({ plan: requestedPlan, subscribe: "1" });
+    const promo = searchParams.get("promo");
+    if (promo) params.set("promo", promo);
+
+    const redirectTo = `/pricing?${params.toString()}`;
+    sessionStorage.setItem("pendingSubscriptionPlan", requestedPlan);
+    navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`, { state: { redirectTo }, replace: true });
+  }, [authLoading, navigate, searchParams, user]);
+
+  useEffect(() => {
     if (authLoading || !user || hasOpenedRequestedPlan || plans.length === 0) return;
 
     const shouldAutoSubscribe = searchParams.get("subscribe") === "1";
