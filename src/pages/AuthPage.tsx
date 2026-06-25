@@ -54,14 +54,19 @@ export default function AuthPage() {
     );
   };
 
+  const getRequestedRedirectRef = useRef(getRequestedRedirect);
+  getRequestedRedirectRef.current = getRequestedRedirect;
+
   const rememberRequestedRedirect = () => {
     const redirectTo = getRequestedRedirect();
     if (redirectTo) sessionStorage.setItem("authRedirectTo", redirectTo);
   };
 
   const handleSuccessfulAuth = async (isNewUser: boolean = false) => {
+    const requestedRedirect = getRequestedRedirectRef.current();
+
     // Only proceed if this was user-initiated or initial session check
-    if (!isUserInitiatedAuth.current && hasCheckedSession.current && !getRequestedRedirect()) {
+    if (!isUserInitiatedAuth.current && hasCheckedSession.current && !requestedRedirect) {
       return;
     }
     
@@ -98,8 +103,6 @@ export default function AuthPage() {
       }
     }
     
-    const requestedRedirect = getRequestedRedirect();
-
     // For new users, redirect to onboarding unless they came from a subscription checkout flow
     if (isNewUser && !requestedRedirect?.startsWith("/pricing")) {
       navigate("/onboarding");
