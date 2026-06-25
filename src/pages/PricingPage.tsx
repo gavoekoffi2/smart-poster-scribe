@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,32 +13,68 @@ const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ d
 
 export default function PricingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, isLoading: authLoading } = useAuth();
   const { plans, subscription, isProcessingPayment } = useSubscription();
   const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
     open: false, planName: "", planSlug: "", planPrice: ""
   });
 
+  const [hasOpenedRequestedPlan, setHasOpenedRequestedPlan] = useState(false);
+
+  const openSubscriptionModal = useCallback((planSlug: string) => {
+    const plan = plans.find(p => p.slug === planSlug);
+    if (!plan) {
+      toast.error("Plan introuvable. Veuillez choisir un abonnement.");
+      return;
+    }
+
+    setRequestModal({
+      open: true,
+      planName: plan.name,
+      planSlug,
+      planPrice: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois`,
+    });
+  }, [plans]);
+
+  useEffect(() => {
+    if (authLoading || !user || hasOpenedRequestedPlan || plans.length === 0) return;
+
+    const shouldAutoSubscribe = searchParams.get("subscribe") === "1";
+    const requestedPlan = searchParams.get("plan") || sessionStorage.getItem("pendingSubscriptionPlan");
+
+    if (!shouldAutoSubscribe || !requestedPlan || requestedPlan === "free") return;
+
+    openSubscriptionModal(requestedPlan);
+    sessionStorage.removeItem("pendingSubscriptionPlan");
+    setHasOpenedRequestedPlan(true);
+  }, [authLoading, hasOpenedRequestedPlan, openSubscriptionModal, plans.length, searchParams, user]);
+
   const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
-      navigate("/app");
+      if (authLoading) return;
+      navigate(user ? "/app" : "/auth?redirect=/app", { state: { redirectTo: "/app" } });
+      return;
+    }
+
+    if (authLoading) {
+      toast.info("Connexion en cours de vérification, réessayez dans un instant.");
       return;
     }
 
     if (!user) {
-      toast.info("Connectez-vous pour souscrire à un abonnement");
-      navigate("/auth?redirect=/pricing");
+      const params = new URLSearchParams({ plan: planSlug, subscribe: "1" });
+      const promo = searchParams.get("promo");
+      if (promo) params.set("promo", promo);
+      const redirectTo = `/pricing?${params.toString()}`;
+
+      sessionStorage.setItem("pendingSubscriptionPlan", planSlug);
+      toast.info("Connectez-vous pour finaliser votre abonnement");
+      navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`, { state: { redirectTo } });
       return;
     }
 
-    const plan = plans.find(p => p.slug === planSlug);
-    const priceLabel = plan ? `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois` : "";
-    setRequestModal({
-      open: true,
-      planName: plan?.name || planSlug,
-      planSlug,
-      planPrice: priceLabel,
-    });
+    openSubscriptionModal(planSlug);
   };
 
   const features = [
