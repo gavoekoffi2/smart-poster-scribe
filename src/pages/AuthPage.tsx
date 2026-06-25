@@ -210,7 +210,7 @@ export default function AuthPage() {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth?confirmed=true`
+          emailRedirectTo: `${window.location.origin}/auth?confirmed=true${getRequestedRedirect() ? `&redirect=${encodeURIComponent(getRequestedRedirect()!)}` : ""}`
         }
       });
 
