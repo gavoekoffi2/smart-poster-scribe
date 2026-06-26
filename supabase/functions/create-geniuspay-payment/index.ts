@@ -36,8 +36,9 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Utilisateur non authentifié");
 
     const body = await req.json();
-    const { planSlug, returnUrl, customerPhone, customerName } = body as {
+    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider } = body as {
       planSlug?: string; returnUrl?: string; customerPhone?: string; customerName?: string;
+      country?: string; paymentMethod?: string; mmoProvider?: string;
     };
     if (!planSlug) throw new Error("Plan non spécifié");
 
