@@ -257,8 +257,17 @@ export function useSubscription() {
     }
   }, [user, getPlanBySlug, fetchSubscription]);
 
-  // Pay via GeniusPay (hosted checkout)
-  const openGeniusPayCheckout = useCallback(async (planSlug: string, opts?: { customerName?: string; customerPhone?: string }) => {
+  // Pay via GeniusPay (hosted checkout or direct method)
+  const openGeniusPayCheckout = useCallback(async (
+    planSlug: string,
+    opts?: {
+      customerName?: string;
+      customerPhone?: string;
+      country?: string;
+      paymentMethod?: string;
+      mmoProvider?: string;
+    }
+  ) => {
     if (!user) throw new Error("Vous devez être connecté pour souscrire");
     const plan = await getPlanBySlug(planSlug);
     if (!plan) throw new Error("Plan introuvable");
@@ -273,6 +282,9 @@ export function useSubscription() {
           returnUrl,
           customerName: opts?.customerName,
           customerPhone: opts?.customerPhone,
+          country: opts?.country,
+          paymentMethod: opts?.paymentMethod,
+          mmoProvider: opts?.mmoProvider,
         },
       });
       if (error) throw new Error(error.message || "Erreur d'initialisation du paiement");
