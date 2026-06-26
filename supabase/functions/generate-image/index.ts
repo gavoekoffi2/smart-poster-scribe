@@ -1496,32 +1496,40 @@ serve(async (req) => {
     if (!referenceImage) {
       console.log("No reference image provided. Selecting best matching template...");
       try {
-        // Source de vérité unique : on utilise EXACTEMENT la même détection que pour les consignes IA.
+        // PRIORITÉ : domaine fourni par le client (sélection UI explicite) puis détection prompt.
         const promptLower = prompt.toLowerCase();
         const detected = detectDomainFromPrompt(prompt);
-        const bestDomain: string | null = detected && detected !== "other" ? detected : null;
+        const KNOWN_DOMAINS = new Set([
+          "formation","education","service","business_services","technology",
+          "health","realestate","church","event","music","sport","youtube",
+          "restaurant","ecommerce","fashion","other"
+        ]);
+        const clientDomain = typeof domain === "string" && KNOWN_DOMAINS.has(domain) ? domain : null;
+        const detectedClean = detected && detected !== "other" ? detected : null;
+        const bestDomain: string | null = clientDomain ?? detectedClean;
 
         // Familles strictes : seuls les domaines visuellement compatibles peuvent servir de fallback.
         // Restaurant / fashion / food NE SONT JAMAIS un fallback pour les autres domaines.
         const DOMAIN_FAMILY: Record<string, string[]> = {
-          formation:  ["formation", "education", "service", "event"],
-          education:  ["education", "formation", "service", "event"],
-          service:    ["service", "formation", "education", "technology", "event"],
-          technology: ["technology", "service", "formation", "education"],
-          health:     ["health", "service"],
-          realestate: ["realestate", "service"],
-          church:     ["church", "event"],
-          event:      ["event", "church", "music", "sport"],
-          music:      ["music", "event"],
-          sport:      ["sport", "event"],
-          youtube:    ["youtube", "event", "music"],
-          restaurant: ["restaurant", "ecommerce"],
-          ecommerce:  ["ecommerce", "restaurant", "fashion"],
-          fashion:    ["fashion", "ecommerce"],
-          other:      ["service", "event"],
+          formation:         ["formation", "education", "service", "event"],
+          education:         ["education", "formation", "service", "event"],
+          service:           ["service", "formation", "education", "technology", "event"],
+          business_services: ["business_services", "service", "formation", "technology", "education"],
+          technology:        ["technology", "service", "formation", "education"],
+          health:            ["health", "service", "education"],
+          realestate:        ["realestate", "service", "event"],
+          church:            ["church", "event"],
+          event:             ["event", "church", "music", "sport"],
+          music:             ["music", "event", "youtube"],
+          sport:             ["sport", "event"],
+          youtube:           ["youtube", "event", "music"],
+          restaurant:        ["restaurant", "ecommerce"],
+          ecommerce:         ["ecommerce", "restaurant", "fashion"],
+          fashion:           ["fashion", "ecommerce"],
+          other:             ["other", "service", "event"],
         };
 
-        console.log(`🎯 Template selection — detectedDomain="${detected}", bestDomain="${bestDomain}"`);
+        console.log(`🎯 Template selection — clientDomain="${clientDomain}", detected="${detected}", bestDomain="${bestDomain}"`);
 
         let tplCandidates: any[] = [];
         let fallbackFamilyUsed: string[] = [];
