@@ -646,6 +646,17 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
     "etudiant", "enseignement", "professeur", "cours", "examen", "diplôme", "diplome",
     "baccalauréat", "baccalaureat", "licence", "master", "doctorat"
   ],
+  service: [
+    "service", "prestation", "consulting", "conseil", "agence", "freelance",
+    "expertise", "accompagnement", "assistance", "réparation", "reparation",
+    "installation", "maintenance", "dépannage", "depannage", "plomberie",
+    "électricité", "electricite", "nettoyage", "transport", "logistique"
+  ],
+  business_services: [
+    "entreprise", "société", "societe", "b2b", "professionnel", "professionnels",
+    "corporate", "PME", "TPE", "startup b2b", "audit", "comptabilité", "comptabilite",
+    "juridique", "ressources humaines", "RH", "marketing digital"
+  ],
 };
 
 /**
