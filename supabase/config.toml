@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.geniuspay-webhook]
 verify_jwt = false
+
+[functions.detect-country]
+verify_jwt = false
