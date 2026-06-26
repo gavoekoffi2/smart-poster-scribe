@@ -36,8 +36,9 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Utilisateur non authentifié");
 
     const body = await req.json();
-    const { planSlug, returnUrl, customerPhone, customerName } = body as {
+    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider } = body as {
       planSlug?: string; returnUrl?: string; customerPhone?: string; customerName?: string;
+      country?: string; paymentMethod?: string; mmoProvider?: string;
     };
     if (!planSlug) throw new Error("Plan non spécifié");
 
@@ -92,14 +93,26 @@ serve(async (req) => {
         name: fullName,
         email: user.email || undefined,
         phone: customerPhone || (profile as { phone?: string } | null)?.phone || undefined,
+        country: country ? country.toUpperCase() : undefined,
       },
       metadata: {
         user_id: user.id,
         plan_id: plan.id,
         transaction_id: transaction.id,
         plan_slug: planSlug,
+        country: country || null,
+        requested_method: paymentMethod || null,
       },
     };
+
+    // Routage explicite : si un moyen de paiement précis est demandé, on l'envoie.
+    // Sinon, GeniusPay affiche sa page de checkout avec tous les moyens.
+    if (paymentMethod) {
+      gpRequest.payment_method = paymentMethod;
+      if (paymentMethod === "pawapay" && mmoProvider) {
+        gpRequest.mmo_provider = mmoProvider;
+      }
+    }
 
     console.log("[geniuspay] init payment", { tx: transaction.id, amount: plan.price_fcfa });
 

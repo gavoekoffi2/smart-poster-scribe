@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useGeoCountry } from "@/hooks/useGeoCountry";
+import { COUNTRIES, getCountry, type PaymentOption } from "@/lib/paymentRouting";
 import { toast } from "sonner";
-import { MessageCircle, CreditCard, Loader2 } from "lucide-react";
+import { MessageCircle, CreditCard, Loader2, MapPin } from "lucide-react";
 
 // Numéro WhatsApp destinataire des demandes d'abonnement
 const WHATSAPP_NUMBER = "22893708178";
@@ -20,6 +23,10 @@ interface SubscriptionRequestModalProps {
   planPrice?: string;
 }
 
+function methodKey(o: PaymentOption) {
+  return `${o.method}::${o.mmoProvider || ""}`;
+}
+
 export function SubscriptionRequestModal({
   open,
   onOpenChange,
@@ -29,10 +36,29 @@ export function SubscriptionRequestModal({
 }: SubscriptionRequestModalProps) {
   const { user } = useAuth();
   const { openGeniusPayCheckout } = useSubscription();
+  const { country, setCountry } = useGeoCountry();
+
+  const countryInfo = useMemo(() => getCountry(country), [country]);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [selectedMethodKey, setSelectedMethodKey] = useState<string>(() =>
+    methodKey(countryInfo.options[0])
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPayingOnline, setIsPayingOnline] = useState(false);
+
+  // Réinitialiser la méthode sélectionnée quand le pays change
+  useEffect(() => {
+    setSelectedMethodKey(methodKey(countryInfo.options[0]));
+    // Préremplir l'indicatif téléphone si vide
+    setPhone((current) => {
+      if (current && current.startsWith("+")) return current;
+      return countryInfo.dialCode + " ";
+    });
+  }, [country, countryInfo]);
+
+  const selectedOption: PaymentOption =
+    countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || countryInfo.options[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +66,6 @@ export function SubscriptionRequestModal({
 
     setIsSubmitting(true);
     try {
-      // Enregistrer la demande pour le suivi admin (best-effort)
       if (user) {
         await supabase.from("subscription_requests").insert({
           user_id: user.id,
@@ -50,9 +75,8 @@ export function SubscriptionRequestModal({
         });
       }
 
-      // Construire le message WhatsApp pré-rempli
       const priceLine = planPrice ? `\nTarif: ${planPrice}` : "";
-      const message = `Bonjour, je souhaite souscrire au plan *${planName}* de Graphiste GPT.\n\nNom: ${fullName.trim()}\nTéléphone: ${phone.trim()}${priceLine}\n\nMerci de me communiquer les instructions de paiement.`;
+      const message = `Bonjour, je souhaite souscrire au plan *${planName}* de Graphiste GPT.\n\nNom: ${fullName.trim()}\nTéléphone: ${phone.trim()}\nPays: ${countryInfo.flag} ${countryInfo.name}${priceLine}\n\nMerci de me communiquer les instructions de paiement.`;
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
       window.open(url, "_blank", "noopener,noreferrer");
@@ -76,12 +100,12 @@ export function SubscriptionRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Souscrire au plan {planName}</DialogTitle>
           <DialogDescription>
-            Remplissez vos coordonnées. Vous serez ensuite redirigé vers WhatsApp pour
-            finaliser votre abonnement avec notre équipe.
+            Choisissez votre pays — nous vous proposerons les moyens de paiement adaptés
+            (Mobile Money local ou Carte bancaire).
           </DialogDescription>
         </DialogHeader>
 
@@ -94,6 +118,54 @@ export function SubscriptionRequestModal({
               disabled
               className="bg-muted"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="country" className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" />
+              Pays
+            </Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger id="country">
+                <SelectValue>
+                  <span className="mr-2">{countryInfo.flag}</span>
+                  {countryInfo.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    <span className="mr-2">{c.flag}</span>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Moyen de paiement</Label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {countryInfo.options.map((opt) => {
+                const k = methodKey(opt);
+                const active = k === selectedMethodKey;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSelectedMethodKey(k)}
+                    className={`flex items-center justify-between rounded-md border px-3 py-2.5 text-sm transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    <span className="font-medium">{opt.label}</span>
+                    {active && <span className="text-xs text-primary">✓ Par défaut</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -113,19 +185,28 @@ export function SubscriptionRequestModal({
             <Input
               id="phone"
               type="tel"
-              placeholder="Ex: +228 90 00 00 00"
+              placeholder={`Ex: ${countryInfo.dialCode} 90 00 00 00`}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required
+              required={selectedOption.method !== "card"}
               maxLength={20}
             />
+            {selectedOption.method === "card" && (
+              <p className="text-xs text-muted-foreground">
+                Optionnel pour un paiement par carte.
+              </p>
+            )}
           </div>
 
           <Button
             type="button"
             onClick={async () => {
-              if (!fullName.trim() || !phone.trim()) {
-                toast.error("Renseignez votre nom et téléphone");
+              if (!fullName.trim()) {
+                toast.error("Renseignez votre nom");
+                return;
+              }
+              if (selectedOption.method !== "card" && !phone.trim()) {
+                toast.error("Renseignez votre téléphone Mobile Money");
                 return;
               }
               setIsPayingOnline(true);
@@ -133,6 +214,9 @@ export function SubscriptionRequestModal({
                 await openGeniusPayCheckout(planSlug, {
                   customerName: fullName.trim(),
                   customerPhone: phone.trim(),
+                  country: countryInfo.code,
+                  paymentMethod: selectedOption.method,
+                  mmoProvider: selectedOption.mmoProvider,
                 });
               } catch (err) {
                 console.error(err);
@@ -140,11 +224,11 @@ export function SubscriptionRequestModal({
                 setIsPayingOnline(false);
               }
             }}
-            disabled={isPayingOnline || isSubmitting || !fullName.trim() || !phone.trim()}
+            disabled={isPayingOnline || isSubmitting || !fullName.trim()}
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent text-primary-foreground"
           >
             {isPayingOnline ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-            {isPayingOnline ? "Redirection..." : "Payer en ligne (Wave, Orange, MTN, Carte)"}
+            {isPayingOnline ? "Redirection..." : `Payer avec ${selectedOption.label}`}
           </Button>
 
           <div className="relative my-2">
@@ -165,7 +249,7 @@ export function SubscriptionRequestModal({
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            Paiement en ligne sécurisé via GeniusPay, ou activation manuelle via WhatsApp.
+            Paiement en ligne sécurisé via GeniusPay (Mobile Money + Carte), ou activation manuelle via WhatsApp.
           </p>
         </form>
       </DialogContent>

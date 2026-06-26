@@ -574,6 +574,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           company_name: string | null
+          country: string | null
           cover_image_url: string | null
           created_at: string
           default_color_palette: string[] | null
@@ -595,6 +596,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           company_name?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string
           default_color_palette?: string[] | null
@@ -616,6 +618,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           company_name?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string
           default_color_palette?: string[] | null

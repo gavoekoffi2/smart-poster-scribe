@@ -1,63 +1,80 @@
+## Objectif
 
-# Intégration de GeniusPay
+Quand un utilisateur clique sur "S'abonner", le moyen de paiement proposé par défaut est adapté à son pays :
+- Cameroun → MTN MoMo / Orange Money Cameroun
+- Côte d'Ivoire → Wave / Orange CI / MTN CI
+- Sénégal → Wave / Orange / Free
+- Togo, Bénin, Burkina, Mali… → Moov / Orange / MTN du pays
+- RDC, Kenya, Ouganda… → opérateur local (Airtel, M-Pesa, MTN)
+- Europe / USA / autres → Carte bancaire (Visa/Mastercard via GeniusPay)
 
-Ajout de GeniusPay (https://geniuspay.ci) en tant qu'agrégateur de paiement pour les abonnements, à côté des intégrations existantes (Moneroo, FedaPay). On utilisera le **mode Checkout hébergé** (recommandé par GeniusPay) — le client choisit son moyen de paiement (Wave, Orange, MTN, Moov, Airtel, Carte, PawaPay…) sur la page GeniusPay.
+L'utilisateur peut toujours changer le pays / moyen avant de payer.
 
-## 1. Secrets à ajouter (je te les demanderai via le formulaire sécurisé)
+## Faisabilité
 
-- `GENIUSPAY_API_KEY` — clé publique (`pk_sandbox_...` ou `pk_live_...`)
-- `GENIUSPAY_API_SECRET` — clé secrète (`sk_sandbox_...` ou `sk_live_...`)
-- `GENIUSPAY_WEBHOOK_SECRET` — secret webhook (`whsec_...`), obtenu en créant un webhook côté GeniusPay vers l'URL de l'edge function
+Oui — GeniusPay supporte nativement :
+- `customer.country` (ISO2 : CI, SN, CM, TG, CD…) pour router vers le bon opérateur
+- `payment_method` (`wave`, `orange_money`, `mtn_money`, `moov_money`, `airtel_money`, `pawapay`, `card`)
+- `mmo_provider` pour PawaPay (`ORANGE_CMR`, `MTN_MOMO_CMR`, `ORANGE_SEN`…)
+- `card` pour les paiements internationaux (Visa/Mastercard)
 
-## 2. Edge function `create-geniuspay-payment`
+→ Pas besoin d'ajouter Stripe pour l'Europe : la carte bancaire passe déjà par GeniusPay.
 
-Nouvelle edge function (Lovable Cloud) qui :
-- Vérifie le JWT utilisateur
-- Charge le plan (`subscription_plans` par `slug`), refuse `free`/`enterprise`
-- Crée une ligne `payment_transactions` (status `pending`, `payment_method='geniuspay'`)
-- Appelle `POST https://geniuspay.ci/api/v1/merchant/payments` avec :
-  - `amount` = `plan.price_fcfa`, `currency: 'XOF'`
-  - `description`, `customer` (name/email/phone)
-  - `success_url` / `error_url` vers `/account?payment=success|failed`
-  - `metadata`: `{ user_id, plan_id, transaction_id, plan_slug }`
-  - **pas** de `payment_method` → renvoie un `checkout_url`
-- Met à jour la transaction avec la `reference` GeniusPay (stockée dans `metadata.geniuspay_reference`)
-- Retourne `{ checkoutUrl, transactionId }`
+## Plan
 
-## 3. Edge function `geniuspay-webhook` (publique, `verify_jwt = false`)
+### 1. Détection automatique du pays
+Hook `useGeoCountry` qui détermine le pays dans cet ordre :
+1. Pays sauvegardé dans le profil (`profiles.country`)
+2. Préfixe du numéro de téléphone du profil (+237 → CM, +225 → CI, +221 → SN…)
+3. Géolocalisation IP via une edge function légère `detect-country` utilisant l'en-tête `cf-ipcountry` / `x-vercel-ip-country` ou un fallback `https://ipapi.co/json`
+4. Langue navigateur (fr-FR → FR, en-US → US…) en dernier recours
 
-- Lit les headers `X-Webhook-Signature`, `X-Webhook-Timestamp`, `X-Webhook-Event`
-- Vérifie la signature : `HMAC-SHA256(timestamp + "." + rawBody, GENIUSPAY_WEBHOOK_SECRET)` avec `timingSafeEqual`
-- Vérifie que le timestamp est récent (< 5 min) pour bloquer les rejeux
-- Gère les événements :
-  - `payment.success` → marque la transaction `completed` + active/renouvelle l'abonnement (réutilise la logique existante `admin_grant_subscription` style, ou met à jour `user_subscriptions` directement avec `credits_per_month` du plan)
-  - `payment.failed` / `payment.cancelled` / `payment.expired` → marque la transaction `failed`/`cancelled`/`expired`
-  - `payment.refunded` → marque `refunded` (et éventuellement notification)
-- Idempotence : ignore si la transaction est déjà `completed`
-- Le trigger SQL `record_referral_commission` existant prendra automatiquement la commission affilié sur passage à `completed`
+### 2. Mapping pays → moyen de paiement par défaut
+Table `src/lib/paymentRouting.ts` :
 
-## 4. UI — choix du fournisseur
+```text
+CM, GA, CG, CF (XAF)           → pawapay + mmo_provider auto (Orange/MTN)
+CI                              → wave (par défaut), orange_money, mtn_money, moov_money
+SN                              → wave, orange_money, pawapay (Free)
+TG, BJ, BF, ML, NE, GW (XOF)   → moov_money, orange_money, mtn_money
+CD                              → airtel_money, orange_money (pawapay VODACOM)
+KE, UG, RW                      → pawapay (M-Pesa / MTN / Airtel)
+GH, NG                          → paystack
+Reste du monde (EU, US, etc.)  → card
+```
 
-Dans `src/hooks/useSubscription.ts` (et page abonnement) :
-- Ajout d'un paramètre `provider: 'geniuspay' | 'moneroo'` dans `createCheckout`
-- Sur la page tarifs/abonnement, ajout d'une option « Payer avec GeniusPay » (Wave, Orange, MTN, Moov, carte, PawaPay) à côté de l'option Moneroo existante
-- Redirection vers le `checkout_url` retourné
+### 3. UI du modal de paiement (`SubscriptionRequestModal.tsx`)
+- Affichage en haut : "Paiement depuis : 🇨🇲 Cameroun" avec menu déroulant pour changer
+- Liste des moyens de paiement disponibles pour ce pays, le premier sélectionné par défaut (logo + nom)
+- Champ téléphone pré-rempli/validé selon le pays
+- Pour les pays "carte" : on affiche directement "💳 Carte bancaire (Visa / Mastercard)"
 
-## 5. Configuration côté GeniusPay (à faire par toi après déploiement)
+### 4. Edge function `create-geniuspay-payment`
+Accepter et transmettre 3 nouveaux paramètres optionnels :
+- `country` (ISO2) → `customer.country`
+- `paymentMethod` → `payment_method`
+- `mmoProvider` → `mmo_provider`
 
-Je te donnerai l'URL exacte du webhook à coller dans le dashboard GeniusPay (Settings → Webhooks), avec les events `payment.success`, `payment.failed`, `payment.cancelled`, `payment.expired`, `payment.refunded`. À la création tu récupéreras le `whsec_...` à me transmettre via le formulaire sécurisé.
+Si `paymentMethod` est omis → comportement actuel (page checkout GeniusPay générique).
+
+### 5. Persistance
+Sauvegarder le pays choisi dans `profiles.country` (ajout de la colonne si absente) pour pré-remplir les prochains paiements.
 
 ## Détails techniques
 
-- Pas de modification de schéma DB : on réutilise `payment_transactions` (`payment_method = 'geniuspay'`, référence stockée dans `metadata.geniuspay_reference`).
-- Pas de SDK : appels HTTP directs avec `fetch` + headers `X-API-Key` / `X-API-Secret`.
-- Signature webhook vérifiée avec `crypto.subtle.importKey` + `sign('HMAC')` puis comparaison constante.
-- Toujours répondre `200` au webhook après traitement réussi (sinon GeniusPay rejouera).
-- Logs concis dans la console des edge functions pour diagnostic.
+- Pas de nouveau secret, pas de nouvelle dépendance
+- Aucune modification de Stripe (non intégré, pas nécessaire — GeniusPay `card` couvre l'international)
+- Migration SQL minimale : `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS country text;`
+- Fichiers touchés :
+  - `src/lib/paymentRouting.ts` (nouveau)
+  - `src/hooks/useGeoCountry.ts` (nouveau)
+  - `supabase/functions/detect-country/index.ts` (nouveau, très léger)
+  - `src/components/pricing/SubscriptionRequestModal.tsx` (UI sélecteur)
+  - `src/hooks/useSubscription.ts` (passer country/paymentMethod)
+  - `supabase/functions/create-geniuspay-payment/index.ts` (forwarder les nouveaux champs)
+  - 1 migration SQL pour la colonne `country`
 
-## Ordre d'exécution une fois en build mode
+## Limites à savoir
 
-1. Te demander les 3 secrets via `add_secret` (en deux temps : API key + secret d'abord, webhook secret après que tu l'aies créé côté GeniusPay).
-2. Créer les deux edge functions.
-3. Mettre à jour `useSubscription` + UI de paiement.
-4. Te communiquer l'URL du webhook à configurer dans le dashboard GeniusPay.
+- GeniusPay convertit automatiquement XAF/CDF/KES vers XOF côté gateway ; les montants restent affichés en FCFA dans l'app (déjà le cas).
+- La détection IP n'est pas fiable à 100% (VPN, etc.) → l'utilisateur peut toujours changer le pays manuellement avant de payer.
