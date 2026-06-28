@@ -33,6 +33,9 @@ import { CreditBalance } from "@/components/credits/CreditBalance";
 import { ColorPalette } from "@/components/chat/ColorPalette";
 import { AffiliateTab } from "@/components/affiliate/AffiliateTab";
 import ApiKeysTab from "@/components/account/ApiKeysTab";
+import { StatsTab } from "@/components/account/StatsTab";
+import { ApiUsageTab } from "@/components/account/ApiUsageTab";
+import { BarChart3, Activity } from "lucide-react";
 
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,7 +79,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     const t = searchParams.get("tab");
-    if (t && ["preferences","subscription","history","affiliation","api"].includes(t)) {
+    if (t && ["preferences","subscription","history","affiliation","api","stats","api-usage"].includes(t)) {
       setActiveTab(t);
     }
   }, [searchParams]);
@@ -429,9 +432,17 @@ export default function AccountPage() {
               <Gift className="w-4 h-4" />
               Affiliation
             </TabsTrigger>
+            <TabsTrigger value="stats" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Statistiques
+            </TabsTrigger>
             <TabsTrigger value="api" className="gap-2">
               <KeyRound className="w-4 h-4" />
               API
+            </TabsTrigger>
+            <TabsTrigger value="api-usage" className="gap-2">
+              <Activity className="w-4 h-4" />
+              API Usage
             </TabsTrigger>
           </TabsList>
 
