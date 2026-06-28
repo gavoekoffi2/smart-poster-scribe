@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.detect-country]
 verify_jwt = false
+
+[functions.send-transactional-email]
+verify_jwt = false
+
+[functions.request-affiliate-payout]
+verify_jwt = true
