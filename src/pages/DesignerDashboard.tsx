@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Clock
 } from "lucide-react";
+import { DesignerPayoutsCard } from "@/components/designer/DesignerPayoutsCard";
 
 interface DesignerProfile {
   id: string;
