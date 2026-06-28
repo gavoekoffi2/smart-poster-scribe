@@ -1,56 +1,105 @@
-## Objectif
 
-1. Tout utilisateur qui s'inscrit via un lien `?ref=XXXX` bénéficie automatiquement de **-10%** sur son premier (et seul) abonnement payant.
-2. L'affilié continue de toucher **30% de commission récurrente** (déjà en place) — calculée sur le montant **réellement payé** par le filleul.
-3. L'affilié voit dans son tableau de bord la **liste de ses filleuls** avec leur statut (inscrit / abonné / payant) en plus des stats déjà présentes.
-4. Mettre en avant la remise dans la communication (lien copié, page d'inscription).
+# Programme Graphistes Partenaires
 
-## 1. Remise filleul -10%
+## Modèle économique retenu
 
-- Lecture du champ `profiles.referred_by` au moment du checkout dans `src/hooks/useSubscription.ts` (méthodes `openFedaPayCheckout` et le flux GeniusPay correspondant).
-- Si `referred_by` est non nul **et** qu'aucun paiement `completed` n'existe encore pour ce user (première souscription), appliquer `priceFcfa * 0.9` et `priceUsd * 0.9`.
-- Enregistrer la remise dans `payment_transactions.metadata` : `{ referral_discount: 0.10, referred_by: '<code>' }` pour traçabilité.
-- Côté edge function `create-geniuspay-payment` : accepter un `discount_rate` optionnel et l'appliquer aux montants envoyés à GeniusPay (cohérent avec ce que voit l'utilisateur).
-- La commission 30% (`record_referral_commission`) sera naturellement calculée sur `amount_usd` du transaction record, donc sur le **montant remisé** — c'est le comportement voulu.
+- **Royalty** : 20% (paramétrable par l'admin) de la valeur monétaire d'une génération, versés au graphiste à chaque utilisation de son template.
+- **Valeur d'une génération** : 0,20 $ par défaut (paramétrable). Indépendant du plan de l'abonné — un illimité génère = le graphiste touche pareil.
+- **Clone strict forcé** : tout template provenant d'un graphiste partenaire active automatiquement le mode pixel-perfect (`isCloneMode = true`). Le design reste intact, seul le texte/contenu de l'utilisateur est injecté.
+- **Payouts** : manuels, demande déclenchée par le graphiste depuis son dashboard à partir de 10 000 FCFA, validation et marquage "payé" par l'admin.
 
-## 2. Affichage de la remise
+## Ce qui existe déjà (à ne pas refaire)
 
-- `src/pages/AuthPage.tsx` : bandeau vert "🎁 Tu bénéficies de -10% sur ton premier abonnement grâce à ton parrain" si `?ref=` présent dans l'URL ou dans localStorage.
-- `src/pages/PricingPage.tsx` : afficher le prix barré + prix -10% sur chaque plan si l'utilisateur est filleul éligible.
-- `src/components/affiliate/AffiliateTab.tsx` : reformuler le texte du lien — "Vos filleuls bénéficient de **-10%**, vous touchez **30%** à vie".
+- Tables `partner_designers`, `reference_templates.designer_id/earnings/usage_count`, `template_earnings`.
+- Pages : `/designer/register`, `/designer/dashboard`, `/designer/upload`, `/designer/profile`, `/designer/:id` (public).
+- Admin : `/admin/designers` pour vérifier les graphistes.
+- Route protégée `DesignerRoute`.
 
-## 3. Tableau de bord affilié — liste des filleuls
+## Ce qui manque et qu'on va construire
 
-Ajouter une section "Mes filleuls" dans `AffiliateTab.tsx` montrant :
+### 1. Paramètres globaux (admin)
+Nouvelle table `platform_settings` (clé/valeur) avec deux entrées :
+- `designer_royalty_rate` (défaut `0.20`)
+- `generation_unit_value_usd` (défaut `0.20`)
+Écran `/admin/settings` minimal pour les modifier.
 
-| Filleul | Inscrit le | Statut | Plan | Vos gains |
-|---|---|---|---|---|
+### 2. Crédit automatique des royalties
+- Trigger SQL `on_image_job_completed` : quand un `image_jobs` passe à `completed` ET que le template utilisé a un `designer_id` non null :
+  - calcule `royalty = unit_value * rate`
+  - insère dans `template_earnings`
+  - incrémente `reference_templates.earnings` et `reference_templates.usage_count`
+  - incrémente `partner_designers.total_earnings`
+- Idempotent (clé unique sur `job_id` dans `template_earnings`).
 
-- Récupération via une nouvelle SQL function `get_affiliate_referrals(p_affiliate_id)` (security definer) qui joint `profiles` (filtrés sur `referred_by = code`) ↔ `user_subscriptions` ↔ `subscription_plans` ↔ somme `referral_commissions`. Évite d'exposer la table profiles côté RLS.
-- Statut : `Inscrit` (pas d'abo payant), `Essai` (plan free), `Abonné` (plan payant actif), `Expiré`.
-- Anonymisation légère : prénom + première lettre du nom (ex: "Jean K."), pour la confidentialité.
+### 3. Tableau de bord graphiste enrichi
+Dans `/designer/dashboard` :
+- KPI : gains totaux, gains du mois, solde disponible, nombre d'utilisations
+- Tableau "Mes créations" avec usage_count + earnings par template
+- Bouton "Activer / Désactiver" un template
+- Graphique simple "Utilisations sur 30 jours"
+- Section "Payouts" : solde, bouton "Demander un retrait" (≥ 10 000 FCFA), historique
 
-## 4. Détails techniques
+### 4. Système de payouts
+Nouvelle table `designer_payout_requests` (designer_id, amount, status pending/paid/rejected, payment_method, payment_details, admin_note, paid_at).
+- Le graphiste remplit ses coordonnées (Mobile Money / IBAN) et soumet
+- Le solde disponible = `total_earnings` - somme des payouts validés/en attente
+- Admin valide depuis `/admin/designer-payouts` (nouvelle page)
 
-- **Migration SQL** :
-  - Fonction `get_affiliate_referrals(uuid)` retournant `(referral_name text, joined_at timestamptz, status text, plan_name text, total_earned numeric)`.
-  - Vérification que l'appelant est bien le propriétaire de l'`affiliate_id`.
-- **Hook** : étendre `useAffiliate` avec `referrals: Referral[]` chargés en parallèle des commissions.
-- **Eligibilité remise** : helper `useReferralDiscount()` qui retourne `{ eligible, rate, code }` en croisant `profile.referred_by` et l'absence de paiement `completed` précédent.
-- **Anti-abus** : la remise s'applique uniquement à la **première transaction completed** du user — vérifiée côté hook et re-vérifiée dans la webhook si nécessaire (pas d'altération du webhook ici, le contrôle frontend suffit puisque le user ne peut pas modifier son `referred_by` après inscription).
+### 5. Upload : clone strict par défaut
+Dans `/designer/upload` : checkbox pré-cochée et verrouillée "Mes templates sont reproduits à l'identique" + texte d'info expliquant la protection.
 
-## Fichiers touchés
+### 6. Génération : forcer le clone pour les templates partenaires
+- L'edge function de génération détecte `template.designer_id IS NOT NULL` → force `isCloneMode = true` et désactive les variations créatives, quels que soient les paramètres utilisateur.
+- Affichage dans `/app` : badge "Design original — clone exact" et nom + lien profil du graphiste sous le template choisi.
 
-- `src/hooks/useSubscription.ts` — appliquer la remise
-- `src/hooks/useAffiliate.ts` — charger les filleuls + helper discount
-- `src/components/affiliate/AffiliateTab.tsx` — nouvelle section filleuls + texte
-- `src/pages/AuthPage.tsx` — bandeau remise
-- `src/pages/PricingPage.tsx` — prix barré pour filleuls
-- `supabase/functions/create-geniuspay-payment/index.ts` — paramètre `discount_rate`
-- Migration : fonction `get_affiliate_referrals`
+### 7. Marketplace : section "Par nos graphistes"
+- Filtre dédié dans `TemplatesMarketplace` pour afficher uniquement les templates `designer_id IS NOT NULL`.
+- Carte template affiche avatar + nom du graphiste, cliquable vers `/designer/:id`.
 
-## Hors-scope
+### 8. Onboarding et visibilité
+- Lien "Devenir graphiste partenaire" dans le footer + page d'accueil section dédiée
+- Bouton "Espace graphiste" dans le menu utilisateur si le user a un profil `partner_designers`
 
-- Modification du taux 30% (déjà en place).
-- Multiples codes promo cumulables.
-- Remise sur renouvellements (seulement le premier abonnement).
+## Détails techniques
+
+### Nouvelle table `platform_settings`
+```text
+key text primary key, value jsonb, updated_by uuid, updated_at timestamptz
+GRANT SELECT public, ALL service_role ; RLS lecture publique, écriture super_admin/admin
+```
+
+### Nouvelle table `designer_payout_requests`
+```text
+id, designer_id (fk partner_designers), amount_usd numeric, amount_fcfa integer,
+status enum(pending|approved|paid|rejected), payment_method text, payment_details jsonb,
+admin_note text, requested_at, processed_at, processed_by uuid
+GRANT SELECT/INSERT au designer propriétaire ; ALL service_role ; UPDATE admins
+```
+
+### Ajout à `template_earnings`
+Colonne `job_id uuid UNIQUE` + `royalty_rate numeric` + `unit_value_usd numeric` pour traçabilité.
+
+### Trigger
+```text
+AFTER UPDATE OF status ON image_jobs
+WHEN NEW.status='completed' AND OLD.status<>'completed'
+→ fonction record_designer_royalty(job_id)
+```
+Lit le `template_id` utilisé dans le job, vérifie `designer_id`, lit les settings, insère earning.
+
+### Flag clone strict côté edge function
+Dans le builder de prompt, après lecture du template :
+```text
+if (template.designer_id) { params.isCloneMode = true; params.allowVariations = false; }
+```
+
+## Découpage en livraisons
+
+1. **Backend royalties** : migration settings + payout_requests + trigger + colonnes traçabilité.
+2. **Dashboard graphiste v2** : KPI, tableau templates, graph, section payouts.
+3. **Admin** : page settings + page payouts.
+4. **Génération** : clone strict forcé pour templates partenaires + badge UI dans `/app`.
+5. **Marketplace** : filtre "Par nos graphistes" + crédit graphiste sur les cartes.
+6. **Visibilité onboarding** : footer, landing, menu user.
+
+Je commencerai par 1 → 2 → 4 dans la première itération de build (cœur fonctionnel), puis 3 → 5 → 6 dans une seconde passe.

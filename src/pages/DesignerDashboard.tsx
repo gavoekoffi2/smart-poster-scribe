@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Clock
 } from "lucide-react";
+import { DesignerPayoutsCard } from "@/components/designer/DesignerPayoutsCard";
 
 interface DesignerProfile {
   id: string;
@@ -257,6 +258,22 @@ const DesignerDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Bandeau d'information sur le clone strict */}
+        <Card className="mb-6 border-primary/30 bg-primary/5">
+          <CardContent className="py-4 text-sm">
+            <strong>🎨 Reproduction fidèle activée.</strong> Pour chaque template que vous publiez,
+            l'IA reproduit le design <strong>à l'identique</strong> : couleurs, mise en page, typographies,
+            composition. Seuls les contenus (textes, logos, photos de l'utilisateur) sont remplacés.
+            Vous recevez une <strong>royalty automatique</strong> à chaque génération à partir de votre template.
+          </CardContent>
+        </Card>
+
+        {/* Gains & retraits */}
+        <div className="mb-8">
+          <DesignerPayoutsCard designerId={profile.id} />
+        </div>
+
 
         {/* Templates Section */}
         <Tabs defaultValue="all" className="space-y-4">
