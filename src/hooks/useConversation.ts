@@ -1456,6 +1456,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             contentImage: state.contentImage || undefined,
             secondaryImages: modSecondaryImages.length > 0 ? modSecondaryImages : undefined,
             isCloneMode: true,
+            templateId: cloneTemplate?.id,
             isModification: true,
             modificationRequest: request,
             domain: state.domain || undefined,
