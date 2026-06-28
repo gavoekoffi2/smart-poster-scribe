@@ -149,10 +149,75 @@ export function AffiliateTab() {
             Copier
           </Button>
         </div>
+        <div className="mt-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+          <p className="text-xs text-foreground">
+            🎁 <strong>Argument commercial :</strong> vos filleuls bénéficient automatiquement de <strong className="text-green-500">-10%</strong> sur leur premier abonnement via ce lien. Vous touchez <strong className="text-primary">30%</strong> de commission récurrente à chaque paiement, à vie.
+          </p>
+        </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Partagez ce lien sur vos réseaux sociaux, WhatsApp, ou par email. Toute personne qui s'inscrit et s'abonne via ce lien vous rapporte 30% de commission, à chaque paiement.
+          Partagez ce lien sur vos réseaux sociaux, WhatsApp, ou par email.
         </p>
       </motion.div>
+
+      {/* Mes filleuls */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+        className="p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50"
+      >
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-primary" />
+          Mes filleuls ({referrals.length})
+        </h3>
+
+        {referrals.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>Aucun filleul pour le moment</p>
+            <p className="text-sm mt-1">Partagez votre lien pour inviter votre communauté !</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {referrals.map((r, idx) => (
+              <div
+                key={`${r.referral_name}-${idx}`}
+                className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
+                    {r.referral_name?.[0]?.toUpperCase() || "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {r.referral_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Inscrit le {format(new Date(r.joined_at), "d MMM yyyy", { locale: fr })}
+                      {r.plan_name && ` • ${r.plan_name}`}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    r.status === "active"
+                      ? "bg-green-500/10 text-green-500"
+                      : r.status === "pending"
+                        ? "bg-yellow-500/10 text-yellow-500"
+                        : "bg-muted text-muted-foreground"
+                  }`}>
+                    {r.status === "active" ? "Abonné" : r.status === "pending" ? "En attente" : "Inscrit"}
+                  </span>
+                  {Number(r.total_earned) > 0 && (
+                    <span className="text-xs font-semibold text-green-500">
+                      +${Number(r.total_earned).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       {/* Commissions History */}
       <motion.div
