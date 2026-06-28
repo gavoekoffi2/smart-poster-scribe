@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 type Setting = { key: string; value: any };
 
