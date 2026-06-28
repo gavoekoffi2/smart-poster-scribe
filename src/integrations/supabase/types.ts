@@ -1147,6 +1147,16 @@ export type Database = {
             Returns: Json
           }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
+      get_affiliate_referrals: {
+        Args: { p_affiliate_id: string }
+        Returns: {
+          joined_at: string
+          plan_name: string
+          referral_name: string
+          status: string
+          total_earned: number
+        }[]
+      }
       get_or_create_user_subscription: {
         Args: { p_user_id: string }
         Returns: {
