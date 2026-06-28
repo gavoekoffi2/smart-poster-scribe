@@ -23,6 +23,7 @@ export function Footer() {
       { label: "Confidentialité", href: "/privacy" },
       { label: "CGU", href: "/terms" },
       { label: "Mentions légales", href: "/legal" },
+      { label: "Statut des services", href: "/status" },
     ],
   };
 

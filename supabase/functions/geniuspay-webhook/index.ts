@@ -177,6 +177,24 @@ serve(async (req) => {
             });
           }
         }
+        try {
+          if (targetUserId) {
+            const { data: prof } = await supabase
+              .from("profiles").select("email, full_name").eq("user_id", targetUserId).maybeSingle();
+            const { data: plan2 } = await supabase
+              .from("subscription_plans").select("name, credits_per_month").eq("id", targetPlanId!).maybeSingle();
+            if (prof?.email) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({
+                  to: prof.email, template: "payment_succeeded",
+                  data: { plan: plan2?.name || "Pro", credits: plan2?.credits_per_month, name: prof.full_name },
+                }),
+              });
+            }
+          }
+        } catch (_) { /* ignore */ }
         break;
       }
       case "payment.failed":
@@ -195,6 +213,21 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", tx.id);
+        try {
+          if (eventName === "payment.failed") {
+            const uid = userId || tx.user_id;
+            if (uid) {
+              const { data: prof } = await supabase.from("profiles").select("email").eq("user_id", uid).maybeSingle();
+              if (prof?.email) {
+                await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-transactional-email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                  body: JSON.stringify({ to: prof.email, template: "payment_failed", data: {} }),
+                });
+              }
+            }
+          }
+        } catch (_) {}
         break;
       }
       default:

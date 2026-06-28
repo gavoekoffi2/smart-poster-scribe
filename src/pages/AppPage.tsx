@@ -8,6 +8,8 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { CreditBalance } from "@/components/credits/CreditBalance";
+import { NotificationBell } from "@/components/NotificationBell";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { QualityToggle } from "@/components/QualityToggle";
 import { QualityChoice } from "@/components/QualityChoice";
 import { UpgradeModal } from "@/components/credits/UpgradeModal";
@@ -627,6 +629,7 @@ export default function AppPage() {
             {isAuthenticated && (
               <CreditBalance compact onUpgrade={() => navigate("/pricing")} />
             )}
+            {isAuthenticated && <NotificationBell />}
             <Button 
               variant="ghost" 
               size="sm" 
@@ -1158,6 +1161,9 @@ export default function AppPage() {
         }}
         creditError={creditError}
       />
+
+      {/* Onboarding (1st visit) */}
+      <OnboardingTour />
 
       {/* Tutorial Overlay */}
       {shouldShowTutorial && user && !tutorialLoading && (

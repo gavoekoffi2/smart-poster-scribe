@@ -286,6 +286,13 @@ export default function AuthPage() {
         return;
       }
 
+      // Fire welcome email (best-effort)
+      try {
+        supabase.functions.invoke("send-transactional-email", {
+          body: { to: email, template: "welcome", data: { name: fullName, credits: 3 } },
+        });
+      } catch (_) {}
+
       // Check if email confirmation is required
       if (data.user && !data.session) {
         // Email confirmation required

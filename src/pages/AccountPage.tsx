@@ -37,6 +37,7 @@ import ApiKeysTab from "@/components/account/ApiKeysTab";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { NotificationBell } from "@/components/NotificationBell";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -370,6 +371,7 @@ export default function AccountPage() {
               <Pencil className="w-4 h-4" />
               {editMode ? "Annuler" : "Modifier"}
             </Button>
+            <NotificationBell />
             <Button
               variant="ghost"
               size="sm"

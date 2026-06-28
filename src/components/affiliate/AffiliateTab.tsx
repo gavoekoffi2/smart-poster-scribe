@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useAffiliate } from "@/hooks/useAffiliate";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { AffiliatePayoutCard } from "@/components/affiliate/AffiliatePayoutCard";
 
 export function AffiliateTab() {
   const {
@@ -126,6 +127,9 @@ export function AffiliateTab() {
           <p className="text-xs text-muted-foreground">récurrente à vie</p>
         </motion.div>
       </div>
+
+      {/* Payouts */}
+      <AffiliatePayoutCard affiliateId={affiliate.id} />
 
       {/* Referral Link */}
       <motion.div

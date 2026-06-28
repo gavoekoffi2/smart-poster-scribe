@@ -30,12 +30,15 @@ const AdminFeedback = lazy(() => import("./pages/AdminFeedback"));
 const AdminRoles = lazy(() => import("./pages/AdminRoles"));
 const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 const AdminContact = lazy(() => import("./pages/AdminContact"));
+const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 // Lazy load designer pages
 const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
 const DesignerUpload = lazy(() => import("./pages/DesignerUpload"));
 const DesignerProfile = lazy(() => import("./pages/DesignerProfile"));
 const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
+const StatusPage = lazy(() => import("./pages/StatusPage"));
 
 
 const queryClient = new QueryClient();
@@ -73,6 +76,8 @@ const App = () => (
           <Route path="/admin/roles" element={<AdminRoute><AdminRoles /></AdminRoute>} />
           <Route path="/admin/affiliates" element={<AdminRoute><AdminAffiliates /></AdminRoute>} />
           <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+          <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
 
           {/* Designer routes with guard */}
           <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
@@ -83,6 +88,7 @@ const App = () => (
 
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/docs/api" element={<ApiDocsPage />} />
+          <Route path="/status" element={<StatusPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />

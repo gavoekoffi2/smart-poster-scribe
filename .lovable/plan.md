@@ -1,105 +1,95 @@
 
-# Programme Graphistes Partenaires
+# Plan d'implémentation — Tous les chantiers (Sprints 1 à 5)
 
-## Modèle économique retenu
+Je vais exécuter les 12 améliorations identifiées dans l'audit, sans interruption, dans l'ordre logique de dépendances. Chaque sprint est livré avec son backend, son front et ses tests visuels.
 
-- **Royalty** : 20% (paramétrable par l'admin) de la valeur monétaire d'une génération, versés au graphiste à chaque utilisation de son template.
-- **Valeur d'une génération** : 0,20 $ par défaut (paramétrable). Indépendant du plan de l'abonné — un illimité génère = le graphiste touche pareil.
-- **Clone strict forcé** : tout template provenant d'un graphiste partenaire active automatiquement le mode pixel-perfect (`isCloneMode = true`). Le design reste intact, seul le texte/contenu de l'utilisateur est injecté.
-- **Payouts** : manuels, demande déclenchée par le graphiste depuis son dashboard à partir de 10 000 FCFA, validation et marquage "payé" par l'admin.
+---
 
-## Ce qui existe déjà (à ne pas refaire)
+## Sprint 1 — Emails transactionnels + Relance promo (items 2, 3)
 
-- Tables `partner_designers`, `reference_templates.designer_id/earnings/usage_count`, `template_earnings`.
-- Pages : `/designer/register`, `/designer/dashboard`, `/designer/upload`, `/designer/profile`, `/designer/:id` (public).
-- Admin : `/admin/designers` pour vérifier les graphistes.
-- Route protégée `DesignerRoute`.
+1. Activer l'infrastructure email Lovable (domaine + queue pgmq + cron).
+2. Scaffolder les fonctions `send-transactional-email`, `handle-email-unsubscribe`, `process-email-queue`.
+3. Créer 6 templates React Email :
+   - `welcome` — envoyé au signup
+   - `payment-receipt` — déclenché par `geniuspay-webhook` sur `completed`
+   - `low-credits` — quand `credits_remaining ≤ 4`
+   - `subscription-expiring` — J-3 avant `current_period_end`
+   - `payout-approved` — graphiste/affilié
+   - `referral-signup` — affilié notifié d'un nouveau filleul
+4. Table `pricing_offers` (user_id, code, discount_pct, expires_at, used_at) + RLS.
+5. Persister l'offre `BOOST20` du `UpgradeModal` en DB, l'appliquer côté `create-geniuspay-payment` si non expirée.
+6. Cron quotidien `cron-low-credits-alerts` + `cron-subscription-expiring`.
 
-## Ce qui manque et qu'on va construire
+## Sprint 2 — Marketplace graphistes : finir le programme (item 6)
 
-### 1. Paramètres globaux (admin)
-Nouvelle table `platform_settings` (clé/valeur) avec deux entrées :
-- `designer_royalty_rate` (défaut `0.20`)
-- `generation_unit_value_usd` (défaut `0.20`)
-Écran `/admin/settings` minimal pour les modifier.
+7. Page `/admin/settings` : éditer `designer_royalty_rate` + `generation_unit_value_usd` (table `platform_settings` existe déjà).
+8. Page `/admin/designer-payouts` : liste des `designer_payout_requests`, actions Approuver/Payer/Rejeter + note admin.
+9. `TemplatesMarketplace` : nouveau filtre "Par nos graphistes" + crédit auteur sur chaque carte (avatar + nom cliquable → `/designer/:id`).
+10. Lien "Devenir graphiste partenaire" dans `Footer`, section dédiée sur `LandingPage`, entrée "Espace graphiste" dans le menu user si profil `partner_designers` existe.
+11. Dans `/app` : badge "Design original — clone exact" + lien profil graphiste sous le template choisi.
 
-### 2. Crédit automatique des royalties
-- Trigger SQL `on_image_job_completed` : quand un `image_jobs` passe à `completed` ET que le template utilisé a un `designer_id` non null :
-  - calcule `royalty = unit_value * rate`
-  - insère dans `template_earnings`
-  - incrémente `reference_templates.earnings` et `reference_templates.usage_count`
-  - incrémente `partner_designers.total_earnings`
-- Idempotent (clé unique sur `job_id` dans `template_earnings`).
+## Sprint 3 — Affiliation complète + Notifications in-app (items 5, 7)
 
-### 3. Tableau de bord graphiste enrichi
-Dans `/designer/dashboard` :
-- KPI : gains totaux, gains du mois, solde disponible, nombre d'utilisations
-- Tableau "Mes créations" avec usage_count + earnings par template
-- Bouton "Activer / Désactiver" un template
-- Graphique simple "Utilisations sur 30 jours"
-- Section "Payouts" : solde, bouton "Demander un retrait" (≥ 10 000 FCFA), historique
+12. Table `affiliate_payout_requests` (calquée sur designer) + RPC `get_affiliate_balance` + section "Mes gains & retraits" dans `AffiliateTab` (seuil 10 000 FCFA).
+13. Page `/admin/affiliate-payouts` (mêmes patterns que designer payouts).
+14. Table `notifications` (user_id, type, payload jsonb, read_at) + Realtime channel.
+15. Composant `<NotificationBell />` dans `Navbar` (badge non-lus, dropdown, marquage lu).
+16. Émettre des notifications sur : génération async terminée, commission affilié reçue, payout payé, abonnement activé.
 
-### 4. Système de payouts
-Nouvelle table `designer_payout_requests` (designer_id, amount, status pending/paid/rejected, payment_method, payment_details, admin_note, paid_at).
-- Le graphiste remplit ses coordonnées (Mobile Money / IBAN) et soumet
-- Le solde disponible = `total_earnings` - somme des payouts validés/en attente
-- Admin valide depuis `/admin/designer-payouts` (nouvelle page)
+## Sprint 4 — Dashboard, onboarding & API Usage (items 1, 4, 9)
 
-### 5. Upload : clone strict par défaut
-Dans `/designer/upload` : checkbox pré-cochée et verrouillée "Mes templates sont reproduits à l'identique" + texte d'info expliquant la protection.
+17. Forcer le déclenchement du `TutorialOverlay` au 1er login (`tutorial_completed = false`).
+18. Checklist "Premiers pas" sur `/account` (1ère affiche / définir logo / inviter un ami / connecter domaine).
+19. Onglet "Statistiques" dans `/account` : graphique 30j générations, top 3 domaines, projection fin de crédits.
+20. Onglet "API Usage" dans `/account` lisant `api_usage_logs` : requêtes/jour, top endpoints, latence p50/p95, erreurs 4xx/5xx, alerte 80% quota.
+21. Modal "Note ta création" tous les 5 designs (utilise `generation_feedback` existant) + carrousel témoignages dynamique sur landing.
 
-### 6. Génération : forcer le clone pour les templates partenaires
-- L'edge function de génération détecte `template.designer_id IS NOT NULL` → force `isCloneMode = true` et désactive les variations créatives, quels que soient les paramètres utilisateur.
-- Affichage dans `/app` : badge "Design original — clone exact" et nom + lien profil du graphiste sous le template choisi.
+## Sprint 5 — Pro features : Équipes, SEO, Observabilité (items 8, 10, 11, 12)
 
-### 7. Marketplace : section "Par nos graphistes"
-- Filtre dédié dans `TemplatesMarketplace` pour afficher uniquement les templates `designer_id IS NOT NULL`.
-- Carte template affiche avatar + nom du graphiste, cliquable vers `/designer/:id`.
+22. Tables `teams`, `team_members` + pool de crédits partagé + plan "Agence" (50 sièges, 49$).
+23. UI gestion d'équipe dans `/account` (inviter par email, rôles owner/member, retirer).
+24. 8 landing pages SEO `/[domaine]` (église, mariage, restaurant, e-commerce, youtube, événement, immobilier, formation) avec JsonLd + meta complets.
+25. Sitemap auto-régénéré incluant les nouvelles routes + 3 articles seeds dans `/blog` (mdx léger).
+26. Intégration Sentry front + edge functions (DSN via secret).
+27. Page publique `/status` lisant table `service_health` + bandeau d'incident global.
+28. Alerte admin (notification + email) si > 5 paiements failed/heure.
 
-### 8. Onboarding et visibilité
-- Lien "Devenir graphiste partenaire" dans le footer + page d'accueil section dédiée
-- Bouton "Espace graphiste" dans le menu utilisateur si le user a un profil `partner_designers`
+---
 
-## Détails techniques
+## Tables à créer (résumé)
 
-### Nouvelle table `platform_settings`
 ```text
-key text primary key, value jsonb, updated_by uuid, updated_at timestamptz
-GRANT SELECT public, ALL service_role ; RLS lecture publique, écriture super_admin/admin
+pricing_offers              user-specific promo codes
+affiliate_payout_requests   calqué sur designer_payout_requests
+notifications               in-app notifications, realtime
+teams                       owner_id, name, plan_id, credits_pool
+team_members                team_id, user_id, role
+service_health              statut public des services
+email_log                   audit envois (auto par infra email)
 ```
+Toutes avec GRANT explicites + RLS scopée propriétaire/service_role.
 
-### Nouvelle table `designer_payout_requests`
-```text
-id, designer_id (fk partner_designers), amount_usd numeric, amount_fcfa integer,
-status enum(pending|approved|paid|rejected), payment_method text, payment_details jsonb,
-admin_note text, requested_at, processed_at, processed_by uuid
-GRANT SELECT/INSERT au designer propriétaire ; ALL service_role ; UPDATE admins
-```
+## Edge functions à créer
 
-### Ajout à `template_earnings`
-Colonne `job_id uuid UNIQUE` + `royalty_rate numeric` + `unit_value_usd numeric` pour traçabilité.
+- `send-transactional-email` (scaffold Lovable)
+- `cron-low-credits-alerts`, `cron-subscription-expiring`, `cron-payment-health-check`
+- `create-team-invite`, `accept-team-invite`
 
-### Trigger
-```text
-AFTER UPDATE OF status ON image_jobs
-WHEN NEW.status='completed' AND OLD.status<>'completed'
-→ fonction record_designer_royalty(job_id)
-```
-Lit le `template_id` utilisé dans le job, vérifie `designer_id`, lit les settings, insère earning.
+## Secrets nécessaires
 
-### Flag clone strict côté edge function
-Dans le builder de prompt, après lecture du template :
-```text
-if (template.designer_id) { params.isCloneMode = true; params.allowVariations = false; }
-```
+- `SENTRY_DSN` (à demander en cours de Sprint 5)
+- Domaine email (configuration interactive au Sprint 1)
 
-## Découpage en livraisons
+---
 
-1. **Backend royalties** : migration settings + payout_requests + trigger + colonnes traçabilité.
-2. **Dashboard graphiste v2** : KPI, tableau templates, graph, section payouts.
-3. **Admin** : page settings + page payouts.
-4. **Génération** : clone strict forcé pour templates partenaires + badge UI dans `/app`.
-5. **Marketplace** : filtre "Par nos graphistes" + crédit graphiste sur les cartes.
-6. **Visibilité onboarding** : footer, landing, menu user.
+## Mode d'exécution
 
-Je commencerai par 1 → 2 → 4 dans la première itération de build (cœur fonctionnel), puis 3 → 5 → 6 dans une seconde passe.
+Je travaille **sprint par sprint sans m'arrêter**, en livrant à chaque sprint :
+- Migration SQL (avec GRANT + RLS)
+- Edge functions déployées
+- Composants UI + intégration dans les pages existantes
+- Vérification visuelle Playwright sur les écrans critiques
+
+Au démarrage du Sprint 1, je vais devoir te demander **une seule chose interactive** : valider la configuration du domaine email (ex: `notify.graphistegpt.pro`). Ensuite tout est automatique.
+
+Prêt à lancer le Sprint 1 dès validation de ce plan.
