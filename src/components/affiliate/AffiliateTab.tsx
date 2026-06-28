@@ -10,6 +10,7 @@ export function AffiliateTab() {
   const {
     affiliate,
     commissions,
+    referrals,
     isLoading,
     activateAffiliate,
     getReferralLink,
