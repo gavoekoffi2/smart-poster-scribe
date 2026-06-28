@@ -21,6 +21,8 @@ import {
   Menu,
   X,
   Mail,
+  Wallet,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +42,8 @@ const navItems = [
   { id: "designers", label: "Graphistes", icon: Users, path: "/admin/designers", permission: "manage_designers" },
   { id: "roles", label: "Rôles", icon: Shield, path: "/admin/roles", permission: "manage_admins" },
   { id: "contact", label: "Messages", icon: Mail, path: "/admin/contact", permission: "view_dashboard" },
+  { id: "payouts", label: "Paiements", icon: Wallet, path: "/admin/payouts", permission: "manage_users" },
+  { id: "settings", label: "Paramètres", icon: Settings, path: "/admin/settings", permission: "manage_admins" },
 ];
 
 export default function AdminLayout({ children, requiredPermission = "view_dashboard" }: AdminLayoutProps) {
