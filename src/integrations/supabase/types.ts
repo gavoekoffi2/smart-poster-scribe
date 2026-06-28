@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_payout_requests: {
+        Row: {
+          admin_note: string | null
+          affiliate_id: string
+          amount_fcfa: number | null
+          amount_usd: number
+          id: string
+          payment_details: Json
+          payment_method: string
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          admin_note?: string | null
+          affiliate_id: string
+          amount_fcfa?: number | null
+          amount_usd: number
+          id?: string
+          payment_details?: Json
+          payment_method: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          admin_note?: string | null
+          affiliate_id?: string
+          amount_fcfa?: number | null
+          amount_usd?: number
+          id?: string
+          payment_details?: Json
+          payment_method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payout_requests_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliates: {
         Row: {
           created_at: string
@@ -556,6 +606,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          payload: Json
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          payload?: Json
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          payload?: Json
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       partner_designers: {
         Row: {
           bio: string | null
@@ -663,6 +749,42 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      pricing_offers: {
+        Row: {
+          code: string
+          created_at: string
+          discount_pct: number
+          expires_at: string
+          id: string
+          reason: string | null
+          used_at: string | null
+          used_transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_pct: number
+          expires_at: string
+          id?: string
+          reason?: string | null
+          used_at?: string | null
+          used_transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_pct?: number
+          expires_at?: string
+          id?: string
+          reason?: string | null
+          used_at?: string | null
+          used_transaction_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -861,6 +983,30 @@ export type Database = {
         }
         Relationships: []
       }
+      service_health: {
+        Row: {
+          id: string
+          message: string | null
+          service: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          message?: string | null
+          service: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          message?: string | null
+          service?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -944,6 +1090,82 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      team_members: {
+        Row: {
+          invited_at: string
+          invited_email: string | null
+          joined_at: string | null
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          invited_at?: string
+          invited_email?: string | null
+          joined_at?: string | null
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          invited_at?: string
+          invited_email?: string | null
+          joined_at?: string | null
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          credits_pool: number
+          id: string
+          max_members: number
+          name: string
+          owner_id: string
+          plan_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credits_pool?: number
+          id?: string
+          max_members?: number
+          name: string
+          owner_id: string
+          plan_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credits_pool?: number
+          id?: string
+          max_members?: number
+          name?: string
+          owner_id?: string
+          plan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       template_earnings: {
         Row: {
@@ -1250,6 +1472,43 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_affiliate_payouts: {
+        Args: { p_admin_id: string }
+        Returns: {
+          admin_note: string
+          affiliate_email: string
+          affiliate_id: string
+          affiliate_name: string
+          amount_fcfa: number
+          amount_usd: number
+          id: string
+          payment_details: Json
+          payment_method: string
+          processed_at: string
+          requested_at: string
+          status: string
+        }[]
+      }
+      admin_list_designer_payouts: {
+        Args: { p_admin_id: string }
+        Returns: {
+          admin_note: string
+          amount_fcfa: number
+          amount_usd: number
+          designer_id: string
+          designer_name: string
+          id: string
+          payment_details: Json
+          payment_method: string
+          processed_at: string
+          requested_at: string
+          status: string
+        }[]
+      }
+      admin_set_platform_setting: {
+        Args: { p_admin_id: string; p_key: string; p_value: Json }
+        Returns: undefined
+      }
       check_and_debit_credits:
         | {
             Args: {
@@ -1268,7 +1527,19 @@ export type Database = {
             }
             Returns: Json
           }
+      create_notification: {
+        Args: {
+          p_body?: string
+          p_link?: string
+          p_payload?: Json
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
+      get_affiliate_balance: { Args: { p_affiliate_id: string }; Returns: Json }
       get_affiliate_referrals: {
         Args: { p_affiliate_id: string }
         Returns: {
