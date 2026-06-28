@@ -109,9 +109,11 @@ serve(async (req) => {
     const errorUrl = `${origin}/account?payment=failed`;
 
     const gpRequest: Record<string, unknown> = {
-      amount: plan.price_fcfa,
+      amount: finalAmountFcfa,
       currency: "XOF",
-      description: `Abonnement ${plan.name} - Graphiste GPT`,
+      description: discountRate > 0
+        ? `Abonnement ${plan.name} - Graphiste GPT (-10% parrainage)`
+        : `Abonnement ${plan.name} - Graphiste GPT`,
       success_url: successUrl,
       error_url: errorUrl,
       customer: {
@@ -127,6 +129,8 @@ serve(async (req) => {
         plan_slug: planSlug,
         country: country || null,
         requested_method: paymentMethod || null,
+        referral_discount: discountRate,
+        referred_by: referralCode,
       },
     };
 
