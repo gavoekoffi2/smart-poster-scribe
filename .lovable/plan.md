@@ -1,80 +1,56 @@
 ## Objectif
 
-Quand un utilisateur clique sur "S'abonner", le moyen de paiement proposé par défaut est adapté à son pays :
-- Cameroun → MTN MoMo / Orange Money Cameroun
-- Côte d'Ivoire → Wave / Orange CI / MTN CI
-- Sénégal → Wave / Orange / Free
-- Togo, Bénin, Burkina, Mali… → Moov / Orange / MTN du pays
-- RDC, Kenya, Ouganda… → opérateur local (Airtel, M-Pesa, MTN)
-- Europe / USA / autres → Carte bancaire (Visa/Mastercard via GeniusPay)
+1. Tout utilisateur qui s'inscrit via un lien `?ref=XXXX` bénéficie automatiquement de **-10%** sur son premier (et seul) abonnement payant.
+2. L'affilié continue de toucher **30% de commission récurrente** (déjà en place) — calculée sur le montant **réellement payé** par le filleul.
+3. L'affilié voit dans son tableau de bord la **liste de ses filleuls** avec leur statut (inscrit / abonné / payant) en plus des stats déjà présentes.
+4. Mettre en avant la remise dans la communication (lien copié, page d'inscription).
 
-L'utilisateur peut toujours changer le pays / moyen avant de payer.
+## 1. Remise filleul -10%
 
-## Faisabilité
+- Lecture du champ `profiles.referred_by` au moment du checkout dans `src/hooks/useSubscription.ts` (méthodes `openFedaPayCheckout` et le flux GeniusPay correspondant).
+- Si `referred_by` est non nul **et** qu'aucun paiement `completed` n'existe encore pour ce user (première souscription), appliquer `priceFcfa * 0.9` et `priceUsd * 0.9`.
+- Enregistrer la remise dans `payment_transactions.metadata` : `{ referral_discount: 0.10, referred_by: '<code>' }` pour traçabilité.
+- Côté edge function `create-geniuspay-payment` : accepter un `discount_rate` optionnel et l'appliquer aux montants envoyés à GeniusPay (cohérent avec ce que voit l'utilisateur).
+- La commission 30% (`record_referral_commission`) sera naturellement calculée sur `amount_usd` du transaction record, donc sur le **montant remisé** — c'est le comportement voulu.
 
-Oui — GeniusPay supporte nativement :
-- `customer.country` (ISO2 : CI, SN, CM, TG, CD…) pour router vers le bon opérateur
-- `payment_method` (`wave`, `orange_money`, `mtn_money`, `moov_money`, `airtel_money`, `pawapay`, `card`)
-- `mmo_provider` pour PawaPay (`ORANGE_CMR`, `MTN_MOMO_CMR`, `ORANGE_SEN`…)
-- `card` pour les paiements internationaux (Visa/Mastercard)
+## 2. Affichage de la remise
 
-→ Pas besoin d'ajouter Stripe pour l'Europe : la carte bancaire passe déjà par GeniusPay.
+- `src/pages/AuthPage.tsx` : bandeau vert "🎁 Tu bénéficies de -10% sur ton premier abonnement grâce à ton parrain" si `?ref=` présent dans l'URL ou dans localStorage.
+- `src/pages/PricingPage.tsx` : afficher le prix barré + prix -10% sur chaque plan si l'utilisateur est filleul éligible.
+- `src/components/affiliate/AffiliateTab.tsx` : reformuler le texte du lien — "Vos filleuls bénéficient de **-10%**, vous touchez **30%** à vie".
 
-## Plan
+## 3. Tableau de bord affilié — liste des filleuls
 
-### 1. Détection automatique du pays
-Hook `useGeoCountry` qui détermine le pays dans cet ordre :
-1. Pays sauvegardé dans le profil (`profiles.country`)
-2. Préfixe du numéro de téléphone du profil (+237 → CM, +225 → CI, +221 → SN…)
-3. Géolocalisation IP via une edge function légère `detect-country` utilisant l'en-tête `cf-ipcountry` / `x-vercel-ip-country` ou un fallback `https://ipapi.co/json`
-4. Langue navigateur (fr-FR → FR, en-US → US…) en dernier recours
+Ajouter une section "Mes filleuls" dans `AffiliateTab.tsx` montrant :
 
-### 2. Mapping pays → moyen de paiement par défaut
-Table `src/lib/paymentRouting.ts` :
+| Filleul | Inscrit le | Statut | Plan | Vos gains |
+|---|---|---|---|---|
 
-```text
-CM, GA, CG, CF (XAF)           → pawapay + mmo_provider auto (Orange/MTN)
-CI                              → wave (par défaut), orange_money, mtn_money, moov_money
-SN                              → wave, orange_money, pawapay (Free)
-TG, BJ, BF, ML, NE, GW (XOF)   → moov_money, orange_money, mtn_money
-CD                              → airtel_money, orange_money (pawapay VODACOM)
-KE, UG, RW                      → pawapay (M-Pesa / MTN / Airtel)
-GH, NG                          → paystack
-Reste du monde (EU, US, etc.)  → card
-```
+- Récupération via une nouvelle SQL function `get_affiliate_referrals(p_affiliate_id)` (security definer) qui joint `profiles` (filtrés sur `referred_by = code`) ↔ `user_subscriptions` ↔ `subscription_plans` ↔ somme `referral_commissions`. Évite d'exposer la table profiles côté RLS.
+- Statut : `Inscrit` (pas d'abo payant), `Essai` (plan free), `Abonné` (plan payant actif), `Expiré`.
+- Anonymisation légère : prénom + première lettre du nom (ex: "Jean K."), pour la confidentialité.
 
-### 3. UI du modal de paiement (`SubscriptionRequestModal.tsx`)
-- Affichage en haut : "Paiement depuis : 🇨🇲 Cameroun" avec menu déroulant pour changer
-- Liste des moyens de paiement disponibles pour ce pays, le premier sélectionné par défaut (logo + nom)
-- Champ téléphone pré-rempli/validé selon le pays
-- Pour les pays "carte" : on affiche directement "💳 Carte bancaire (Visa / Mastercard)"
+## 4. Détails techniques
 
-### 4. Edge function `create-geniuspay-payment`
-Accepter et transmettre 3 nouveaux paramètres optionnels :
-- `country` (ISO2) → `customer.country`
-- `paymentMethod` → `payment_method`
-- `mmoProvider` → `mmo_provider`
+- **Migration SQL** :
+  - Fonction `get_affiliate_referrals(uuid)` retournant `(referral_name text, joined_at timestamptz, status text, plan_name text, total_earned numeric)`.
+  - Vérification que l'appelant est bien le propriétaire de l'`affiliate_id`.
+- **Hook** : étendre `useAffiliate` avec `referrals: Referral[]` chargés en parallèle des commissions.
+- **Eligibilité remise** : helper `useReferralDiscount()` qui retourne `{ eligible, rate, code }` en croisant `profile.referred_by` et l'absence de paiement `completed` précédent.
+- **Anti-abus** : la remise s'applique uniquement à la **première transaction completed** du user — vérifiée côté hook et re-vérifiée dans la webhook si nécessaire (pas d'altération du webhook ici, le contrôle frontend suffit puisque le user ne peut pas modifier son `referred_by` après inscription).
 
-Si `paymentMethod` est omis → comportement actuel (page checkout GeniusPay générique).
+## Fichiers touchés
 
-### 5. Persistance
-Sauvegarder le pays choisi dans `profiles.country` (ajout de la colonne si absente) pour pré-remplir les prochains paiements.
+- `src/hooks/useSubscription.ts` — appliquer la remise
+- `src/hooks/useAffiliate.ts` — charger les filleuls + helper discount
+- `src/components/affiliate/AffiliateTab.tsx` — nouvelle section filleuls + texte
+- `src/pages/AuthPage.tsx` — bandeau remise
+- `src/pages/PricingPage.tsx` — prix barré pour filleuls
+- `supabase/functions/create-geniuspay-payment/index.ts` — paramètre `discount_rate`
+- Migration : fonction `get_affiliate_referrals`
 
-## Détails techniques
+## Hors-scope
 
-- Pas de nouveau secret, pas de nouvelle dépendance
-- Aucune modification de Stripe (non intégré, pas nécessaire — GeniusPay `card` couvre l'international)
-- Migration SQL minimale : `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS country text;`
-- Fichiers touchés :
-  - `src/lib/paymentRouting.ts` (nouveau)
-  - `src/hooks/useGeoCountry.ts` (nouveau)
-  - `supabase/functions/detect-country/index.ts` (nouveau, très léger)
-  - `src/components/pricing/SubscriptionRequestModal.tsx` (UI sélecteur)
-  - `src/hooks/useSubscription.ts` (passer country/paymentMethod)
-  - `supabase/functions/create-geniuspay-payment/index.ts` (forwarder les nouveaux champs)
-  - 1 migration SQL pour la colonne `country`
-
-## Limites à savoir
-
-- GeniusPay convertit automatiquement XAF/CDF/KES vers XOF côté gateway ; les montants restent affichés en FCFA dans l'app (déjà le cas).
-- La détection IP n'est pas fiable à 100% (VPN, etc.) → l'utilisateur peut toujours changer le pays manuellement avant de payer.
+- Modification du taux 30% (déjà en place).
+- Multiples codes promo cumulables.
+- Remise sur renouvellements (seulement le premier abonnement).
