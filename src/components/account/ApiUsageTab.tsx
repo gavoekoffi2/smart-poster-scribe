@@ -5,7 +5,7 @@ import { Loader2, Zap, AlertTriangle, Activity } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Badge } from "@/components/ui/badge";
 
-type Log = { created_at: string; endpoint: string; status_code: number; latency_ms: number | null };
+type Log = { created_at: string; endpoint: string; status_code: number; duration_ms: number | null };
 
 export function ApiUsageTab({ userId }: { userId: string }) {
   const [logs, setLogs] = useState<Log[]>([]);
@@ -17,7 +17,7 @@ export function ApiUsageTab({ userId }: { userId: string }) {
       const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       const { data } = await supabase
         .from("api_usage_logs")
-        .select("created_at,endpoint,status_code,latency_ms")
+        .select("created_at,endpoint,status_code,duration_ms")
         .eq("user_id", userId)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
@@ -51,7 +51,7 @@ export function ApiUsageTab({ userId }: { userId: string }) {
   const series = Object.entries(byDay).map(([date, count]) => ({ date, count }));
 
   // Latency p50/p95
-  const lats = logs.map((l) => l.latency_ms || 0).filter((v) => v > 0).sort((a, b) => a - b);
+  const lats = logs.map((l) => l.duration_ms || 0).filter((v) => v > 0).sort((a, b) => a - b);
   const p = (q: number) => lats.length ? lats[Math.floor(lats.length * q)] : 0;
   const errors4xx = logs.filter((l) => l.status_code >= 400 && l.status_code < 500).length;
   const errors5xx = logs.filter((l) => l.status_code >= 500).length;
