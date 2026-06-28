@@ -681,17 +681,30 @@ function buildProfessionalPrompt({
     lines.push("La PREMIÈRE image jointe = GABARIT de design (style graphique, palette, typographie, composition, formes décoratives).");
     lines.push("Tu RÉUTILISES son style visuel, MAIS tu remplaces 100% de son contenu informationnel par les infos client ci-dessus.");
     lines.push("Les autres images jointes = éléments à insérer (photos, logos client).");
-    lines.push(
-      isStrictUserReference
-        ? "L'utilisateur a fourni cette référence : respecter au maximum sa structure (mise en page, palette, ambiance), mais le CONTENU doit être 100% celui du client."
-        : "Adapter librement la structure du gabarit pour qu'elle serve PARFAITEMENT les infos du client (hiérarchie, lisibilité, typographie)."
-    );
+    if (isStrictUserReference) {
+      lines.push("");
+      lines.push("🔒 CLONE FIDÈLE OBLIGATOIRE — RÉFÉRENCE UTILISATEUR :");
+      lines.push("L'utilisateur a explicitement fourni cette affiche comme MODÈLE À CLONER. Tu dois reproduire son DESIGN À L'IDENTIQUE :");
+      lines.push("• MISE EN PAGE pixel-near : mêmes blocs, mêmes proportions, mêmes positions (haut/bas/gauche/droite), même alignement, même grille.");
+      lines.push("• PALETTE : mêmes couleurs (codes hex équivalents), mêmes dégradés, même hiérarchie chromatique.");
+      lines.push("• TYPOGRAPHIE : mêmes familles/graisses/tailles relatives, mêmes effets (ombres, contours, capitales).");
+      lines.push("• FORMES DÉCORATIVES : conserver TOUTES les formes (vagues, cercles, bandeaux, lignes, motifs) à l'identique.");
+      lines.push("• PHOTO/VISUEL PRINCIPAL : même cadrage, même zone, même style d'intégration (silhouette détourée, fond perdu, etc.).");
+      lines.push("• SEUL LE CONTENU INFORMATIONNEL CHANGE : textes, dates, prix, noms, contacts, logos = ceux du client UNIQUEMENT.");
+      lines.push("Le résultat doit donner l'impression d'avoir été produit par le MÊME graphiste, le MÊME jour, pour un nouveau client.");
+    } else {
+      lines.push("Adapter intelligemment la structure du gabarit pour qu'elle serve PARFAITEMENT les infos du client (hiérarchie, lisibilité, typographie), tout en conservant son ADN visuel (palette, typo, composition globale, ambiance).");
+    }
 
     lines.push("");
     lines.push("═══ RÈGLE #2 : STYLE VISUEL À CONSERVER ═══");
     lines.push("PALETTE & AMBIANCE : conserver les couleurs dominantes et l'ambiance (sauf si les infos client imposent un autre univers).");
     lines.push("TYPOGRAPHIE : conserver la même famille de polices, hiérarchie et graisses.");
-    lines.push("COMPOSITION : conserver l'esprit de mise en page (équilibre, zones, rythme), avec ajustements autorisés pour que les vraies infos client tiennent proprement.");
+    lines.push(
+      isStrictUserReference
+        ? "COMPOSITION : reproduire la mise en page À L'IDENTIQUE — mêmes zones, mêmes proportions, mêmes alignements. Aucun réagencement libre."
+        : "COMPOSITION : conserver l'esprit de mise en page (équilibre, zones, rythme), avec ajustements autorisés pour que les vraies infos client tiennent proprement."
+    );
     lines.push("FORMES DÉCORATIVES : garder les formes (vagues, cercles, bandeaux) si elles servent le nouveau contenu, sinon supprimer proprement.");
 
     lines.push("");
