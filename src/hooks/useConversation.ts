@@ -1273,6 +1273,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             contentImage: state.contentImage || undefined,
             secondaryImages: secondaryImagesData.length > 0 ? secondaryImagesData : undefined,
             isCloneMode: isCloneModeActive,
+            templateId: cloneTemplate?.id,
             formatWidth: formatPreset?.width,
             formatHeight: formatPreset?.height,
             usageType: state.usageType || "social",
