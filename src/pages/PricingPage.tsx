@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
+import { ArrowLeft, Sparkles, Shield, Zap, Globe, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/pricing/PlanCard";
 import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
+import { useReferralDiscount } from "@/hooks/useAffiliate";
 import { toast } from "sonner";
 const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
@@ -15,6 +16,7 @@ export default function PricingPage() {
   const [searchParams] = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   const { plans, subscription, isProcessingPayment, openGeniusPayCheckout } = useSubscription();
+  const { eligible: discountEligible, rate: discountRate } = useReferralDiscount();
   const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
     open: false, planName: "", planSlug: "", planPrice: ""
   });
