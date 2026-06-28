@@ -289,6 +289,63 @@ export type Database = {
         }
         Relationships: []
       }
+      designer_payout_requests: {
+        Row: {
+          admin_note: string | null
+          amount_fcfa: number
+          amount_usd: number
+          designer_id: string
+          id: string
+          payment_details: Json
+          payment_method: string
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_fcfa: number
+          amount_usd: number
+          designer_id: string
+          id?: string
+          payment_details?: Json
+          payment_method: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_fcfa?: number
+          amount_usd?: number
+          designer_id?: string
+          id?: string
+          payment_details?: Json
+          payment_method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "designer_payout_requests_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "designer_payout_requests_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_images: {
         Row: {
           aspect_ratio: string
@@ -407,6 +464,7 @@ export type Database = {
           result_url: string | null
           status: string
           task_id: string | null
+          template_id: string | null
           updated_at: string
           user_id: string
         }
@@ -422,6 +480,7 @@ export type Database = {
           result_url?: string | null
           status?: string
           task_id?: string | null
+          template_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -437,10 +496,26 @@ export type Database = {
           result_url?: string | null
           status?: string
           task_id?: string | null
+          template_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "image_jobs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reference_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_jobs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "reference_templates_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marquee_items: {
         Row: {
@@ -569,6 +644,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -854,24 +950,50 @@ export type Database = {
           amount: number
           created_at: string
           description: string | null
+          designer_id: string | null
           id: string
+          job_id: string | null
+          royalty_rate: number | null
           template_id: string
+          unit_value_usd: number | null
         }
         Insert: {
           amount?: number
           created_at?: string
           description?: string | null
+          designer_id?: string | null
           id?: string
+          job_id?: string | null
+          royalty_rate?: number | null
           template_id: string
+          unit_value_usd?: number | null
         }
         Update: {
           amount?: number
           created_at?: string
           description?: string | null
+          designer_id?: string | null
           id?: string
+          job_id?: string | null
+          royalty_rate?: number | null
           template_id?: string
+          unit_value_usd?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "template_earnings_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_earnings_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "partner_designers_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "template_earnings_template_id_fkey"
             columns: ["template_id"]
@@ -1157,6 +1279,7 @@ export type Database = {
           total_earned: number
         }[]
       }
+      get_designer_balance: { Args: { p_designer_id: string }; Returns: Json }
       get_or_create_user_subscription: {
         Args: { p_user_id: string }
         Returns: {
