@@ -10,6 +10,7 @@ interface PlanCardProps {
   onSubscribe: (planSlug: string) => void;
   isLoading: boolean;
   index: number;
+  discountRate?: number;
 }
 
 const planIcons: Record<string, React.ReactNode> = {
