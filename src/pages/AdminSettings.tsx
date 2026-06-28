@@ -45,7 +45,7 @@ export default function AdminSettings() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <AdminLayout requiredPermission="manage_admins">
       <div className="max-w-2xl mx-auto space-y-6">
         <h1 className="text-2xl md:text-3xl font-bold">Paramètres plateforme</h1>
         <Card>
@@ -63,7 +63,7 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
 
