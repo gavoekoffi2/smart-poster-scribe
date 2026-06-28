@@ -1162,6 +1162,9 @@ export default function AppPage() {
         creditError={creditError}
       />
 
+      {/* Onboarding (1st visit) */}
+      <OnboardingTour />
+
       {/* Tutorial Overlay */}
       {shouldShowTutorial && user && !tutorialLoading && (
         <TutorialOverlay
