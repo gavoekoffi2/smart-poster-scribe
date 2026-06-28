@@ -14,6 +14,16 @@ export function Footer() {
       { label: "Obtenir une clé API", href: "/account?tab=api" },
       { label: "Démarrage rapide", href: "/docs/api#quickstart" },
     ],
+    solutions: [
+      { label: "Affiches d'église", href: "/domaines/eglise" },
+      { label: "Affiches de mariage", href: "/domaines/mariage" },
+      { label: "Restaurants", href: "/domaines/restaurant" },
+      { label: "E-commerce", href: "/domaines/ecommerce" },
+      { label: "Miniatures YouTube", href: "/domaines/youtube" },
+      { label: "Événements", href: "/domaines/evenement" },
+      { label: "Immobilier", href: "/domaines/immobilier" },
+      { label: "Formations", href: "/domaines/formation" },
+    ],
     company: [
       { label: "À propos", href: "/#about" },
       { label: "Contact", href: "/#contact" },
@@ -85,6 +95,20 @@ export function Footer() {
             <h4 className="font-display font-semibold text-foreground mb-4">Développeurs</h4>
             <ul className="space-y-3">
               {footerLinks.developers.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Solutions */}
+          <div>
+            <h4 className="font-display font-semibold text-foreground mb-4">Solutions</h4>
+            <ul className="space-y-3">
+              {footerLinks.solutions.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
