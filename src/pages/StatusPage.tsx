@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, AlertTriangle, XCircle, Wrench } from "lucide-react";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
+import { useNavigate } from "react-router-dom";
 
 type Service = { id: string; service: string; status: string; message: string | null; updated_at: string };
 
@@ -16,6 +17,7 @@ const ICONS: Record<string, { icon: any; color: string; label: string }> = {
 
 export default function StatusPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("service_health").select("*").order("service").then(({ data }) => setServices((data as Service[]) || []));
@@ -25,7 +27,7 @@ export default function StatusPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
+      <Navbar onGetStarted={() => navigate("/auth")} />
       <main className="flex-1 container mx-auto max-w-3xl px-4 py-12">
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">État de la plateforme</h1>
