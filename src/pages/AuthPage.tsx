@@ -397,6 +397,14 @@ export default function AuthPage() {
           </div>
         </div>
 
+        {getStoredReferralCode() && (
+          <div className="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-center">
+            <p className="text-sm text-foreground">
+              🎁 Vous avez été invité ! Bénéficiez de <strong className="text-green-500">-10%</strong> sur votre premier abonnement.
+            </p>
+          </div>
+        )}
+
         {pendingEmailConfirmation ? (
           <Card className="bg-card/60 backdrop-blur-xl border-border/40 shadow-2xl shadow-primary/5">
             <CardHeader className="text-center pb-4">
