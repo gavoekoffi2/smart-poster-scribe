@@ -1719,7 +1719,8 @@ serve(async (req) => {
     
     // Détecter si c'est un mode clone (passé dans le body de la requête OU auto-sélectionné)
     // NOUVEAU: Les templates auto-sélectionnés sont AUSSI traités comme du clonage
-    const isCloneMode = body.isCloneMode === true || isAutoSelectedTemplate;
+    // Les templates d'un graphiste partenaire sont TOUJOURS clonés à l'identique (clone strict)
+    const isCloneMode = body.isCloneMode === true || isAutoSelectedTemplate || templateIsFromDesigner;
     const referenceMode: ReferenceMode = userProvidedReferenceImage
       ? "user"
       : isAutoSelectedTemplate
