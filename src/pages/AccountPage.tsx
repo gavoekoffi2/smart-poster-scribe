@@ -869,6 +869,14 @@ export default function AccountPage() {
           <TabsContent value="api">
             <ApiKeysTab />
           </TabsContent>
+
+          <TabsContent value="stats">
+            <StatsTab userId={user.id} />
+          </TabsContent>
+
+          <TabsContent value="api-usage">
+            <ApiUsageTab userId={user.id} />
+          </TabsContent>
         </Tabs>
 
 

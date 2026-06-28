@@ -39,6 +39,7 @@ const DesignerUpload = lazy(() => import("./pages/DesignerUpload"));
 const DesignerProfile = lazy(() => import("./pages/DesignerProfile"));
 const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
 const StatusPage = lazy(() => import("./pages/StatusPage"));
+const DomainLandingPage = lazy(() => import("./pages/DomainLandingPage"));
 
 
 const queryClient = new QueryClient();
@@ -89,6 +90,7 @@ const App = () => (
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/docs/api" element={<ApiDocsPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/domaines/:slug" element={<DomainLandingPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />
