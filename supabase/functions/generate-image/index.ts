@@ -1200,13 +1200,41 @@ serve(async (req) => {
       modificationRequest: rawModificationRequest, // Description de la modification demandée
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
       apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
+      templateId: rawTemplateId, // ID du template choisi (pour royalties + clone strict)
     } = body;
     const apiStrictPremium: boolean = rawApiStrictPremium === true;
     // Public API requests are always forced to premium (gpt-image-2)
     const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
 
-    const userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
+    let userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
+
+    // === Template tracking (royalties graphistes) ===
+    // Si un templateId est fourni, on l'utilise pour : (a) tracer le job, (b) forcer le clone
+    // strict si le template appartient à un graphiste partenaire, (c) garantir que l'image
+    // référence soit bien celle du template choisi.
+    let resolvedTemplateId: string | null = null;
+    let templateIsFromDesigner = false;
+    if (rawTemplateId && typeof rawTemplateId === "string" && /^[0-9a-f-]{36}$/i.test(rawTemplateId)) {
+      try {
+        const { data: tplRow } = await supabase
+          .from("reference_templates")
+          .select("id, image_url, designer_id")
+          .eq("id", rawTemplateId)
+          .maybeSingle();
+        if (tplRow?.id) {
+          resolvedTemplateId = tplRow.id;
+          templateIsFromDesigner = !!tplRow.designer_id;
+          // Si l'appelant n'a pas envoyé d'image de référence, on utilise celle du template.
+          if (!userProvidedReferenceImage && tplRow.image_url) {
+            referenceImage = tplRow.image_url;
+            userProvidedReferenceImage = true;
+          }
+        }
+      } catch (e) {
+        console.warn("Template lookup failed:", e);
+      }
+    }
 
     // Validation
     if (!prompt || typeof prompt !== 'string') {
