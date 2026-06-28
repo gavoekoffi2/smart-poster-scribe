@@ -39,8 +39,11 @@ export function AffiliateTab() {
         <h2 className="text-2xl font-bold text-foreground mb-3">
           Programme d'affiliation
         </h2>
-        <p className="text-muted-foreground max-w-md mx-auto mb-6">
+        <p className="text-muted-foreground max-w-md mx-auto mb-4">
           Recommandez Graphiste GPT et gagnez <strong className="text-primary">30% de commission récurrente</strong> sur chaque abonnement de vos filleuls, à chaque renouvellement, à vie.
+        </p>
+        <p className="text-sm text-green-500 max-w-md mx-auto mb-6">
+          🎁 Bonus : vos filleuls bénéficient automatiquement de <strong>-10%</strong> sur leur premier abonnement grâce à votre lien.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-lg mx-auto">
           <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
