@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles, Shield, Zap, Globe } from "lucide-react";
+import { ArrowLeft, Sparkles, Shield, Zap, Globe, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "@/components/pricing/PlanCard";
 import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
+import { useReferralDiscount } from "@/hooks/useAffiliate";
 import { toast } from "sonner";
 const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
@@ -15,6 +16,7 @@ export default function PricingPage() {
   const [searchParams] = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   const { plans, subscription, isProcessingPayment, openGeniusPayCheckout } = useSubscription();
+  const { eligible: discountEligible, rate: discountRate } = useReferralDiscount();
   const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
     open: false, planName: "", planSlug: "", planPrice: ""
   });
@@ -210,6 +212,22 @@ export default function PricingPage() {
           </div>
         </section>
 
+        {/* Referral discount banner */}
+        {discountEligible && (
+          <div className="container mx-auto px-4 mb-6">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-3xl mx-auto p-4 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center gap-3"
+            >
+              <Gift className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <p className="text-sm text-foreground">
+                🎁 Vous bénéficiez de <strong className="text-green-500">-{Math.round(discountRate * 100)}%</strong> sur votre premier abonnement grâce à votre lien de parrainage.
+              </p>
+            </motion.div>
+          </div>
+        )}
+
         {/* Pricing Cards */}
         <section className="pb-20 px-4">
           <div className="container mx-auto">
@@ -222,6 +240,7 @@ export default function PricingPage() {
                   onSubscribe={handleSubscribe}
                   isLoading={isProcessingPayment || isStartingCheckout}
                   index={index}
+                  discountRate={discountEligible ? discountRate : 0}
                 />
               ))}
             </div>

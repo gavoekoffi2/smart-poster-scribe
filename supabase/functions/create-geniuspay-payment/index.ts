@@ -55,22 +55,47 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, phone")
+      .select("full_name, phone, referred_by")
       .eq("user_id", user.id)
       .single();
 
     const fullName = customerName || profile?.full_name || "Client";
+
+    // Server-side referral discount: 10% off the first ever payment of a referred user
+    let discountRate = 0;
+    let referralCode: string | null = null;
+    const referredBy = (profile as { referred_by?: string | null } | null)?.referred_by ?? null;
+    if (referredBy) {
+      const { count } = await supabase
+        .from("payment_transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "completed");
+      if ((count ?? 0) === 0) {
+        discountRate = 0.10;
+        referralCode = referredBy;
+      }
+    }
+
+    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - discountRate));
+    const finalAmountUsd = Math.round(plan.price_usd * (1 - discountRate) * 100) / 100;
 
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
       .insert({
         user_id: user.id,
         plan_id: plan.id,
-        amount_fcfa: plan.price_fcfa,
-        amount_usd: plan.price_usd,
+        amount_fcfa: finalAmountFcfa,
+        amount_usd: finalAmountUsd,
         status: "pending",
         payment_method: "geniuspay",
-        metadata: { plan_slug: planSlug, provider: "geniuspay" },
+        metadata: {
+          plan_slug: planSlug,
+          provider: "geniuspay",
+          referral_discount: discountRate,
+          referred_by: referralCode,
+          original_price_fcfa: plan.price_fcfa,
+        },
       })
       .select()
       .single();
@@ -84,9 +109,11 @@ serve(async (req) => {
     const errorUrl = `${origin}/account?payment=failed`;
 
     const gpRequest: Record<string, unknown> = {
-      amount: plan.price_fcfa,
+      amount: finalAmountFcfa,
       currency: "XOF",
-      description: `Abonnement ${plan.name} - Graphiste GPT`,
+      description: discountRate > 0
+        ? `Abonnement ${plan.name} - Graphiste GPT (-10% parrainage)`
+        : `Abonnement ${plan.name} - Graphiste GPT`,
       success_url: successUrl,
       error_url: errorUrl,
       customer: {
@@ -102,6 +129,8 @@ serve(async (req) => {
         plan_slug: planSlug,
         country: country || null,
         requested_method: paymentMethod || null,
+        referral_discount: discountRate,
+        referred_by: referralCode,
       },
     };
 

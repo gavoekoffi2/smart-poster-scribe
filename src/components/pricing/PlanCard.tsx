@@ -10,6 +10,7 @@ interface PlanCardProps {
   onSubscribe: (planSlug: string) => void;
   isLoading: boolean;
   index: number;
+  discountRate?: number;
 }
 
 const planIcons: Record<string, React.ReactNode> = {
@@ -24,17 +25,20 @@ const planColors: Record<string, string> = {
   illimite: "from-amber-500 to-orange-600",
 };
 
-export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }: PlanCardProps) {
+export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index, discountRate = 0 }: PlanCardProps) {
   const isFree = plan.slug === "free";
   const isUnlimited = plan.credits_per_month >= 9999;
+  const hasDiscount = !isFree && discountRate > 0;
+  const discountedFcfa = hasDiscount ? Math.round(plan.price_fcfa * (1 - discountRate)) : plan.price_fcfa;
+  const discountedUsd = hasDiscount ? Math.round(plan.price_usd * (1 - discountRate) * 100) / 100 : plan.price_usd;
 
   const formatPrice = () => {
     if (isFree) {
       return { main: "Gratuit", sub: "Pour commencer" };
     }
     return {
-      main: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA/mois`,
-      sub: `(≈ $${plan.price_usd})`,
+      main: `${discountedFcfa.toLocaleString("fr-FR")} FCFA/mois`,
+      sub: `(≈ $${discountedUsd})`,
     };
   };
 
@@ -104,6 +108,16 @@ export function PlanCard({ plan, isCurrentPlan, onSubscribe, isLoading, index }:
 
           {/* Price */}
           <div className="mb-6">
+            {hasDiscount && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm text-muted-foreground line-through">
+                  {plan.price_fcfa.toLocaleString("fr-FR")} FCFA
+                </span>
+                <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                  -{Math.round(discountRate * 100)}% parrainage
+                </span>
+              </div>
+            )}
             <div className="text-3xl font-bold text-foreground">{price.main}</div>
             <div className="text-sm text-muted-foreground">{price.sub}</div>
           </div>
