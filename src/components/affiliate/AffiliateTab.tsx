@@ -218,6 +218,7 @@ export function AffiliateTab() {
             ))}
           </div>
         )}
+      </motion.div>
 
       {/* Commissions History */}
       <motion.div
