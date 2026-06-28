@@ -1606,10 +1606,23 @@ serve(async (req) => {
           }
         }
 
-        // 3) Aucun candidat pertinent → on NE clone PAS un template hors contexte.
-        //    On laisse la génération basculer en mode libre (referenceImage reste null).
+        // 3) Dernier recours : n'importe quel template actif (pour TOUJOURS s'inspirer d'un design existant).
         if (tplCandidates.length === 0) {
-          console.log(`🚫 No in-context template found for domain "${bestDomain ?? "unknown"}" — falling back to FREE creation mode (no cloning).`);
+          const { data: anyTemplates } = await supabase
+            .from("reference_templates")
+            .select("image_url, domain, description, tags")
+            .eq("is_active", true)
+            .limit(30);
+          if (anyTemplates && anyTemplates.length > 0) {
+            tplCandidates = anyTemplates;
+            fallbackFamilyUsed = ["__any_active__"];
+            console.log(`🌐 Last-resort fallback: ${tplCandidates.length} active templates (no domain match).`);
+          } else {
+            console.log(`🚫 No template at all in DB — falling back to FREE creation mode.`);
+          }
+        }
+        if (tplCandidates.length === 0) {
+          // rien à faire : aucune référence disponible
         } else {
           // Scoring : bonus si domaine exact + match de mots-clés du prompt.
           const scoredTemplates = tplCandidates.map(t => {
