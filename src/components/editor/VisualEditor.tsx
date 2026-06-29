@@ -115,6 +115,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
   const [imageScale, setImageScale] = useState(1);
+  const [hasAutoExtracted, setHasAutoExtracted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
   const sourceImageRef = useRef<HTMLImageElement | null>(null);
