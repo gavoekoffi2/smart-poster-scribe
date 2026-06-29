@@ -1084,7 +1084,7 @@ export default function AppPage() {
                         className="flex-1 border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300"
                       >
                         <Pencil className="w-4 h-4 mr-2" />
-                        Éditer
+                        Modifier (texte, logo, couleurs)
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
