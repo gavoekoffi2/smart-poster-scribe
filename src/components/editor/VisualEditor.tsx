@@ -115,6 +115,7 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [zoom, setZoom] = useState(1);
   const [imageScale, setImageScale] = useState(1);
+  const [hasAutoExtracted, setHasAutoExtracted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const blobUrlRef = useRef<string | null>(null);
   const sourceImageRef = useRef<HTMLImageElement | null>(null);
@@ -733,14 +734,41 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     };
   }, [getCanvas, isReady, saveToHistory]);
 
+  // Auto-convert poster into editable layers (Canva-like) once editor is ready
+  useEffect(() => {
+    if (isReady && !hasAutoExtracted && !isTextExtracting) {
+      setHasAutoExtracted(true);
+      // Small delay to let the canvas settle
+      const t = setTimeout(() => {
+        handleTextExtraction();
+      }, 600);
+      return () => clearTimeout(t);
+    }
+  }, [isReady, hasAutoExtracted, isTextExtracting, handleTextExtraction]);
+
   return (
     <div className="fixed inset-0 bg-background/98 backdrop-blur-md z-50 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border/30 bg-card/80 backdrop-blur-sm">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between p-3 border-b border-border/30 bg-card/80 backdrop-blur-sm flex-wrap gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-lg font-display font-semibold gradient-text">
             Éditeur visuel
           </h2>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleTextExtraction}
+            disabled={!isReady || isTextExtracting}
+            className="bg-gradient-to-r from-primary to-brand-orange text-primary-foreground hover:opacity-90 shadow-md"
+            title="Détecter tous les textes et les convertir en calques modifiables (style Canva)"
+          >
+            {isTextExtracting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <ScanText className="w-4 h-4 mr-2" />
+            )}
+            {isTextExtracting ? "Conversion en cours…" : "Convertir en calques (Canva)"}
+          </Button>
           <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
             <Button
               variant="ghost"
