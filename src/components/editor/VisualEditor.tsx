@@ -734,6 +734,18 @@ export function VisualEditor({ imageUrl, onClose, onSave }: VisualEditorProps) {
     };
   }, [getCanvas, isReady, saveToHistory]);
 
+  // Auto-convert poster into editable layers (Canva-like) once editor is ready
+  useEffect(() => {
+    if (isReady && !hasAutoExtracted && !isTextExtracting) {
+      setHasAutoExtracted(true);
+      // Small delay to let the canvas settle
+      const t = setTimeout(() => {
+        handleTextExtraction();
+      }, 600);
+      return () => clearTimeout(t);
+    }
+  }, [isReady, hasAutoExtracted, isTextExtracting, handleTextExtraction]);
+
   return (
     <div className="fixed inset-0 bg-background/98 backdrop-blur-md z-50 flex flex-col">
       {/* Header */}
