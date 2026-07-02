@@ -376,19 +376,38 @@ export default function AuthPage() {
     setIsGoogleLoading(true);
     isUserInitiatedAuth.current = true;
     rememberRequestedRedirect();
-    
+    // Persist OAuth intent across the full-page redirect
+    sessionStorage.setItem("pendingOAuthProvider", "google");
+
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
+      const { error, redirected } = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: `${window.location.origin}/auth`,
       });
 
       if (error) {
         isUserInitiatedAuth.current = false;
+        sessionStorage.removeItem("pendingOAuthProvider");
         toast.error("Erreur lors de la connexion avec Google");
         console.error("Google OAuth error:", error);
+        return;
+      }
+
+      // If session was set inline (popup flow), trigger redirect manually
+      if (!redirected) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          sessionStorage.removeItem("pendingOAuthProvider");
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("user_id", session.user.id)
+            .single();
+          handleSuccessfulAuth(!profile?.onboarding_completed);
+        }
       }
     } catch (error) {
       isUserInitiatedAuth.current = false;
+      sessionStorage.removeItem("pendingOAuthProvider");
       toast.error("Une erreur est survenue lors de la connexion avec Google");
       console.error("Google OAuth error:", error);
     } finally {
