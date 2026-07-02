@@ -145,7 +145,13 @@ export default function AuthPage() {
   useEffect(() => {
     // Only check session once on mount
     if (hasCheckedSession.current) return;
-    
+
+    // Restore user-initiated flag after OAuth full-page redirect
+    const pendingOAuth = sessionStorage.getItem("pendingOAuthProvider");
+    if (pendingOAuth) {
+      isUserInitiatedAuth.current = true;
+    }
+
     const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       hasCheckedSession.current = true;
@@ -154,16 +160,32 @@ export default function AuthPage() {
         // Check if this is a confirmed email redirect (new user)
         const urlParams = new URLSearchParams(window.location.search);
         const isConfirmed = urlParams.get('confirmed') === 'true';
-        
+
         if (isConfirmed) {
           // New user who just confirmed email - go to onboarding
           isUserInitiatedAuth.current = true;
+          sessionStorage.removeItem("pendingOAuthProvider");
           toast.success("Email confirmé ! Bienvenue sur Graphiste GPT !");
           handleSuccessfulAuth(true);
+        } else if (pendingOAuth) {
+          // Returning from OAuth (Google/Apple) — always proceed
+          sessionStorage.removeItem("pendingOAuthProvider");
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("user_id", session.user.id)
+            .single();
+          const isNewUser = !profile?.onboarding_completed;
+          toast.success("Connexion réussie !");
+          handleSuccessfulAuth(isNewUser);
         } else {
           // Existing user already logged in
           handleSuccessfulAuth(false);
         }
+      } else if (pendingOAuth) {
+        // OAuth returned without a session — clear flag so user can retry cleanly
+        sessionStorage.removeItem("pendingOAuthProvider");
+        isUserInitiatedAuth.current = false;
       }
     };
     
