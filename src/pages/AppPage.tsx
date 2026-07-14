@@ -222,6 +222,25 @@ export default function AppPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Après une inscription qui a été déclenchée par un téléchargement en attente,
+  // reprendre automatiquement le téléchargement.
+  const pendingDownloadHandled = useRef(false);
+  useEffect(() => {
+    if (pendingDownloadHandled.current) return;
+    if (!isRealUser) return;
+    const raw = sessionStorage.getItem("pendingDownload");
+    if (!raw) return;
+    pendingDownloadHandled.current = true;
+    sessionStorage.removeItem("pendingDownload");
+    try {
+      const { format } = JSON.parse(raw) as { url: string; format: "png" | "jpeg" | "pdf" };
+      setTimeout(() => {
+        handleDownloadWithFormat(format || "png");
+      }, 400);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealUser]);
+
   // Fire confetti and save to history when image is generated
   useEffect(() => {
     if (generatedImage && generatedImage !== prevGeneratedImage) {
