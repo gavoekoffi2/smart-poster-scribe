@@ -27,7 +27,7 @@ export default function LandingPage() {
   }, []);
 
   const handleGetStarted = () => {
-    navigate("/auth");
+    navigate("/app");
   };
 
   return (
