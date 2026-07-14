@@ -43,7 +43,8 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageData } = body as AnalyzeImageRequest;
+    const { imageData, locale } = body as AnalyzeImageRequest & { locale?: "en" | "fr" };
+    const outLocale: "en" | "fr" = locale === "en" ? "en" : "fr";
 
     // ============ INPUT VALIDATION ============
     if (!imageData || typeof imageData !== 'string') {
