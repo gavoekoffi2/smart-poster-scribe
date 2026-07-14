@@ -235,7 +235,7 @@ export default function AppPage() {
     try {
       const { url, format } = JSON.parse(raw) as { url: string; format: "png" | "jpeg" | "pdf" };
       if (!url) return;
-      toast.success("Compte créé ! Téléchargement en cours…");
+      toast.success(localStorage.getItem("i18nextLng") === "en" ? "Account created! Downloading…" : "Compte créé ! Téléchargement en cours…");
       setTimeout(async () => {
         try {
           const response = await fetch(url, { mode: "cors", credentials: "omit" });
@@ -418,7 +418,7 @@ export default function AppPage() {
       try {
         sessionStorage.setItem("pendingDownload", JSON.stringify({ url: imageToDownload, format }));
       } catch {}
-      toast.info("Créez un compte gratuit pour télécharger votre affiche.");
+      toast.info(localStorage.getItem("i18nextLng") === "en" ? "Create a free account to download your poster." : "Créez un compte gratuit pour télécharger votre affiche.");
       navigate("/auth?redirect=/app&reason=download");
       return;
     }
