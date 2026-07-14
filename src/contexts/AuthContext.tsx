@@ -7,10 +7,15 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAnonymous: boolean;
+  isRealUser: boolean;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const isAnonUser = (u: User | null) =>
+  !!u && ((u as any).is_anonymous === true || u.app_metadata?.provider === "anonymous");
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -18,15 +23,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let ensuringAnon = false;
+
+    const ensureAnonSession = async () => {
+      if (ensuringAnon) return;
+      ensuringAnon = true;
+      try {
+        await supabase.auth.signInAnonymously();
+      } catch (e) {
+        console.error("Anonymous sign-in failed:", e);
+      } finally {
+        ensuringAnon = false;
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      if (!session && event !== "SIGNED_OUT") {
+        ensureAnonSession();
+      }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        await ensureAnonSession();
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+      } else {
+        setSession(session);
+        setUser(session.user);
+      }
       setIsLoading(false);
     });
 
@@ -37,8 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const anonymous = isAnonUser(user);
+
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, isAuthenticated: !!user, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        isAuthenticated: !!user,
+        isAnonymous: anonymous,
+        isRealUser: !!user && !anonymous,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

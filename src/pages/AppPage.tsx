@@ -112,15 +112,11 @@ export default function AppPage() {
   const cloneTemplate = locationState?.cloneTemplate;
   
   const { profile } = useUserProfile();
-  const { user, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { user, isAuthenticated, isAnonymous, isRealUser, isLoading: authLoading, signOut } = useAuth();
   const { shouldShowTutorial, isLoading: tutorialLoading, completeTutorial } = useTutorial(user?.id);
 
-  // Redirect to auth if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate("/auth", { replace: true });
-    }
-  }, [authLoading, isAuthenticated, navigate]);
+  // Note: pas de redirection vers /auth ici — les visiteurs peuvent essayer sans compte
+  // (session anonyme auto). L'inscription est demandée uniquement au moment du téléchargement.
   const {
     messages,
     conversationState,
@@ -225,6 +221,39 @@ export default function AppPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Après une inscription qui a été déclenchée par un téléchargement en attente,
+  // reprendre automatiquement le téléchargement.
+  const pendingDownloadHandled = useRef(false);
+  useEffect(() => {
+    if (pendingDownloadHandled.current) return;
+    if (!isRealUser) return;
+    const raw = sessionStorage.getItem("pendingDownload");
+    if (!raw) return;
+    pendingDownloadHandled.current = true;
+    sessionStorage.removeItem("pendingDownload");
+    try {
+      const { url, format } = JSON.parse(raw) as { url: string; format: "png" | "jpeg" | "pdf" };
+      if (!url) return;
+      toast.success("Compte créé ! Téléchargement en cours…");
+      setTimeout(async () => {
+        try {
+          const response = await fetch(url, { mode: "cors", credentials: "omit" });
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = `graphiste-gpt-${Date.now()}.${format === "jpeg" ? "jpg" : format}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          window.open(url, "_blank");
+        }
+      }, 400);
+    } catch {}
+  }, [isRealUser]);
 
   // Fire confetti and save to history when image is generated
   useEffect(() => {
@@ -383,6 +412,17 @@ export default function AppPage() {
     const imageId = feedbackImageId || selectedHistoryImage?.id;
     
     if (!imageToDownload) return;
+
+    // Inscription requise pour télécharger — on garde l'image en attente
+    if (!isRealUser) {
+      try {
+        sessionStorage.setItem("pendingDownload", JSON.stringify({ url: imageToDownload, format }));
+      } catch {}
+      toast.info("Créez un compte gratuit pour télécharger votre affiche.");
+      navigate("/auth?redirect=/app&reason=download");
+      return;
+    }
+    
     
     try {
       // Essayer d'abord avec fetch + blob
