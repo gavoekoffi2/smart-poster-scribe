@@ -65,11 +65,11 @@ const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestat
 // Domaine restaurant avec traitement spécial
 const RESTAURANT_DOMAIN: Domain = "restaurant";
 
-const INITIAL_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+const INITIAL_MESSAGE = getUiLocale() === "en"
+  ? "Hi! I'm your graphic designer assistant. How would you like to create your poster?"
+  : "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
 
-const MODE_SELECT_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+const MODE_SELECT_MESSAGE = INITIAL_MESSAGE;
 
 // Convertit un code hex en description de couleur naturelle
 function hexToColorName(hex: string): string {
