@@ -10,7 +10,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useGeoCountry } from "@/hooks/useGeoCountry";
 import { COUNTRIES, getCountry, type PaymentOption } from "@/lib/paymentRouting";
 import { toast } from "sonner";
-import { MessageCircle, CreditCard, Loader2, MapPin } from "lucide-react";
+import { MessageCircle, CreditCard, Loader2, MapPin, Tag, Check, X } from "lucide-react";
 
 // Numéro WhatsApp destinataire des demandes d'abonnement
 const WHATSAPP_NUMBER = "22893708178";
