@@ -3,6 +3,7 @@ import { ArrowRight, Star, CheckCircle, Play } from "lucide-react";
 import heroImage from "@/assets/hero-designer-robot.png";
 import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { DemoVideoModal } from "./DemoVideoModal";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -12,6 +13,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
   const { t } = useTranslation();
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
+  const [demoOpen, setDemoOpen] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -87,7 +89,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
                 variant="outline"
                 size="lg"
                 className="text-lg border-border hover:bg-secondary hover:border-primary/50 px-8 py-6 rounded-full group"
-                onClick={() => document.getElementById("process")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => setDemoOpen(true)}
               >
                 <Play className="w-5 h-5 mr-2 transition-transform group-hover:scale-110" />
                 {t("hero.demo")}
@@ -211,6 +213,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         <div className="w-1 h-1 bg-primary/50 rounded-full" />
         <div className="w-1 h-1 bg-primary/30 rounded-full" />
       </div>
+      <DemoVideoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </section>
   );
 }
