@@ -13,6 +13,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
   const { t } = useTranslation();
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
+  const [demoOpen, setDemoOpen] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
