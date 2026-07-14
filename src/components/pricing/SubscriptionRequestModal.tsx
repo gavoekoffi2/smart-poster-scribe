@@ -227,6 +227,39 @@ export function SubscriptionRequestModal({
             )}
           </div>
 
+          {/* Promo code */}
+          <div className="space-y-2">
+            <Label htmlFor="promo-code" className="flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5" />
+              Code promo (optionnel)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="promo-code"
+                placeholder="Entrez votre code"
+                value={promoCode}
+                onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoStatus(null); }}
+                disabled={promoStatus?.valid}
+                maxLength={40}
+              />
+              {promoStatus?.valid ? (
+                <Button type="button" variant="outline" size="icon" onClick={clearPromo}>
+                  <X className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={applyPromo} disabled={isValidatingPromo || !promoCode.trim()}>
+                  {isValidatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
+                </Button>
+              )}
+            </div>
+            {promoStatus && (
+              <p className={`text-xs flex items-center gap-1 ${promoStatus.valid ? "text-green-500" : "text-destructive"}`}>
+                {promoStatus.valid ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                {promoStatus.message}
+              </p>
+            )}
+          </div>
+
           <Button
             type="button"
             onClick={async () => {
@@ -246,6 +279,7 @@ export function SubscriptionRequestModal({
                   country: countryInfo.code,
                   paymentMethod: selectedOption.method,
                   mmoProvider: selectedOption.mmoProvider,
+                  promoCode: promoStatus?.valid ? promoCode.trim() : undefined,
                 });
               } catch (err) {
                 console.error(err);
