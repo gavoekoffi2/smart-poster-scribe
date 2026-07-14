@@ -32,6 +32,7 @@ const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 const AdminContact = lazy(() => import("./pages/AdminContact"));
 const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const AdminPromoCodes = lazy(() => import("./pages/AdminPromoCodes"));
 // Lazy load designer pages
 const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
@@ -79,6 +80,7 @@ const App = () => (
           <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
           <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/promo-codes" element={<AdminRoute><AdminPromoCodes /></AdminRoute>} />
 
           {/* Designer routes with guard */}
           <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />

@@ -10,7 +10,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useGeoCountry } from "@/hooks/useGeoCountry";
 import { COUNTRIES, getCountry, type PaymentOption } from "@/lib/paymentRouting";
 import { toast } from "sonner";
-import { MessageCircle, CreditCard, Loader2, MapPin } from "lucide-react";
+import { MessageCircle, CreditCard, Loader2, MapPin, Tag, Check, X } from "lucide-react";
 
 // Numéro WhatsApp destinataire des demandes d'abonnement
 const WHATSAPP_NUMBER = "22893708178";
@@ -46,6 +46,35 @@ export function SubscriptionRequestModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPayingOnline, setIsPayingOnline] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ valid: boolean; discount?: number; message?: string } | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  const applyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setIsValidatingPromo(true);
+    try {
+      const { data, error } = await supabase.rpc("validate_promo_code" as any, {
+        p_code: promoCode.trim(),
+        p_plan_slug: planSlug,
+      });
+      if (error) throw error;
+      const v = data as any;
+      if (v?.valid) {
+        setPromoStatus({ valid: true, discount: v.discount_percent, message: `-${v.discount_percent}% appliqué` });
+        toast.success(`Code appliqué : -${v.discount_percent}%`);
+      } else {
+        setPromoStatus({ valid: false, message: v?.message || "Code invalide" });
+        toast.error(v?.message || "Code invalide");
+      }
+    } catch (e) {
+      setPromoStatus({ valid: false, message: "Erreur de validation" });
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const clearPromo = () => { setPromoCode(""); setPromoStatus(null); };
 
   // Réinitialiser la méthode sélectionnée quand le pays change
   useEffect(() => {
@@ -198,6 +227,39 @@ export function SubscriptionRequestModal({
             )}
           </div>
 
+          {/* Promo code */}
+          <div className="space-y-2">
+            <Label htmlFor="promo-code" className="flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5" />
+              Code promo (optionnel)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="promo-code"
+                placeholder="Entrez votre code"
+                value={promoCode}
+                onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoStatus(null); }}
+                disabled={promoStatus?.valid}
+                maxLength={40}
+              />
+              {promoStatus?.valid ? (
+                <Button type="button" variant="outline" size="icon" onClick={clearPromo}>
+                  <X className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={applyPromo} disabled={isValidatingPromo || !promoCode.trim()}>
+                  {isValidatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
+                </Button>
+              )}
+            </div>
+            {promoStatus && (
+              <p className={`text-xs flex items-center gap-1 ${promoStatus.valid ? "text-green-500" : "text-destructive"}`}>
+                {promoStatus.valid ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                {promoStatus.message}
+              </p>
+            )}
+          </div>
+
           <Button
             type="button"
             onClick={async () => {
@@ -217,6 +279,7 @@ export function SubscriptionRequestModal({
                   country: countryInfo.code,
                   paymentMethod: selectedOption.method,
                   mmoProvider: selectedOption.mmoProvider,
+                  promoCode: promoStatus?.valid ? promoCode.trim() : undefined,
                 });
               } catch (err) {
                 console.error(err);

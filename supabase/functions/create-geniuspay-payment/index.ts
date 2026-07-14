@@ -36,11 +36,16 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Utilisateur non authentifié");
 
     const body = await req.json();
-    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider } = body as {
+    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider, promoCode } = body as {
       planSlug?: string; returnUrl?: string; customerPhone?: string; customerName?: string;
-      country?: string; paymentMethod?: string; mmoProvider?: string;
+      country?: string; paymentMethod?: string; mmoProvider?: string; promoCode?: string;
     };
     if (!planSlug) throw new Error("Plan non spécifié");
+
+    // Create a request-scoped client to run promo validation as the calling user
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || supabaseServiceKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const { data: plan, error: planError } = await supabase
       .from("subscription_plans")
@@ -77,8 +82,27 @@ serve(async (req) => {
       }
     }
 
-    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - discountRate));
-    const finalAmountUsd = Math.round(plan.price_usd * (1 - discountRate) * 100) / 100;
+    // Optional promo code — validate & apply on top of referral discount
+    let promoDiscountRate = 0;
+    let promoCodeId: string | null = null;
+    let promoCodeValue: string | null = null;
+    if (promoCode && promoCode.trim()) {
+      const { data: validation } = await userClient.rpc("validate_promo_code", {
+        p_code: promoCode.trim(),
+        p_plan_slug: planSlug,
+      });
+      if (validation && (validation as any).valid) {
+        promoDiscountRate = ((validation as any).discount_percent || 0) / 100;
+        promoCodeId = (validation as any).code_id;
+        promoCodeValue = (validation as any).code;
+      } else {
+        throw new Error((validation as any)?.message || "Code promo invalide");
+      }
+    }
+
+    const combinedDiscount = 1 - (1 - discountRate) * (1 - promoDiscountRate);
+    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - combinedDiscount));
+    const finalAmountUsd = Math.round(plan.price_usd * (1 - combinedDiscount) * 100) / 100;
 
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
@@ -95,6 +119,9 @@ serve(async (req) => {
           referral_discount: discountRate,
           referred_by: referralCode,
           original_price_fcfa: plan.price_fcfa,
+          promo_code: promoCodeValue,
+          promo_code_id: promoCodeId,
+          promo_discount_rate: promoDiscountRate,
         },
       })
       .select()
@@ -103,6 +130,19 @@ serve(async (req) => {
     if (txError || !transaction) {
       throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
     }
+
+    // Record promo code redemption (if any)
+    if (promoCodeId && promoCodeValue) {
+      const { error: redeemError } = await userClient.rpc("redeem_promo_code", {
+        p_code: promoCodeValue,
+        p_plan_slug: planSlug,
+        p_original_amount: plan.price_fcfa,
+        p_currency: "FCFA",
+        p_payment_transaction_id: transaction.id,
+      });
+      if (redeemError) console.error("[promo] redeem error:", redeemError);
+    }
+
 
     const origin = req.headers.get("origin") || "";
     const successUrl = returnUrl || `${origin}/account?payment=success`;

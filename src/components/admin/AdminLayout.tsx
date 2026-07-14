@@ -23,6 +23,7 @@ import {
   Mail,
   Wallet,
   Settings,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ const navItems = [
   { id: "showcase", label: "Showcase", icon: Palette, path: "/admin/showcase", permission: "manage_templates" },
   { id: "feedback", label: "Feedbacks", icon: MessageSquare, path: "/admin/feedback", permission: "view_dashboard" },
   { id: "subscriptions", label: "Abonnements", icon: CreditCard, path: "/admin/subscriptions", permission: "manage_users" },
+  { id: "promo-codes", label: "Codes promo", icon: Tag, path: "/admin/promo-codes", permission: "manage_users" },
   { id: "affiliates", label: "Affiliation", icon: Link2, path: "/admin/affiliates", permission: "manage_users" },
   { id: "designers", label: "Graphistes", icon: Users, path: "/admin/designers", permission: "manage_designers" },
   { id: "roles", label: "Rôles", icon: Shield, path: "/admin/roles", permission: "manage_admins" },
