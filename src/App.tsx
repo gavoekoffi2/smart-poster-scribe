@@ -32,6 +32,7 @@ const AdminAffiliates = lazy(() => import("./pages/AdminAffiliates"));
 const AdminContact = lazy(() => import("./pages/AdminContact"));
 const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const AdminPromoCodes = lazy(() => import("./pages/AdminPromoCodes"));
 // Lazy load designer pages
 const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
