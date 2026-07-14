@@ -372,10 +372,10 @@ export function TemplatesMarketplace() {
                 <div className="space-y-3">
                   <Button onClick={() => handleCloneTemplate(selectedTemplate)} className="w-full glow-orange bg-gradient-to-r from-primary to-accent rounded-full py-6">
                     <Sparkles className="w-4 h-4 mr-2" />
-                    S'inspirer de ce design
+                    {t("templates.inspireCta")}
                   </Button>
                   <Button variant="outline" onClick={() => setSelectedTemplate(null)} className="w-full rounded-full">
-                    Fermer
+                    {t("templates.close")}
                   </Button>
                 </div>
               </div>
