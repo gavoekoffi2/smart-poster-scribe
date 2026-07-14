@@ -740,7 +740,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   
   const getInitialMessage = () => {
     if (cloneTemplate) {
-      return "J'analyse cette affiche pour comprendre les informations à personnaliser...";
+      return getUiLocale() === "en"
+        ? "I'm analyzing this poster to understand what to personalize..."
+        : "J'analyse cette affiche pour comprendre les informations à personnaliser...";
     }
     return INITIAL_MESSAGE;
   };
