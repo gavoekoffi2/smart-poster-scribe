@@ -3,6 +3,7 @@ import { ArrowRight, Star, CheckCircle, Play } from "lucide-react";
 import heroImage from "@/assets/hero-designer-robot.png";
 import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { DemoVideoModal } from "./DemoVideoModal";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
