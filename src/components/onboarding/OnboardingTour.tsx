@@ -1,26 +1,22 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Wand2, CreditCard, Share2 } from "lucide-react";
 
-const STEPS = [
-  { icon: Sparkles, title: "Bienvenue 👋", body: "Graphiste GPT crée des affiches pros en quelques secondes grâce à l'IA et à nos templates de graphistes." },
-  { icon: Wand2, title: "1. Décrivez votre besoin", body: "Tapez une demande (ex : « Affiche église dimanche, thème espoir »). L'IA détecte le bon template." },
-  { icon: CreditCard, title: "2. Vos crédits", body: "Chaque génération consomme 1 crédit. Vous démarrez avec 3 crédits offerts. Passez à un plan pour générer en illimité." },
-  { icon: Share2, title: "3. Parrainez & gagnez", body: "Partagez votre lien d'affiliation et gagnez 30% de commission sur chaque abonnement filleul." },
-];
-
+const ICONS = [Sparkles, Wand2, CreditCard, Share2];
 const KEY = "ggpt_onboarding_seen_v1";
 
 export function OnboardingTour() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!localStorage.getItem(KEY)) {
-      const t = setTimeout(() => setOpen(true), 800);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setOpen(true), 800);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -29,8 +25,11 @@ export function OnboardingTour() {
     setOpen(false);
   };
 
-  const cur = STEPS[step];
-  const Icon = cur.icon;
+  const rawSteps = t("onboarding.steps", { returnObjects: true }) as Array<{ title: string; body: string }>;
+  const steps = Array.isArray(rawSteps) ? rawSteps : [];
+  if (steps.length === 0) return null;
+  const cur = steps[step];
+  const Icon = ICONS[step] || Sparkles;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
@@ -43,16 +42,16 @@ export function OnboardingTour() {
           <DialogDescription className="text-center pt-2">{cur.body}</DialogDescription>
         </DialogHeader>
         <div className="flex justify-center gap-1.5 py-2">
-          {STEPS.map((_, i) => (
+          {steps.map((_, i) => (
             <span key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-6 bg-primary" : "w-1.5 bg-muted"}`} />
           ))}
         </div>
         <DialogFooter className="sm:justify-between gap-2">
-          <Button variant="ghost" onClick={close}>Passer</Button>
-          {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)}>Suivant</Button>
+          <Button variant="ghost" onClick={close}>{t("onboarding.skip")}</Button>
+          {step < steps.length - 1 ? (
+            <Button onClick={() => setStep(step + 1)}>{t("onboarding.next")}</Button>
           ) : (
-            <Button onClick={close}>C'est parti ✨</Button>
+            <Button onClick={close}>{t("onboarding.letsGo")}</Button>
           )}
         </DialogFooter>
       </DialogContent>
