@@ -1214,7 +1214,9 @@ serve(async (req) => {
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
       apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
       templateId: rawTemplateId, // ID du template choisi (pour royalties + clone strict)
+      locale: rawLocale, // 'en' | 'fr' — langue préférée pour tout texte que l'IA rédige
     } = body;
+    const uiLocale: "en" | "fr" = rawLocale === "en" ? "en" : "fr";
     const apiStrictPremium: boolean = rawApiStrictPremium === true;
     // Public API requests are always forced to premium (gpt-image-2)
     const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
