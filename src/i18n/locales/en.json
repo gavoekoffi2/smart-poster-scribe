@@ -264,5 +264,65 @@
     "label": "Language",
     "english": "English",
     "french": "French"
+  },
+  "tutorial": {
+    "stepOf": "Step {{current}} of {{total}}",
+    "skip": "Skip",
+    "next": "Next",
+    "gotIt": "Got it!",
+    "steps": [
+      {
+        "title": "Welcome to Graphiste GPT! 🎨",
+        "description": "I'm your virtual graphic designer assistant. I'll walk you through the platform so you can create amazing posters in a few clicks!"
+      },
+      {
+        "title": "Pick your domain",
+        "description": "Start by selecting the type of poster you want to create: restaurant, event, church, e-commerce and much more!"
+      },
+      {
+        "title": "Describe your project",
+        "description": "Tell me what you want: the theme, the colors, the main copy... The more precise you are, the better the result."
+      },
+      {
+        "title": "Add your assets",
+        "description": "You can attach your logo, product photos, and even a reference image to inspire me. Everything is customizable!"
+      },
+      {
+        "title": "Choose the format",
+        "description": "Pick the format and resolution of your poster. Higher resolution means sharper details for printing."
+      },
+      {
+        "title": "Generate and download! ✨",
+        "description": "Click Generate and let the magic happen. In seconds your professional poster is ready to download."
+      }
+    ]
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "letsGo": "Let's go ✨",
+    "steps": [
+      {
+        "title": "Welcome 👋",
+        "body": "Graphiste GPT creates pro posters in seconds thanks to AI and our designer templates."
+      },
+      {
+        "title": "1. Describe your need",
+        "body": "Type a request (e.g. \"Church poster, Sunday, theme: hope\"). AI picks the right template."
+      },
+      {
+        "title": "2. Your credits",
+        "body": "Each generation uses 1 credit. You start with 3 free credits. Upgrade to a plan for unlimited creation."
+      },
+      {
+        "title": "3. Refer & earn",
+        "body": "Share your affiliate link and earn 30% commission on every referred subscription."
+      }
+    ]
+  },
+  "chat": {
+    "designerName": "Graphic designer",
+    "downloadRequiresAccount": "Create a free account to download your poster.",
+    "accountCreatedDownloading": "Account created! Downloading…"
   }
 }

@@ -264,5 +264,65 @@
     "label": "Langue",
     "english": "Anglais",
     "french": "Français"
+  },
+  "tutorial": {
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "skip": "Passer",
+    "next": "Suivant",
+    "gotIt": "C'est compris !",
+    "steps": [
+      {
+        "title": "Bienvenue sur Graphiste GPT ! 🎨",
+        "description": "Je suis votre assistant graphiste virtuel. Je vais vous guider à travers les fonctionnalités de la plateforme pour que vous puissiez créer des affiches incroyables en quelques clics !"
+      },
+      {
+        "title": "Choisissez votre domaine",
+        "description": "Commencez par sélectionner le type d'affiche que vous souhaitez créer : restaurant, événement, église, e-commerce, et bien plus encore !"
+      },
+      {
+        "title": "Décrivez votre projet",
+        "description": "Expliquez-moi ce que vous voulez : le thème, les couleurs, le texte principal... Plus vous êtes précis, plus le résultat sera parfait !"
+      },
+      {
+        "title": "Ajoutez vos éléments",
+        "description": "Vous pouvez ajouter votre logo, des photos de vos produits, et même une image de référence pour m'inspirer. Tout est personnalisable !"
+      },
+      {
+        "title": "Choisissez le format",
+        "description": "Sélectionnez le format et la résolution de votre affiche. Plus la résolution est haute, plus les détails seront nets pour l'impression."
+      },
+      {
+        "title": "Générez et téléchargez ! ✨",
+        "description": "Cliquez sur 'Générer' et laissez la magie opérer ! En quelques secondes, votre affiche professionnelle sera prête à télécharger."
+      }
+    ]
+  },
+  "onboarding": {
+    "skip": "Passer",
+    "next": "Suivant",
+    "letsGo": "C'est parti ✨",
+    "steps": [
+      {
+        "title": "Bienvenue 👋",
+        "body": "Graphiste GPT crée des affiches pros en quelques secondes grâce à l'IA et à nos templates de graphistes."
+      },
+      {
+        "title": "1. Décrivez votre besoin",
+        "body": "Tapez une demande (ex : « Affiche église dimanche, thème espoir »). L'IA détecte le bon template."
+      },
+      {
+        "title": "2. Vos crédits",
+        "body": "Chaque génération consomme 1 crédit. Vous démarrez avec 3 crédits offerts. Passez à un plan pour générer en illimité."
+      },
+      {
+        "title": "3. Parrainez & gagnez",
+        "body": "Partagez votre lien d'affiliation et gagnez 30% de commission sur chaque abonnement filleul."
+      }
+    ]
+  },
+  "chat": {
+    "designerName": "Graphiste",
+    "downloadRequiresAccount": "Créez un compte gratuit pour télécharger votre affiche.",
+    "accountCreatedDownloading": "Compte créé ! Téléchargement en cours…"
   }
 }
