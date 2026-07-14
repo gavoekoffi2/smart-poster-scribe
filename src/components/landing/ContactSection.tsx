@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, MessageCircle, Send, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,45 +8,41 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const contactInfo = [
-  {
-    icon: Phone,
-    label: "Téléphone",
-    values: ["+228 93 70 81 78", "+228 91 04 13 35"],
-    href: "tel:+22893708178",
-  },
-  {
-    icon: Mail,
-    label: "Email",
-    values: ["contact@graphiste-gpt.com"],
-    href: "mailto:contact@graphiste-gpt.com",
-  },
-  {
-    icon: MapPin,
-    label: "Adresse",
-    values: ["Lomé, quartier Hédranawoé", "À côté de la radio Zéphyr-Togo"],
-    href: "https://maps.google.com/?q=Lome+Hedranawoe",
-  },
-  {
-    icon: Clock,
-    label: "Horaires",
-    values: ["Lun - Sam: 8h - 18h", "Dim: Fermé"],
-    href: null,
-  },
-];
-
 export function ContactSection() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const contactInfo = [
+    {
+      icon: Phone,
+      label: t("contact.info.phone"),
+      values: ["+228 93 70 81 78", "+228 91 04 13 35"],
+      href: "tel:+22893708178",
+    },
+    {
+      icon: Mail,
+      label: t("contact.info.email"),
+      values: ["contact@graphiste-gpt.com"],
+      href: "mailto:contact@graphiste-gpt.com",
+    },
+    {
+      icon: MapPin,
+      label: t("contact.info.address"),
+      values: ["Lomé, Hédranawoé", "Togo"],
+      href: "https://maps.google.com/?q=Lome+Hedranawoe",
+    },
+    {
+      icon: Clock,
+      label: t("contact.info.hours"),
+      values: [t("contact.info.hoursValue"), t("contact.info.closed")],
+      href: null,
+    },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
       const { data, error } = await supabase.functions.invoke("send-contact", {
         body: {
@@ -54,15 +51,13 @@ export function ContactSection() {
           message: formData.message.trim(),
         },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
-      toast.success("Message envoyé avec succès ! Nous vous répondrons sous 24h.");
+      toast.success(t("contact.form.success"));
       setFormData({ name: "", email: "", message: "" });
     } catch (err: any) {
       console.error("Contact form error:", err);
-      toast.error(err?.message || "Erreur lors de l'envoi. Réessayez ou contactez-nous sur WhatsApp.");
+      toast.error(err?.message || t("contact.form.error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -70,13 +65,11 @@ export function ContactSection() {
 
   return (
     <section id="contact" className="py-24 px-4 relative overflow-hidden">
-      {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent" />
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[150px]" />
       <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent/10 rounded-full blur-[120px]" />
 
       <div className="container mx-auto max-w-6xl relative z-10">
-        {/* Header */}
         <div className="text-center mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -85,7 +78,7 @@ export function ContactSection() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6"
           >
             <MessageCircle className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Contact</span>
+            <span className="text-sm font-medium text-primary">{t("contact.badge")}</span>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -94,8 +87,8 @@ export function ContactSection() {
             transition={{ delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
           >
-            <span className="text-foreground">Parlons de votre </span>
-            <span className="gradient-text">projet</span>
+            <span className="text-foreground">{t("contact.titleA")}</span>
+            <span className="gradient-text">{t("contact.titleB")}</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -104,12 +97,11 @@ export function ContactSection() {
             transition={{ delay: 0.2 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            Une question ? Un projet spécial ? Notre équipe est à votre écoute pour vous accompagner.
+            {t("contact.description")}
           </motion.p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-          {/* Contact Info */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -154,7 +146,6 @@ export function ContactSection() {
               })}
             </div>
 
-            {/* WhatsApp CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -166,67 +157,59 @@ export function ContactSection() {
                   <MessageCircle className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-foreground mb-1">Discutons sur WhatsApp</h3>
-                  <p className="text-sm text-muted-foreground">Réponse rapide garantie</p>
+                  <h3 className="font-semibold text-foreground mb-1">{t("contact.whatsappTitle")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("contact.whatsappDesc")}</p>
                 </div>
-                <Button
-                  asChild
-                  className="bg-green-500 hover:bg-green-600 text-white rounded-full px-6"
-                >
-                  <a
-                    href="https://wa.me/22893708178"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Écrire
+                <Button asChild className="bg-green-500 hover:bg-green-600 text-white rounded-full px-6">
+                  <a href="https://wa.me/22893708178" target="_blank" rel="noopener noreferrer">
+                    {t("contact.whatsappCta")}
                   </a>
                 </Button>
               </div>
             </motion.div>
           </motion.div>
 
-          {/* Contact Form */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             className="p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/50"
           >
-            <h3 className="text-2xl font-bold text-foreground mb-6">Envoyez-nous un message</h3>
+            <h3 className="text-2xl font-bold text-foreground mb-6">{t("contact.formTitle")}</h3>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Votre nom
+                  {t("contact.form.name")}
                 </label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Jean Dupont"
+                  placeholder={t("contact.form.namePlaceholder")}
                   required
                   className="bg-background/60 border-border/40 focus:border-primary/50"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Votre email
+                  {t("contact.form.email")}
                 </label>
                 <Input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="jean@exemple.com"
+                  placeholder={t("contact.form.emailPlaceholder")}
                   required
                   className="bg-background/60 border-border/40 focus:border-primary/50"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Votre message
+                  {t("contact.form.message")}
                 </label>
                 <Textarea
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Décrivez votre projet ou posez votre question..."
+                  placeholder={t("contact.form.messagePlaceholder")}
                   required
                   rows={5}
                   className="bg-background/60 border-border/40 focus:border-primary/50 resize-none"
@@ -238,11 +221,11 @@ export function ContactSection() {
                 className="w-full py-6 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground glow-orange font-semibold"
               >
                 {isSubmitting ? (
-                  "Envoi en cours..."
+                  t("contact.form.submitting")
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Envoyer le message
+                    {t("contact.form.submit")}
                   </>
                 )}
               </Button>

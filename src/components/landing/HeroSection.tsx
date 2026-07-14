@@ -147,22 +147,18 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             >
               <img 
                 src={heroImage} 
-                alt="Graphiste africain assisté par un robot IA" 
+                alt={t("hero.imageAlt")} 
                 className="w-full h-full object-cover rounded-2xl shadow-2xl shadow-primary/30"
                 style={{
                   transform: "translateZ(30px)",
                 }}
               />
               
-              {/* Shine overlay effect on hover */}
               <div 
                 className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{
-                  transform: "translateZ(40px)",
-                }}
+                style={{ transform: "translateZ(40px)" }}
               />
               
-              {/* Floating stats cards with 3D effect */}
               <div 
                 className="absolute top-4 right-4 md:top-8 md:right-[-20px] bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl p-3 md:p-4 shadow-xl animate-float z-20"
                 style={{
@@ -175,7 +171,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
                   </div>
                   <div>
                     <p className="text-xl md:text-2xl font-bold text-foreground">4.9</p>
-                    <p className="text-[10px] md:text-xs text-muted-foreground">Note clients</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{t("hero.cards.rating")}</p>
                   </div>
                 </div>
               </div>
@@ -193,7 +189,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
                   </div>
                   <div>
                     <p className="text-base md:text-lg font-bold text-foreground">+50K</p>
-                    <p className="text-[10px] md:text-xs text-muted-foreground">Visuels créés</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{t("hero.cards.created")}</p>
                   </div>
                 </div>
               </div>

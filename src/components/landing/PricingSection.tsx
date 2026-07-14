@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Zap, Infinity as InfinityIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 
@@ -18,6 +19,7 @@ const planGradients: Record<string, string> = {
 
 export function PricingSection() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { plans, isLoading } = useSubscription();
 
   const handleSubscribe = (planSlug: string) => {
@@ -29,8 +31,8 @@ export function PricingSection() {
     navigate(`/pricing?${params.toString()}`);
   };
 
-  // Order: free, essentiel, illimite
   const ordered = [...plans].sort((a, b) => a.sort_order - b.sort_order);
+  const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 
   return (
     <section id="pricing" className="py-24 px-4 relative overflow-hidden">
@@ -47,7 +49,7 @@ export function PricingSection() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6"
           >
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Tarifs</span>
+            <span className="text-sm font-medium text-primary">{t("pricing.badge")}</span>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -56,8 +58,8 @@ export function PricingSection() {
             transition={{ delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
           >
-            <span className="text-foreground">Des tarifs </span>
-            <span className="gradient-text">transparents</span>
+            <span className="text-foreground">{t("pricing.titleA")}</span>
+            <span className="gradient-text">{t("pricing.titleB")}</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -66,7 +68,7 @@ export function PricingSection() {
             transition={{ delay: 0.2 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            Choisissez le plan adapté à vos besoins. Commencez gratuitement et évoluez selon votre croissance.
+            {t("pricing.description")}
           </motion.p>
         </div>
 
@@ -85,19 +87,15 @@ export function PricingSection() {
               const isUnlimited = plan.credits_per_month >= 9999;
               const postersCount = isUnlimited ? null : Math.floor(plan.credits_per_month / 2);
 
-              const priceMain = isFree
-                ? "$0"
-                : `$${plan.price_usd}`;
-              const priceSub = isFree
-                ? "(0 FCFA)"
-                : `(≈ ${plan.price_fcfa.toLocaleString("fr-FR")} FCFA)`;
-              const period = isFree ? "" : "/mois";
+              const priceMain = isFree ? "$0" : `$${plan.price_usd}`;
+              const priceSub = isFree ? "(0 FCFA)" : `(≈ ${plan.price_fcfa.toLocaleString(locale)} FCFA)`;
+              const period = isFree ? "" : t("pricing.period");
 
               const cta = isFree
-                ? "Tester gratuitement"
+                ? t("pricing.ctaFree")
                 : isUnlimited
-                  ? "Passer à l'Illimité"
-                  : "Souscrire maintenant";
+                  ? t("pricing.ctaUnlimited")
+                  : t("pricing.ctaSubscribe");
 
               return (
                 <motion.div
@@ -114,7 +112,7 @@ export function PricingSection() {
                 >
                   {plan.is_popular && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold shadow-lg">
-                      Le plus populaire
+                      {t("pricing.popular")}
                     </div>
                   )}
 
@@ -135,21 +133,20 @@ export function PricingSection() {
                     <span className="text-sm text-muted-foreground">{priceSub}</span>
                   </div>
 
-                  {/* Quota highlight */}
                   <div className="mb-6 p-3 rounded-xl bg-muted/50 border border-border/50 text-center">
                     {isUnlimited ? (
                       <div className="flex items-center justify-center gap-2 text-primary font-bold text-lg">
-                        <InfinityIcon className="w-5 h-5" /> Affiches illimitées
+                        <InfinityIcon className="w-5 h-5" /> {t("pricing.unlimited")}
                       </div>
                     ) : isFree ? (
                       <div className="text-sm text-foreground">
-                        <span className="font-bold text-primary">≈ 3 affiches</span>{" "}
-                        <span className="text-muted-foreground">(bonus unique)</span>
+                        <span className="font-bold text-primary">{t("pricing.freeBonus")}</span>{" "}
+                        <span className="text-muted-foreground">{t("pricing.freeBonusHint")}</span>
                       </div>
                     ) : (
                       <div className="text-sm text-foreground">
-                        <span className="font-bold text-primary">{postersCount} affiches</span>{" "}
-                        <span className="text-muted-foreground">/ mois</span>
+                        <span className="font-bold text-primary">{postersCount} {t("pricing.postersPerMonth")}</span>{" "}
+                        <span className="text-muted-foreground">{t("pricing.perMonth")}</span>
                       </div>
                     )}
                   </div>
@@ -189,9 +186,9 @@ export function PricingSection() {
           viewport={{ once: true }}
           className="mt-12 p-6 rounded-2xl bg-card/40 backdrop-blur-sm border border-border/50 text-center"
         >
-          <h4 className="font-semibold text-foreground mb-2">Consommation des crédits</h4>
+          <h4 className="font-semibold text-foreground mb-2">{t("pricing.creditsTitle")}</h4>
           <p className="text-muted-foreground text-sm">
-            <span className="text-primary font-medium">1 affiche = 2 crédits</span>, quelle que soit la résolution choisie. Les modifications sont toujours gratuites.
+            <span className="text-primary font-medium">{t("pricing.creditsDescA")}</span>{t("pricing.creditsDescB")}
           </p>
         </motion.div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sparkles, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,7 @@ interface GeneratedImage {
 const INITIAL_DISPLAY_COUNT = 8;
 
 export function ShowcaseSection() {
+  const { t, i18n } = useTranslation();
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
@@ -70,18 +72,10 @@ export function ShowcaseSection() {
   };
 
   const getDomainLabel = (domain: string | null) => {
-    const labels: Record<string, string> = {
-      church: "Église",
-      restaurant: "Restaurant",
-      event: "Événement",
-      formation: "Formation",
-      ecommerce: "E-commerce",
-      service: "Service",
-      fashion: "Mode",
-      realestate: "Immobilier",
-      health: "Santé",
-    };
-    return domain ? labels[domain] || domain : "Général";
+    if (!domain) return t("templates.domains.general");
+    const key = `templates.domains.${domain}`;
+    const label = t(key);
+    return label === key ? domain : label;
   };
 
   if (loading) {
@@ -112,17 +106,17 @@ export function ShowcaseSection() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Vitrine</span>
+              <span className="text-sm font-medium text-primary">{t("showcase.badge")}</span>
             </div>
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              <span className="text-foreground">Créés avec </span>
-              <span className="gradient-text">Graphiste GPT</span>
+              <span className="text-foreground">{t("showcase.titleA")}</span>
+              <span className="gradient-text">{t("showcase.titleB")}</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-              Des affiches professionnelles générées en quelques secondes. Les visuels créés par nos utilisateurs apparaîtront ici.
+              {t("showcase.empty")}
             </p>
             <p className="text-sm text-muted-foreground/60 italic">
-              Soyez le premier à créer une affiche et elle apparaîtra ici ! ✨
+              {t("showcase.emptyHint")}
             </p>
           </div>
         </div>
@@ -142,16 +136,14 @@ export function ShowcaseSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Vitrine</span>
+            <span className="text-sm font-medium text-primary">{t("showcase.badge")}</span>
           </div>
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-foreground">Créés avec </span>
-            <span className="gradient-text">Graphiste GPT</span>
+            <span className="text-foreground">{t("showcase.titleA")}</span>
+            <span className="gradient-text">{t("showcase.titleB")}</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {usingFallback
-              ? "Découvrez une sélection de visuels inspirants pendant que les créations validées du showcase sont en cours de publication."
-              : "Des affiches professionnelles générées en quelques secondes. Ces visuels ont été créés par nos utilisateurs grâce à l'IA."}
+            {usingFallback ? t("showcase.descFallback") : t("showcase.descLive")}
           </p>
         </div>
 
@@ -212,12 +204,12 @@ export function ShowcaseSection() {
             >
               {showAll ? (
                 <>
-                  Voir moins
+                  {t("showcase.showLess")}
                   <ChevronUp className="w-5 h-5" />
                 </>
               ) : (
                 <>
-                  Découvrir plus ({images.length - INITIAL_DISPLAY_COUNT} autres)
+                  {t("showcase.showMore", { count: images.length - INITIAL_DISPLAY_COUNT })}
                   <ChevronDown className="w-5 h-5" />
                 </>
               )}
@@ -250,7 +242,7 @@ export function ShowcaseSection() {
               </div>
               <p className="text-foreground">{selectedImage.prompt}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Créé le {new Date(selectedImage.created_at).toLocaleDateString("fr-FR")}
+                {t("showcase.createdOn", { date: new Date(selectedImage.created_at).toLocaleDateString(i18n.language === "fr" ? "fr-FR" : "en-US") })}
               </p>
             </div>
             <button
