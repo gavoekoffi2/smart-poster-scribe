@@ -233,12 +233,26 @@ export default function AppPage() {
     pendingDownloadHandled.current = true;
     sessionStorage.removeItem("pendingDownload");
     try {
-      const { format } = JSON.parse(raw) as { url: string; format: "png" | "jpeg" | "pdf" };
-      setTimeout(() => {
-        handleDownloadWithFormat(format || "png");
+      const { url, format } = JSON.parse(raw) as { url: string; format: "png" | "jpeg" | "pdf" };
+      if (!url) return;
+      toast.success("Compte créé ! Téléchargement en cours…");
+      setTimeout(async () => {
+        try {
+          const response = await fetch(url, { mode: "cors", credentials: "omit" });
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = `graphiste-gpt-${Date.now()}.${format === "jpeg" ? "jpg" : format}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          window.open(url, "_blank");
+        }
       }, 400);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRealUser]);
 
   // Fire confetti and save to history when image is generated
