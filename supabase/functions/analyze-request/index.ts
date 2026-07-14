@@ -125,7 +125,8 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { userText } = body;
+    const { userText, locale } = body;
+    const effectiveLocale: "en" | "fr" = locale === "en" ? "en" : "fr";
 
     // ============ INPUT VALIDATION ============
     if (!userText || typeof userText !== 'string') {
@@ -152,7 +153,11 @@ serve(async (req) => {
 
     console.log("Analyzing user request:", trimmedText.substring(0, 200));
 
-const systemPrompt = `Tu es un expert graphiste IA qui analyse des demandes d'affiches publicitaires.
+    const localeInstruction = effectiveLocale === "en"
+      ? `\n\n=== OUTPUT LANGUAGE ===\nWrite the "summary" field and every "missingInfo" entry in ENGLISH. If the user writes in French or another language, still answer in ENGLISH unless the user explicitly asks otherwise. Extracted values (title, dates, prices...) keep their original language.`
+      : `\n\n=== LANGUE DE SORTIE ===\nRédige le champ "summary" et chaque entrée "missingInfo" en FRANÇAIS. Les valeurs extraites (titre, dates, prix...) conservent leur langue d'origine.`;
+
+const systemPrompt = `Tu es un expert graphiste IA qui analyse des demandes d'affiches publicitaires.${localeInstruction}
 
 TON OBJECTIF: Comprendre la demande et NE JAMAIS DEMANDER D'INFORMATIONS INUTILES.
 
