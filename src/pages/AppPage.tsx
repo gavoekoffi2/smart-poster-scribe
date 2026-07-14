@@ -112,15 +112,11 @@ export default function AppPage() {
   const cloneTemplate = locationState?.cloneTemplate;
   
   const { profile } = useUserProfile();
-  const { user, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { user, isAuthenticated, isAnonymous, isRealUser, isLoading: authLoading, signOut } = useAuth();
   const { shouldShowTutorial, isLoading: tutorialLoading, completeTutorial } = useTutorial(user?.id);
 
-  // Redirect to auth if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate("/auth", { replace: true });
-    }
-  }, [authLoading, isAuthenticated, navigate]);
+  // Note: pas de redirection vers /auth ici — les visiteurs peuvent essayer sans compte
+  // (session anonyme auto). L'inscription est demandée uniquement au moment du téléchargement.
   const {
     messages,
     conversationState,
