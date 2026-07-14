@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Zap, Infinity as InfinityIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 
 const planIcons: Record<string, typeof Zap> = {
   free: Zap,
@@ -21,14 +24,33 @@ export function PricingSection() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { plans, isLoading } = useSubscription();
+  const { user } = useAuth();
+  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
+    open: false, planName: "", planSlug: "", planPrice: ""
+  });
 
   const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
-      navigate("/auth?redirect=/app", { state: { redirectTo: "/app" } });
+      navigate(user ? "/app" : "/auth?redirect=/app", { state: { redirectTo: "/app" } });
       return;
     }
-    const params = new URLSearchParams({ plan: planSlug, subscribe: "1" });
-    navigate(`/pricing?${params.toString()}`);
+    // Non connecté -> redirection vers auth avec plan mémorisé, puis checkout direct sur /pricing
+    if (!user) {
+      const redirectTo = `/pricing?plan=${planSlug}&subscribe=1`;
+      sessionStorage.setItem("pendingSubscriptionPlan", planSlug);
+      sessionStorage.setItem("authRedirectTo", redirectTo);
+      navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`, { state: { redirectTo } });
+      return;
+    }
+    // Connecté -> ouvrir directement la modale de paiement (pas de détour par /pricing)
+    const plan = plans.find(p => p.slug === planSlug);
+    if (!plan) return;
+    setRequestModal({
+      open: true,
+      planName: plan.name,
+      planSlug,
+      planPrice: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois`,
+    });
   };
 
   const ordered = [...plans].sort((a, b) => a.sort_order - b.sort_order);
@@ -192,6 +214,14 @@ export function PricingSection() {
           </p>
         </motion.div>
       </div>
+
+      <SubscriptionRequestModal
+        open={requestModal.open}
+        onOpenChange={(open) => setRequestModal(prev => ({ ...prev, open }))}
+        planName={requestModal.planName}
+        planSlug={requestModal.planSlug}
+        planPrice={requestModal.planPrice}
+      />
     </section>
   );
 }

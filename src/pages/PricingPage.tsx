@@ -63,15 +63,15 @@ export default function PricingPage() {
     return `/pricing?${params.toString()}`;
   }, [searchParams]);
 
-  const startCheckout = useCallback(async (planSlug: string) => {
+  const startCheckout = useCallback((planSlug: string) => {
     if (planSlug === "free") {
       if (authLoading) return;
       navigate(user ? "/app" : "/auth?redirect=/app", { state: { redirectTo: "/app" } });
       return;
     }
 
-    if (authLoading || isStartingCheckout || isProcessingPayment) {
-      if (authLoading) toast.info("Connexion en cours de vérification, réessayez dans un instant.");
+    if (authLoading) {
+      toast.info("Connexion en cours de vérification, réessayez dans un instant.");
       return;
     }
 
@@ -84,18 +84,9 @@ export default function PricingPage() {
       return;
     }
 
-    setIsStartingCheckout(true);
-    sessionStorage.setItem("pendingSubscriptionPlan", planSlug);
-    try {
-      await openGeniusPayCheckout(planSlug);
-    } catch (err) {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : "Impossible d'ouvrir le paiement");
-      openSubscriptionModal(planSlug);
-    } finally {
-      setIsStartingCheckout(false);
-    }
-  }, [authLoading, buildCheckoutRedirect, isProcessingPayment, isStartingCheckout, navigate, openGeniusPayCheckout, openSubscriptionModal, user]);
+    // Ouvre directement la modale de paiement — pas d'accès libre à /app
+    openSubscriptionModal(planSlug);
+  }, [authLoading, buildCheckoutRedirect, navigate, openSubscriptionModal, user]);
 
   useEffect(() => {
     if (authLoading || !user || hasOpenedRequestedPlan) return;
