@@ -82,8 +82,27 @@ serve(async (req) => {
       }
     }
 
-    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - discountRate));
-    const finalAmountUsd = Math.round(plan.price_usd * (1 - discountRate) * 100) / 100;
+    // Optional promo code — validate & apply on top of referral discount
+    let promoDiscountRate = 0;
+    let promoCodeId: string | null = null;
+    let promoCodeValue: string | null = null;
+    if (promoCode && promoCode.trim()) {
+      const { data: validation } = await userClient.rpc("validate_promo_code", {
+        p_code: promoCode.trim(),
+        p_plan_slug: planSlug,
+      });
+      if (validation && (validation as any).valid) {
+        promoDiscountRate = ((validation as any).discount_percent || 0) / 100;
+        promoCodeId = (validation as any).code_id;
+        promoCodeValue = (validation as any).code;
+      } else {
+        throw new Error((validation as any)?.message || "Code promo invalide");
+      }
+    }
+
+    const combinedDiscount = 1 - (1 - discountRate) * (1 - promoDiscountRate);
+    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - combinedDiscount));
+    const finalAmountUsd = Math.round(plan.price_usd * (1 - combinedDiscount) * 100) / 100;
 
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
