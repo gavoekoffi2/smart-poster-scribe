@@ -46,6 +46,35 @@ export function SubscriptionRequestModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPayingOnline, setIsPayingOnline] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ valid: boolean; discount?: number; message?: string } | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  const applyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setIsValidatingPromo(true);
+    try {
+      const { data, error } = await supabase.rpc("validate_promo_code" as any, {
+        p_code: promoCode.trim(),
+        p_plan_slug: planSlug,
+      });
+      if (error) throw error;
+      const v = data as any;
+      if (v?.valid) {
+        setPromoStatus({ valid: true, discount: v.discount_percent, message: `-${v.discount_percent}% appliqué` });
+        toast.success(`Code appliqué : -${v.discount_percent}%`);
+      } else {
+        setPromoStatus({ valid: false, message: v?.message || "Code invalide" });
+        toast.error(v?.message || "Code invalide");
+      }
+    } catch (e) {
+      setPromoStatus({ valid: false, message: "Erreur de validation" });
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const clearPromo = () => { setPromoCode(""); setPromoStatus(null); };
 
   // Réinitialiser la méthode sélectionnée quand le pays change
   useEffect(() => {
