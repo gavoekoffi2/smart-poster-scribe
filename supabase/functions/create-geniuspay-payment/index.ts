@@ -119,6 +119,9 @@ serve(async (req) => {
           referral_discount: discountRate,
           referred_by: referralCode,
           original_price_fcfa: plan.price_fcfa,
+          promo_code: promoCodeValue,
+          promo_code_id: promoCodeId,
+          promo_discount_rate: promoDiscountRate,
         },
       })
       .select()
