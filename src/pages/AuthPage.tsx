@@ -155,7 +155,23 @@ export default function AuthPage() {
     const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       hasCheckedSession.current = true;
-      
+
+      // Session anonyme : on la termine silencieusement pour permettre une inscription propre.
+      // La session anonyme est utilisée sur /app pour essayer sans compte ; sur /auth,
+      // l'utilisateur veut créer un vrai compte, donc on repart d'une session vierge.
+      const isAnon = !!session?.user && (
+        (session.user as any).is_anonymous === true ||
+        session.user.app_metadata?.provider === "anonymous"
+      );
+      if (isAnon) {
+        await supabase.auth.signOut();
+        if (pendingOAuth) {
+          sessionStorage.removeItem("pendingOAuthProvider");
+          isUserInitiatedAuth.current = false;
+        }
+        return;
+      }
+
       if (session?.user) {
         // Check if this is a confirmed email redirect (new user)
         const urlParams = new URLSearchParams(window.location.search);
