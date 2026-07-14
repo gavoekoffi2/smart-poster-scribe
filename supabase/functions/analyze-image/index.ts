@@ -43,7 +43,8 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageData } = body as AnalyzeImageRequest;
+    const { imageData, locale } = body as AnalyzeImageRequest & { locale?: "en" | "fr" };
+    const outLocale: "en" | "fr" = locale === "en" ? "en" : "fr";
 
     // ============ INPUT VALIDATION ============
     if (!imageData || typeof imageData !== 'string') {
@@ -84,7 +85,22 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Tu es un expert en design graphique et en analyse visuelle. 
+            content: outLocale === "en"
+              ? `You are an expert in graphic design and visual analysis.
+Analyze the provided image and generate a VERY detailed description that will serve as a template to create similar posters.
+
+Your description must include:
+1. COMPOSITION: Layout of elements, main zones, visual hierarchy
+2. COLORS: Dominant palette, accents, gradients, contrast
+3. TYPOGRAPHY: Text style, relative sizes, placement
+4. ARTISTIC STYLE: Trend (modern, retro, minimalist, etc.), mood
+5. VISUAL ELEMENTS: Shapes, icons, illustrations, photos
+6. EFFECTS: Shadows, lighting, textures, filters
+7. EMOTION: General feeling conveyed by the design
+
+Write this description in ENGLISH, structured and usable as a prompt for image generation.
+The description should be 200-400 words.`
+              : `Tu es un expert en design graphique et en analyse visuelle. 
 Analyse l'image fournie et génère une description TRÈS détaillée qui servira de template pour créer des affiches similaires.
 
 Ta description doit inclure :
@@ -104,7 +120,9 @@ La description doit faire entre 200 et 400 mots.`
             content: [
               {
                 type: "text",
-                text: "Analyse cette image et génère un template de description détaillé pour créer des affiches dans le même style :"
+                text: outLocale === "en"
+                  ? "Analyze this image and generate a detailed description template to create posters in the same style:"
+                  : "Analyse cette image et génère un template de description détaillé pour créer des affiches dans le même style :"
               },
               {
                 type: "image_url",

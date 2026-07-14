@@ -26,6 +26,11 @@ import { toast } from "sonner";
 import { getDomainQuestions, getNextQuestion, domainHasQuestions, DomainQuestion } from "@/config/domainQuestions";
 import { detectContextMismatch, getDomainLabel as getContextDomainLabel } from "@/utils/contextDetection";
 
+const getUiLocale = (): "en" | "fr" => {
+  try { return (typeof window !== "undefined" && localStorage.getItem("i18nextLng") === "en") ? "en" : "fr"; } catch { return "fr"; }
+};
+
+
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
@@ -60,11 +65,11 @@ const PRODUCT_DOMAINS: Domain[] = ["fashion", "technology", "health", "realestat
 // Domaine restaurant avec traitement spécial
 const RESTAURANT_DOMAIN: Domain = "restaurant";
 
-const INITIAL_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+const INITIAL_MESSAGE = getUiLocale() === "en"
+  ? "Hi! I'm your graphic designer assistant. How would you like to create your poster?"
+  : "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
 
-const MODE_SELECT_MESSAGE =
-  "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?";
+const MODE_SELECT_MESSAGE = INITIAL_MESSAGE;
 
 // Convertit un code hex en description de couleur naturelle
 function hexToColorName(hex: string): string {
@@ -735,7 +740,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
   
   const getInitialMessage = () => {
     if (cloneTemplate) {
-      return "J'analyse cette affiche pour comprendre les informations à personnaliser...";
+      return getUiLocale() === "en"
+        ? "I'm analyzing this poster to understand what to personalize..."
+        : "J'analyse cette affiche pour comprendre les informations à personnaliser...";
     }
     return INITIAL_MESSAGE;
   };
@@ -878,6 +885,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           const { data, error } = await supabase.functions.invoke("analyze-template", {
             body: { 
+            locale: getUiLocale(),
               imageUrl: imageToAnalyze, 
               domain: cloneTemplate.domain,
               existingDescription: cloneTemplate.description,
@@ -1264,6 +1272,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
+            locale: getUiLocale(),
             prompt: finalPrompt,
             aspectRatio,
             resolution,
@@ -1446,6 +1455,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
+            locale: getUiLocale(),
             prompt: modificationPrompt,
             aspectRatio,
             resolution,
@@ -1884,7 +1894,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         try {
           // Analyser le message de l'utilisateur pour extraire les informations
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
           
           removeLoadingMessage();
@@ -2000,7 +2010,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           try {
             const { data } = await supabase.functions.invoke("analyze-request", {
-              body: { userText: content },
+              body: { userText: content, locale: getUiLocale() },
             });
             
             removeLoadingMessage();
@@ -2076,7 +2086,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           try {
             const { data } = await supabase.functions.invoke("analyze-request", {
-              body: { userText: content },
+              body: { userText: content, locale: getUiLocale() },
             });
             
             removeLoadingMessage();
@@ -2195,7 +2205,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         try {
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
 
           removeLoadingMessage();
@@ -2265,7 +2275,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         try {
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
 
           removeLoadingMessage();
@@ -3361,7 +3371,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const { data, error } = await supabase.functions.invoke("analyze-image", {
-          body: { imageData: imageDataUrl },
+          body: { imageData: imageDataUrl, locale: getUiLocale() },
         });
 
         removeLoadingMessage();
@@ -3501,6 +3511,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           const { data, error } = await supabase.functions.invoke("generate-image", {
             body: {
+            locale: getUiLocale(),
               prompt,
               aspectRatio: "9:16",
               resolution: "1K",
@@ -3568,7 +3579,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const { data, error } = await supabase.functions.invoke("analyze-image", {
-          body: { imageData: imageDataUrl },
+          body: { imageData: imageDataUrl, locale: getUiLocale() },
         });
 
         removeLoadingMessage();

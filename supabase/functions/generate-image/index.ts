@@ -1214,7 +1214,9 @@ serve(async (req) => {
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
       apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
       templateId: rawTemplateId, // ID du template choisi (pour royalties + clone strict)
+      locale: rawLocale, // 'en' | 'fr' — langue préférée pour tout texte que l'IA rédige
     } = body;
+    const uiLocale: "en" | "fr" = rawLocale === "en" ? "en" : "fr";
     const apiStrictPremium: boolean = rawApiStrictPremium === true;
     // Public API requests are always forced to premium (gpt-image-2)
     const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
@@ -1802,10 +1804,15 @@ serve(async (req) => {
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
-    
+
+    // Locale hint for any narrative/UI text the model may produce (poster copy stays as user requested)
+    const localeHint = uiLocale === "en"
+      ? `LANGUAGE PREFERENCE: The user's platform is set to ENGLISH. Any narrative text, alt-text, captions or fallback microcopy you write should be in ENGLISH. The actual poster wording follows the user's explicit request below.\n\n`
+      : `PRÉFÉRENCE LINGUISTIQUE: La plateforme de l'utilisateur est en FRANÇAIS. Tout texte narratif, alt-text, légende ou microcopie de secours doit être en FRANÇAIS. Le texte de l'affiche suit la demande explicite de l'utilisateur ci-dessous.\n\n`;
+
     // Safety: smart truncate if exceeds API limit
     const MAX_SAFE_PROMPT = 6000;
-    let finalPrompt = professionalPrompt;
+    let finalPrompt = localeHint + professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
       console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
       // Find where user data starts (after "=== INFOS CLIENT" or "=== DONNEES CLIENT")

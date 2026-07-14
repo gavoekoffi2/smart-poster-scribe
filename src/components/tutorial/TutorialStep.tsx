@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, X, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { TutorialMascot } from "./TutorialMascot";
 
@@ -28,6 +29,7 @@ export function TutorialStep({
   onComplete,
   isLastStep
 }: TutorialStepProps) {
+  const { t } = useTranslation();
   const positionClasses = {
     "center": "items-center justify-center",
     "top-left": "items-start justify-start pt-32 pl-8",
@@ -91,7 +93,7 @@ export function TutorialStep({
             {/* Step number */}
             <div className="text-center mb-3">
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Étape {currentStep + 1} sur {totalSteps}
+                {t("tutorial.stepOf", { current: currentStep + 1, total: totalSteps })}
               </span>
             </div>
             
@@ -124,7 +126,7 @@ export function TutorialStep({
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-4 h-4 mr-1" />
-                Passer
+                {t("tutorial.skip")}
               </Button>
               
               {isLastStep ? (
@@ -133,14 +135,14 @@ export function TutorialStep({
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  C'est compris !
+                  {t("tutorial.gotIt")}
                 </Button>
               ) : (
                 <Button
                   onClick={onNext}
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 gap-2"
                 >
-                  Suivant
+                  {t("tutorial.next")}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
