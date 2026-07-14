@@ -266,6 +266,7 @@ export function useSubscription() {
       country?: string;
       paymentMethod?: string;
       mmoProvider?: string;
+      promoCode?: string;
     }
   ) => {
     if (!user) throw new Error("Vous devez être connecté pour souscrire");
@@ -285,6 +286,7 @@ export function useSubscription() {
           country: opts?.country,
           paymentMethod: opts?.paymentMethod,
           mmoProvider: opts?.mmoProvider,
+          promoCode: opts?.promoCode,
         },
       });
       if (error) throw new Error(error.message || "Erreur d'initialisation du paiement");
