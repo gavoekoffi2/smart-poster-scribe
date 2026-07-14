@@ -26,6 +26,11 @@ import { toast } from "sonner";
 import { getDomainQuestions, getNextQuestion, domainHasQuestions, DomainQuestion } from "@/config/domainQuestions";
 import { detectContextMismatch, getDomainLabel as getContextDomainLabel } from "@/utils/contextDetection";
 
+const getUiLocale = (): "en" | "fr" => {
+  try { return (typeof window !== "undefined" && localStorage.getItem("i18nextLng") === "en") ? "en" : "fr"; } catch { return "fr"; }
+};
+
+
 // Domaines qui peuvent avoir des orateurs/artistes/invités
 const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
 
@@ -878,6 +883,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           const { data, error } = await supabase.functions.invoke("analyze-template", {
             body: { 
+            locale: getUiLocale(),
               imageUrl: imageToAnalyze, 
               domain: cloneTemplate.domain,
               existingDescription: cloneTemplate.description,
@@ -1264,6 +1270,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
+            locale: getUiLocale(),
             prompt: finalPrompt,
             aspectRatio,
             resolution,
@@ -1446,6 +1453,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
           body: {
+            locale: getUiLocale(),
             prompt: modificationPrompt,
             aspectRatio,
             resolution,
@@ -3501,6 +3509,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
           const { data, error } = await supabase.functions.invoke("generate-image", {
             body: {
+            locale: getUiLocale(),
               prompt,
               aspectRatio: "9:16",
               resolution: "1K",
