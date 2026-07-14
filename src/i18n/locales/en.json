@@ -27,6 +27,205 @@
       "designers": "Designers",
       "domains": "Domains",
       "satisfaction": "Satisfaction"
+    },
+    "cards": {
+      "rating": "Customer rating",
+      "created": "Visuals created"
+    },
+    "imageAlt": "African designer assisted by an AI robot"
+  },
+  "testimonials": {
+    "badge": "Founder's Testimonial",
+    "titleA": "The Vision Behind",
+    "titleB": "Graphiste AI",
+    "quote": "Designers create, AI automates. On Graphiste GPT, designers focus on creativity and submit their best work. AI personalizes these designs for clients. Designers earn royalties, clients save time. Everyone wins.",
+    "role": "CEO & Founder, Graphiste GPT",
+    "cta": "Discover our mission"
+  },
+  "marquee": {
+    "youtubeBadge": "YouTube",
+    "youtubeTitleA": "Professional ",
+    "youtubeTitleB": "Thumbnails",
+    "youtubeDesc": "Captivating YouTube thumbnails that boost your views and engagement",
+    "inspirationsBadge": "Inspirations",
+    "postersTitleA": "Premium ",
+    "postersTitleB": "Posters",
+    "postersDesc": "Hundreds of professional designs created by our partner designers",
+    "inspire": "Get inspired",
+    "inspireThumbnail": "Get inspired by this thumbnail"
+  },
+  "templates": {
+    "badge": "Marketplace",
+    "titleA": "Professional ",
+    "titleB": "Templates",
+    "description": "Designs created by our partner designers. Pick one, customize it, and AI generates your poster. Each use rewards the designer.",
+    "empty": "No template found for this domain.",
+    "showLess": "Show less",
+    "showMore": "Discover more templates",
+    "cta": "Create my poster",
+    "inspire": "Get inspired",
+    "inspireCta": "Get inspired by this design",
+    "close": "Close",
+    "domains": {
+      "all": "All",
+      "church": "Church",
+      "restaurant": "Restaurant",
+      "formation": "Training",
+      "ecommerce": "E-commerce",
+      "event": "Event",
+      "service": "Service",
+      "fashion": "Fashion",
+      "realestate": "Real estate",
+      "health": "Health",
+      "general": "General"
+    }
+  },
+  "showcase": {
+    "badge": "Showcase",
+    "titleA": "Created with ",
+    "titleB": "Graphiste GPT",
+    "descLive": "Professional posters generated in seconds. These visuals were created by our users with AI.",
+    "descFallback": "Discover a selection of inspiring visuals while validated showcase creations are being published.",
+    "empty": "Professional posters generated in seconds. Visuals created by our users will appear here.",
+    "emptyHint": "Be the first to create a poster and it will appear here! ✨",
+    "showLess": "Show less",
+    "showMore": "Discover more ({{count}} more)",
+    "createdOn": "Created on {{date}}"
+  },
+  "process": {
+    "badge": "Simple & Fast",
+    "titleA": "How does ",
+    "titleB": "it work?",
+    "description": "From idea to professional poster in 4 simple steps. AI does the work, you reap the results.",
+    "cta": "Create my poster now",
+    "taglineA": "Designers create, ",
+    "taglineB": "AI automates.",
+    "taglineC": " Everyone wins.",
+    "steps": {
+      "s1Title": "Describe your project",
+      "s1Desc": "Explain what you want to create: event, promotion, concert, training...",
+      "s2Title": "Pick a template",
+      "s2Desc": "Choose from designs by pro designers or upload your own reference.",
+      "s3Title": "AI generates your poster",
+      "s3Desc": "Our AI takes inspiration from the chosen style to create your custom visual in seconds.",
+      "s4Title": "Download and share",
+      "s4Desc": "Get your HD poster ready to print or share on social networks."
+    }
+  },
+  "about": {
+    "titleA": "A platform that ",
+    "titleB": "benefits everyone",
+    "description": "Graphiste GPT reinvents graphic creation. Users get professional posters instantly. Designers focus on what they do best: creativity. AI handles the repetitive work. Every template used generates royalties for its creator.",
+    "skills": {
+      "users": "User time saved",
+      "designers": "Partner Designer satisfaction"
+    },
+    "imageAlt": "Our team at work"
+  },
+  "features": {
+    "titleA": "For You and For ",
+    "titleB": "Designers",
+    "description": "A platform where users create posters in seconds, and designers monetize their creativity.",
+    "sectionBadge": "Features",
+    "sectionTitle": "Everything you need",
+    "services": {
+      "s1Title": "For Users",
+      "s1Desc": "Create your posters in a few clicks with AI. Upload a reference or pick a template, AI does the rest.",
+      "s2Title": "For Designers",
+      "s2Desc": "Submit your designs and earn royalties on every use. Focus on creativity, AI automates the rest.",
+      "s3Title": "Template Marketplace",
+      "s3Desc": "Professional designs for every sector: church, restaurant, event, training, e-commerce and more."
+    },
+    "list": {
+      "f1Title": "Natural conversation",
+      "f1Desc": "Describe your project in plain language, our AI understands your needs.",
+      "f2Title": "Color Palette",
+      "f2Desc": "Customize your visual colors with our smart picker.",
+      "f3Title": "Pro Templates",
+      "f3Desc": "Over 50 professional templates tailored to every industry.",
+      "f4Title": "Visual References",
+      "f4Desc": "Upload reference images to guide the creation.",
+      "f5Title": "Fast Generation",
+      "f5Desc": "Get your visuals in seconds with our optimized AI.",
+      "f6Title": "Full History",
+      "f6Desc": "Find all your creations in your personal space.",
+      "f7Title": "HD Export",
+      "f7Desc": "Download your creations in high definition, ready to print.",
+      "f8Title": "Advanced AI",
+      "f8Desc": "Our AI learns from your preferences for ever better results."
+    }
+  },
+  "pricing": {
+    "badge": "Pricing",
+    "titleA": "Transparent ",
+    "titleB": "pricing",
+    "description": "Choose the plan that fits your needs. Start free and scale with your growth.",
+    "popular": "Most popular",
+    "unlimited": "Unlimited posters",
+    "freeBonus": "≈ 3 posters",
+    "freeBonusHint": "(one-time bonus)",
+    "postersPerMonth": "posters",
+    "perMonth": "/ month",
+    "period": "/month",
+    "ctaFree": "Try for free",
+    "ctaUnlimited": "Go Unlimited",
+    "ctaSubscribe": "Subscribe now",
+    "creditsTitle": "Credit consumption",
+    "creditsDescA": "1 poster = 2 credits",
+    "creditsDescB": ", regardless of the resolution chosen. Modifications are always free."
+  },
+  "contact": {
+    "badge": "Contact",
+    "titleA": "Let's talk about your ",
+    "titleB": "project",
+    "description": "A question? A special project? Our team is here to help you.",
+    "info": {
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "hours": "Hours",
+      "hoursValue": "Mon - Sat: 8am - 6pm",
+      "closed": "Sun: Closed"
+    },
+    "whatsappTitle": "Chat on WhatsApp",
+    "whatsappDesc": "Fast reply guaranteed",
+    "whatsappCta": "Write",
+    "formTitle": "Send us a message",
+    "form": {
+      "name": "Your name",
+      "namePlaceholder": "John Doe",
+      "email": "Your email",
+      "emailPlaceholder": "john@example.com",
+      "message": "Your message",
+      "messagePlaceholder": "Describe your project or ask your question...",
+      "submit": "Send message",
+      "submitting": "Sending...",
+      "success": "Message sent successfully! We will reply within 24 hours.",
+      "error": "Error while sending. Please try again or contact us on WhatsApp."
+    }
+  },
+  "cta": {
+    "badge": "Get started now",
+    "titleA": "Ready to create your",
+    "titleB": "first poster?",
+    "description": "Upload a reference or pick a template. AI does the rest in seconds.",
+    "primary": "Create my poster",
+    "secondary": "Become a partner designer"
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Frequently Asked Questions",
+    "description": "Answers to the most common questions",
+    "seeAll": "See all questions",
+    "items": {
+      "q1": "What is Graphiste GPT?",
+      "a1": "Graphiste GPT combines professional designers' expertise with AI to generate custom posters in seconds.",
+      "q2": "How much does generating a poster cost?",
+      "a2": "Each poster uses 2 credits. Free users get 3 free generations, then paid plans start at 2,500 FCFA/month.",
+      "q3": "Are generated images royalty-free?",
+      "a3": "Yes, every image generated on your account belongs to you and can be used without restrictions.",
+      "q4": "How do I become a partner designer?",
+      "a4": "Register as a partner designer, submit your templates and earn royalties on every use."
     }
   },
   "footer": {

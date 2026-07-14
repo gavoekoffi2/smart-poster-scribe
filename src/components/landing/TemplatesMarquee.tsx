@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 
 // Helper pour détecter le domaine depuis le chemin de l'image
@@ -81,6 +82,7 @@ function MarqueeRow({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const duplicatedImages = [...images, ...images, ...images];
 
@@ -126,7 +128,7 @@ function MarqueeRow({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/90 hover:bg-primary backdrop-blur-sm text-primary-foreground text-xs font-medium transition-all duration-200 hover:scale-105 shadow-lg cursor-pointer"
               >
                 <Sparkles className="w-3 h-3" />
-                S'inspirer
+                {t("marquee.inspire")}
               </button>
             </div>
           </div>
@@ -146,6 +148,7 @@ function YouTubeMarqueeRow({
   speed?: number;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const duplicatedImages = [...images, ...images];
 
   const handleInspire = async (e: React.MouseEvent, imageUrl: string) => {
@@ -195,7 +198,7 @@ function YouTubeMarqueeRow({
                 className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 backdrop-blur-md text-primary-foreground text-sm font-semibold transition-all duration-200 hover:scale-[1.02] shadow-xl cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
-                S'inspirer de cette miniature
+                {t("marquee.inspireThumbnail")}
               </button>
             </div>
           </div>
@@ -206,6 +209,7 @@ function YouTubeMarqueeRow({
 }
 
 export function TemplatesMarquee() {
+  const { t } = useTranslation();
   const [youtubeImages, setYoutubeImages] = useState<string[]>(FALLBACK_YOUTUBE_THUMBNAILS);
   const [posterRows, setPosterRows] = useState<{ row1: string[]; row2: string[]; row3: string[] }>(FALLBACK_POSTER_TEMPLATES);
   const [isLoading, setIsLoading] = useState(true);
@@ -274,14 +278,14 @@ export function TemplatesMarquee() {
               <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
               </svg>
-              <span className="text-sm font-medium text-red-400">YouTube</span>
+              <span className="text-sm font-medium text-red-400">{t("marquee.youtubeBadge")}</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              <span className="text-foreground">Miniatures </span>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500">Professionnelles</span>
+              <span className="text-foreground">{t("marquee.youtubeTitleA")}</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-orange-500">{t("marquee.youtubeTitleB")}</span>
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Des miniatures YouTube captivantes qui boostent vos vues et votre engagement
+              {t("marquee.youtubeDesc")}
             </p>
           </div>
         </div>
@@ -304,14 +308,14 @@ export function TemplatesMarquee() {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Inspirations</span>
+              <span className="text-sm font-medium text-primary">{t("marquee.inspirationsBadge")}</span>
             </div>
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              <span className="text-foreground">Affiches </span>
-              <span className="gradient-text">Premium</span>
+              <span className="text-foreground">{t("marquee.postersTitleA")}</span>
+              <span className="gradient-text">{t("marquee.postersTitleB")}</span>
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Des centaines de designs professionnels créés par nos graphistes partenaires
+              {t("marquee.postersDesc")}
             </p>
           </div>
         </div>

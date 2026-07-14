@@ -27,6 +27,205 @@
       "designers": "Graphistes",
       "domains": "Domaines",
       "satisfaction": "Satisfaction"
+    },
+    "cards": {
+      "rating": "Note clients",
+      "created": "Visuels créés"
+    },
+    "imageAlt": "Graphiste africain assisté par un robot IA"
+  },
+  "testimonials": {
+    "badge": "Témoignage du Fondateur",
+    "titleA": "La Vision Derrière",
+    "titleB": "Graphiste IA",
+    "quote": "Les graphistes créent, l'IA automatise. Sur Graphiste GPT, les designers se concentrent sur la créativité et soumettent leurs meilleures créations. L'IA personnalise ces designs pour les clients. Les graphistes perçoivent des royalties, les clients gagnent du temps. Tout le monde y gagne.",
+    "role": "CEO & Fondateur, Graphiste GPT",
+    "cta": "Découvrir notre mission"
+  },
+  "marquee": {
+    "youtubeBadge": "YouTube",
+    "youtubeTitleA": "Miniatures ",
+    "youtubeTitleB": "Professionnelles",
+    "youtubeDesc": "Des miniatures YouTube captivantes qui boostent vos vues et votre engagement",
+    "inspirationsBadge": "Inspirations",
+    "postersTitleA": "Affiches ",
+    "postersTitleB": "Premium",
+    "postersDesc": "Des centaines de designs professionnels créés par nos graphistes partenaires",
+    "inspire": "S'inspirer",
+    "inspireThumbnail": "S'inspirer de cette miniature"
+  },
+  "templates": {
+    "badge": "Marketplace",
+    "titleA": "Templates ",
+    "titleB": "Professionnels",
+    "description": "Des designs créés par nos graphistes partenaires. Choisissez, personnalisez, et l'IA génère votre affiche. Chaque utilisation rémunère le designer.",
+    "empty": "Aucun template trouvé pour ce domaine.",
+    "showLess": "Voir moins",
+    "showMore": "Découvrir plus de templates",
+    "cta": "Créer mon affiche",
+    "inspire": "S'inspirer",
+    "inspireCta": "S'inspirer de ce design",
+    "close": "Fermer",
+    "domains": {
+      "all": "Tous",
+      "church": "Église",
+      "restaurant": "Restaurant",
+      "formation": "Formation",
+      "ecommerce": "E-commerce",
+      "event": "Événement",
+      "service": "Service",
+      "fashion": "Mode",
+      "realestate": "Immobilier",
+      "health": "Santé",
+      "general": "Général"
+    }
+  },
+  "showcase": {
+    "badge": "Vitrine",
+    "titleA": "Créés avec ",
+    "titleB": "Graphiste GPT",
+    "descLive": "Des affiches professionnelles générées en quelques secondes. Ces visuels ont été créés par nos utilisateurs grâce à l'IA.",
+    "descFallback": "Découvrez une sélection de visuels inspirants pendant que les créations validées du showcase sont en cours de publication.",
+    "empty": "Des affiches professionnelles générées en quelques secondes. Les visuels créés par nos utilisateurs apparaîtront ici.",
+    "emptyHint": "Soyez le premier à créer une affiche et elle apparaîtra ici ! ✨",
+    "showLess": "Voir moins",
+    "showMore": "Découvrir plus ({{count}} autres)",
+    "createdOn": "Créé le {{date}}"
+  },
+  "process": {
+    "badge": "Simple & Rapide",
+    "titleA": "Comment ",
+    "titleB": "ça marche ?",
+    "description": "De l'idée à l'affiche professionnelle en 4 étapes simples. L'IA fait le travail, vous récoltez les résultats.",
+    "cta": "Créer mon affiche maintenant",
+    "taglineA": "Les graphistes créent, ",
+    "taglineB": "l'IA automatise.",
+    "taglineC": " Tout le monde gagne.",
+    "steps": {
+      "s1Title": "Décrivez votre projet",
+      "s1Desc": "Expliquez ce que vous voulez créer : événement, promotion, concert, formation...",
+      "s2Title": "Choisissez un template",
+      "s2Desc": "Sélectionnez parmi nos designs créés par des graphistes pros ou uploadez votre référence.",
+      "s3Title": "L'IA génère votre affiche",
+      "s3Desc": "Notre IA s'inspire du style choisi pour créer votre visuel personnalisé en quelques secondes.",
+      "s4Title": "Téléchargez et partagez",
+      "s4Desc": "Récupérez votre affiche HD prête à l'impression ou au partage sur les réseaux sociaux."
+    }
+  },
+  "about": {
+    "titleA": "Une plateforme qui ",
+    "titleB": "profite à tous",
+    "description": "Graphiste GPT réinvente la création graphique. Les utilisateurs obtiennent des affiches professionnelles sans attendre. Les graphistes se concentrent sur ce qu'ils font de mieux : la créativité. L'IA se charge du travail répétitif. Chaque template utilisé génère des royalties pour son créateur.",
+    "skills": {
+      "users": "Gain de temps Utilisateurs",
+      "designers": "Satisfaction Graphistes Partenaires"
+    },
+    "imageAlt": "Notre équipe au travail"
+  },
+  "features": {
+    "titleA": "Pour Vous et Pour les ",
+    "titleB": "Graphistes",
+    "description": "Une plateforme où les utilisateurs créent des affiches en secondes, et les graphistes monétisent leur créativité.",
+    "sectionBadge": "Fonctionnalités",
+    "sectionTitle": "Tout ce dont vous avez besoin",
+    "services": {
+      "s1Title": "Pour les Utilisateurs",
+      "s1Desc": "Créez vos affiches en quelques clics grâce à l'IA. Uploadez une référence ou choisissez un template, l'IA fait le reste.",
+      "s2Title": "Pour les Graphistes",
+      "s2Desc": "Soumettez vos designs et gagnez des royalties à chaque utilisation. Concentrez-vous sur la créativité, l'IA automatise le reste.",
+      "s3Title": "Marketplace de Templates",
+      "s3Desc": "Des designs professionnels pour tous les secteurs : église, restaurant, événement, formation, e-commerce et plus encore."
+    },
+    "list": {
+      "f1Title": "Conversation Naturelle",
+      "f1Desc": "Décrivez votre projet en langage naturel, notre IA comprend vos besoins.",
+      "f2Title": "Palette de Couleurs",
+      "f2Desc": "Personnalisez les couleurs de votre visuel avec notre sélecteur intelligent.",
+      "f3Title": "Templates Pro",
+      "f3Desc": "Plus de 50 templates professionnels adaptés à chaque domaine d'activité.",
+      "f4Title": "Références Visuelles",
+      "f4Desc": "Uploadez des images de référence pour guider la création.",
+      "f5Title": "Génération Rapide",
+      "f5Desc": "Obtenez vos visuels en quelques secondes grâce à notre IA optimisée.",
+      "f6Title": "Historique Complet",
+      "f6Desc": "Retrouvez toutes vos créations dans votre espace personnel.",
+      "f7Title": "Export HD",
+      "f7Desc": "Téléchargez vos créations en haute définition, prêtes à l'impression.",
+      "f8Title": "IA Avancée",
+      "f8Desc": "Notre IA apprend de vos préférences pour des résultats toujours meilleurs."
+    }
+  },
+  "pricing": {
+    "badge": "Tarifs",
+    "titleA": "Des tarifs ",
+    "titleB": "transparents",
+    "description": "Choisissez le plan adapté à vos besoins. Commencez gratuitement et évoluez selon votre croissance.",
+    "popular": "Le plus populaire",
+    "unlimited": "Affiches illimitées",
+    "freeBonus": "≈ 3 affiches",
+    "freeBonusHint": "(bonus unique)",
+    "postersPerMonth": "affiches",
+    "perMonth": "/ mois",
+    "period": "/mois",
+    "ctaFree": "Tester gratuitement",
+    "ctaUnlimited": "Passer à l'Illimité",
+    "ctaSubscribe": "Souscrire maintenant",
+    "creditsTitle": "Consommation des crédits",
+    "creditsDescA": "1 affiche = 2 crédits",
+    "creditsDescB": ", quelle que soit la résolution choisie. Les modifications sont toujours gratuites."
+  },
+  "contact": {
+    "badge": "Contact",
+    "titleA": "Parlons de votre ",
+    "titleB": "projet",
+    "description": "Une question ? Un projet spécial ? Notre équipe est à votre écoute pour vous accompagner.",
+    "info": {
+      "phone": "Téléphone",
+      "email": "Email",
+      "address": "Adresse",
+      "hours": "Horaires",
+      "hoursValue": "Lun - Sam: 8h - 18h",
+      "closed": "Dim: Fermé"
+    },
+    "whatsappTitle": "Discutons sur WhatsApp",
+    "whatsappDesc": "Réponse rapide garantie",
+    "whatsappCta": "Écrire",
+    "formTitle": "Envoyez-nous un message",
+    "form": {
+      "name": "Votre nom",
+      "namePlaceholder": "Jean Dupont",
+      "email": "Votre email",
+      "emailPlaceholder": "jean@exemple.com",
+      "message": "Votre message",
+      "messagePlaceholder": "Décrivez votre projet ou posez votre question...",
+      "submit": "Envoyer le message",
+      "submitting": "Envoi en cours...",
+      "success": "Message envoyé avec succès ! Nous vous répondrons sous 24h.",
+      "error": "Erreur lors de l'envoi. Réessayez ou contactez-nous sur WhatsApp."
+    }
+  },
+  "cta": {
+    "badge": "Commencez maintenant",
+    "titleA": "Prêt à créer votre",
+    "titleB": "première affiche ?",
+    "description": "Uploadez une référence ou choisissez un template. L'IA fait le reste en quelques secondes.",
+    "primary": "Créer mon affiche",
+    "secondary": "Devenir graphiste partenaire"
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Questions Fréquentes",
+    "description": "Les réponses aux questions les plus posées",
+    "seeAll": "Voir toutes les questions",
+    "items": {
+      "q1": "Qu'est-ce que Graphiste GPT ?",
+      "a1": "Graphiste GPT combine l'expertise de graphistes professionnels avec l'IA pour générer des affiches personnalisées en quelques secondes.",
+      "q2": "Combien coûte la génération d'une affiche ?",
+      "a2": "Chaque affiche consomme 2 crédits. Les utilisateurs gratuits ont 3 générations gratuites, puis des plans payants à partir de 2 500 FCFA/mois.",
+      "q3": "Les images générées sont-elles libres de droits ?",
+      "a3": "Oui, toutes les images générées via votre compte vous appartiennent et sont utilisables sans restriction.",
+      "q4": "Comment devenir graphiste partenaire ?",
+      "a4": "Inscrivez-vous comme graphiste partenaire, soumettez vos templates et gagnez des royalties à chaque utilisation."
     }
   },
   "footer": {

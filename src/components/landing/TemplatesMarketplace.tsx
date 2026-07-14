@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, ArrowUpRight, Church, UtensilsCrossed, GraduationCap, Store, Calendar, Briefcase, Shirt, Building, Heart, ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,13 +11,15 @@ function TiltTemplateCard({
   index, 
   onSelect, 
   onClone, 
-  getDomainLabel 
+  getDomainLabel,
+  inspireLabel
 }: { 
   template: ReferenceTemplate; 
   index: number; 
   onSelect: () => void; 
   onClone: (e: React.MouseEvent) => void;
   getDomainLabel: (id: string) => string;
+  inspireLabel: string;
 }) {
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
@@ -124,7 +127,7 @@ function TiltTemplateCard({
           }}
         >
           <Sparkles className="w-3 h-3" />
-          S'inspirer
+          {inspireLabel}
         </button>
 
         {/* Decorative glow */}
@@ -158,54 +161,27 @@ function getTemplateImageUrl(imageUrl: string): string {
   }
   return `/${imageUrl}`;
 }
-const domainConfig = [{
-  id: "all",
-  name: "Tous",
-  icon: Sparkles
-}, {
-  id: "church",
-  name: "Église",
-  icon: Church
-}, {
-  id: "restaurant",
-  name: "Restaurant",
-  icon: UtensilsCrossed
-}, {
-  id: "formation",
-  name: "Formation",
-  icon: GraduationCap
-}, {
-  id: "ecommerce",
-  name: "E-commerce",
-  icon: Store
-}, {
-  id: "event",
-  name: "Événement",
-  icon: Calendar
-}, {
-  id: "service",
-  name: "Service",
-  icon: Briefcase
-}, {
-  id: "fashion",
-  name: "Mode",
-  icon: Shirt
-}, {
-  id: "realestate",
-  name: "Immobilier",
-  icon: Building
-}, {
-  id: "health",
-  name: "Santé",
-  icon: Heart
-}];
+const domainConfigStatic = [
+  { id: "all", icon: Sparkles },
+  { id: "church", icon: Church },
+  { id: "restaurant", icon: UtensilsCrossed },
+  { id: "formation", icon: GraduationCap },
+  { id: "ecommerce", icon: Store },
+  { id: "event", icon: Calendar },
+  { id: "service", icon: Briefcase },
+  { id: "fashion", icon: Shirt },
+  { id: "realestate", icon: Building },
+  { id: "health", icon: Heart },
+];
 export function TemplatesMarketplace() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<ReferenceTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDomain, setSelectedDomain] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<ReferenceTemplate | null>(null);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
+  const domainConfig = domainConfigStatic.map(d => ({ ...d, name: t(`templates.domains.${d.id}`) }));
   
   useEffect(() => {
     fetchTemplates();
@@ -288,18 +264,17 @@ export function TemplatesMarketplace() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Marketplace</span>
+            <span className="text-sm font-medium text-primary">{t("templates.badge")}</span>
           </div>
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-foreground">Templates </span>
-            <span className="gradient-text">Professionnels</span>
+            <span className="text-foreground">{t("templates.titleA")}</span>
+            <span className="gradient-text">{t("templates.titleB")}</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des designs créés par nos graphistes partenaires. Choisissez, personnalisez, et l'IA génère votre affiche. Chaque utilisation rémunère le designer.
+            {t("templates.description")}
           </p>
         </div>
 
-        {/* Domain Filters */}
         <div className="flex flex-wrap justify-center gap-3 mb-12">
           {domainConfig.map(domain => {
           const Icon = domain.icon;
@@ -314,13 +289,12 @@ export function TemplatesMarketplace() {
         })}
         </div>
 
-        {/* Templates Grid */}
         {loading ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {Array.from({
           length: 8
         }).map((_, i) => <div key={i} className="aspect-[3/4] rounded-2xl bg-card/40 border border-border/40 animate-pulse" />)}
           </div> : templates.length === 0 ? <div className="text-center py-12">
-            <p className="text-muted-foreground">Aucun template trouvé pour ce domaine.</p>
+            <p className="text-muted-foreground">{t("templates.empty")}</p>
           </div> : <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {templates.map((template, index) => (
               <TiltTemplateCard
@@ -330,11 +304,11 @@ export function TemplatesMarketplace() {
                 onSelect={() => setSelectedTemplate(template)}
                 onClone={(e) => handleQuickClone(e, template)}
                 getDomainLabel={getDomainLabel}
+                inspireLabel={t("templates.inspire")}
               />
             ))}
           </div>}
 
-        {/* Bouton Voir plus / Voir moins */}
         {templates.length >= 12 && (
           <div className="text-center mt-8">
             <button
@@ -344,22 +318,21 @@ export function TemplatesMarketplace() {
               {showAllTemplates ? (
                 <>
                   <ChevronUp className="w-4 h-4" />
-                  <span className="text-sm font-medium">Voir moins</span>
+                  <span className="text-sm font-medium">{t("templates.showLess")}</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="w-4 h-4" />
-                  <span className="text-sm font-medium">Découvrir plus de templates</span>
+                  <span className="text-sm font-medium">{t("templates.showMore")}</span>
                 </>
               )}
             </button>
           </div>
         )}
 
-        {/* CTA */}
         <div className="text-center mt-12">
           <Button onClick={() => navigate("/app")} className="glow-orange bg-gradient-to-r from-primary to-accent rounded-full px-8 py-6 text-lg">
-            Créer mon affiche
+            {t("templates.cta")}
             <ArrowUpRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
