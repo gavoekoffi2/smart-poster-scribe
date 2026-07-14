@@ -36,11 +36,16 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Utilisateur non authentifié");
 
     const body = await req.json();
-    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider } = body as {
+    const { planSlug, returnUrl, customerPhone, customerName, country, paymentMethod, mmoProvider, promoCode } = body as {
       planSlug?: string; returnUrl?: string; customerPhone?: string; customerName?: string;
-      country?: string; paymentMethod?: string; mmoProvider?: string;
+      country?: string; paymentMethod?: string; mmoProvider?: string; promoCode?: string;
     };
     if (!planSlug) throw new Error("Plan non spécifié");
+
+    // Create a request-scoped client to run promo validation as the calling user
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || supabaseServiceKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const { data: plan, error: planError } = await supabase
       .from("subscription_plans")
