@@ -2,12 +2,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, CheckCircle, Play } from "lucide-react";
 import heroImage from "@/assets/hero-designer-robot.png";
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
 }
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
+  const { t } = useTranslation();
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -55,51 +57,50 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
           <div className="text-left order-2 lg:order-1 pt-4 lg:pt-0">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6 animate-fade-up">
-              <span className="text-sm font-medium text-primary">👋 Bienvenue !</span>
+              <span className="text-sm font-medium text-primary">{t("hero.welcome")}</span>
             </div>
 
             {/* Main Title */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-5 leading-[1.1] animate-fade-up" style={{ animationDelay: "0.1s" }}>
-              <span className="text-foreground">Créez des </span>
-              <span className="gradient-text">affiches pro</span>
-              <span className="text-foreground"> en </span>
-              <span className="gradient-text">quelques secondes</span>
+              <span className="text-foreground">{t("hero.title1")}</span>
+              <span className="gradient-text">{t("hero.title2")}</span>
+              <span className="text-foreground">{t("hero.title3")}</span>
+              <span className="gradient-text">{t("hero.title4")}</span>
             </h1>
 
             {/* Description */}
             <p className="text-lg text-muted-foreground mb-8 max-w-lg animate-fade-up" style={{ animationDelay: "0.15s" }}>
-              Uploadez une affiche de référence ou choisissez parmi nos templates créés par des graphistes pros. 
-              L'IA s'inspire de leur design pour générer votre affiche personnalisée.
+              {t("hero.description")}
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-start mb-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 onClick={onGetStarted}
                 className="group glow-orange bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-8 py-6 rounded-full"
               >
-                Commencer
+                {t("hero.cta")}
                 <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
+              <Button
+                variant="outline"
+                size="lg"
                 className="text-lg border-border hover:bg-secondary hover:border-primary/50 px-8 py-6 rounded-full group"
                 onClick={() => document.getElementById("process")?.scrollIntoView({ behavior: "smooth" })}
               >
                 <Play className="w-5 h-5 mr-2 transition-transform group-hover:scale-110" />
-                Voir la démo
+                {t("hero.demo")}
               </Button>
             </div>
 
             {/* Stats row */}
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-border/30 animate-fade-up" style={{ animationDelay: "0.3s" }}>
               {[
-                { value: "5K+", label: "Visuels Créés" },
-                { value: "50+", label: "Graphistes" },
-                { value: "10+", label: "Domaines" },
-                { value: "98%", label: "Satisfaction" },
+                { value: "5K+", label: t("hero.stats.visuals") },
+                { value: "50+", label: t("hero.stats.designers") },
+                { value: "10+", label: t("hero.stats.domains") },
+                { value: "98%", label: t("hero.stats.satisfaction") },
               ].map((stat, i) => (
                 <div key={i} className="text-left">
                   <span className="text-xl md:text-2xl font-bold text-foreground">{stat.value}</span>

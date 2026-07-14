@@ -1,39 +1,42 @@
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { LogoIcon } from "@/components/LogoIcon";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Footer() {
+  const { t } = useTranslation();
   const footerLinks = {
     product: [
-      { label: "Fonctionnalités", href: "/#features" },
-      { label: "Tarifs", href: "/#pricing" },
-      { label: "Templates", href: "/#templates" },
+      { label: t("footer.links.features"), href: "/#features" },
+      { label: t("footer.links.pricing"), href: "/#pricing" },
+      { label: t("footer.links.templates"), href: "/#templates" },
     ],
     developers: [
-      { label: "API & Documentation", href: "/docs/api" },
-      { label: "Obtenir une clé API", href: "/account?tab=api" },
-      { label: "Démarrage rapide", href: "/docs/api#quickstart" },
+      { label: t("footer.links.apiDocs"), href: "/docs/api" },
+      { label: t("footer.links.getApiKey"), href: "/account?tab=api" },
+      { label: t("footer.links.quickstart"), href: "/docs/api#quickstart" },
     ],
     solutions: [
-      { label: "Affiches d'église", href: "/domaines/eglise" },
-      { label: "Affiches de mariage", href: "/domaines/mariage" },
-      { label: "Restaurants", href: "/domaines/restaurant" },
-      { label: "E-commerce", href: "/domaines/ecommerce" },
-      { label: "Miniatures YouTube", href: "/domaines/youtube" },
-      { label: "Événements", href: "/domaines/evenement" },
-      { label: "Immobilier", href: "/domaines/immobilier" },
-      { label: "Formations", href: "/domaines/formation" },
+      { label: t("footer.links.church"), href: "/domaines/eglise" },
+      { label: t("footer.links.wedding"), href: "/domaines/mariage" },
+      { label: t("footer.links.restaurant"), href: "/domaines/restaurant" },
+      { label: t("footer.links.ecommerce"), href: "/domaines/ecommerce" },
+      { label: t("footer.links.youtube"), href: "/domaines/youtube" },
+      { label: t("footer.links.events"), href: "/domaines/evenement" },
+      { label: t("footer.links.realestate"), href: "/domaines/immobilier" },
+      { label: t("footer.links.training"), href: "/domaines/formation" },
     ],
     company: [
-      { label: "À propos", href: "/#about" },
-      { label: "Contact", href: "/#contact" },
-      { label: "FAQ", href: "/faq" },
+      { label: t("footer.links.about"), href: "/#about" },
+      { label: t("footer.links.contact"), href: "/#contact" },
+      { label: t("footer.links.faq"), href: "/faq" },
     ],
     legal: [
-      { label: "Confidentialité", href: "/privacy" },
-      { label: "CGU", href: "/terms" },
-      { label: "Mentions légales", href: "/legal" },
-      { label: "Statut des services", href: "/status" },
+      { label: t("footer.links.privacy"), href: "/privacy" },
+      { label: t("footer.links.terms"), href: "/terms" },
+      { label: t("footer.links.legalMentions"), href: "/legal" },
+      { label: t("footer.links.status"), href: "/status" },
     ],
   };
 
@@ -43,7 +46,6 @@ export function Footer() {
 
       <div className="container mx-auto max-w-7xl px-4 py-16 relative z-10">
         <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-12 mb-12">
-          {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
@@ -53,11 +55,11 @@ export function Footer() {
                 <h3 className="font-display text-xl font-bold text-foreground">
                   Graphiste <span className="gradient-text">GPT</span>
                 </h3>
-                <p className="text-xs text-muted-foreground">Graphistes + IA = Visuels Pro</p>
+                <p className="text-xs text-muted-foreground">Designers + AI</p>
               </div>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-sm">
-              La plateforme où les graphistes créent des templates et gagnent des royalties. L'IA génère vos affiches personnalisées en quelques secondes.
+              {t("footer.tagline")}
             </p>
 
             <div className="space-y-3">
@@ -71,86 +73,40 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 text-primary" />
-                <span>Lomé, quartier Hédranawoé à côté de la radio Zéphyr-Togo</span>
+                <span>Lomé, Togo</span>
               </div>
+            </div>
+
+            <div className="mt-6">
+              <LanguageSwitcher variant="outline" />
             </div>
           </div>
 
-          {/* Product Links */}
-          <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Produit</h4>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Developers Links */}
-          <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Développeurs</h4>
-            <ul className="space-y-3">
-              {footerLinks.developers.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Solutions */}
-          <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Solutions</h4>
-            <ul className="space-y-3">
-              {footerLinks.solutions.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company Links */}
-          <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Entreprise</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal Links */}
-          <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Légal</h4>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {[
+            { title: t("footer.product"), links: footerLinks.product },
+            { title: t("footer.developers"), links: footerLinks.developers },
+            { title: t("footer.solutions"), links: footerLinks.solutions },
+            { title: t("footer.company"), links: footerLinks.company },
+            { title: t("footer.legal"), links: footerLinks.legal },
+          ].map((col) => (
+            <div key={col.title}>
+              <h4 className="font-display font-semibold text-foreground mb-4">{col.title}</h4>
+              <ul className="space-y-3">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link to={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Bottom bar */}
         <div className="pt-8 border-t border-border/30 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Graphiste GPT. Tous droits réservés.
+            © {new Date().getFullYear()} Graphiste GPT. {t("footer.rights")}
           </p>
         </div>
       </div>
