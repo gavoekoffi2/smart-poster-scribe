@@ -944,6 +944,108 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_code_redemptions: {
+        Row: {
+          created_at: string
+          currency: string | null
+          discount_amount: number | null
+          final_amount: number | null
+          id: string
+          original_amount: number | null
+          payment_transaction_id: string | null
+          plan_slug: string | null
+          promo_code_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          discount_amount?: number | null
+          final_amount?: number | null
+          id?: string
+          original_amount?: number | null
+          payment_transaction_id?: string | null
+          plan_slug?: string | null
+          promo_code_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          discount_amount?: number | null
+          final_amount?: number | null
+          id?: string
+          original_amount?: number | null
+          payment_transaction_id?: string | null
+          plan_slug?: string | null
+          promo_code_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_code_redemptions_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          applicable_plans: string[] | null
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_percent: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          once_per_user: boolean
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          applicable_plans?: string[] | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_percent: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          once_per_user?: boolean
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          applicable_plans?: string[] | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_percent?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          once_per_user?: boolean
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
       reference_templates: {
         Row: {
           created_at: string
@@ -1616,6 +1718,23 @@ export type Database = {
           status: string
         }[]
       }
+      admin_list_promo_redemptions: {
+        Args: { p_admin_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          currency: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          original_amount: number
+          plan_slug: string
+          promo_code_id: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       admin_set_platform_setting: {
         Args: { p_admin_id: string; p_key: string; p_value: Json }
         Returns: undefined
@@ -1735,6 +1854,16 @@ export type Database = {
           read_ct: number
         }[]
       }
+      redeem_promo_code: {
+        Args: {
+          p_code: string
+          p_currency?: string
+          p_original_amount: number
+          p_payment_transaction_id?: string
+          p_plan_slug: string
+        }
+        Returns: Json
+      }
       submit_generation_feedback: {
         Args: {
           p_comment: string
@@ -1752,6 +1881,10 @@ export type Database = {
           scopes: string[]
           user_id: string
         }[]
+      }
+      validate_promo_code: {
+        Args: { p_code: string; p_plan_slug?: string }
+        Returns: Json
       }
     }
     Enums: {
