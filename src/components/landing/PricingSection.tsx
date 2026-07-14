@@ -214,6 +214,14 @@ export function PricingSection() {
           </p>
         </motion.div>
       </div>
+
+      <SubscriptionRequestModal
+        open={requestModal.open}
+        onOpenChange={(open) => setRequestModal(prev => ({ ...prev, open }))}
+        planName={requestModal.planName}
+        planSlug={requestModal.planSlug}
+        planPrice={requestModal.planPrice}
+      />
     </section>
   );
 }
