@@ -80,6 +80,7 @@ const App = () => (
           <Route path="/admin/contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
           <Route path="/admin/payouts" element={<AdminRoute><AdminPayouts /></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/promo-codes" element={<AdminRoute><AdminPromoCodes /></AdminRoute>} />
 
           {/* Designer routes with guard */}
           <Route path="/designer/register" element={<DesignerRoute><DesignerRegistration /></DesignerRoute>} />
