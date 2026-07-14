@@ -213,6 +213,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         <div className="w-1 h-1 bg-primary/50 rounded-full" />
         <div className="w-1 h-1 bg-primary/30 rounded-full" />
       </div>
+      <DemoVideoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </section>
   );
 }
