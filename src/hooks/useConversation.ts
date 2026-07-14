@@ -1892,7 +1892,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         try {
           // Analyser le message de l'utilisateur pour extraire les informations
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
           
           removeLoadingMessage();
@@ -2008,7 +2008,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           try {
             const { data } = await supabase.functions.invoke("analyze-request", {
-              body: { userText: content },
+              body: { userText: content, locale: getUiLocale() },
             });
             
             removeLoadingMessage();
@@ -2084,7 +2084,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           try {
             const { data } = await supabase.functions.invoke("analyze-request", {
-              body: { userText: content },
+              body: { userText: content, locale: getUiLocale() },
             });
             
             removeLoadingMessage();
@@ -2203,7 +2203,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         try {
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
 
           removeLoadingMessage();
@@ -2273,7 +2273,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
         try {
           const { data, error } = await supabase.functions.invoke("analyze-request", {
-            body: { userText: content },
+            body: { userText: content, locale: getUiLocale() },
           });
 
           removeLoadingMessage();
@@ -3369,7 +3369,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const { data, error } = await supabase.functions.invoke("analyze-image", {
-          body: { imageData: imageDataUrl },
+          body: { imageData: imageDataUrl, locale: getUiLocale() },
         });
 
         removeLoadingMessage();
@@ -3577,7 +3577,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
 
       try {
         const { data, error } = await supabase.functions.invoke("analyze-image", {
-          body: { imageData: imageDataUrl },
+          body: { imageData: imageDataUrl, locale: getUiLocale() },
         });
 
         removeLoadingMessage();
