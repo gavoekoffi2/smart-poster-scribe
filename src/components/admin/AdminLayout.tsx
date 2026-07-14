@@ -23,6 +23,7 @@ import {
   Mail,
   Wallet,
   Settings,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 
