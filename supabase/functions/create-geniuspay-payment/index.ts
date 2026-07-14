@@ -177,8 +177,12 @@ serve(async (req) => {
     // Routage explicite : si un moyen de paiement précis est demandé, on l'envoie.
     // Sinon, GeniusPay affiche sa page de checkout avec tous les moyens.
     if (paymentMethod) {
-      gpRequest.payment_method = paymentMethod;
-      if (paymentMethod === "pawapay" && mmoProvider) {
+      // Mapping : "card" (carte bancaire Visa/Mastercard) est traité par Paystack chez GeniusPay,
+      // qui présente un vrai formulaire de saisie de carte (numéro, expiration, CVV).
+      // Sans ce mapping, "card" retombe parfois sur la page checkout affichant un QR Wave.
+      const effectiveMethod = paymentMethod === "card" ? "paystack" : paymentMethod;
+      gpRequest.payment_method = effectiveMethod;
+      if (effectiveMethod === "pawapay" && mmoProvider) {
         gpRequest.mmo_provider = mmoProvider;
       }
     }
