@@ -131,6 +131,19 @@ serve(async (req) => {
       throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
     }
 
+    // Record promo code redemption (if any)
+    if (promoCodeId && promoCodeValue) {
+      const { error: redeemError } = await userClient.rpc("redeem_promo_code", {
+        p_code: promoCodeValue,
+        p_plan_slug: planSlug,
+        p_original_amount: plan.price_fcfa,
+        p_currency: "FCFA",
+        p_payment_transaction_id: transaction.id,
+      });
+      if (redeemError) console.error("[promo] redeem error:", redeemError);
+    }
+
+
     const origin = req.headers.get("origin") || "";
     const successUrl = returnUrl || `${origin}/account?payment=success`;
     const errorUrl = `${origin}/account?payment=failed`;
