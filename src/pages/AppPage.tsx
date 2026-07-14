@@ -379,6 +379,17 @@ export default function AppPage() {
     const imageId = feedbackImageId || selectedHistoryImage?.id;
     
     if (!imageToDownload) return;
+
+    // Inscription requise pour télécharger — on garde l'image en attente
+    if (!isRealUser) {
+      try {
+        sessionStorage.setItem("pendingDownload", JSON.stringify({ url: imageToDownload, format }));
+      } catch {}
+      toast.info("Créez un compte gratuit pour télécharger votre affiche.");
+      navigate("/auth?returnTo=/app&reason=download");
+      return;
+    }
+    
     
     try {
       // Essayer d'abord avec fetch + blob
