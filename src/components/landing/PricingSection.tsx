@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Crown, Zap, Infinity as InfinityIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { SubscriptionRequestModal } from "@/components/pricing/SubscriptionRequestModal";
 
 const planIcons: Record<string, typeof Zap> = {
   free: Zap,
