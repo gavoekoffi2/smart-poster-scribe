@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://bbfzfgcdioewzbmlgaqy.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "graphistegpt-mcp",
+      "version": "0.1.0",
+      "title": "GraphisteGPT"
+    },
+    "tools": [
+      {
+        "name": "get_my_credits",
+        "title": "Obtenir mes crédits",
+        "description": "Renvoie le solde de crédits et le plan d'abonnement de l'utilisateur GraphisteGPT connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_posters",
+        "title": "Lister mes affiches",
+        "description": "Liste les affiches générées par l'utilisateur GraphisteGPT connecté, les plus récentes d'abord.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Nombre max d'affiches à renvoyer (défaut 10)."
+            },
+            "domain": {
+              "type": "string",
+              "description": "Filtrer par domaine (ex : restaurant, mode, immobilier)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_poster",
+        "title": "Détails d'une affiche",
+        "description": "Renvoie les détails complets d'une affiche générée appartenant à l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'affiche."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_templates",
+        "title": "Rechercher des modèles",
+        "description": "Recherche dans le catalogue public de modèles d'affiches GraphisteGPT par domaine ou mot-clé.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domaine (restaurant, mode, immobilier, événement…)."
+            },
+            "query": {
+              "type": "string",
+              "description": "Mot-clé libre à rechercher dans les tags ou la description."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Nombre max de résultats (défaut 12)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
