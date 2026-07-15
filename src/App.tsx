@@ -41,6 +41,7 @@ const DesignerProfile = lazy(() => import("./pages/DesignerProfile"));
 const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
 const StatusPage = lazy(() => import("./pages/StatusPage"));
 const DomainLandingPage = lazy(() => import("./pages/DomainLandingPage"));
+const OAuthConsentPage = lazy(() => import("./pages/OAuthConsentPage"));
 
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const App = () => (
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/legal" element={<LegalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
           <Route path="*" element={<NotFound />} />
 
         </Routes>
