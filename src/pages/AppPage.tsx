@@ -44,6 +44,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { GeneratedImage, AspectRatio } from "@/types/generation";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 interface CreditError {
   error: string;
   message: string;

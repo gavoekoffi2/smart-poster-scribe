@@ -323,6 +323,43 @@
   "chat": {
     "designerName": "Graphiste",
     "downloadRequiresAccount": "Créez un compte gratuit pour télécharger votre affiche.",
-    "accountCreatedDownloading": "Compte créé ! Téléchargement en cours…"
+    "accountCreatedDownloading": "Compte créé ! Téléchargement en cours…",
+    "initialMessage": "Bonjour ! Je suis votre assistant graphiste. Comment souhaitez-vous créer votre affiche ?",
+    "analyzingTemplate": "J'analyse cette affiche pour comprendre les informations à personnaliser...",
+    "cloneMode": "Mode clonage",
+    "premiumAssistant": "Assistant design premium"
+  },
+  "appHeader": {
+    "history": "Historique",
+    "new": "Nouveau",
+    "refer": "Parrainer",
+    "referTitle": "Gagnez 30% en parrainant",
+    "myAccount": "Mon compte",
+    "signOut": "Déconnexion",
+    "signIn": "Connexion"
+  },
+  "account": {
+    "back": "Retour",
+    "user": "Utilisateur",
+    "admin": "Admin",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "signOut": "Déconnexion",
+    "affiliateBannerTitle": "Gagnez 30% à vie avec l'affiliation",
+    "affiliateBannerDesc": "Générez votre lien de parrainage et partagez-le pour gagner à chaque abonnement.",
+    "affiliateBannerCta": "Mon lien d'affiliation",
+    "apiBannerTitle": "Intégrez Graphiste GPT dans votre app",
+    "apiBannerDesc": "Générez votre clé API et accédez à la documentation complète.",
+    "apiDocs": "Documentation",
+    "apiCta": "Ma clé API",
+    "tabs": {
+      "preferences": "Préférences",
+      "subscription": "Abonnement",
+      "history": "Historique",
+      "affiliation": "Affiliation",
+      "stats": "Statistiques",
+      "api": "API",
+      "apiUsage": "Utilisation API"
+    }
   }
 }
