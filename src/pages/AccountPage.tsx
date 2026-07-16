@@ -454,9 +454,10 @@ export default function AccountPage() {
               <History className="w-4 h-4" />
               Historique
             </TabsTrigger>
-            <TabsTrigger value="affiliation" className="gap-2">
+            <TabsTrigger value="affiliation" className="gap-2 relative data-[state=inactive]:text-green-500 data-[state=inactive]:font-semibold">
               <Gift className="w-4 h-4" />
               Affiliation
+              <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-bold">30%</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="w-4 h-4" />
