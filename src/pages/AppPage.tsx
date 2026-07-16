@@ -35,7 +35,7 @@ import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown, Gift } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -690,6 +690,17 @@ export default function AppPage() {
             </Button>
             {isAuthenticated ? (
               <>
+                <Link to="/account?tab=affiliation">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-green-500/10 hover:text-green-500 transition-all duration-300 text-green-500"
+                    title="Gagnez 30% en parrainant"
+                  >
+                    <Gift className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Parrainer</span>
+                  </Button>
+                </Link>
                 <Link to="/account">
                   <Button 
                     variant="ghost" 
