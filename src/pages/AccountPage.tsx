@@ -387,6 +387,32 @@ export default function AccountPage() {
           </div>
         </div>
 
+        {/* Affiliation Promo Banner - highly visible entry point */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-5 rounded-2xl bg-gradient-to-r from-green-500/15 via-primary/10 to-accent/15 border border-green-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500 to-primary flex items-center justify-center shadow-lg shadow-green-500/30 flex-shrink-0">
+              <Gift className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Gagnez 30% à vie avec l'affiliation</h3>
+              <p className="text-sm text-muted-foreground">Générez votre lien de parrainage et partagez-le pour gagner à chaque abonnement.</p>
+            </div>
+          </div>
+          <Button
+            variant="neon"
+            size="sm"
+            onClick={() => setActiveTab("affiliation")}
+            className="w-full sm:w-auto gap-2"
+          >
+            <Gift className="w-4 h-4" />
+            Mon lien d'affiliation
+          </Button>
+        </motion.div>
+
         {/* API Promo Banner */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
