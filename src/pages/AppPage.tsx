@@ -35,7 +35,7 @@ import { InlineFeedbackWidget } from "@/components/feedback/InlineFeedbackWidget
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown } from "lucide-react";
+import { Send, Download, RotateCcw, SkipForward, History, Sparkles, LogOut, User, Copy, Pencil, FileImage, FileText, ChevronDown, Gift } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
