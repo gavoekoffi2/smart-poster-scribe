@@ -45,10 +45,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function AccountPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { hasPermission, isLoading: adminLoading } = useAdmin();
   const { subscription, transactions, refreshSubscription } = useSubscription();
@@ -299,8 +302,11 @@ export default function AccountPage() {
           className="absolute top-4 left-4 gap-2 backdrop-blur-sm bg-background/50"
         >
           <ArrowLeft className="w-4 h-4" />
-          Retour
+          {t("account.back")}
         </Button>
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher variant="outline" />
+        </div>
       </div>
 
       {/* Profile Header */}
@@ -341,7 +347,7 @@ export default function AccountPage() {
           {/* Name & Email */}
           <div className="flex-1 pb-2">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {profile?.full_name || "Utilisateur"}
+              {profile?.full_name || t("account.user")}
             </h1>
             <p className="text-muted-foreground">{user.email}</p>
             {profile?.company_name && (
@@ -362,7 +368,7 @@ export default function AccountPage() {
                 className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
               >
                 <Shield className="w-4 h-4" />
-                Admin
+                {t("account.admin")}
               </Button>
             )}
             <Button
@@ -372,7 +378,7 @@ export default function AccountPage() {
               className="gap-2"
             >
               <Pencil className="w-4 h-4" />
-              {editMode ? "Annuler" : "Modifier"}
+              {editMode ? t("account.cancel") : t("account.edit")}
             </Button>
             <NotificationBell />
             <Button
@@ -382,7 +388,7 @@ export default function AccountPage() {
               className="gap-2 text-destructive hover:bg-destructive/10"
             >
               <LogOut className="w-4 h-4" />
-              Déconnexion
+              {t("account.signOut")}
             </Button>
           </div>
         </div>
@@ -398,8 +404,8 @@ export default function AccountPage() {
               <Gift className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Gagnez 30% à vie avec l'affiliation</h3>
-              <p className="text-sm text-muted-foreground">Générez votre lien de parrainage et partagez-le pour gagner à chaque abonnement.</p>
+              <h3 className="font-semibold text-foreground">{t("account.affiliateBannerTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{t("account.affiliateBannerDesc")}</p>
             </div>
           </div>
           <Button
@@ -409,7 +415,7 @@ export default function AccountPage() {
             className="w-full sm:w-auto gap-2"
           >
             <Gift className="w-4 h-4" />
-            Mon lien d'affiliation
+            {t("account.affiliateBannerCta")}
           </Button>
         </motion.div>
 
@@ -424,17 +430,17 @@ export default function AccountPage() {
               <KeyRound className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Intégrez Graphiste GPT dans votre app</h3>
-              <p className="text-sm text-muted-foreground">Générez votre clé API et accédez à la documentation complète.</p>
+              <h3 className="font-semibold text-foreground">{t("account.apiBannerTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{t("account.apiBannerDesc")}</p>
             </div>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <Button variant="outline" size="sm" onClick={() => navigate("/docs/api")} className="flex-1 sm:flex-none">
-              Documentation
+              {t("account.apiDocs")}
             </Button>
             <Button variant="neon" size="sm" onClick={() => setActiveTab("api")} className="flex-1 sm:flex-none gap-2">
               <KeyRound className="w-4 h-4" />
-              Ma clé API
+              {t("account.apiCta")}
             </Button>
           </div>
         </motion.div>
@@ -444,28 +450,28 @@ export default function AccountPage() {
           <TabsList className="bg-card/50 backdrop-blur-sm border border-border/50 p-1 w-full sm:w-auto flex overflow-x-auto whitespace-nowrap justify-start">
             <TabsTrigger value="preferences" className="gap-2">
               <Settings className="w-4 h-4" />
-              Préférences
+              {t("account.tabs.preferences")}
             </TabsTrigger>
             <TabsTrigger value="subscription" className="gap-2">
               <Crown className="w-4 h-4" />
-              Abonnement
+              {t("account.tabs.subscription")}
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-2">
               <History className="w-4 h-4" />
-              Historique
+              {t("account.tabs.history")}
             </TabsTrigger>
             <TabsTrigger value="affiliation" className="gap-2 relative data-[state=inactive]:text-green-500 data-[state=inactive]:font-semibold">
               <Gift className="w-4 h-4" />
-              Affiliation
+              {t("account.tabs.affiliation")}
               <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-bold">30%</span>
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="w-4 h-4" />
-              Statistiques
+              {t("account.tabs.stats")}
             </TabsTrigger>
             <TabsTrigger value="api" className="gap-2">
               <KeyRound className="w-4 h-4" />
-              API
+              {t("account.tabs.api")}
             </TabsTrigger>
             <TabsTrigger value="api-usage" className="gap-2">
               <Activity className="w-4 h-4" />

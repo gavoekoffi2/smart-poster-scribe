@@ -44,6 +44,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { GeneratedImage, AspectRatio } from "@/types/generation";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 interface CreditError {
   error: string;
   message: string;
@@ -110,7 +112,8 @@ export default function AppPage() {
   const location = useLocation();
   const locationState = location.state as CloneTemplateState | null;
   const cloneTemplate = locationState?.cloneTemplate;
-  
+  const { t } = useTranslation();
+
   const { profile } = useUserProfile();
   const { user, isAuthenticated, isAnonymous, isRealUser, isLoading: authLoading, signOut } = useAuth();
   const { shouldShowTutorial, isLoading: tutorialLoading, completeTutorial } = useTutorial(user?.id);
@@ -653,18 +656,19 @@ export default function AppPage() {
                 {isCloneMode ? (
                   <>
                     <Copy className="w-2.5 h-2.5 text-accent" />
-                    Mode clonage
+                    {t("chat.cloneMode")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-2.5 h-2.5 text-primary" />
-                    Assistant design premium
+                    {t("chat.premiumAssistant")}
                   </>
                 )}
               </p>
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
             <QualityToggle />
             {isAuthenticated && (
               <CreditBalance compact onUpgrade={() => navigate("/pricing")} />
@@ -677,7 +681,7 @@ export default function AppPage() {
               className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
             >
               <History className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Historique</span>
+              <span className="hidden sm:inline">{t("appHeader.history")}</span>
             </Button>
             <Button 
               variant="ghost" 
@@ -686,7 +690,7 @@ export default function AppPage() {
               className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Nouveau</span>
+              <span className="hidden sm:inline">{t("appHeader.new")}</span>
             </Button>
             {isAuthenticated ? (
               <>
@@ -695,10 +699,10 @@ export default function AppPage() {
                     variant="ghost"
                     size="sm"
                     className="hover:bg-green-500/10 hover:text-green-500 transition-all duration-300 text-green-500"
-                    title="Gagnez 30% en parrainant"
+                    title={t("appHeader.referTitle")}
                   >
                     <Gift className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Parrainer</span>
+                    <span className="hidden sm:inline">{t("appHeader.refer")}</span>
                   </Button>
                 </Link>
                 <Link to="/account">
@@ -708,7 +712,7 @@ export default function AppPage() {
                     className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
                   >
                     <User className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Mon compte</span>
+                    <span className="hidden sm:inline">{t("appHeader.myAccount")}</span>
                   </Button>
                 </Link>
                 <Button 
@@ -718,7 +722,7 @@ export default function AppPage() {
                   className="hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Déconnexion</span>
+                  <span className="hidden sm:inline">{t("appHeader.signOut")}</span>
                 </Button>
               </>
             ) : (
@@ -729,7 +733,7 @@ export default function AppPage() {
                   className="border-primary/30 hover:bg-primary/10"
                 >
                   <User className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Connexion</span>
+                  <span className="hidden sm:inline">{t("appHeader.signIn")}</span>
                 </Button>
               </Link>
             )}

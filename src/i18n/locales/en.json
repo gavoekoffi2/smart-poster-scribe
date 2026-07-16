@@ -323,6 +323,43 @@
   "chat": {
     "designerName": "Graphic designer",
     "downloadRequiresAccount": "Create a free account to download your poster.",
-    "accountCreatedDownloading": "Account created! Downloading…"
+    "accountCreatedDownloading": "Account created! Downloading…",
+    "initialMessage": "Hi! I'm your graphic designer assistant. How would you like to create your poster?",
+    "analyzingTemplate": "I'm analyzing this poster to understand what to personalize...",
+    "cloneMode": "Clone mode",
+    "premiumAssistant": "Premium design assistant"
+  },
+  "appHeader": {
+    "history": "History",
+    "new": "New",
+    "refer": "Refer",
+    "referTitle": "Earn 30% by referring",
+    "myAccount": "My account",
+    "signOut": "Sign out",
+    "signIn": "Sign in"
+  },
+  "account": {
+    "back": "Back",
+    "user": "User",
+    "admin": "Admin",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "signOut": "Sign out",
+    "affiliateBannerTitle": "Earn 30% for life with affiliation",
+    "affiliateBannerDesc": "Generate your referral link and share it to earn on every subscription.",
+    "affiliateBannerCta": "My affiliate link",
+    "apiBannerTitle": "Integrate Graphiste GPT into your app",
+    "apiBannerDesc": "Generate your API key and access the full documentation.",
+    "apiDocs": "Documentation",
+    "apiCta": "My API key",
+    "tabs": {
+      "preferences": "Preferences",
+      "subscription": "Subscription",
+      "history": "History",
+      "affiliation": "Affiliation",
+      "stats": "Statistics",
+      "api": "API",
+      "apiUsage": "API Usage"
+    }
   }
 }
