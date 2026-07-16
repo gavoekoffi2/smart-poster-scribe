@@ -690,6 +690,17 @@ export default function AppPage() {
             </Button>
             {isAuthenticated ? (
               <>
+                <Link to="/account?tab=affiliation">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-green-500/10 hover:text-green-500 transition-all duration-300 text-green-500"
+                    title="Gagnez 30% en parrainant"
+                  >
+                    <Gift className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Parrainer</span>
+                  </Button>
+                </Link>
                 <Link to="/account">
                   <Button 
                     variant="ghost" 
