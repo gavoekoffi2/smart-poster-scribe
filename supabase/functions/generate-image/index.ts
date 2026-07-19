@@ -415,17 +415,16 @@ async function downloadAndUploadImage(
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.toLowerCase().startsWith("image/")) {
-    throw new Error(`URL ne retourne pas une image (content-type=${contentType || "unknown"})`);
+  const rawContentType = response.headers.get("content-type") || "";
+  if (!rawContentType.toLowerCase().startsWith("image/")) {
+    throw new Error(`URL ne retourne pas une image (content-type=${rawContentType || "unknown"})`);
   }
+  const contentType = normalizeImageContentType(rawContentType);
 
   const arrayBuffer = await response.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
   
-  let extension = 'jpg';
-  if (contentType.includes('png')) extension = 'png';
-  else if (contentType.includes('webp')) extension = 'webp';
+  const extension = extensionFromContentType(contentType);
   
   const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
   
@@ -1551,9 +1550,9 @@ serve(async (req) => {
         console.log(`Trying primary URL: ${primaryUrl}`);
         const response = await fetch(primaryUrl);
         if (response.ok) {
-          const contentType = response.headers.get("content-type") || "";
-          if (contentType.toLowerCase().startsWith("image/")) {
-            return await uploadFetchedImage(response, contentType, prefix);
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.toLowerCase().startsWith("image/")) {
+        return await uploadFetchedImage(response, normalizeImageContentType(contentType), prefix);
           }
         }
       } catch (e) {
@@ -1569,7 +1568,7 @@ serve(async (req) => {
           if (response.ok) {
             const contentType = response.headers.get("content-type") || "";
             if (contentType.toLowerCase().startsWith("image/")) {
-              return await uploadFetchedImage(response, contentType, prefix);
+              return await uploadFetchedImage(response, normalizeImageContentType(contentType), prefix);
             }
           }
         } catch (e) {
@@ -1589,9 +1588,8 @@ serve(async (req) => {
       const arrayBuffer = await response.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       
-      let extension = 'jpg';
-      if (contentType.includes('png')) extension = 'png';
-      else if (contentType.includes('webp')) extension = 'webp';
+      contentType = normalizeImageContentType(contentType);
+      const extension = extensionFromContentType(contentType);
       
       const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
       
