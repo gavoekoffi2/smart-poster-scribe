@@ -1864,7 +1864,7 @@ serve(async (req) => {
     }
     
     // Smart condensation of user prompt to fit within API limits
-    const MAX_USER_PROMPT = 2500;
+    const MAX_USER_PROMPT = 4200;
     let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
     if (userPromptFull.length > MAX_USER_PROMPT) {
       console.warn(`User prompt too long (${userPromptFull.length}), condensing to ${MAX_USER_PROMPT}`);
@@ -1897,8 +1897,11 @@ serve(async (req) => {
     let finalPrompt = localeHint + professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
       console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
-      // Find where user data starts (after "=== INFOS CLIENT" or "=== DONNEES CLIENT")
-      const clientDataMarker = finalPrompt.indexOf("=== ");
+      const clientDataMarker = Math.max(
+        finalPrompt.lastIndexOf("═══ RAPPEL FINAL"),
+        finalPrompt.lastIndexOf("═══ DONNÉES CLIENT"),
+        finalPrompt.lastIndexOf("═══ 📋 INFORMATIONS CLIENT"),
+      );
       if (clientDataMarker > 0) {
         const systemPart = finalPrompt.substring(0, clientDataMarker);
         const userPart = finalPrompt.substring(clientDataMarker);
