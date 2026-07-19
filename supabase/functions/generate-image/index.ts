@@ -1412,7 +1412,7 @@ serve(async (req) => {
         user_id: userId,
         status: 'processing',
         template_id: resolvedTemplateId,
-        params: { prompt: prompt.slice(0, 500), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner },
+        params: { prompt: Array.from(String(prompt)).slice(0, 500).join(''), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner },
       })
       .select('id')
       .single();
