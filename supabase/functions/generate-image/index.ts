@@ -758,6 +758,7 @@ function buildProfessionalPrompt({
     lines.push("═══ FIN INFOS CLIENT ═══");
     lines.push("");
     lines.push("⚠️ TOUT texte de l'affiche finale doit provenir EXCLUSIVEMENT du bloc ci-dessus. Aucun mot, aucune date, aucun prix, aucun nom, aucun numéro de l'image de référence ne doit subsister.");
+    lines.push("🧠 INTELLIGENCE DE MISE EN PAGE : tu peux hiérarchiser visuellement les informations (titre dominant, date/contact/lieu en blocs secondaires), mais tu ne dois jamais supprimer, résumer, fusionner ou changer le sens d'une information client. Si l'espace manque, réduis, réorganise, crée des encadrés ou des colonnes.");
     lines.push("");
 
     lines.push("═══ RÈGLE #1 : RÔLE DE L'IMAGE DE RÉFÉRENCE ═══");
@@ -978,6 +979,8 @@ function buildProfessionalPrompt({
   instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe EXACTE du client, caractère par caractère.");
   instructions.push("• CTA: Si pertinent ET fourni par le client, bouton/bandeau visible et accrocheur.");
   if (hasLogoImage) instructions.push("• LOGO: Reproduire EXACTEMENT tel que fourni, sans déformation.");
+  instructions.push("• INTELLIGENCE CONTENU: analyser le brief et organiser les informations par importance (titre, promesse, date/heure, lieu, prix, contact, CTA), sans supprimer ni altérer le sens. Les détails secondaires peuvent être plus petits, mais ils doivent rester présents et lisibles.");
+  instructions.push("• INTERDIT: enlever une information client pour faire plus joli. Si l'affiche est chargée, utiliser une grille, des cartouches, des colonnes ou une hiérarchie plus compacte.");
   
   instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
