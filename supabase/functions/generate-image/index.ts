@@ -51,6 +51,55 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
+function normalizeImageContentType(contentType: string | null | undefined, fallback = "image/jpeg"): string {
+  const normalized = (contentType || fallback).split(";")[0].trim().toLowerCase();
+  if (normalized === "image/jpg" || normalized === "image/pjpeg") return "image/jpeg";
+  if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(normalized)) return normalized;
+  return fallback;
+}
+
+function extensionFromContentType(contentType: string): string {
+  const normalized = normalizeImageContentType(contentType);
+  if (normalized === "image/png") return "png";
+  if (normalized === "image/webp") return "webp";
+  if (normalized === "image/gif") return "gif";
+  return "jpg";
+}
+
+async function imageSourceToDataUrl(imageSource: string): Promise<string> {
+  if (imageSource.startsWith("data:image/")) return imageSource;
+
+  const response = await fetch(imageSource);
+  if (!response.ok) {
+    throw new Error(`Impossible de préparer l'image d'entrée (${response.status})`);
+  }
+
+  const contentType = normalizeImageContentType(response.headers.get("content-type"));
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < buffer.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(buffer.subarray(i, i + CHUNK)) as unknown as number[],
+    );
+  }
+  return `data:${contentType};base64,${btoa(binary)}`;
+}
+
+async function prepareInlineImageInputs(imageInputs: string[]): Promise<string[]> {
+  const prepared: string[] = [];
+  for (const source of imageInputs.slice(0, 6)) {
+    try {
+      prepared.push(await imageSourceToDataUrl(source));
+    } catch (error) {
+      console.warn("Image inline preparation failed, keeping original URL:", getErrorMessage(error));
+      prepared.push(source);
+    }
+  }
+  return prepared;
+}
+
 function isKieCreditError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
@@ -109,12 +158,8 @@ async function persistGeneratedImageToStorage(
       throw new Error(`Impossible de télécharger l'image générée (${imgResp.status})`);
     }
 
-    contentType = imgResp.headers.get("content-type") || contentType;
-    extension = contentType.includes("jpeg") || contentType.includes("jpg")
-      ? "jpg"
-      : contentType.includes("webp")
-        ? "webp"
-        : "png";
+    contentType = normalizeImageContentType(imgResp.headers.get("content-type"), contentType);
+    extension = extensionFromContentType(contentType);
     bytes = new Uint8Array(await imgResp.arrayBuffer());
   }
 
