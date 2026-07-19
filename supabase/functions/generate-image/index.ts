@@ -289,7 +289,8 @@ async function generateWithOpenRouter(
   console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality})...`);
 
   const content: any[] = [{ type: "text", text: prompt }];
-  for (const imgUrl of imageInputs.slice(0, 6)) {
+  const inlineInputs = await prepareInlineImageInputs(imageInputs);
+  for (const imgUrl of inlineInputs) {
     content.push({ type: "image_url", image_url: { url: imgUrl } });
   }
 
