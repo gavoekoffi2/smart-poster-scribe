@@ -205,7 +205,7 @@ async function generateWithGoogleGemini(
       try {
         const imgResp = await fetch(imgUrl);
         if (imgResp.ok) {
-          const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+          const contentType = normalizeImageContentType(imgResp.headers.get("content-type"));
           const buffer = new Uint8Array(await imgResp.arrayBuffer());
           // Chunked base64 conversion: `String.fromCharCode(...arr)` overflows the call stack
           // on images larger than ~100KB. We build the binary string in 32KB slices.
@@ -342,9 +342,10 @@ async function generateWithLovableFallback(
 ): Promise<string> {
   console.log("Falling back to Lovable AI image generation...");
 
+  const inlineInputs = await prepareInlineImageInputs(imageInputs);
   const content = [
     { type: "text", text: prompt },
-    ...imageInputs.slice(0, 6).map((url) => ({
+    ...inlineInputs.map((url) => ({
       type: "image_url",
       image_url: { url },
     })),
@@ -460,7 +461,7 @@ async function uploadBase64ToStorage(
     throw new Error(`Format d'image invalide pour ${prefix}. Formats acceptés: jpeg, png, webp`);
   }
   
-  const mimeType = matches[1].toLowerCase();
+  const mimeType = normalizeImageContentType(`image/${matches[1]}`);
   const base64Content = matches[2];
   
   const binaryString = atob(base64Content);
@@ -469,13 +470,13 @@ async function uploadBase64ToStorage(
     bytes[i] = binaryString.charCodeAt(i);
   }
   
-  const extension = mimeType === 'jpeg' || mimeType === 'jpg' ? 'jpg' : mimeType;
+  const extension = extensionFromContentType(mimeType);
   const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
   
   const { error } = await supabase.storage
     .from('temp-images')
     .upload(fileName, bytes, {
-      contentType: `image/${mimeType}`,
+        contentType: mimeType,
       upsert: false,
     });
   
