@@ -625,16 +625,51 @@ function buildProfessionalPrompt({
     }
 
     // ====== (B) MODIFICATION CHIRURGICALE ======
+    // Détection : demande de RESTAURATION / RÉINTÉGRATION de contenu manquant
+    const restoreKeywords = [
+      "remets", "remettre", "remet ", "remettez",
+      "ramene", "ramener", "ramenez", "ramène",
+      "restaure", "restaurer", "restaurez", "restauration",
+      "rajoute", "rajouter", "rajoutez",
+      "ajoute a nouveau", "remets tout", "remets les infos", "remets le contenu",
+      "manque", "manquant", "manquantes", "manquants",
+      "tu as supprime", "tu as enleve", "tu as oublie", "tu as omis",
+      "il manque", "il n'y a plus", "n'apparait pas", "napparait pas",
+      "reintegre", "reintegrer", "reintegration",
+      "restore", "bring back", "put back", "add back", "missing",
+    ];
+    const isRestoreRequest = restoreKeywords.some((k) => normalized.includes(k));
+
     lines.push("🔧 MODE MODIFICATION CHIRURGICALE - LIRE ATTENTIVEMENT 🔧");
     lines.push("");
     lines.push("L'image jointe est une affiche DÉJÀ GÉNÉRÉE par toi. Le client demande UNE CORRECTION PRÉCISE.");
     lines.push("");
-    lines.push("═══ RÈGLE ABSOLUE: MODIFIER UNIQUEMENT CE QUI EST DEMANDÉ ═══");
+    lines.push("═══ 🛡️ RÈGLE #0 — PROTECTION DU CONTENU CLIENT (PRIORITÉ ABSOLUE) 🛡️ ═══");
+    lines.push("• TOUTES les informations textuelles présentes sur l'affiche jointe (titres, sous-titres, dates, heures, lieux, prix, contacts, téléphones, emails, sites web, noms, slogans, hashtags, réseaux sociaux, mentions légales, call-to-action) DOIVENT être PRÉSERVÉES INTÉGRALEMENT.");
+    lines.push("• 🚫 INTERDICTION ABSOLUE de SUPPRIMER, OMETTRE, RACCOURCIR, PARAPHRASER ou FUSIONNER une information existante — même si elle semble redondante, secondaire, décorative, ou si elle prend de la place.");
+    lines.push("• 🚫 INTERDICTION de supprimer un bloc de texte pour « aérer », « équilibrer » ou « améliorer » la composition. Toute info du client est ESSENTIELLE — c'est le MESSAGE de l'affiche.");
+    lines.push("• Si la modification demandée impose des contraintes d'espace, RÉORGANISE / REDIMENSIONNE — ne SUPPRIME JAMAIS.");
+    lines.push("• Avant de rendre : vérifier zone par zone que CHAQUE texte de l'affiche source est toujours présent MOT POUR MOT sur l'affiche finale (sauf ceux que le client demande explicitement de supprimer).");
+    lines.push("");
+
+    if (isRestoreRequest) {
+      lines.push("═══ 🔁 DEMANDE DE RESTAURATION DÉTECTÉE 🔁 ═══");
+      lines.push("Le client signale que du contenu IMPORTANT a été supprimé/oublié lors d'une génération précédente et demande de le RÉINTÉGRER.");
+      lines.push("• LIRE ATTENTIVEMENT la demande du client ci-dessous : elle indique quel(s) contenu(s) doivent réapparaître.");
+      lines.push("• RÉINSÉRER ces informations manquantes sur l'affiche à leur place logique (en respectant la hiérarchie visuelle existante).");
+      lines.push("• Si le client dit « remets tout », « restore all », « ramène les infos » sans préciser : réintégrer TOUTES les informations qui figuraient dans le brief original du client et qui ne sont PAS visibles sur l'affiche jointe.");
+      lines.push("• Adapter légèrement la mise en page si nécessaire pour faire de la place — SANS toucher au style, à la palette ou à la typographie.");
+      lines.push("• 🚫 Ne PAS régénérer un design complètement nouveau. Le look général reste identique, on RÉINTÈGRE seulement le contenu absent.");
+      lines.push("");
+    }
+
+    lines.push("═══ RÈGLE ABSOLUE : MODIFIER UNIQUEMENT CE QUI EST DEMANDÉ ═══");
     lines.push("• L'affiche doit rester 100% IDENTIQUE sauf le changement demandé.");
-    lines.push("• NE PAS régénérer un nouveau design. NE PAS changer la mise en page.");
+    lines.push("• NE PAS régénérer un nouveau design. NE PAS changer la mise en page globale.");
     lines.push("• NE PAS modifier les couleurs, les polices, les positions, les tailles SAUF si demandé.");
-    lines.push("• NE PAS ajouter ou supprimer d'éléments SAUF si demandé.");
-    lines.push("• Le fond, les formes, les photos, les logos: INTOUCHABLES sauf demande explicite.");
+    lines.push("• NE PAS ajouter d'éléments décoratifs non demandés.");
+    lines.push("• Ne SUPPRIMER un élément QUE si le client le demande EXPLICITEMENT et en le nommant.");
+    lines.push("• Le fond, les formes, les photos, les logos : INTOUCHABLES sauf demande explicite.");
     lines.push("");
     lines.push("═══ 🚫🚫🚫 INTERDICTION ABSOLUE D'HALLUCINATION 🚫🚫🚫 ═══");
     lines.push("• NE JAMAIS inventer, ajouter ou modifier du texte que le client N'A PAS demandé de changer.");
@@ -644,14 +679,16 @@ function buildProfessionalPrompt({
     lines.push("");
     lines.push("═══ TYPES DE MODIFICATIONS ═══");
     lines.push("• Correction de texte → changer UNIQUEMENT le texte concerné, même police, même taille, même position.");
-    lines.push("• Suppression → supprimer UNIQUEMENT l'élément cité, reconstruire le fond local proprement.");
-    lines.push("• Ajout → ajouter UNIQUEMENT ce qui est demandé, style cohérent avec l'existant.");
+    lines.push("• Suppression → supprimer UNIQUEMENT l'élément explicitement cité par le client, reconstruire le fond local proprement.");
+    lines.push("• Ajout / Restauration → ajouter ce qui est demandé, style cohérent avec l'existant, sans toucher au reste.");
     lines.push("• Couleur → modifier UNIQUEMENT la couleur citée, tout le reste intact.");
     lines.push("• Déplacement → déplacer UNIQUEMENT l'élément cité, tout le reste fixe.");
     lines.push("");
-    lines.push("═══ CONTRÔLE QUALITÉ ═══");
-    lines.push("✓ Comparer pixel par pixel avec l'original: SEUL le changement demandé doit être visible.");
-    lines.push("✓ Si on masque la zone modifiée, le reste doit être IDENTIQUE.");
+    lines.push("═══ ✅ CHECKLIST FINALE OBLIGATOIRE ═══");
+    lines.push("✓ TOUTES les infos textuelles de l'affiche source sont-elles présentes mot pour mot ? (sauf suppressions explicites)");
+    lines.push("✓ Aucun titre, date, prix, contact, lieu, nom, hashtag n'a été perdu ?");
+    lines.push("✓ Si RESTAURATION demandée : les infos manquantes sont-elles bien réintégrées ?");
+    lines.push("✓ Comparer avec l'original : SEUL le changement demandé (+ éventuelle réintégration) doit être visible.");
     lines.push("");
     lines.push(`Format:${aspectRatio}|HD|Francais`);
     lines.push("");
