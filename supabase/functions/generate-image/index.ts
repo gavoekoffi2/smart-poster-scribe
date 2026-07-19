@@ -51,6 +51,55 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
+function normalizeImageContentType(contentType: string | null | undefined, fallback = "image/jpeg"): string {
+  const normalized = (contentType || fallback).split(";")[0].trim().toLowerCase();
+  if (normalized === "image/jpg" || normalized === "image/pjpeg") return "image/jpeg";
+  if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(normalized)) return normalized;
+  return fallback;
+}
+
+function extensionFromContentType(contentType: string): string {
+  const normalized = normalizeImageContentType(contentType);
+  if (normalized === "image/png") return "png";
+  if (normalized === "image/webp") return "webp";
+  if (normalized === "image/gif") return "gif";
+  return "jpg";
+}
+
+async function imageSourceToDataUrl(imageSource: string): Promise<string> {
+  if (imageSource.startsWith("data:image/")) return imageSource;
+
+  const response = await fetch(imageSource);
+  if (!response.ok) {
+    throw new Error(`Impossible de préparer l'image d'entrée (${response.status})`);
+  }
+
+  const contentType = normalizeImageContentType(response.headers.get("content-type"));
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < buffer.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(buffer.subarray(i, i + CHUNK)) as unknown as number[],
+    );
+  }
+  return `data:${contentType};base64,${btoa(binary)}`;
+}
+
+async function prepareInlineImageInputs(imageInputs: string[]): Promise<string[]> {
+  const prepared: string[] = [];
+  for (const source of imageInputs.slice(0, 6)) {
+    try {
+      prepared.push(await imageSourceToDataUrl(source));
+    } catch (error) {
+      console.warn("Image inline preparation failed, keeping original URL:", getErrorMessage(error));
+      prepared.push(source);
+    }
+  }
+  return prepared;
+}
+
 function isKieCreditError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
@@ -109,12 +158,8 @@ async function persistGeneratedImageToStorage(
       throw new Error(`Impossible de télécharger l'image générée (${imgResp.status})`);
     }
 
-    contentType = imgResp.headers.get("content-type") || contentType;
-    extension = contentType.includes("jpeg") || contentType.includes("jpg")
-      ? "jpg"
-      : contentType.includes("webp")
-        ? "webp"
-        : "png";
+    contentType = normalizeImageContentType(imgResp.headers.get("content-type"), contentType);
+    extension = extensionFromContentType(contentType);
     bytes = new Uint8Array(await imgResp.arrayBuffer());
   }
 
@@ -160,7 +205,7 @@ async function generateWithGoogleGemini(
       try {
         const imgResp = await fetch(imgUrl);
         if (imgResp.ok) {
-          const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+          const contentType = normalizeImageContentType(imgResp.headers.get("content-type"));
           const buffer = new Uint8Array(await imgResp.arrayBuffer());
           // Chunked base64 conversion: `String.fromCharCode(...arr)` overflows the call stack
           // on images larger than ~100KB. We build the binary string in 32KB slices.
@@ -244,7 +289,8 @@ async function generateWithOpenRouter(
   console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality})...`);
 
   const content: any[] = [{ type: "text", text: prompt }];
-  for (const imgUrl of imageInputs.slice(0, 6)) {
+  const inlineInputs = await prepareInlineImageInputs(imageInputs);
+  for (const imgUrl of inlineInputs) {
     content.push({ type: "image_url", image_url: { url: imgUrl } });
   }
 
@@ -297,9 +343,10 @@ async function generateWithLovableFallback(
 ): Promise<string> {
   console.log("Falling back to Lovable AI image generation...");
 
+  const inlineInputs = await prepareInlineImageInputs(imageInputs);
   const content = [
     { type: "text", text: prompt },
-    ...imageInputs.slice(0, 6).map((url) => ({
+    ...inlineInputs.map((url) => ({
       type: "image_url",
       image_url: { url },
     })),
@@ -369,17 +416,16 @@ async function downloadAndUploadImage(
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.toLowerCase().startsWith("image/")) {
-    throw new Error(`URL ne retourne pas une image (content-type=${contentType || "unknown"})`);
+  const rawContentType = response.headers.get("content-type") || "";
+  if (!rawContentType.toLowerCase().startsWith("image/")) {
+    throw new Error(`URL ne retourne pas une image (content-type=${rawContentType || "unknown"})`);
   }
+  const contentType = normalizeImageContentType(rawContentType);
 
   const arrayBuffer = await response.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
   
-  let extension = 'jpg';
-  if (contentType.includes('png')) extension = 'png';
-  else if (contentType.includes('webp')) extension = 'webp';
+  const extension = extensionFromContentType(contentType);
   
   const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
   
@@ -415,7 +461,7 @@ async function uploadBase64ToStorage(
     throw new Error(`Format d'image invalide pour ${prefix}. Formats acceptés: jpeg, png, webp`);
   }
   
-  const mimeType = matches[1].toLowerCase();
+  const mimeType = normalizeImageContentType(`image/${matches[1]}`);
   const base64Content = matches[2];
   
   const binaryString = atob(base64Content);
@@ -424,13 +470,13 @@ async function uploadBase64ToStorage(
     bytes[i] = binaryString.charCodeAt(i);
   }
   
-  const extension = mimeType === 'jpeg' || mimeType === 'jpg' ? 'jpg' : mimeType;
+  const extension = extensionFromContentType(mimeType);
   const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
   
   const { error } = await supabase.storage
     .from('temp-images')
     .upload(fileName, bytes, {
-      contentType: `image/${mimeType}`,
+        contentType: mimeType,
       upsert: false,
     });
   
@@ -712,6 +758,7 @@ function buildProfessionalPrompt({
     lines.push("═══ FIN INFOS CLIENT ═══");
     lines.push("");
     lines.push("⚠️ TOUT texte de l'affiche finale doit provenir EXCLUSIVEMENT du bloc ci-dessus. Aucun mot, aucune date, aucun prix, aucun nom, aucun numéro de l'image de référence ne doit subsister.");
+    lines.push("🧠 INTELLIGENCE DE MISE EN PAGE : tu peux hiérarchiser visuellement les informations (titre dominant, date/contact/lieu en blocs secondaires), mais tu ne dois jamais supprimer, résumer, fusionner ou changer le sens d'une information client. Si l'espace manque, réduis, réorganise, crée des encadrés ou des colonnes.");
     lines.push("");
 
     lines.push("═══ RÈGLE #1 : RÔLE DE L'IMAGE DE RÉFÉRENCE ═══");
@@ -932,6 +979,8 @@ function buildProfessionalPrompt({
   instructions.push("• ORTHOGRAPHE: Zéro faute. Respecter l'orthographe EXACTE du client, caractère par caractère.");
   instructions.push("• CTA: Si pertinent ET fourni par le client, bouton/bandeau visible et accrocheur.");
   if (hasLogoImage) instructions.push("• LOGO: Reproduire EXACTEMENT tel que fourni, sans déformation.");
+  instructions.push("• INTELLIGENCE CONTENU: analyser le brief et organiser les informations par importance (titre, promesse, date/heure, lieu, prix, contact, CTA), sans supprimer ni altérer le sens. Les détails secondaires peuvent être plus petits, mais ils doivent rester présents et lisibles.");
+  instructions.push("• INTERDIT: enlever une information client pour faire plus joli. Si l'affiche est chargée, utiliser une grille, des cartouches, des colonnes ou une hiérarchie plus compacte.");
   
   instructions.push("");
   instructions.push(`Format:${aspectRatio}|HD|Francais`);
@@ -1505,9 +1554,9 @@ serve(async (req) => {
         console.log(`Trying primary URL: ${primaryUrl}`);
         const response = await fetch(primaryUrl);
         if (response.ok) {
-          const contentType = response.headers.get("content-type") || "";
-          if (contentType.toLowerCase().startsWith("image/")) {
-            return await uploadFetchedImage(response, contentType, prefix);
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.toLowerCase().startsWith("image/")) {
+        return await uploadFetchedImage(response, normalizeImageContentType(contentType), prefix);
           }
         }
       } catch (e) {
@@ -1523,7 +1572,7 @@ serve(async (req) => {
           if (response.ok) {
             const contentType = response.headers.get("content-type") || "";
             if (contentType.toLowerCase().startsWith("image/")) {
-              return await uploadFetchedImage(response, contentType, prefix);
+              return await uploadFetchedImage(response, normalizeImageContentType(contentType), prefix);
             }
           }
         } catch (e) {
@@ -1543,9 +1592,8 @@ serve(async (req) => {
       const arrayBuffer = await response.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       
-      let extension = 'jpg';
-      if (contentType.includes('png')) extension = 'png';
-      else if (contentType.includes('webp')) extension = 'webp';
+      contentType = normalizeImageContentType(contentType);
+      const extension = extensionFromContentType(contentType);
       
       const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
       
@@ -1819,7 +1867,7 @@ serve(async (req) => {
     }
     
     // Smart condensation of user prompt to fit within API limits
-    const MAX_USER_PROMPT = 2500;
+    const MAX_USER_PROMPT = 4200;
     let userPromptFull = prompt + (logoPositionText ? ` ${logoPositionText}` : "") + scenePreferenceText + secondaryImagesPromptSection;
     if (userPromptFull.length > MAX_USER_PROMPT) {
       console.warn(`User prompt too long (${userPromptFull.length}), condensing to ${MAX_USER_PROMPT}`);
@@ -1852,8 +1900,11 @@ serve(async (req) => {
     let finalPrompt = localeHint + professionalPrompt;
     if (finalPrompt.length > MAX_SAFE_PROMPT) {
       console.warn(`Prompt too long (${finalPrompt.length}), condensing to ${MAX_SAFE_PROMPT}`);
-      // Find where user data starts (after "=== INFOS CLIENT" or "=== DONNEES CLIENT")
-      const clientDataMarker = finalPrompt.indexOf("=== ");
+      const clientDataMarker = Math.max(
+        finalPrompt.lastIndexOf("═══ RAPPEL FINAL"),
+        finalPrompt.lastIndexOf("═══ DONNÉES CLIENT"),
+        finalPrompt.lastIndexOf("═══ 📋 INFORMATIONS CLIENT"),
+      );
       if (clientDataMarker > 0) {
         const systemPart = finalPrompt.substring(0, clientDataMarker);
         const userPart = finalPrompt.substring(clientDataMarker);
