@@ -585,6 +585,7 @@ function buildProfessionalPrompt({
   isModification = false,
   modificationRequest = "",
   templateSourceDomain = null,
+  typographyDuo = null,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -596,6 +597,7 @@ function buildProfessionalPrompt({
   isModification?: boolean;
   modificationRequest?: string;
   templateSourceDomain?: string | null;
+  typographyDuo?: TypographyDuo | null;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt (templateSourceDomain="${templateSourceDomain}")`);
