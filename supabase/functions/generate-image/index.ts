@@ -628,7 +628,7 @@ function buildProfessionalPrompt({
 
     if (isEnhancementRequest) {
       // ====== (A) REDESIGN COMPLET À PARTIR DES INFOS CLIENT ======
-      const typoStyle = getRandomTypographyStyle();
+      const typoStyle = typographyDuo ? buildTypographyBrief(typographyDuo) : getRandomTypographyStyle();
       const layoutStyle = getRandomLayoutStyle();
       const expertSkills = buildExpertSkillsPrompt(detectedDomain);
 
@@ -653,7 +653,7 @@ function buildProfessionalPrompt({
       lines.push("═══ STANDARDS PREMIUM À APPLIQUER ═══");
       lines.push(expertSkills);
       lines.push("");
-      lines.push(`Style typographique: ${typoStyle}`);
+      lines.push(typographyDuo ? typoStyle : `Style typographique: ${typoStyle}`);
       lines.push(`Structure de mise en page: ${layoutStyle}`);
       lines.push("• Composition en 5 couches : fond riche → formes décoratives → visuels → blocs texte → effets finaux.");
       lines.push("• Hiérarchie dramatique : titre 3x+ sous-titre, sous-titre 2x+ corps de texte.");
@@ -915,21 +915,28 @@ function buildProfessionalPrompt({
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
   
-  // Typographie ultra-premium
-  const typoStyle = getRandomTypographyStyle();
+  // Typographie ultra-premium (duo imposé pour se différencier)
   const layoutStyle = getRandomLayoutStyle();
-  
+
   instructions.push("");
-  instructions.push("═══ 🔤 TYPOGRAPHIE ULTRA-PREMIUM (CRITIQUE) ═══");
-  instructions.push(`Style principal: ${typoStyle}`);
-  instructions.push("TITRE PRINCIPAL: Police display MASSIVE avec traitement graphique SPECTACULAIRE.");
-  instructions.push("→ Effets obligatoires sur le titre: 3D, ombres portées épaisses (6-12px), contours doubles, dégradé métallique, glow, ou relief biseauté.");
-  instructions.push("→ Le titre n'est PAS du texte. C'est un ÉLÉMENT GRAPHIQUE CENTRAL qui attire l'œil immédiatement.");
-  instructions.push("→ Taille titre: 60-100pt. IMPOSANT. DOMINANT. Occupe 20-30% de la surface.");
-  instructions.push("SOUS-TITRES: Police complémentaire avec effets subtils (ombre légère, contour fin, légère transparence).");
-  instructions.push("→ Hiérarchie DRAMATIQUE: Titre 3x+ le sous-titre. Sous-titre 2x+ le corps.");
-  instructions.push("CORPS DE TEXTE: Ultra-lisible, espacement généreux, police clean et moderne.");
-  instructions.push("INTERDITS: Texte plat sans effet, polices basiques (Arial, Helvetica brut), texte qui se fond dans le décor.");
+  if (typographyDuo) {
+    instructions.push(buildTypographyBrief(typographyDuo));
+    instructions.push("TITRE : traitement graphique spectaculaire (ombre portée épaisse, contour double, dégradé métallique, glow, relief 3D ou biseauté). Le titre est un élément graphique, pas un simple mot.");
+    instructions.push("Taille titre 60-100pt, occupe 20-30% de la surface. Hiérarchie DRAMATIQUE: Titre ≥ 3× sous-titre.");
+    instructions.push("INTERDITS: Arial, Helvetica brut, Times New Roman par défaut, plus de 2 familles typographiques, texte plat sans effet sur le titre.");
+  } else {
+    const typoStyle = getRandomTypographyStyle();
+    instructions.push("═══ 🔤 TYPOGRAPHIE ULTRA-PREMIUM (CRITIQUE) ═══");
+    instructions.push(`Style principal: ${typoStyle}`);
+    instructions.push("TITRE PRINCIPAL: Police display MASSIVE avec traitement graphique SPECTACULAIRE.");
+    instructions.push("→ Effets obligatoires sur le titre: 3D, ombres portées épaisses (6-12px), contours doubles, dégradé métallique, glow, ou relief biseauté.");
+    instructions.push("→ Le titre n'est PAS du texte. C'est un ÉLÉMENT GRAPHIQUE CENTRAL qui attire l'œil immédiatement.");
+    instructions.push("→ Taille titre: 60-100pt. IMPOSANT. DOMINANT. Occupe 20-30% de la surface.");
+    instructions.push("SOUS-TITRES: Police complémentaire avec effets subtils (ombre légère, contour fin, légère transparence).");
+    instructions.push("→ Hiérarchie DRAMATIQUE: Titre 3x+ le sous-titre. Sous-titre 2x+ le corps.");
+    instructions.push("CORPS DE TEXTE: Ultra-lisible, espacement généreux, police clean et moderne.");
+    instructions.push("INTERDITS: Texte plat sans effet, polices basiques (Arial, Helvetica brut), texte qui se fond dans le décor.");
+  }
   
   instructions.push("");
   instructions.push("═══ 📐 MISE EN PAGE AWARD-WINNING ═══");
