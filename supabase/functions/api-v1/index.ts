@@ -23,6 +23,8 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PUBLIC_API_BASE = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/api-v1`;
+const STALE_JOB_TIMEOUT_MS = 10 * 60_000;
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -161,7 +163,7 @@ const ALLOWED_FIELDS = new Set([
   "prices", "speakers", "colors", "extra_instructions",
   "aspect_ratio", "resolution", "reference_image_url",
   "logo_url", "logo_urls",
-  "mode", "webhook_url", "idempotency_key",
+  "mode", "webhook_url", "idempotency_key", "reliability_mode",
   // tolerated (forced internally):
   "quality",
   // tolerated legacy:
@@ -328,6 +330,9 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
   // Mode
   const mode: "sync" | "async" = body.mode === "async" ? "async" : "sync";
   const webhookUrl = typeof body.webhook_url === "string" ? body.webhook_url : undefined;
+  // Opt-in used by Pro Social AI: premium-first generation, then bounded
+  // raster-image fallbacks. The public API remains strict-premium by default.
+  const reliabilityMode = body.reliability_mode === true;
 
   // Reference image
   let referenceImage: string | undefined = typeof body.reference_image_url === "string" ? body.reference_image_url : undefined;
@@ -350,7 +355,8 @@ async function routeGenerate(req: Request, ctx: ApiKeyContext, requestId: string
     aspectRatio,
     resolution,
     quality: "premium",
-    apiStrictPremium: true,
+    apiStrictPremium: !reliabilityMode,
+    apiReliabilityMode: reliabilityMode,
     referenceImage,
     logoImages: Array.isArray(body.logo_urls) ? body.logo_urls : (body.logo_url ? [body.logo_url] : undefined),
     webhookUrl,
@@ -561,7 +567,21 @@ async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: s
     .maybeSingle();
   if (error) return errorResponse("DB_ERROR", error.message, 500, requestId);
   if (!job) return errorResponse("NOT_FOUND", "Job not found.", 404, requestId);
-  const normStatus = job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing";
+  let normStatus = job.status === "completed" ? "completed" : job.status === "failed" ? "failed" : "processing";
+  // Edge background work can be terminated by the platform. Never expose an
+  // immortal `processing` job: make it terminal so clients can safely retry
+  // with a new idempotency key instead of polling forever.
+  const updatedAtMs = Date.parse(job.updated_at || job.created_at || "");
+  if (normStatus === "processing" && Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs > STALE_JOB_TIMEOUT_MS) {
+    const staleMessage = "JOB_TIMEOUT: image generation worker exceeded its execution window";
+    const { error: staleError } = await admin.rpc("fail_stale_image_job", { p_job_id: jobId });
+    if (staleError) {
+      console.error("fail_stale_image_job error:", staleError);
+      return errorResponse("DB_ERROR", "Unable to finalize stale image job.", 500, requestId);
+    }
+    normStatus = "failed";
+    job.error_message = staleMessage;
+  }
   const params = (job as any).params || {};
   const apiStrict = params.apiStrictPremium === true;
   const aspectRatio = typeof params.aspectRatio === "string" ? params.aspectRatio : "9:16";
@@ -570,13 +590,16 @@ async function routePosterStatus(jobId: string, ctx: ApiKeyContext, requestId: s
 
   if (normStatus === "failed") {
     const msg = job.error_message || "Generation failed";
+    const isJobTimeout = msg.includes("JOB_TIMEOUT");
     const isPremiumUnavailable = msg.includes("PREMIUM_MODEL_UNAVAILABLE");
     return errorResponse(
-      isPremiumUnavailable ? "PREMIUM_MODEL_UNAVAILABLE" : "GENERATION_FAILED",
-      isPremiumUnavailable
+      isJobTimeout ? "JOB_TIMEOUT" : isPremiumUnavailable ? "PREMIUM_MODEL_UNAVAILABLE" : "GENERATION_FAILED",
+      isJobTimeout
+        ? "Image generation timed out. The job is safe to retry."
+        : isPremiumUnavailable
         ? "GPT Image 2 is required for all API generations. No fast or fallback model was used."
         : msg,
-      502,
+      isJobTimeout ? 504 : 502,
       requestId,
     );
   }
@@ -844,8 +867,9 @@ serve(async (req) => {
   const path = v1Idx >= 0 ? url.pathname.slice(v1Idx) : url.pathname;
   const requestId = crypto.randomUUID();
   const t0 = Date.now();
-  // Absolute base URL exposed to clients (preserves the /functions/v1/api-v1 prefix).
-  const baseUrl = v1Idx >= 0 ? `${url.origin}${url.pathname.slice(0, v1Idx)}` : url.origin;
+  // Supabase may expose an internal http:// URL to the runtime. Always emit the
+  // canonical public HTTPS function URL in OpenAPI and async polling responses.
+  const baseUrl = PUBLIC_API_BASE;
 
   // Public: OpenAPI spec (no auth)
   if (path === "/v1/openapi.json" && req.method === "GET") {

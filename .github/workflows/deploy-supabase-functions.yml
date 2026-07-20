@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'supabase/migrations/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-functions.yml'
   workflow_dispatch:
@@ -35,6 +36,23 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      - name: Apply reliability database migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' \
+            < supabase/migrations/20260720014500_refund_stale_image_jobs.sql \
+            > /tmp/reliability-migration.json
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --url "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            --header "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data-binary @/tmp/reliability-migration.json
+
+      - name: Deploy api-v1 Edge Function
+        run: supabase functions deploy api-v1 --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Deploy generate-image Edge Function
         run: supabase functions deploy generate-image --project-ref "$SUPABASE_PROJECT_REF"

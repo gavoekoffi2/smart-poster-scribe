@@ -11,6 +11,28 @@ const corsHeaders = {
 };
 
 const KIE_API_BASE = "https://api.kie.ai/api/v1/jobs";
+const OPENROUTER_PREMIUM_TIMEOUT_MS = 55_000;
+const GOOGLE_FALLBACK_TIMEOUT_MS = 35_000;
+const LOVABLE_FALLBACK_TIMEOUT_MS = 25_000;
+
+async function fetchWithTimeout(
+  input: string | URL | Request,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Provider timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 interface KieCreateTaskResponse {
   code: number;
@@ -70,7 +92,7 @@ function extensionFromContentType(contentType: string): string {
 async function imageSourceToDataUrl(imageSource: string): Promise<string> {
   if (imageSource.startsWith("data:image/")) return imageSource;
 
-  const response = await fetch(imageSource);
+  const response = await fetchWithTimeout(imageSource, { method: "GET" }, 8_000);
   if (!response.ok) {
     throw new Error(`Impossible de préparer l'image d'entrée (${response.status})`);
   }
@@ -89,16 +111,18 @@ async function imageSourceToDataUrl(imageSource: string): Promise<string> {
 }
 
 async function prepareInlineImageInputs(imageInputs: string[]): Promise<string[]> {
-  const prepared: string[] = [];
-  for (const source of imageInputs.slice(0, 6)) {
-    try {
-      prepared.push(await imageSourceToDataUrl(source));
-    } catch (error) {
-      console.warn("Image inline preparation failed, keeping original URL:", getErrorMessage(error));
-      prepared.push(source);
-    }
-  }
-  return prepared;
+  // Resolve inputs concurrently so one unavailable logo/reference cannot consume
+  // the whole Edge execution budget before provider generation starts.
+  return await Promise.all(
+    imageInputs.slice(0, 6).map(async (source) => {
+      try {
+        return await imageSourceToDataUrl(source);
+      } catch (error) {
+        console.warn("Image inline preparation failed, keeping original URL:", getErrorMessage(error));
+        return source;
+      }
+    }),
+  );
 }
 
 function isKieCreditError(error: unknown): boolean {
@@ -181,6 +205,7 @@ async function generateWithGoogleGemini(
   apiKey: string,
   prompt: string,
   imageInputs: string[],
+  timeoutMs = GOOGLE_FALLBACK_TIMEOUT_MS,
 ): Promise<string> {
   console.log("🔵 Generating image with Google Gemini API (Nano Banana 2)...");
   console.log("Image inputs count:", imageInputs.length);
@@ -232,7 +257,7 @@ async function generateWithGoogleGemini(
     }
   }
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
     {
       method: "POST",
@@ -243,7 +268,8 @@ async function generateWithGoogleGemini(
           responseModalities: ["TEXT", "IMAGE"],
         },
       }),
-    }
+    },
+    timeoutMs,
   );
 
   if (!response.ok) {
@@ -283,6 +309,7 @@ async function generateWithOpenRouter(
   prompt: string,
   imageInputs: string[],
   quality: "fast" | "premium" = "fast",
+  timeoutMs = OPENROUTER_PREMIUM_TIMEOUT_MS,
 ): Promise<string> {
   const model = quality === "premium"
     ? "openai/gpt-5.4-image-2"
@@ -295,7 +322,7 @@ async function generateWithOpenRouter(
     content.push({ type: "image_url", image_url: { url: imgUrl } });
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -308,7 +335,7 @@ async function generateWithOpenRouter(
       messages: [{ role: "user", content }],
       modalities: ["image", "text"],
     }),
-  });
+  }, timeoutMs);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -341,6 +368,7 @@ async function generateWithLovableFallback(
   apiKey: string,
   prompt: string,
   imageInputs: string[],
+  timeoutMs = LOVABLE_FALLBACK_TIMEOUT_MS,
 ): Promise<string> {
   console.log("Falling back to Lovable AI image generation...");
 
@@ -353,7 +381,7 @@ async function generateWithLovableFallback(
     })),
   ];
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -369,7 +397,7 @@ async function generateWithLovableFallback(
       ],
       modalities: ["image", "text"],
     }),
-  });
+  }, timeoutMs);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -1309,13 +1337,16 @@ serve(async (req) => {
       modificationRequest: rawModificationRequest, // Description de la modification demandée
       quality: rawQuality, // 'fast' (Nano Banana Pro) | 'premium' (OpenAI GPT Image 2, plus lent)
       apiStrictPremium: rawApiStrictPremium, // Public API only: force gpt-image-2 with NO fallback
+      apiReliabilityMode: rawApiReliabilityMode, // Pro Social AI: premium-first + bounded raster fallbacks
       templateId: rawTemplateId, // ID du template choisi (pour royalties + clone strict)
       locale: rawLocale, // 'en' | 'fr' — langue préférée pour tout texte que l'IA rédige
     } = body;
     const uiLocale: "en" | "fr" = rawLocale === "en" ? "en" : "fr";
-    const apiStrictPremium: boolean = rawApiStrictPremium === true;
-    // Public API requests are always forced to premium (gpt-image-2)
-    const quality: "fast" | "premium" = apiStrictPremium ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
+    const apiReliabilityMode: boolean = rawApiReliabilityMode === true;
+    const apiStrictPremium: boolean = rawApiStrictPremium === true && !apiReliabilityMode;
+    // Reliability mode still starts with GPT Image 2, but allows bounded
+    // fallbacks before the Edge execution window can terminate the worker.
+    const quality: "fast" | "premium" = (apiStrictPremium || apiReliabilityMode) ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
 
     let userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
@@ -1508,7 +1539,18 @@ serve(async (req) => {
         user_id: userId,
         status: 'processing',
         template_id: resolvedTemplateId,
-        params: { prompt: Array.from(String(prompt)).slice(0, 500).join(''), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner },
+        params: {
+          prompt: Array.from(String(prompt)).slice(0, 500).join(''),
+          aspectRatio,
+          resolution,
+          outputFormat,
+          apiStrictPremium,
+          apiReliabilityMode,
+          creditsUsed: Number(creditCheckResult?.credits_used || 0),
+          isFree: creditCheckResult?.is_free === true,
+          templateId: resolvedTemplateId,
+          templateIsFromDesigner,
+        },
       })
       .select('id')
       .single();
@@ -1981,7 +2023,38 @@ serve(async (req) => {
       resultUrl = await generateWithLovableFallback(LOVABLE_API_KEY, finalPrompt, imageInputs);
     };
 
-    if (apiStrictPremium) {
+    if (apiReliabilityMode) {
+      // ===== MODE FIABILITÉ PRO SOCIAL AI =====
+      // Keep the complete worker below the Edge execution ceiling: premium
+      // first, then two bounded raster-image providers. Kie polling is skipped
+      // here because it can outlive a single Edge invocation.
+      try {
+        if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY non configurée");
+        console.log("🛡️ [Reliability] GPT Image 2 premium attempt...");
+        taskId = `openrouter-${crypto.randomUUID()}`;
+        resultUrl = await generateWithOpenRouter(
+          OPENROUTER_API_KEY,
+          finalPrompt,
+          imageInputs,
+          "premium",
+          OPENROUTER_PREMIUM_TIMEOUT_MS,
+        );
+      } catch (premiumError) {
+        console.warn("⚠️ [Reliability] Premium attempt failed:", getErrorMessage(premiumError));
+        try {
+          await tryGoogle();
+          console.log("✅ [Reliability] Google raster fallback succeeded.");
+        } catch (googleError) {
+          console.warn("⚠️ [Reliability] Google fallback failed:", getErrorMessage(googleError));
+          try {
+            await tryLovable();
+            console.log("✅ [Reliability] Lovable raster fallback succeeded.");
+          } catch (lovableError) {
+            generationError = lovableError;
+          }
+        }
+      }
+    } else if (apiStrictPremium) {
       // ===== MODE STRICT API: GPT Image 2 uniquement, AUCUN fallback =====
       if (!OPENROUTER_API_KEY) {
         generationError = new Error(
@@ -2047,59 +2120,9 @@ serve(async (req) => {
       console.log("✅ Image generation succeeded.");
     }
 
-    // ===== REMBOURSEMENT AUTOMATIQUE =====
-    if (generationError && creditCheckResult?.success && userId && creditCheckResult.credits_used > 0) {
-      const creditsToRefund = creditCheckResult.credits_used;
-      console.log(`⚠️ Generation failed, refunding ${creditsToRefund} credits to user ${userId}`);
-      
-      try {
-        await supabase.from('credit_transactions').insert({
-          user_id: userId,
-          amount: creditsToRefund,
-          type: 'refund',
-          description: 'Remboursement auto: génération échouée',
-        });
-        
-        const { data: currentSub } = await supabase
-          .from('user_subscriptions')
-          .select('id, credits_remaining, plan_id')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (currentSub) {
-          const { data: plan } = await supabase
-            .from('subscription_plans')
-            .select('slug')
-            .eq('id', currentSub.plan_id)
-            .single();
-          
-          if (plan?.slug === 'free') {
-            const { data: subData } = await supabase
-              .from('user_subscriptions')
-              .select('free_generations_used')
-              .eq('id', currentSub.id)
-              .single();
-            if (subData) {
-              await supabase
-                .from('user_subscriptions')
-                .update({ free_generations_used: Math.max(0, subData.free_generations_used - 1) })
-                .eq('id', currentSub.id);
-            }
-          } else {
-            await supabase
-              .from('user_subscriptions')
-              .update({ credits_remaining: currentSub.credits_remaining + creditsToRefund })
-              .eq('id', currentSub.id);
-          }
-        }
-        
-        console.log(`✅ Refund of ${creditsToRefund} credits completed`);
-      } catch (refundError) {
-        console.error("❌ Refund failed:", refundError);
-      }
-    }
+    // Failure refunds are finalized atomically in the background catch block
+    // through fail_image_job_and_refund. Never mutate balances here: keeping
+    // status + refund in one DB transaction prevents double credits on retries.
     
     // Cleanup temp files even on error
     if (tempFilePaths.length > 0) {
@@ -2152,13 +2175,24 @@ serve(async (req) => {
         console.error("❌ Background job error:", bgErr);
         const msg = getErrorMessage(bgErr);
         const isPremiumUnavailable = msg.startsWith("PREMIUM_MODEL_UNAVAILABLE");
-        await supabase.from('image_jobs').update({
-          status: 'failed',
-          error_message: msg.slice(0, 1000),
-          model_used: apiStrictPremium ? 'gpt-image-2' : null,
-          provider_used: apiStrictPremium ? 'openai' : null,
-          fallback_used: false,
-        }).eq('id', jobId);
+        const { error: finalizeError } = await supabase.rpc('fail_image_job_and_refund', {
+          p_job_id: jobId,
+          p_error_message: msg.slice(0, 1000),
+          p_model_used: apiStrictPremium ? 'gpt-image-2' : null,
+          p_provider_used: apiStrictPremium ? 'openai' : null,
+        });
+        if (finalizeError) {
+          console.error("❌ Atomic job failure/refund failed:", finalizeError);
+          // Fail closed: terminal status prevents endless polling; balances are
+          // not mutated outside the atomic RPC, avoiding a duplicate refund.
+          await supabase.from('image_jobs').update({
+            status: 'failed',
+            error_message: msg.slice(0, 1000),
+            model_used: apiStrictPremium ? 'gpt-image-2' : null,
+            provider_used: apiStrictPremium ? 'openai' : null,
+            fallback_used: false,
+          }).eq('id', jobId);
+        }
         if (isPremiumUnavailable) console.warn("🔒 [API strict] PREMIUM_MODEL_UNAVAILABLE recorded on job", jobId);
       }
     };
