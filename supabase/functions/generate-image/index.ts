@@ -1904,7 +1904,7 @@ serve(async (req) => {
       console.log(`🔤 Typography duo picked: ${typographyDuo.id} (${typographyDuo.mood})`);
       // Log dans le job pour alimenter la rotation future
       await supabase.from("image_jobs").update({
-        params: { ...(jobRow as any), typo_duo: typographyDuo.id, prompt: Array.from(String(prompt)).slice(0, 500).join(''), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner, templateAlwaysUsed: !!referenceImage },
+        params: { prompt: Array.from(String(prompt)).slice(0, 500).join(''), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner, templateAlwaysUsed: !!referenceImage, typo_duo: typographyDuo.id },
       }).eq("id", jobId);
     } catch (e) {
       console.warn("Typography duo selection failed:", e);
