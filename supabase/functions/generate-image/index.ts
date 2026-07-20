@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectDomainFromPrompt, buildExpertSkillsPrompt, getRandomTypographyStyle, getRandomLayoutStyle } from "./expertSkills.ts";
+import { pickTypographyDuo, buildTypographyBrief, type TypographyDuo } from "./typographySystem.ts";
 // professionalStandards no longer injected into prompt to stay within API limits
 
 const corsHeaders = {
@@ -584,6 +585,7 @@ function buildProfessionalPrompt({
   isModification = false,
   modificationRequest = "",
   templateSourceDomain = null,
+  typographyDuo = null,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -595,6 +597,7 @@ function buildProfessionalPrompt({
   isModification?: boolean;
   modificationRequest?: string;
   templateSourceDomain?: string | null;
+  typographyDuo?: TypographyDuo | null;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt (templateSourceDomain="${templateSourceDomain}")`);
@@ -625,7 +628,7 @@ function buildProfessionalPrompt({
 
     if (isEnhancementRequest) {
       // ====== (A) REDESIGN COMPLET À PARTIR DES INFOS CLIENT ======
-      const typoStyle = getRandomTypographyStyle();
+      const typoStyle = typographyDuo ? buildTypographyBrief(typographyDuo) : getRandomTypographyStyle();
       const layoutStyle = getRandomLayoutStyle();
       const expertSkills = buildExpertSkillsPrompt(detectedDomain);
 
@@ -650,7 +653,7 @@ function buildProfessionalPrompt({
       lines.push("═══ STANDARDS PREMIUM À APPLIQUER ═══");
       lines.push(expertSkills);
       lines.push("");
-      lines.push(`Style typographique: ${typoStyle}`);
+      lines.push(typographyDuo ? typoStyle : `Style typographique: ${typoStyle}`);
       lines.push(`Structure de mise en page: ${layoutStyle}`);
       lines.push("• Composition en 5 couches : fond riche → formes décoratives → visuels → blocs texte → effets finaux.");
       lines.push("• Hiérarchie dramatique : titre 3x+ sous-titre, sous-titre 2x+ corps de texte.");
@@ -912,21 +915,28 @@ function buildProfessionalPrompt({
   const expertSkillsPrompt = buildExpertSkillsPrompt(detectedDomain);
   instructions.push(expertSkillsPrompt);
   
-  // Typographie ultra-premium
-  const typoStyle = getRandomTypographyStyle();
+  // Typographie ultra-premium (duo imposé pour se différencier)
   const layoutStyle = getRandomLayoutStyle();
-  
+
   instructions.push("");
-  instructions.push("═══ 🔤 TYPOGRAPHIE ULTRA-PREMIUM (CRITIQUE) ═══");
-  instructions.push(`Style principal: ${typoStyle}`);
-  instructions.push("TITRE PRINCIPAL: Police display MASSIVE avec traitement graphique SPECTACULAIRE.");
-  instructions.push("→ Effets obligatoires sur le titre: 3D, ombres portées épaisses (6-12px), contours doubles, dégradé métallique, glow, ou relief biseauté.");
-  instructions.push("→ Le titre n'est PAS du texte. C'est un ÉLÉMENT GRAPHIQUE CENTRAL qui attire l'œil immédiatement.");
-  instructions.push("→ Taille titre: 60-100pt. IMPOSANT. DOMINANT. Occupe 20-30% de la surface.");
-  instructions.push("SOUS-TITRES: Police complémentaire avec effets subtils (ombre légère, contour fin, légère transparence).");
-  instructions.push("→ Hiérarchie DRAMATIQUE: Titre 3x+ le sous-titre. Sous-titre 2x+ le corps.");
-  instructions.push("CORPS DE TEXTE: Ultra-lisible, espacement généreux, police clean et moderne.");
-  instructions.push("INTERDITS: Texte plat sans effet, polices basiques (Arial, Helvetica brut), texte qui se fond dans le décor.");
+  if (typographyDuo) {
+    instructions.push(buildTypographyBrief(typographyDuo));
+    instructions.push("TITRE : traitement graphique spectaculaire (ombre portée épaisse, contour double, dégradé métallique, glow, relief 3D ou biseauté). Le titre est un élément graphique, pas un simple mot.");
+    instructions.push("Taille titre 60-100pt, occupe 20-30% de la surface. Hiérarchie DRAMATIQUE: Titre ≥ 3× sous-titre.");
+    instructions.push("INTERDITS: Arial, Helvetica brut, Times New Roman par défaut, plus de 2 familles typographiques, texte plat sans effet sur le titre.");
+  } else {
+    const typoStyle = getRandomTypographyStyle();
+    instructions.push("═══ 🔤 TYPOGRAPHIE ULTRA-PREMIUM (CRITIQUE) ═══");
+    instructions.push(`Style principal: ${typoStyle}`);
+    instructions.push("TITRE PRINCIPAL: Police display MASSIVE avec traitement graphique SPECTACULAIRE.");
+    instructions.push("→ Effets obligatoires sur le titre: 3D, ombres portées épaisses (6-12px), contours doubles, dégradé métallique, glow, ou relief biseauté.");
+    instructions.push("→ Le titre n'est PAS du texte. C'est un ÉLÉMENT GRAPHIQUE CENTRAL qui attire l'œil immédiatement.");
+    instructions.push("→ Taille titre: 60-100pt. IMPOSANT. DOMINANT. Occupe 20-30% de la surface.");
+    instructions.push("SOUS-TITRES: Police complémentaire avec effets subtils (ombre légère, contour fin, légère transparence).");
+    instructions.push("→ Hiérarchie DRAMATIQUE: Titre 3x+ le sous-titre. Sous-titre 2x+ le corps.");
+    instructions.push("CORPS DE TEXTE: Ultra-lisible, espacement généreux, police clean et moderne.");
+    instructions.push("INTERDITS: Texte plat sans effet, polices basiques (Arial, Helvetica brut), texte qui se fond dans le décor.");
+  }
   
   instructions.push("");
   instructions.push("═══ 📐 MISE EN PAGE AWARD-WINNING ═══");
@@ -1874,6 +1884,32 @@ serve(async (req) => {
       userPromptFull = condenseUserPrompt(userPromptFull, MAX_USER_PROMPT);
     }
     
+    // Sélection d'un duo typographique (rotation utilisateur)
+    let typographyDuo: TypographyDuo | null = null;
+    try {
+      const detectedDomainForTypo = detectDomainFromPrompt(userPromptFull);
+      let recentDuoIds: string[] = [];
+      if (userId) {
+        const { data: recentJobs } = await supabase
+          .from("image_jobs")
+          .select("params")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        recentDuoIds = (recentJobs || [])
+          .map((j: any) => j?.params?.typo_duo)
+          .filter((x: unknown): x is string => typeof x === "string");
+      }
+      typographyDuo = pickTypographyDuo(detectedDomainForTypo, recentDuoIds);
+      console.log(`🔤 Typography duo picked: ${typographyDuo.id} (${typographyDuo.mood})`);
+      // Log dans le job pour alimenter la rotation future
+      await supabase.from("image_jobs").update({
+        params: { prompt: Array.from(String(prompt)).slice(0, 500).join(''), aspectRatio, resolution, outputFormat, apiStrictPremium, templateId: resolvedTemplateId, templateIsFromDesigner, templateAlwaysUsed: !!referenceImage, typo_duo: typographyDuo.id },
+      }).eq("id", jobId);
+    } catch (e) {
+      console.warn("Typography duo selection failed:", e);
+    }
+
     const professionalPrompt = buildProfessionalPrompt({
       userPrompt: userPromptFull,
       hasReferenceImage: !!referenceImage,
@@ -1885,7 +1921,7 @@ serve(async (req) => {
       isModification: !!isModification,
       modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
       templateSourceDomain: pickedTemplateDomain,
-
+      typographyDuo,
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
