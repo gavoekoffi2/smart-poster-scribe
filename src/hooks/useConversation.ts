@@ -1726,9 +1726,7 @@ Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou
           
           addMessage(
             "assistant",
-            "Je vais créer un design original adapté à vos besoins.
-
-Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
+            "Je vais créer un design original adapté à vos besoins.\n\nSouhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
           );
         }
       } catch (err) {
@@ -2006,9 +2004,7 @@ Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur '
             // Ajouter les zones hors contexte à la liste des zones à effacer
             zonesToDelete: [...existingZonesToDelete, ...contextMismatchZones],
           }));
-          addMessage("assistant", "Compris ! Ces zones hors contexte seront supprimées et le layout sera adapté.
-
-Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
+          addMessage("assistant", "Compris ! Ces zones hors contexte seront supprimées et le layout sera adapté.\n\nSouhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } else {
           // L'utilisateur fournit des remplacements pour les zones hors contexte
           addLoadingMessage();
@@ -2083,9 +2079,7 @@ Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous po
             // Marquer que les zones manquantes doivent être effacées
             zonesToDelete: prev.missingTextZones || [],
           }));
-          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées.
-
-Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
+          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées.\n\nSouhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } else {
           // L'utilisateur fournit des informations supplémentaires
           // Analyser le nouveau contenu et fusionner avec les infos existantes
@@ -3399,9 +3393,7 @@ Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous po
           } else {
             addMessage(
               "assistant",
-              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue.
-
-Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
+              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue.\n\nSouhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
             );
             setConversationState((prev) => ({
               ...prev,
