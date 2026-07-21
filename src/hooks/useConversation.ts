@@ -32,7 +32,7 @@ const getUiLocale = (): "en" | "fr" => {
 
 
 // Domaines qui peuvent avoir des orateurs/artistes/invités
-const SPEAKER_DOMAINS: Domain[] = ["church", "event", "music", "formation", "education"];
+const SPEAKER_DOMAINS: Domain[] = ["event", "formation"];
 
 // Attente de la fin d'un job de génération asynchrone (poll image_jobs)
 async function waitForImageJob(jobId: string, maxAttempts = 200): Promise<{ url?: string; error?: string }> {
@@ -1695,7 +1695,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           setConversationState((prev) => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             referenceImage: imageUrl,
             referenceDescription: styleDescription,
             stylePreferences: preferences,
@@ -1708,13 +1708,15 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           addMessage(
             "assistant",
-            `${domainMessage} Je vais créer un design original en utilisant uniquement VOS informations. Choisissez une palette de couleurs :`
+            `${domainMessage} Je vais créer un design original en utilisant uniquement VOS informations.
+
+Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)`
           );
         } else {
           // No templates found - will generate purely from description
           setConversationState((prev) => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             stylePreferences: preferences,
             usingAutoTemplate: false,
             referenceDescription: preferences 
@@ -1724,7 +1726,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           addMessage(
             "assistant",
-            "Je vais créer un design original adapté à vos besoins. Choisissez une palette de couleurs :"
+            "Je vais créer un design original adapté à vos besoins.
+
+Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
           );
         }
       } catch (err) {
@@ -1735,10 +1739,10 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         // Fallback
         setConversationState((prev) => ({ 
           ...prev, 
-          step: "colors",
+          step: "logo",
           stylePreferences: preferences,
         }));
-        addMessage("assistant", "Choisissez une palette de couleurs pour votre affiche :");
+        addMessage("assistant", "Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
       }
     },
     [addMessage, addLoadingMessage, removeLoadingMessage]
@@ -1794,7 +1798,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
       }, 250);
     } else if (option === "colors") {
       addMessage("user", "Changer les couleurs");
-      setConversationState(prev => ({ ...prev, step: "colors" }));
+      setConversationState(prev => ({ ...prev, step: "logo" }));
       setTimeout(() => {
         addMessage("assistant", "Choisissez une nouvelle palette de couleurs :");
       }, 250);
@@ -1874,13 +1878,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             // L'utilisateur doit pouvoir personnaliser ses couleurs
             setConversationState(prev => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               extractedInfo: { ...conversationStateRef.current.extractedInfo, ...extractedInfo },
               description: fullDescription,
               // referenceImage est déjà défini avec le template cloné
             }));
             
-            addMessage("assistant", "Parfait ! Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
+            addMessage("assistant", "Parfait ! Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
           }
         }
         return;
@@ -1960,12 +1964,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           // Pas de zones manquantes ni incohérences, passer directement aux couleurs
           setConversationState(prev => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             extractedInfo: extractedInfo,
             description: content,
           }));
           
-          addMessage("assistant", "Parfait ! 🎨 Choisissez maintenant une palette de couleurs pour personnaliser votre affiche :");
+          addMessage("assistant", "Parfait ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } catch (err) {
           console.error("Error analyzing clone content:", err);
           removeLoadingMessage();
@@ -1976,12 +1980,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           setConversationState(prev => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             extractedInfo: extractedInfo,
             description: content,
           }));
           
-          addMessage("assistant", "Parfait ! 🎨 Choisissez une palette de couleurs pour votre affiche :");
+          addMessage("assistant", "Parfait ! 🎨 Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         }
         return;
       }
@@ -1998,11 +2002,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           
           setConversationState(prev => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             // Ajouter les zones hors contexte à la liste des zones à effacer
             zonesToDelete: [...existingZonesToDelete, ...contextMismatchZones],
           }));
-          addMessage("assistant", "Compris ! Ces zones hors contexte seront supprimées de l'affiche et le layout sera adapté. 🎨 Choisissez maintenant une palette de couleurs :");
+          addMessage("assistant", "Compris ! Ces zones hors contexte seront supprimées et le layout sera adapté.
+
+Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } else {
           // L'utilisateur fournit des remplacements pour les zones hors contexte
           addLoadingMessage();
@@ -2035,14 +2041,14 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             
             setConversationState(prev => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               extractedInfo: mergedInfo,
               description: [prev.description, content].filter(Boolean).join("\n"),
               // Effacer les zones hors contexte car l'utilisateur a fourni des remplacements
               contextMismatchZones: [],
             }));
             
-            addMessage("assistant", "Merci pour ces remplacements ! 🎨 Choisissez maintenant une palette de couleurs :");
+            addMessage("assistant", "Merci pour ces remplacements ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
           } catch (err) {
             removeLoadingMessage();
             setIsProcessing(false);
@@ -2050,7 +2056,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             // Fusionner manuellement
             setConversationState(prev => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               extractedInfo: {
                 ...prev.extractedInfo,
                 additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
@@ -2058,7 +2064,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               description: [prev.description, content].filter(Boolean).join("\n"),
             }));
             
-            addMessage("assistant", "Informations ajoutées ! 🎨 Choisissez une palette de couleurs :");
+            addMessage("assistant", "Informations ajoutées ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
           }
         }
         return;
@@ -2073,11 +2079,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           // L'utilisateur veut supprimer les zones manquantes
           setConversationState(prev => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             // Marquer que les zones manquantes doivent être effacées
             zonesToDelete: prev.missingTextZones || [],
           }));
-          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées de l'affiche. 🎨 Choisissez maintenant une palette de couleurs :");
+          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées.
+
+Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } else {
           // L'utilisateur fournit des informations supplémentaires
           // Analyser le nouveau contenu et fusionner avec les infos existantes
@@ -2111,12 +2119,12 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             
             setConversationState(prev => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               extractedInfo: mergedInfo,
               description: [prev.description, content].filter(Boolean).join("\n"),
             }));
             
-            addMessage("assistant", "Merci pour ces informations ! 🎨 Choisissez maintenant une palette de couleurs :");
+            addMessage("assistant", "Merci pour ces informations ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
           } catch (err) {
             removeLoadingMessage();
             setIsProcessing(false);
@@ -2124,7 +2132,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
             // Fusionner manuellement
             setConversationState(prev => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               extractedInfo: {
                 ...prev.extractedInfo,
                 additionalDetails: [prev.extractedInfo?.additionalDetails, content].filter(Boolean).join(". "),
@@ -2132,7 +2140,7 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
               description: [prev.description, content].filter(Boolean).join("\n"),
             }));
             
-            addMessage("assistant", "Informations ajoutées ! 🎨 Choisissez une palette de couleurs :");
+            addMessage("assistant", "Informations ajoutées ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
           }
         }
         return;
@@ -3391,11 +3399,13 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
           } else {
             addMessage(
               "assistant",
-              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue. Choisissez maintenant une palette de couleurs :"
+              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue.
+
+Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
             );
             setConversationState((prev) => ({
               ...prev,
-              step: "colors",
+              step: "logo",
               referenceImage: imageDataUrl,
             }));
           }
@@ -3443,11 +3453,11 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         } else {
           addMessage(
             "assistant",
-            "Image analysée ! Choisissez une palette de couleurs pour personnaliser votre affiche :"
+            "Image analysée ! Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
           );
           setConversationState((prev) => ({
             ...prev,
-            step: "colors",
+            step: "logo",
             referenceImage: imageDataUrl,
             referenceDescription: data.description,
           }));
@@ -3456,9 +3466,9 @@ export function useConversation(cloneTemplate?: CloneTemplateData) {
         removeLoadingMessage();
         addMessage(
           "assistant",
-          "Une erreur est survenue. Choisissez quand même une palette de couleurs :"
+          "Une erreur est survenue. Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'."
         );
-        setConversationState((prev) => ({ ...prev, step: "colors", referenceImage: imageDataUrl }));
+        setConversationState((prev) => ({ ...prev, step: "logo", referenceImage: imageDataUrl }));
       } finally {
         setIsProcessing(false);
       }
