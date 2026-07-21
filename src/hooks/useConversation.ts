@@ -2079,9 +2079,7 @@ Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou
             // Marquer que les zones manquantes doivent être effacées
             zonesToDelete: prev.missingTextZones || [],
           }));
-          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées.
-
-Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
+          addMessage("assistant", "Compris ! Les zones sans remplacement seront supprimées.\n\nSouhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)");
         } else {
           // L'utilisateur fournit des informations supplémentaires
           // Analyser le nouveau contenu et fusionner avec les infos existantes
