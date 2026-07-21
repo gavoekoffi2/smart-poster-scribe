@@ -3393,9 +3393,7 @@ Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou
           } else {
             addMessage(
               "assistant",
-              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue.
-
-Souhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
+              "Je n'ai pas pu analyser l'image, mais je l'ai bien reçue.\n\nSouhaitez-vous ajouter votre logo ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
             );
             setConversationState((prev) => ({
               ...prev,
