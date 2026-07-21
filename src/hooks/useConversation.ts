@@ -1726,9 +1726,7 @@ Souhaitez-vous ajouter le logo de votre entreprise sur l'affiche ? Envoyez-le ou
           
           addMessage(
             "assistant",
-            "Je vais créer un design original adapté à vos besoins.
-
-Souhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
+            "Je vais créer un design original adapté à vos besoins.\n\nSouhaitez-vous ajouter le logo de votre entreprise ? Envoyez-le ou cliquez sur 'Passer'. (Vous pourrez ajuster les couleurs après la génération.)"
           );
         }
       } catch (err) {
