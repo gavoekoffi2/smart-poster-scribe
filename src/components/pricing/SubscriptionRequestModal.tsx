@@ -114,15 +114,17 @@ export function SubscriptionRequestModal({
   const clearPromo = () => { setPromoCode(""); setPromoStatus(null); };
 
   useEffect(() => {
-    setSelectedMethodKey(methodKey(countryInfo.options[0]));
+    setSelectedMethodKey("__choose__");
     setPhone((current) => {
       if (current && current.startsWith("+")) return current;
       return countryInfo.dialCode + " ";
     });
   }, [country, countryInfo]);
 
-  const selectedOption: PaymentOption =
-    countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || countryInfo.options[0];
+  const selectedOption: PaymentOption | null =
+    selectedMethodKey === "__choose__"
+      ? null
+      : countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || null;
 
   const displayPrice = canScale
     ? `${totalFcfa.toLocaleString("fr-FR")} FCFA / mois — ${totalPosters} affiches`
