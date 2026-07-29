@@ -225,6 +225,9 @@ export function PricingSection() {
         planName={requestModal.planName}
         planSlug={requestModal.planSlug}
         planPrice={requestModal.planPrice}
+        basePriceFcfa={requestModal.basePriceFcfa}
+        baseCredits={requestModal.baseCredits}
+        enableExtraPosters={requestModal.enableExtraPosters}
       />
     </section>
   );
