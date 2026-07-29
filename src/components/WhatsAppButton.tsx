@@ -1,4 +1,4 @@
-import { MessageCircle } from "lucide-react";
+
 
 export function WhatsAppButton() {
   const phone = "22893708178";
