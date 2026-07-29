@@ -10,6 +10,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface ImagePreviewProps {
   image: GeneratedImage | null;
@@ -18,9 +20,19 @@ interface ImagePreviewProps {
 
 export function ImagePreview({ image, isGenerating }: ImagePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const { isRealUser } = useAuth();
+  const navigate = useNavigate();
 
   const downloadImage = async (format: "png" | "jpeg" | "pdf") => {
     if (!image || isDownloading) return;
+    if (!isRealUser) {
+      toast.info("Créez un compte gratuit pour télécharger votre affiche.");
+      try {
+        sessionStorage.setItem("postAuthRedirect", window.location.pathname);
+      } catch {}
+      navigate("/auth");
+      return;
+    }
 
     setIsDownloading(true);
     toast.info(`Préparation du téléchargement ${format.toUpperCase()}...`);
