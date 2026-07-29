@@ -17,6 +17,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 const FAQPage = lazy(() => import("./pages/FAQPage"));
 import AdminRoute from "./components/routes/AdminRoute";
 import DesignerRoute from "./components/routes/DesignerRoute";
+import { WhatsAppButton } from "./components/WhatsAppButton";
 
 // Lazy load admin pages
 const AdminUploadPage = lazy(() => import("./pages/AdminUploadPage"));
@@ -59,6 +60,7 @@ const App = () => (
     <Toaster position="top-right" richColors />
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
+        <WhatsAppButton />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
