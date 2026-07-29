@@ -1297,17 +1297,15 @@ serve(async (req) => {
       userId = internalUserId;
       console.log("Internal API call for user:", userId);
     } else if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      
+      const token = authHeader.replace("Bearer ", "").trim();
+
       try {
-        // Créer un client avec le token de l'utilisateur pour vérifier son identité
-        const userSupabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey, {
-          global: { headers: { Authorization: `Bearer ${token}` } }
-        });
-        
-        // Utiliser getUser pour valider le JWT
-        const { data: { user }, error: authError } = await userSupabase.auth.getUser();
-        
+        // Valider le JWT côté serveur via l'API admin (utilise le service role).
+        // Plus fiable que getUser() côté client, qui peut échouer avec
+        // "missing sub claim" lorsque le token utilise le nouveau système
+        // de signing keys asymétriques et ne peut être vérifié localement.
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
         if (!authError && user) {
           userId = user.id;
           console.log("Authenticated user:", userId);
@@ -1318,6 +1316,7 @@ serve(async (req) => {
         console.error("Auth exception:", authException);
       }
     }
+
 
 
     const body = await req.json();
