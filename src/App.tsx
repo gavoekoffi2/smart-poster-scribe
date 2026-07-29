@@ -18,6 +18,7 @@ const FAQPage = lazy(() => import("./pages/FAQPage"));
 import AdminRoute from "./components/routes/AdminRoute";
 import DesignerRoute from "./components/routes/DesignerRoute";
 import { WhatsAppButton } from "./components/WhatsAppButton";
+import { SubscribeFloatingButton } from "./components/SubscribeFloatingButton";
 
 // Lazy load admin pages
 const AdminUploadPage = lazy(() => import("./pages/AdminUploadPage"));
