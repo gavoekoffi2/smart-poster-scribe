@@ -53,9 +53,9 @@ export function SubscriptionRequestModal({
   const countryInfo = useMemo(() => getCountry(country), [country]);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [selectedMethodKey, setSelectedMethodKey] = useState<string>(() =>
-    methodKey(countryInfo.options[0])
-  );
+  // Par défaut : aucune méthode pré-sélectionnée => GeniusPay affiche sa propre
+  // page de sélection (carte bancaire + tous les Mobile Money du pays).
+  const [selectedMethodKey, setSelectedMethodKey] = useState<string>("__choose__");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPayingOnline, setIsPayingOnline] = useState(false);
   const [promoCode, setPromoCode] = useState("");
