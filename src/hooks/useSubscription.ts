@@ -267,6 +267,7 @@ export function useSubscription() {
       paymentMethod?: string;
       mmoProvider?: string;
       promoCode?: string;
+      extraPosters?: number;
     }
   ) => {
     if (!user) throw new Error("Vous devez être connecté pour souscrire");
@@ -287,6 +288,7 @@ export function useSubscription() {
           paymentMethod: opts?.paymentMethod,
           mmoProvider: opts?.mmoProvider,
           promoCode: opts?.promoCode,
+          extraPosters: opts?.extraPosters,
         },
       });
       if (error) throw new Error(error.message || "Erreur d'initialisation du paiement");
@@ -299,6 +301,7 @@ export function useSubscription() {
       throw err;
     }
   }, [user, getPlanBySlug]);
+
 
   const getRemainingCredits = useCallback(() => {
     if (!subscription) {

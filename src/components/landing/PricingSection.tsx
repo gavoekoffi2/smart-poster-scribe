@@ -25,9 +25,10 @@ export function PricingSection() {
   const { t, i18n } = useTranslation();
   const { plans, isLoading } = useSubscription();
   const { user } = useAuth();
-  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
-    open: false, planName: "", planSlug: "", planPrice: ""
-  });
+  const [requestModal, setRequestModal] = useState<{
+    open: boolean; planName: string; planSlug: string; planPrice: string;
+    basePriceFcfa?: number; baseCredits?: number; enableExtraPosters?: boolean;
+  }>({ open: false, planName: "", planSlug: "", planPrice: "" });
 
   const handleSubscribe = (planSlug: string) => {
     if (planSlug === "free") {
@@ -50,6 +51,9 @@ export function PricingSection() {
       planName: plan.name,
       planSlug,
       planPrice: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois`,
+      basePriceFcfa: plan.price_fcfa,
+      baseCredits: plan.credits_per_month,
+      enableExtraPosters: plan.slug === "essentiel",
     });
   };
 
@@ -221,6 +225,9 @@ export function PricingSection() {
         planName={requestModal.planName}
         planSlug={requestModal.planSlug}
         planPrice={requestModal.planPrice}
+        basePriceFcfa={requestModal.basePriceFcfa}
+        baseCredits={requestModal.baseCredits}
+        enableExtraPosters={requestModal.enableExtraPosters}
       />
     </section>
   );

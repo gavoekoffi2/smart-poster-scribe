@@ -9,6 +9,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useReferralDiscount } from "@/hooks/useAffiliate";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
 export default function PricingPage() {
@@ -17,15 +18,26 @@ export default function PricingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { plans, subscription, isProcessingPayment, openGeniusPayCheckout } = useSubscription();
   const { eligible: discountEligible, rate: discountRate } = useReferralDiscount();
-  const [requestModal, setRequestModal] = useState<{ open: boolean; planName: string; planSlug: string; planPrice: string }>({
-    open: false, planName: "", planSlug: "", planPrice: ""
-  });
+  const [requestModal, setRequestModal] = useState<{
+    open: boolean; planName: string; planSlug: string; planPrice: string;
+    basePriceFcfa?: number; baseCredits?: number; enableExtraPosters?: boolean;
+  }>({ open: false, planName: "", planSlug: "", planPrice: "" });
 
   const [hasOpenedRequestedPlan, setHasOpenedRequestedPlan] = useState(false);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
 
-  const openSubscriptionModal = useCallback((planSlug: string) => {
-    const plan = plans.find(p => p.slug === planSlug);
+  const openSubscriptionModal = useCallback(async (planSlug: string) => {
+    let plan = plans.find(p => p.slug === planSlug);
+    if (!plan) {
+      // Fallback : le cache local n'est pas encore prêt — on charge depuis la base.
+      const { data } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("slug", planSlug)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (data) plan = { ...data, features: Array.isArray(data.features) ? data.features as string[] : [] };
+    }
     if (!plan) {
       toast.error("Plan introuvable. Veuillez choisir un abonnement.");
       return;
@@ -36,8 +48,12 @@ export default function PricingPage() {
       planName: plan.name,
       planSlug,
       planPrice: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois`,
+      basePriceFcfa: plan.price_fcfa,
+      baseCredits: plan.credits_per_month,
+      enableExtraPosters: plan.slug === "essentiel",
     });
   }, [plans]);
+
 
   useEffect(() => {
     if (authLoading || user) return;
@@ -381,6 +397,10 @@ export default function PricingPage() {
         planName={requestModal.planName}
         planSlug={requestModal.planSlug}
         planPrice={requestModal.planPrice}
+        basePriceFcfa={requestModal.basePriceFcfa}
+        baseCredits={requestModal.baseCredits}
+        enableExtraPosters={requestModal.enableExtraPosters}
+        initialPromoCode={searchParams.get("promo") || undefined}
       />
     </div>
   );
