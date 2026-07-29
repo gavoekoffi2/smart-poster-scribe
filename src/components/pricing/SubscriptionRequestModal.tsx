@@ -343,7 +343,7 @@ export function SubscriptionRequestModal({
                 toast.error("Renseignez votre nom");
                 return;
               }
-              if (selectedOption.method !== "card" && !phone.trim()) {
+              if (selectedOption && selectedOption.method !== "card" && !phone.trim()) {
                 toast.error("Renseignez votre téléphone Mobile Money");
                 return;
               }
@@ -353,8 +353,9 @@ export function SubscriptionRequestModal({
                   customerName: fullName.trim(),
                   customerPhone: phone.trim(),
                   country: countryInfo.code,
-                  paymentMethod: selectedOption.method,
-                  mmoProvider: selectedOption.mmoProvider,
+                  // Si aucune méthode choisie, on laisse GeniusPay afficher son sélecteur
+                  paymentMethod: selectedOption?.method,
+                  mmoProvider: selectedOption?.mmoProvider,
                   promoCode: promoStatus?.valid ? promoCode.trim() : undefined,
                   extraPosters: canScale ? extraPosters : undefined,
                 });
@@ -368,8 +369,11 @@ export function SubscriptionRequestModal({
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent text-primary-foreground"
           >
             {isPayingOnline ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-            {isPayingOnline ? "Redirection..." : `Payer ${totalFcfa && canScale ? totalFcfa.toLocaleString("fr-FR") + " FCFA" : ""} avec ${selectedOption.label}`.trim()}
+            {isPayingOnline
+              ? "Redirection..."
+              : `Payer${canScale && totalFcfa ? " " + totalFcfa.toLocaleString("fr-FR") + " FCFA" : ""}${selectedOption ? " avec " + selectedOption.label : " en ligne"}`}
           </Button>
+
 
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
