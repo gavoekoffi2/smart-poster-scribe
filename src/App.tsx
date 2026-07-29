@@ -61,6 +61,7 @@ const App = () => (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <WhatsAppButton />
+        <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/app" element={<AppPage />} />
