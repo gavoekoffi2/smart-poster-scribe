@@ -9,6 +9,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useReferralDiscount } from "@/hooks/useAffiliate";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 const Scene3D = lazy(() => import("@/components/landing/Scene3D").then(m => ({ default: m.Scene3D })));
 
 export default function PricingPage() {
