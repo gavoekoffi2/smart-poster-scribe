@@ -53,9 +53,9 @@ export function SubscriptionRequestModal({
   const countryInfo = useMemo(() => getCountry(country), [country]);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [selectedMethodKey, setSelectedMethodKey] = useState<string>(() =>
-    methodKey(countryInfo.options[0])
-  );
+  // Par défaut : aucune méthode pré-sélectionnée => GeniusPay affiche sa propre
+  // page de sélection (carte bancaire + tous les Mobile Money du pays).
+  const [selectedMethodKey, setSelectedMethodKey] = useState<string>("__choose__");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPayingOnline, setIsPayingOnline] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -114,15 +114,17 @@ export function SubscriptionRequestModal({
   const clearPromo = () => { setPromoCode(""); setPromoStatus(null); };
 
   useEffect(() => {
-    setSelectedMethodKey(methodKey(countryInfo.options[0]));
+    setSelectedMethodKey("__choose__");
     setPhone((current) => {
       if (current && current.startsWith("+")) return current;
       return countryInfo.dialCode + " ";
     });
   }, [country, countryInfo]);
 
-  const selectedOption: PaymentOption =
-    countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || countryInfo.options[0];
+  const selectedOption: PaymentOption | null =
+    selectedMethodKey === "__choose__"
+      ? null
+      : countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || null;
 
   const displayPrice = canScale
     ? `${totalFcfa.toLocaleString("fr-FR")} FCFA / mois — ${totalPosters} affiches`
@@ -240,6 +242,18 @@ export function SubscriptionRequestModal({
           <div className="space-y-2">
             <Label>Moyen de paiement</Label>
             <div className="grid grid-cols-1 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedMethodKey("__choose__")}
+                className={`flex items-center justify-between rounded-md border px-3 py-2.5 text-sm transition ${
+                  selectedMethodKey === "__choose__"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-background hover:bg-muted"
+                }`}
+              >
+                <span className="font-medium">💳 Choisir sur la page de paiement</span>
+                {selectedMethodKey === "__choose__" && <span className="text-xs text-primary">✓ Recommandé</span>}
+              </button>
               {countryInfo.options.map((opt) => {
                 const k = methodKey(opt);
                 const active = k === selectedMethodKey;
@@ -255,11 +269,14 @@ export function SubscriptionRequestModal({
                     }`}
                   >
                     <span className="font-medium">{opt.label}</span>
-                    {active && <span className="text-xs text-primary">✓ Par défaut</span>}
+                    {active && <span className="text-xs text-primary">✓ Sélectionné</span>}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Par défaut, vous pourrez choisir carte bancaire ou Mobile Money sur la page de paiement sécurisée.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -275,22 +292,17 @@ export function SubscriptionRequestModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Numéro de téléphone</Label>
+            <Label htmlFor="phone">Numéro de téléphone {selectedOption?.method === "card" || !selectedOption ? "(optionnel)" : ""}</Label>
             <Input
               id="phone"
               type="tel"
               placeholder={`Ex: ${countryInfo.dialCode} 90 00 00 00`}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required={selectedOption.method !== "card"}
               maxLength={20}
             />
-            {selectedOption.method === "card" && (
-              <p className="text-xs text-muted-foreground">
-                Optionnel pour un paiement par carte.
-              </p>
-            )}
           </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="promo-code" className="flex items-center gap-1.5">
@@ -331,7 +343,7 @@ export function SubscriptionRequestModal({
                 toast.error("Renseignez votre nom");
                 return;
               }
-              if (selectedOption.method !== "card" && !phone.trim()) {
+              if (selectedOption && selectedOption.method !== "card" && !phone.trim()) {
                 toast.error("Renseignez votre téléphone Mobile Money");
                 return;
               }
@@ -341,8 +353,9 @@ export function SubscriptionRequestModal({
                   customerName: fullName.trim(),
                   customerPhone: phone.trim(),
                   country: countryInfo.code,
-                  paymentMethod: selectedOption.method,
-                  mmoProvider: selectedOption.mmoProvider,
+                  // Si aucune méthode choisie, on laisse GeniusPay afficher son sélecteur
+                  paymentMethod: selectedOption?.method,
+                  mmoProvider: selectedOption?.mmoProvider,
                   promoCode: promoStatus?.valid ? promoCode.trim() : undefined,
                   extraPosters: canScale ? extraPosters : undefined,
                 });
@@ -356,8 +369,11 @@ export function SubscriptionRequestModal({
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent text-primary-foreground"
           >
             {isPayingOnline ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-            {isPayingOnline ? "Redirection..." : `Payer ${totalFcfa && canScale ? totalFcfa.toLocaleString("fr-FR") + " FCFA" : ""} avec ${selectedOption.label}`.trim()}
+            {isPayingOnline
+              ? "Redirection..."
+              : `Payer${canScale && totalFcfa ? " " + totalFcfa.toLocaleString("fr-FR") + " FCFA" : ""}${selectedOption ? " avec " + selectedOption.label : " en ligne"}`}
           </Button>
+
 
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
