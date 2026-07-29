@@ -242,6 +242,18 @@ export function SubscriptionRequestModal({
           <div className="space-y-2">
             <Label>Moyen de paiement</Label>
             <div className="grid grid-cols-1 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedMethodKey("__choose__")}
+                className={`flex items-center justify-between rounded-md border px-3 py-2.5 text-sm transition ${
+                  selectedMethodKey === "__choose__"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-background hover:bg-muted"
+                }`}
+              >
+                <span className="font-medium">💳 Choisir sur la page de paiement</span>
+                {selectedMethodKey === "__choose__" && <span className="text-xs text-primary">✓ Recommandé</span>}
+              </button>
               {countryInfo.options.map((opt) => {
                 const k = methodKey(opt);
                 const active = k === selectedMethodKey;
@@ -257,11 +269,14 @@ export function SubscriptionRequestModal({
                     }`}
                   >
                     <span className="font-medium">{opt.label}</span>
-                    {active && <span className="text-xs text-primary">✓ Par défaut</span>}
+                    {active && <span className="text-xs text-primary">✓ Sélectionné</span>}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Par défaut, vous pourrez choisir carte bancaire ou Mobile Money sur la page de paiement sécurisée.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -277,22 +292,17 @@ export function SubscriptionRequestModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Numéro de téléphone</Label>
+            <Label htmlFor="phone">Numéro de téléphone {selectedOption?.method === "card" || !selectedOption ? "(optionnel)" : ""}</Label>
             <Input
               id="phone"
               type="tel"
               placeholder={`Ex: ${countryInfo.dialCode} 90 00 00 00`}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required={selectedOption.method !== "card"}
               maxLength={20}
             />
-            {selectedOption.method === "card" && (
-              <p className="text-xs text-muted-foreground">
-                Optionnel pour un paiement par carte.
-              </p>
-            )}
           </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="promo-code" className="flex items-center gap-1.5">
