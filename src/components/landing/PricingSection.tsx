@@ -51,6 +51,9 @@ export function PricingSection() {
       planName: plan.name,
       planSlug,
       planPrice: `${plan.price_fcfa.toLocaleString("fr-FR")} FCFA / mois`,
+      basePriceFcfa: plan.price_fcfa,
+      baseCredits: plan.credits_per_month,
+      enableExtraPosters: plan.slug === "essentiel",
     });
   };
 
