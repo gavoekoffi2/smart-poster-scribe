@@ -4,7 +4,7 @@ import en from "./locales/en.json";
 import fr from "./locales/fr.json";
 
 const stored = typeof window !== "undefined" ? localStorage.getItem("i18nextLng") : null;
-const initialLng = stored === "fr" || stored === "en" ? stored : "en";
+const initialLng = stored === "fr" || stored === "en" ? stored : "fr";
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -12,7 +12,7 @@ i18n.use(initReactI18next).init({
     fr: { translation: fr },
   },
   lng: initialLng,
-  fallbackLng: "en",
+  fallbackLng: "fr",
   interpolation: { escapeValue: false },
 });
 
