@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useGeoCountry } from "@/hooks/useGeoCountry";
 import { COUNTRIES, getCountry, type PaymentOption } from "@/lib/paymentRouting";
 import { toast } from "sonner";
-import { MessageCircle, CreditCard, Loader2, MapPin, Tag, Check, X } from "lucide-react";
+import { MessageCircle, CreditCard, Loader2, MapPin, Tag, Check, X, Sparkles } from "lucide-react";
 
-// Numéro WhatsApp destinataire des demandes d'abonnement
 const WHATSAPP_NUMBER = "22893708178";
 
 interface SubscriptionRequestModalProps {
@@ -21,6 +21,14 @@ interface SubscriptionRequestModalProps {
   planName: string;
   planSlug: string;
   planPrice?: string;
+  /** Auto-appliqué (ex: BOOST20 depuis le pop-up de crédits épuisés) */
+  initialPromoCode?: string;
+  /** Prix FCFA de base du plan (pour le slider). */
+  basePriceFcfa?: number;
+  /** Nombre d'affiches de base incluses (pour le slider Essentiel). */
+  baseCredits?: number;
+  /** Active le sélecteur d'affiches supplémentaires. */
+  enableExtraPosters?: boolean;
 }
 
 function methodKey(o: PaymentOption) {
@@ -33,6 +41,10 @@ export function SubscriptionRequestModal({
   planName,
   planSlug,
   planPrice,
+  initialPromoCode,
+  basePriceFcfa,
+  baseCredits,
+  enableExtraPosters,
 }: SubscriptionRequestModalProps) {
   const { user } = useAuth();
   const { openGeniusPayCheckout } = useSubscription();
@@ -50,12 +62,37 @@ export function SubscriptionRequestModal({
   const [promoStatus, setPromoStatus] = useState<{ valid: boolean; discount?: number; message?: string } | null>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
-  const applyPromo = async () => {
-    if (!promoCode.trim()) return;
+  // Slider (Essentiel seulement) : affiches supplémentaires
+  const canScale = !!enableExtraPosters && !!basePriceFcfa && !!baseCredits && planSlug === "essentiel";
+  const baseP = baseCredits ? Math.floor(baseCredits / 2) : 20; // affiches de base
+  const pricePerPoster = basePriceFcfa && baseP ? Math.round(basePriceFcfa / baseP) : 245;
+  const [extraPosters, setExtraPosters] = useState<number>(0);
+  const totalPosters = baseP + extraPosters;
+  const totalFcfa = (basePriceFcfa || 0) + extraPosters * pricePerPoster;
+
+  // Auto-appliquer le code promo initial
+  useEffect(() => {
+    if (!open) return;
+    setPromoCode(initialPromoCode ? initialPromoCode.toUpperCase() : "");
+    setPromoStatus(null);
+    setExtraPosters(0);
+  }, [open, initialPromoCode]);
+
+  useEffect(() => {
+    if (!open || !initialPromoCode) return;
+    // délai pour laisser la modale se monter
+    const t = setTimeout(() => { void applyPromo(initialPromoCode); }, 100);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialPromoCode, planSlug]);
+
+  const applyPromo = async (codeToApply?: string) => {
+    const code = (codeToApply ?? promoCode).trim();
+    if (!code) return;
     setIsValidatingPromo(true);
     try {
       const { data, error } = await supabase.rpc("validate_promo_code" as any, {
-        p_code: promoCode.trim(),
+        p_code: code,
         p_plan_slug: planSlug,
       });
       if (error) throw error;
@@ -65,7 +102,7 @@ export function SubscriptionRequestModal({
         toast.success(`Code appliqué : -${v.discount_percent}%`);
       } else {
         setPromoStatus({ valid: false, message: v?.message || "Code invalide" });
-        toast.error(v?.message || "Code invalide");
+        if (!codeToApply) toast.error(v?.message || "Code invalide");
       }
     } catch (e) {
       setPromoStatus({ valid: false, message: "Erreur de validation" });
@@ -76,10 +113,8 @@ export function SubscriptionRequestModal({
 
   const clearPromo = () => { setPromoCode(""); setPromoStatus(null); };
 
-  // Réinitialiser la méthode sélectionnée quand le pays change
   useEffect(() => {
     setSelectedMethodKey(methodKey(countryInfo.options[0]));
-    // Préremplir l'indicatif téléphone si vide
     setPhone((current) => {
       if (current && current.startsWith("+")) return current;
       return countryInfo.dialCode + " ";
@@ -88,6 +123,10 @@ export function SubscriptionRequestModal({
 
   const selectedOption: PaymentOption =
     countryInfo.options.find((o) => methodKey(o) === selectedMethodKey) || countryInfo.options[0];
+
+  const displayPrice = canScale
+    ? `${totalFcfa.toLocaleString("fr-FR")} FCFA / mois — ${totalPosters} affiches`
+    : planPrice;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +143,7 @@ export function SubscriptionRequestModal({
         });
       }
 
-      const priceLine = planPrice ? `\nTarif: ${planPrice}` : "";
+      const priceLine = displayPrice ? `\nTarif: ${displayPrice}` : "";
       const message = `Bonjour, je souhaite souscrire au plan *${planName}* de Graphiste GPT.\n\nNom: ${fullName.trim()}\nTéléphone: ${phone.trim()}\nPays: ${countryInfo.flag} ${countryInfo.name}${priceLine}\n\nMerci de me communiquer les instructions de paiement.`;
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
@@ -143,11 +182,37 @@ export function SubscriptionRequestModal({
             <Label htmlFor="plan-display">Plan choisi</Label>
             <Input
               id="plan-display"
-              value={planPrice ? `${planName} — ${planPrice}` : planName}
+              value={displayPrice ? `${planName} — ${displayPrice}` : planName}
               disabled
               className="bg-muted"
             />
           </div>
+
+          {canScale && (
+            <div className="space-y-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  Nombre d'affiches / mois
+                </Label>
+                <span className="text-lg font-bold text-primary">{totalPosters}</span>
+              </div>
+              <Slider
+                value={[extraPosters]}
+                onValueChange={(v) => setExtraPosters(v[0])}
+                min={0}
+                max={80}
+                step={10}
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Base : {baseP} affiches</span>
+                <span>Max : {baseP + 80} affiches</span>
+              </div>
+              <div className="text-xs text-foreground">
+                +{pricePerPoster.toLocaleString("fr-FR")} FCFA par affiche supplémentaire.
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="country" className="flex items-center gap-1.5">
@@ -227,7 +292,6 @@ export function SubscriptionRequestModal({
             )}
           </div>
 
-          {/* Promo code */}
           <div className="space-y-2">
             <Label htmlFor="promo-code" className="flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" />
@@ -247,7 +311,7 @@ export function SubscriptionRequestModal({
                   <X className="w-4 h-4" />
                 </Button>
               ) : (
-                <Button type="button" variant="outline" onClick={applyPromo} disabled={isValidatingPromo || !promoCode.trim()}>
+                <Button type="button" variant="outline" onClick={() => applyPromo()} disabled={isValidatingPromo || !promoCode.trim()}>
                   {isValidatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
                 </Button>
               )}
@@ -280,6 +344,7 @@ export function SubscriptionRequestModal({
                   paymentMethod: selectedOption.method,
                   mmoProvider: selectedOption.mmoProvider,
                   promoCode: promoStatus?.valid ? promoCode.trim() : undefined,
+                  extraPosters: canScale ? extraPosters : undefined,
                 });
               } catch (err) {
                 console.error(err);
@@ -291,7 +356,7 @@ export function SubscriptionRequestModal({
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent text-primary-foreground"
           >
             {isPayingOnline ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-            {isPayingOnline ? "Redirection..." : `Payer avec ${selectedOption.label}`}
+            {isPayingOnline ? "Redirection..." : `Payer ${totalFcfa && canScale ? totalFcfa.toLocaleString("fr-FR") + " FCFA" : ""} avec ${selectedOption.label}`.trim()}
           </Button>
 
           <div className="relative my-2">
