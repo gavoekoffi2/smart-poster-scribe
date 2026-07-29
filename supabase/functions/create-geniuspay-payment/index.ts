@@ -103,8 +103,18 @@ serve(async (req) => {
     }
 
     const combinedDiscount = 1 - (1 - discountRate) * (1 - promoDiscountRate);
-    const finalAmountFcfa = Math.round(plan.price_fcfa * (1 - combinedDiscount));
-    const finalAmountUsd = Math.round(plan.price_usd * (1 - combinedDiscount) * 100) / 100;
+
+    // Slider Essentiel : coût supplémentaire par affiche (base = price / posters de base)
+    const baseCredits = Number(plan.credits_per_month) || 0;
+    const basePosters = Math.max(1, Math.floor(baseCredits / 2));
+    const pricePerPoster = baseCredits > 0 ? Math.round(Number(plan.price_fcfa) / basePosters) : 0;
+    const extra = Math.max(0, Math.min(200, Number(extraPosters) || 0));
+    const extraFcfa = extra * pricePerPoster;
+    const priceFcfaBeforeDiscount = Number(plan.price_fcfa) + extraFcfa;
+    const priceUsdBeforeDiscount = Number(plan.price_usd) * (priceFcfaBeforeDiscount / Number(plan.price_fcfa || 1));
+    const finalAmountFcfa = Math.round(priceFcfaBeforeDiscount * (1 - combinedDiscount));
+    const finalAmountUsd = Math.round(priceUsdBeforeDiscount * (1 - combinedDiscount) * 100) / 100;
+    const finalCredits = baseCredits + extra * 2;
 
     const { data: transaction, error: txError } = await supabase
       .from("payment_transactions")
@@ -124,10 +134,13 @@ serve(async (req) => {
           promo_code: promoCodeValue,
           promo_code_id: promoCodeId,
           promo_discount_rate: promoDiscountRate,
+          extra_posters: extra,
+          custom_credits: finalCredits,
         },
       })
       .select()
       .single();
+
 
     if (txError || !transaction) {
       throw new Error("Erreur création transaction: " + (txError?.message || "unknown"));
