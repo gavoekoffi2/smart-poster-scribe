@@ -397,6 +397,10 @@ export default function PricingPage() {
         planName={requestModal.planName}
         planSlug={requestModal.planSlug}
         planPrice={requestModal.planPrice}
+        basePriceFcfa={requestModal.basePriceFcfa}
+        baseCredits={requestModal.baseCredits}
+        enableExtraPosters={requestModal.enableExtraPosters}
+        initialPromoCode={searchParams.get("promo") || undefined}
       />
     </div>
   );
