@@ -23,6 +23,7 @@ import { SubscribeFloatingButton } from "./components/SubscribeFloatingButton";
 // Lazy load admin pages
 const AdminUploadPage = lazy(() => import("./pages/AdminUploadPage"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminGenerations = lazy(() => import("./pages/AdminGenerations"));
 const AdminTemplates = lazy(() => import("./pages/AdminTemplates"));
 const AdminDesigners = lazy(() => import("./pages/AdminDesigners"));
 const AdminSubscriptions = lazy(() => import("./pages/AdminSubscriptions"));
