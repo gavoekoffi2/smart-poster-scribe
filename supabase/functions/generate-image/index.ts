@@ -1350,6 +1350,30 @@ serve(async (req) => {
     // fallbacks before the Edge execution window can terminate the worker.
     const quality: "fast" | "premium" = (apiStrictPremium || apiReliabilityMode) ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
 
+    // ===== JOURNALISATION DE LA DEMANDE (visible dans le dashboard admin) =====
+    // Enregistré AVANT toute vérification de crédits pour tracer aussi les demandes
+    // des visiteurs non inscrits et les tentatives qui échouent.
+    try {
+      const { data: logRow } = await supabase
+        .from("generation_requests")
+        .insert({
+          user_id: userId,
+          is_anonymous: isAnonymousUser || !userId,
+          prompt: typeof prompt === "string" ? Array.from(prompt).slice(0, 4000).join("") : null,
+          domain: typeof domain === "string" ? domain.slice(0, 100) : null,
+          aspect_ratio: typeof aspectRatio === "string" ? aspectRatio : null,
+          resolution: typeof resolution === "string" ? resolution : null,
+          is_modification: isModification === true,
+          status: "received",
+        })
+        .select("id")
+        .single();
+      requestLogId = logRow?.id ?? null;
+    } catch (logErr) {
+      console.warn("generation_requests log failed:", logErr);
+    }
+
+
     let userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
 
