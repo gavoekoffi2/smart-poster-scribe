@@ -1310,7 +1310,8 @@ serve(async (req) => {
 
         if (!authError && user) {
           userId = user.id;
-          console.log("Authenticated user:", userId);
+          isAnonymousUser = (user as any).is_anonymous === true || user.app_metadata?.provider === "anonymous";
+          console.log("Authenticated user:", userId, "anonymous:", isAnonymousUser);
         } else {
           console.log("Auth error or no user:", authError?.message);
         }
