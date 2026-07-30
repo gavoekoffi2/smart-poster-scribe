@@ -1267,6 +1267,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestLogId: string | null = null;
+  const adminSupabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
   try {
     const KIE_API_KEY = Deno.env.get("KIE_AI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
