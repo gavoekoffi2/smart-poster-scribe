@@ -1293,7 +1293,6 @@ serve(async (req) => {
     // ===== AUTHENTIFICATION UTILISATEUR =====
     let userId: string | null = null;
     let isAnonymousUser = false;
-    let requestLogId: string | null = null;
     const authHeader = req.headers.get("authorization");
     const internalUserId = req.headers.get("x-internal-user-id");
 
