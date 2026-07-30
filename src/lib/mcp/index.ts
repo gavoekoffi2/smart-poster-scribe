@@ -41,6 +41,6 @@ export default defineMcp({
     adminListUsersTool,
     adminModerateShowcaseTool,
     adminSetSubscriptionTool,
-  ],
+  ].map(withMcpGuard),
 });
 

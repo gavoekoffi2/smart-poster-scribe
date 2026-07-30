@@ -543,7 +543,7 @@ var mcp_default = defineMcp({
     admin_list_users_default,
     admin_moderate_showcase_default,
     admin_set_subscription_default
-  ]
+  ].map(withMcpGuard)
 });
 
 // lovable-mcp-supabase-entry.ts
