@@ -1,61 +1,49 @@
-## Objectif
+## Réponse courte
 
-Se démarquer de ChatGPT en produisant des affiches vraiment "graphistes" : (1) toujours s'inspirer d'un template de la base, (2) varier les polices d'une affiche à l'autre ET combiner 2 polices complémentaires sur la même affiche (titre / corps), (3) respecter des codes graphiques pro (hiérarchie, contraste, alignement).
+Oui : **c'est bien via MCP**. GraphisteGPT expose déjà un serveur MCP sécurisé par OAuth (`/functions/v1/mcp`) avec 4 outils en lecture seule. Hermès (dans Claude, ChatGPT, Cursor…) s'y connecte, se connecte **avec votre compte**, et agit en tant que vous. Il manque juste les outils d'action : aujourd'hui il peut seulement lire.
 
-## Ce qu'on change
+## Ce qu'on ajoute
 
-### 1. Toujours partir d'un template (renforcement)
+### 1. Générer et vérifier (boucle « teste → corrige → recommence »)
 
-Aujourd'hui, si `!referenceImage`, on sélectionne un template ; sinon on utilise celui de l'utilisateur. On garde ce comportement mais on durcit :
+- `generate_poster` — lance une génération (texte, domaine, format, mode rapide/premium, image de référence optionnelle) et renvoie un `job_id` immédiatement (mode asynchrone, pour ne pas dépasser le délai d'attente du client MCP).
+- `get_job_status` — état du job : en attente / en cours / terminé (URL de l'affiche) / échec (message d'erreur).
+- `modify_poster` — relance une modification d'une affiche existante (mode modification, gratuit) : c'est l'outil qui permet à Hermès d'itérer jusqu'au résultat voulu.
+- `rate_poster` — enregistre une note sur une affiche générée, pour qu'Hermès mesure ses propres résultats.
 
-- Si aucun template de domaine trouvé → au lieu de "FREE creation mode" (ligne 1708), on force la sélection d'un template actif quelconque et on **passe automatiquement en mode "inspiration ADN" strict** (composition + hiérarchie + typographie du template servent de base). Plus jamais de génération sans template.
-- Log clair `templateAlwaysUsed=true` dans `image_jobs.params` pour traçabilité.
+Ces outils appellent la logique existante de `generate-image`, donc mêmes règles métier : crédits, qualité, clonage, anti-hallucination.
 
-### 2. Système de duo typographique (nouveau)
+### 2. Piloter le compte
 
-Nouveau module `supabase/functions/generate-image/typographySystem.ts` :
+- `get_my_credits`, `list_my_posters`, `get_poster`, `search_templates` — déjà en place, on les garde.
+- `get_my_account` — profil, plan, quotas, paramètres par défaut (logo, couleurs, entreprise).
 
-- **Catalogue de ~20 duos de polices professionnels** (display + body), curatés par ambiance : editorial (Playfair + Inter), bold-modern (Bebas Neue + Work Sans), luxury (Cormorant + Karla), tech (Space Grotesk + DM Sans), organic (Fraunces + Manrope), brutalist (Archivo Black + Hind), retro (Abril Fatface + Cabin), etc.
-- **Fonction `pickTypographyDuo(domain, template, seed)`** : sélectionne un duo cohérent avec le domaine ET différent des dernières générations de l'utilisateur (petit LRU via `image_jobs.params.typo_duo` sur les 5 derniers jobs). Garantit la rotation.
-- **Fonction `buildTypographyBrief(duo)`** : produit un bloc de directives injecté dans le prompt : "TITRE : {display font} — graisse Black, tracking serré, casse haute. SOUS-TITRE : {display font} — Regular, italique optionnel. CORPS : {body font} — Regular/Medium, interlignage 1.4. NE PAS mélanger plus de 2 familles."
+### 3. Admin / modération (réservé aux comptes admin)
 
-Injecté systématiquement dans `buildExpertSkillsInstructions` (là où `typoStyle` existe déjà à la ligne 653) — remplace le style typo générique par un duo précis et nommé.
+Chaque outil vérifie le rôle via `has_role(auth.uid(), 'admin')` côté base ; un compte non-admin reçoit un refus clair.
 
-### 3. Codes graphiques renforcés
+- `admin_list_generation_requests` — journal des demandes (y compris visiteurs non inscrits), filtres statut/date, pour repérer les échecs.
+- `admin_generation_stats` — taux d'échec, volumes, répartition par domaine sur une période.
+- `admin_list_users` — liste des utilisateurs avec plan, crédits, dernière activité.
+- `admin_moderate_showcase` — valider ou retirer une affiche de la vitrine.
+- `admin_set_subscription` — activer/prolonger un abonnement offert (durée en jours).
 
-Dans `professionalStandards.ts`, ajouter une checklist "Règles de graphiste" explicite injectée à chaque génération :
+## Sécurité
 
-- Hiérarchie visuelle stricte (1 focal point, 3 niveaux max).
-- Contraste titre/corps : ratio de tailles ≥ 2.5x.
-- Alignement rigoureux sur une grille (baseline).
-- Un seul duo de polices, pas de 3ᵉ famille.
-- Palette 60-30-10 (déjà en Core memory) — renforcé comme règle bloquante.
-- Interdiction de "tout centrer" par défaut : varier ancrages selon le template.
+- Aucun outil ne prend de `user_id` en entrée : l'identité vient du jeton OAuth vérifié.
+- Toutes les requêtes passent par la clé publique + jeton de l'utilisateur, donc les règles RLS s'appliquent telles quelles. Aucune clé de service dans les outils.
+- Les outils admin échouent proprement pour un utilisateur normal.
+- Les outils qui écrivent (`generate_poster`, `modify_poster`, `admin_*`) sont marqués comme non-lecture-seule, donc le client d'Hermès demandera confirmation avant exécution.
 
-### 4. Variation garantie entre générations
+## Détails techniques
 
-Ajouter dans `index.ts`, avant `buildExpertSkillsInstructions` :
+- Nouveaux fichiers dans `src/lib/mcp/tools/`, enregistrés dans `src/lib/mcp/index.ts` ; le greffon Vite régénère `supabase/functions/mcp/index.ts`.
+- Les outils admin s'appuient sur des fonctions SQL `security definer` déjà présentes ou à créer (contrôle de rôle interne), jamais sur une élévation de privilèges dans l'outil.
+- Le mode asynchrone s'appuie sur la table `image_jobs` (`status`, `result_url`, `error_message`) déjà utilisée par l'API v1.
+- Après implémentation : régénération du manifeste MCP + déploiement de la fonction `mcp`.
 
-```ts
-const recentDuos = await fetchRecentTypoDuos(userId, 5); // depuis image_jobs
-const typoDuo = pickTypographyDuo(detectedDomain, template, { exclude: recentDuos });
-```
+## Connexion d'Hermès (après implémentation)
 
-Le duo choisi est loggé dans `image_jobs.params.typo_duo` pour alimenter la rotation.
-
-### 5. Mémoire de projet
-
-Ajouter à `mem://index.md` Core : "Toujours partir d'un template DB + duo typographique (display+body) obligatoire, rotation entre générations."
-Nouveau fichier mémoire `mem://design/typography-duos-fr` décrivant le catalogue et la rotation.
-
-## Fichiers touchés
-
-- `supabase/functions/generate-image/typographySystem.ts` — nouveau, catalogue + sélection
-- `supabase/functions/generate-image/index.ts` — appel `pickTypographyDuo`, injection du brief, suppression du fallback "FREE mode", log `typo_duo`
-- `supabase/functions/generate-image/expertSkills.ts` — remplace `typoStyle` générique par le duo précis
-- `supabase/functions/generate-image/professionalStandards.ts` — checklist codes graphiques
-- `mem://index.md` + `mem://design/typography-duos-fr`
-
-## Ce qu'on ne touche pas
-
-- Pas de changement UI. Pas de changement de modèle IA. Pas de nouveau secret. Pas de migration DB (la rotation lit `image_jobs.params` existant).
+1. Dans le client d'Hermès, ajouter un serveur MCP : `https://graphistegpt.pro`… en réalité l'URL de la fonction `mcp` du backend (je vous la donnerai telle quelle).
+2. Hermès ouvre une page de connexion GraphisteGPT → vous vous connectez avec votre compte admin → vous approuvez.
+3. Les outils apparaissent dans Hermès ; il peut alors générer, vérifier, corriger et superviser en boucle.

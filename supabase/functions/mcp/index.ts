@@ -128,18 +128,422 @@ var search_templates_default = defineTool4({
   }
 });
 
+// src/lib/mcp/tools/get-my-account.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.22.1";
+
+// src/lib/mcp/tools/_shared.ts
+import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.89.0";
+function userClient(ctx) {
+  return createClient5(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+function notAuth() {
+  return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
+}
+function fail(message) {
+  return { content: [{ type: "text", text: message }], isError: true };
+}
+async function requireAdmin(ctx) {
+  const supabase = userClient(ctx);
+  const { data, error } = await supabase.rpc("has_any_role", {
+    _user_id: ctx.getUserId(),
+    _roles: ["super_admin", "admin"]
+  });
+  if (error) return { ok: false, error: error.message };
+  if (data !== true) return { ok: false, error: "Acc\xE8s refus\xE9 : compte non administrateur." };
+  return { ok: true, supabase };
+}
+async function callGenerateImage(ctx, payload) {
+  const res = await fetch(`${process.env.SUPABASE_URL}/functions/v1/generate-image`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: process.env.SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${ctx.getToken()}`
+    },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  let body = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text;
+  }
+  return { ok: res.ok, status: res.status, body };
+}
+
+// src/lib/mcp/tools/get-my-account.ts
+var get_my_account_default = defineTool5({
+  name: "get_my_account",
+  title: "Mon compte",
+  description: "Renvoie le profil GraphisteGPT de l'utilisateur connect\xE9 : nom, entreprise, secteur, logo et couleurs par d\xE9faut, ainsi que son abonnement.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async (_input, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const supabase = userClient(ctx);
+    const [{ data: profile, error: pErr }, { data: sub }] = await Promise.all([
+      supabase.from("profiles").select("full_name, company_name, industry, phone, website, country, default_logo_url, default_color_palette, onboarding_completed").eq("user_id", ctx.getUserId()).maybeSingle(),
+      supabase.from("user_subscriptions").select("plan_id, status, credits_remaining, free_generations_used, current_period_end").eq("user_id", ctx.getUserId()).maybeSingle()
+    ]);
+    if (pErr) return fail(pErr.message);
+    const text = [
+      `Utilisateur : ${profile?.full_name ?? "n/a"} (${ctx.getUserEmail() ?? "email inconnu"})`,
+      `Entreprise : ${profile?.company_name ?? "n/a"} \u2014 Secteur : ${profile?.industry ?? "n/a"}`,
+      `Logo par d\xE9faut : ${profile?.default_logo_url ?? "aucun"}`,
+      sub ? `Abonnement : ${sub.status} \u2014 ${sub.credits_remaining} cr\xE9dits, jusqu'au ${sub.current_period_end}` : "Abonnement : aucun (offre gratuite)"
+    ].join("\n");
+    return { content: [{ type: "text", text }], structuredContent: { profile, subscription: sub ?? null } };
+  }
+});
+
+// src/lib/mcp/tools/generate-poster.ts
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z4 } from "npm:zod@^3.25.76";
+var generate_poster_default = defineTool6({
+  name: "generate_poster",
+  title: "G\xE9n\xE9rer une affiche",
+  description: "Lance la g\xE9n\xE9ration d'une affiche GraphisteGPT pour l'utilisateur connect\xE9 et renvoie imm\xE9diatement un job_id. Utiliser get_job_status ensuite pour r\xE9cup\xE9rer l'image finale.",
+  inputSchema: {
+    prompt: z4.string().describe("Contenu et brief complet de l'affiche (texte exact \xE0 reproduire, ambiance, style)."),
+    domain: z4.string().optional().describe("Domaine : restaurant, mode, immobilier, event, formation, eglise\u2026"),
+    aspectRatio: z4.string().optional().describe("Format, ex : 9:16, 1:1, 16:9, 3:4. D\xE9faut 9:16."),
+    resolution: z4.string().optional().describe("1K, 2K ou 4K. D\xE9faut 2K."),
+    quality: z4.enum(["fast", "premium"]).optional().describe("fast (rapide) ou premium (qualit\xE9 maximale)."),
+    referenceImage: z4.string().optional().describe("URL d'une affiche de r\xE9f\xE9rence \xE0 cloner ou dont s'inspirer."),
+    templateId: z4.string().optional().describe("Identifiant d'un mod\xE8le du catalogue (voir search_templates)."),
+    locale: z4.enum(["fr", "en"]).optional().describe("Langue des textes r\xE9dig\xE9s par l'IA. D\xE9faut fr.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const { ok, status, body } = await callGenerateImage(ctx, {
+      prompt: input.prompt,
+      domain: input.domain,
+      aspectRatio: input.aspectRatio ?? "9:16",
+      resolution: input.resolution ?? "2K",
+      quality: input.quality ?? "premium",
+      referenceImage: input.referenceImage,
+      templateId: input.templateId,
+      locale: input.locale ?? "fr"
+    });
+    if (!ok || body?.success === false) {
+      const msg = body?.message || body?.error || `\xC9chec de la g\xE9n\xE9ration (HTTP ${status}).`;
+      const upgrade = body?.upgrade_required === true ? " Cr\xE9dits \xE9puis\xE9s : un abonnement est n\xE9cessaire." : "";
+      return fail(`${msg}${upgrade}`);
+    }
+    const jobId = body?.jobId ?? body?.job_id ?? null;
+    return {
+      content: [
+        {
+          type: "text",
+          text: jobId ? `G\xE9n\xE9ration lanc\xE9e. job_id = ${jobId}. Interroger get_job_status pour suivre l'avancement.` : `G\xE9n\xE9ration lanc\xE9e : ${JSON.stringify(body).slice(0, 500)}`
+        }
+      ],
+      structuredContent: { job_id: jobId, status: body?.status ?? "processing" }
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-job-status.ts
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z5 } from "npm:zod@^3.25.76";
+var get_job_status_default = defineTool7({
+  name: "get_job_status",
+  title: "Statut d'une g\xE9n\xE9ration",
+  description: "Renvoie l'\xE9tat d'un job de g\xE9n\xE9ration d'affiche (pending, processing, completed avec l'URL de l'image, ou failed avec le message d'erreur).",
+  inputSchema: {
+    job_id: z5.string().uuid().describe("Identifiant du job renvoy\xE9 par generate_poster ou modify_poster.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ job_id }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const { data, error } = await userClient(ctx).from("image_jobs").select("id, status, result_url, error_message, error_code, model_used, provider_used, fallback_used, created_at, updated_at").eq("id", job_id).maybeSingle();
+    if (error) return fail(error.message);
+    if (!data) return fail("Job introuvable.");
+    const text = data.status === "completed" ? `Termin\xE9 \u2014 ${data.result_url}` : data.status === "failed" ? `\xC9chec \u2014 ${data.error_code ?? ""} ${data.error_message ?? ""}`.trim() : `En cours (${data.status}).`;
+    return { content: [{ type: "text", text }], structuredContent: { job: data } };
+  }
+});
+
+// src/lib/mcp/tools/modify-poster.ts
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z6 } from "npm:zod@^3.25.76";
+var modify_poster_default = defineTool8({
+  name: "modify_poster",
+  title: "Modifier une affiche",
+  description: "Relance une affiche d\xE9j\xE0 g\xE9n\xE9r\xE9e en appliquant une modification pr\xE9cise (couleur, texte, mise en page). Gratuit, sans d\xE9bit de cr\xE9dits. Renvoie un job_id \xE0 suivre avec get_job_status.",
+  inputSchema: {
+    poster_id: z6.string().uuid().describe("Identifiant de l'affiche existante \xE0 modifier (voir list_my_posters)."),
+    modification: z6.string().describe("Modification demand\xE9e, en une ou deux phrases pr\xE9cises.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  handler: async ({ poster_id, modification }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const supabase = userClient(ctx);
+    const { data: poster, error } = await supabase.from("generated_images").select("id, prompt, image_url, domain, aspect_ratio, resolution").eq("id", poster_id).eq("user_id", ctx.getUserId()).maybeSingle();
+    if (error) return fail(error.message);
+    if (!poster) return fail("Affiche introuvable.");
+    const { ok, status, body } = await callGenerateImage(ctx, {
+      prompt: poster.prompt,
+      domain: poster.domain,
+      aspectRatio: poster.aspect_ratio,
+      resolution: poster.resolution,
+      quality: "premium",
+      referenceImage: poster.image_url,
+      isModification: true,
+      modificationRequest: modification,
+      locale: "fr"
+    });
+    if (!ok || body?.success === false) {
+      return fail(body?.message || body?.error || `\xC9chec de la modification (HTTP ${status}).`);
+    }
+    const jobId = body?.jobId ?? body?.job_id ?? null;
+    return {
+      content: [{ type: "text", text: `Modification lanc\xE9e. job_id = ${jobId}.` }],
+      structuredContent: { job_id: jobId, status: body?.status ?? "processing" }
+    };
+  }
+});
+
+// src/lib/mcp/tools/rate-poster.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z7 } from "npm:zod@^3.25.76";
+var rate_poster_default = defineTool9({
+  name: "rate_poster",
+  title: "Noter une affiche",
+  description: "Enregistre une note (1 \xE0 5) et un commentaire sur une affiche g\xE9n\xE9r\xE9e par l'utilisateur connect\xE9.",
+  inputSchema: {
+    poster_id: z7.string().uuid().describe("Identifiant de l'affiche."),
+    rating: z7.number().int().min(1).max(5).describe("Note de 1 \xE0 5."),
+    comment: z7.string().optional().describe("Commentaire libre sur le r\xE9sultat.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  handler: async ({ poster_id, rating, comment }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const { error } = await userClient(ctx).rpc("submit_generation_feedback", {
+      p_user_id: ctx.getUserId(),
+      p_image_id: poster_id,
+      p_rating: rating,
+      p_comment: comment ?? null
+    });
+    if (error) return fail(error.message);
+    return { content: [{ type: "text", text: `Note ${rating}/5 enregistr\xE9e pour l'affiche ${poster_id}.` }] };
+  }
+});
+
+// src/lib/mcp/tools/admin-list-generation-requests.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z8 } from "npm:zod@^3.25.76";
+var admin_list_generation_requests_default = defineTool10({
+  name: "admin_list_generation_requests",
+  title: "Journal des g\xE9n\xE9rations (admin)",
+  description: "R\xE9serv\xE9 aux administrateurs. Liste les demandes de g\xE9n\xE9ration d'affiches, y compris celles des visiteurs non inscrits, avec leur statut et leurs erreurs.",
+  inputSchema: {
+    limit: z8.number().int().min(1).max(200).optional().describe("Nombre max de lignes (d\xE9faut 50)."),
+    status: z8.string().optional().describe("Filtrer par statut : received, processing, completed, failed."),
+    only_failed: z8.boolean().optional().describe("Ne renvoyer que les demandes en \xE9chec.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit, status, only_failed }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const admin = await requireAdmin(ctx);
+    if (!admin.ok) return fail(admin.error);
+    const { data, error } = await admin.supabase.rpc("admin_list_generation_requests", {
+      p_admin_id: ctx.getUserId(),
+      p_limit: limit ?? 50
+    });
+    if (error) return fail(error.message);
+    let rows = data ?? [];
+    if (status) rows = rows.filter((r) => r.status === status || r.job_status === status);
+    if (only_failed) rows = rows.filter((r) => r.status === "failed" || r.job_status === "failed" || !!r.error_message);
+    const text = rows.length ? rows.map(
+      (r) => `\u2022 ${r.created_at} \u2014 ${r.is_anonymous ? "visiteur" : r.user_email ?? r.user_name ?? r.user_id} \u2014 ${r.domain ?? "n/a"} \u2014 ${r.job_status ?? r.status}${r.error_message ? ` \u2014 ERREUR: ${r.error_message}` : ""}
+  \xAB ${(r.prompt ?? "").slice(0, 160)} \xBB`
+    ).join("\n") : "Aucune demande trouv\xE9e.";
+    return { content: [{ type: "text", text }], structuredContent: { requests: rows } };
+  }
+});
+
+// src/lib/mcp/tools/admin-generation-stats.ts
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z9 } from "npm:zod@^3.25.76";
+var admin_generation_stats_default = defineTool11({
+  name: "admin_generation_stats",
+  title: "Statistiques de g\xE9n\xE9ration (admin)",
+  description: "R\xE9serv\xE9 aux administrateurs. Calcule le volume, le taux d'\xE9chec et la r\xE9partition par domaine des g\xE9n\xE9rations r\xE9centes.",
+  inputSchema: {
+    hours: z9.number().int().min(1).max(720).optional().describe("Fen\xEAtre d'analyse en heures (d\xE9faut 24)."),
+    sample: z9.number().int().min(50).max(1e3).optional().describe("Nombre max de demandes analys\xE9es (d\xE9faut 500).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ hours, sample }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const admin = await requireAdmin(ctx);
+    if (!admin.ok) return fail(admin.error);
+    const { data, error } = await admin.supabase.rpc("admin_list_generation_requests", {
+      p_admin_id: ctx.getUserId(),
+      p_limit: sample ?? 500
+    });
+    if (error) return fail(error.message);
+    const since = Date.now() - (hours ?? 24) * 3600 * 1e3;
+    const rows = (data ?? []).filter((r) => new Date(r.created_at).getTime() >= since);
+    const failed = rows.filter((r) => r.status === "failed" || r.job_status === "failed").length;
+    const completed = rows.filter((r) => r.job_status === "completed").length;
+    const anonymous = rows.filter((r) => r.is_anonymous).length;
+    const byDomain = {};
+    for (const r of rows) byDomain[r.domain ?? "n/a"] = (byDomain[r.domain ?? "n/a"] ?? 0) + 1;
+    const stats = {
+      window_hours: hours ?? 24,
+      total: rows.length,
+      completed,
+      failed,
+      failure_rate: rows.length ? Math.round(failed / rows.length * 1e3) / 10 : 0,
+      anonymous,
+      by_domain: byDomain
+    };
+    const text = [
+      `Fen\xEAtre : ${stats.window_hours}h`,
+      `Total : ${stats.total} \u2014 Termin\xE9es : ${completed} \u2014 \xC9checs : ${failed} (${stats.failure_rate}%)`,
+      `Visiteurs non inscrits : ${anonymous}`,
+      `Par domaine : ${Object.entries(byDomain).map(([d, n]) => `${d}=${n}`).join(", ") || "n/a"}`
+    ].join("\n");
+    return { content: [{ type: "text", text }], structuredContent: { stats } };
+  }
+});
+
+// src/lib/mcp/tools/admin-list-users.ts
+import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z10 } from "npm:zod@^3.25.76";
+var admin_list_users_default = defineTool12({
+  name: "admin_list_users",
+  title: "Utilisateurs (admin)",
+  description: "R\xE9serv\xE9 aux administrateurs. Liste les utilisateurs GraphisteGPT avec leur plan, leurs cr\xE9dits restants et leur statut d'abonnement.",
+  inputSchema: {
+    search: z10.string().optional().describe("Filtre libre sur le nom, l'email ou l'entreprise."),
+    limit: z10.number().int().min(1).max(200).optional().describe("Nombre max de r\xE9sultats (d\xE9faut 50).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ search, limit }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const admin = await requireAdmin(ctx);
+    if (!admin.ok) return fail(admin.error);
+    const { data, error } = await admin.supabase.rpc("admin_get_users_with_subscriptions", {
+      p_admin_id: ctx.getUserId()
+    });
+    if (error) return fail(error.message);
+    let rows = data ?? [];
+    if (search) {
+      const s = search.toLowerCase();
+      rows = rows.filter(
+        (r) => [r.full_name, r.email, r.company_name].some((v) => typeof v === "string" && v.toLowerCase().includes(s))
+      );
+    }
+    rows = rows.slice(0, limit ?? 50);
+    const text = rows.length ? rows.map(
+      (r) => `\u2022 ${r.full_name ?? "n/a"} <${r.email ?? "n/a"}> \u2014 ${r.plan_name ?? "gratuit"} (${r.sub_status ?? "n/a"}) \u2014 ${r.credits_remaining ?? 0} cr\xE9dits \u2014 id=${r.user_id}`
+    ).join("\n") : "Aucun utilisateur trouv\xE9.";
+    return { content: [{ type: "text", text }], structuredContent: { users: rows } };
+  }
+});
+
+// src/lib/mcp/tools/admin-moderate-showcase.ts
+import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z11 } from "npm:zod@^3.25.76";
+var admin_moderate_showcase_default = defineTool13({
+  name: "admin_moderate_showcase",
+  title: "Mod\xE9rer la vitrine (admin)",
+  description: "R\xE9serv\xE9 aux administrateurs. Ajoute ou retire une affiche g\xE9n\xE9r\xE9e de la vitrine publique de GraphisteGPT.",
+  inputSchema: {
+    poster_id: z11.string().uuid().describe("Identifiant de l'affiche g\xE9n\xE9r\xE9e."),
+    publish: z11.boolean().describe("true pour publier dans la vitrine, false pour la retirer."),
+    order: z11.number().int().min(0).max(999).optional().describe("Position d'affichage dans la vitrine.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ poster_id, publish, order }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const admin = await requireAdmin(ctx);
+    if (!admin.ok) return fail(admin.error);
+    const patch = { is_showcase: publish };
+    if (typeof order === "number") patch.showcase_order = order;
+    const { data, error } = await admin.supabase.from("generated_images").update(patch).eq("id", poster_id).select("id, is_showcase, showcase_order").maybeSingle();
+    if (error) return fail(error.message);
+    if (!data) return fail("Affiche introuvable.");
+    return {
+      content: [{ type: "text", text: `Affiche ${poster_id} ${publish ? "publi\xE9e dans" : "retir\xE9e de"} la vitrine.` }],
+      structuredContent: { poster: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/admin-set-subscription.ts
+import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z12 } from "npm:zod@^3.25.76";
+var admin_set_subscription_default = defineTool14({
+  name: "admin_set_subscription",
+  title: "Attribuer un abonnement (admin)",
+  description: "R\xE9serv\xE9 aux administrateurs. Active ou prolonge un abonnement pour un utilisateur (offert ou manuel), avec un plan, des cr\xE9dits et une dur\xE9e en mois.",
+  inputSchema: {
+    user_id: z12.string().uuid().describe("Identifiant de l'utilisateur b\xE9n\xE9ficiaire (voir admin_list_users)."),
+    plan_slug: z12.string().describe("Slug du plan : free, essentiel, illimite\u2026"),
+    credits: z12.number().int().min(0).max(1e5).describe("Cr\xE9dits \xE0 cr\xE9diter sur la p\xE9riode."),
+    duration_months: z12.number().int().min(1).max(36).describe("Dur\xE9e de l'abonnement en mois.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  handler: async ({ user_id, plan_slug, credits, duration_months }, ctx) => {
+    if (!ctx.isAuthenticated()) return notAuth();
+    const admin = await requireAdmin(ctx);
+    if (!admin.ok) return fail(admin.error);
+    const { data, error } = await admin.supabase.rpc("admin_grant_subscription", {
+      p_admin_id: ctx.getUserId(),
+      p_target_user_id: user_id,
+      p_plan_slug: plan_slug,
+      p_credits: credits,
+      p_duration_months: duration_months
+    });
+    if (error) return fail(error.message);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Abonnement \xAB ${plan_slug} \xBB accord\xE9 \xE0 ${user_id} : ${credits} cr\xE9dits pour ${duration_months} mois.`
+        }
+      ],
+      structuredContent: { result: data }
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "bbfzfgcdioewzbmlgaqy";
 var mcp_default = defineMcp({
   name: "graphistegpt-mcp",
   title: "GraphisteGPT",
-  version: "0.1.0",
-  instructions: "Outils GraphisteGPT pour l'utilisateur connect\xE9 : consulter son solde de cr\xE9dits, lister ses affiches g\xE9n\xE9r\xE9es, obtenir les d\xE9tails d'une affiche, et rechercher dans le catalogue public de mod\xE8les.",
+  version: "0.2.0",
+  instructions: "Outils GraphisteGPT pour l'utilisateur connect\xE9. Compte : get_my_account, get_my_credits. Cr\xE9ation : generate_poster puis get_job_status en boucle jusqu'\xE0 completed ; modify_poster pour it\xE9rer gratuitement sur une affiche existante ; rate_poster pour noter le r\xE9sultat. Catalogue : search_templates, list_my_posters, get_poster. Outils admin_* r\xE9serv\xE9s aux administrateurs : journal des g\xE9n\xE9rations, statistiques d'\xE9chec, utilisateurs, mod\xE9ration de la vitrine et attribution d'abonnements.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [get_my_credits_default, list_my_posters_default, get_poster_default, search_templates_default]
+  tools: [
+    get_my_credits_default,
+    get_my_account_default,
+    list_my_posters_default,
+    get_poster_default,
+    search_templates_default,
+    generate_poster_default,
+    get_job_status_default,
+    modify_poster_default,
+    rate_poster_default,
+    admin_list_generation_requests_default,
+    admin_generation_stats_default,
+    admin_list_users_default,
+    admin_moderate_showcase_default,
+    admin_set_subscription_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts
