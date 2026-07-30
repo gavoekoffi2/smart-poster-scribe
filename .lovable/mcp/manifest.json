@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "graphistegpt-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "GraphisteGPT"
     },
     "tools": [
@@ -20,6 +20,22 @@
         "name": "get_my_credits",
         "title": "Obtenir mes crédits",
         "description": "Renvoie le solde de crédits et le plan d'abonnement de l'utilisateur GraphisteGPT connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_account",
+        "title": "Mon compte",
+        "description": "Renvoie le profil GraphisteGPT de l'utilisateur connecté : nom, entreprise, secteur, logo et couleurs par défaut, ainsi que son abonnement.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -113,6 +129,338 @@
               "description": "Nombre max de résultats (défaut 12)."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_poster",
+        "title": "Générer une affiche",
+        "description": "Lance la génération d'une affiche GraphisteGPT pour l'utilisateur connecté et renvoie immédiatement un job_id. Utiliser get_job_status ensuite pour récupérer l'image finale.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "Contenu et brief complet de l'affiche (texte exact à reproduire, ambiance, style)."
+            },
+            "domain": {
+              "type": "string",
+              "description": "Domaine : restaurant, mode, immobilier, event, formation, eglise…"
+            },
+            "aspectRatio": {
+              "type": "string",
+              "description": "Format, ex : 9:16, 1:1, 16:9, 3:4. Défaut 9:16."
+            },
+            "resolution": {
+              "type": "string",
+              "description": "1K, 2K ou 4K. Défaut 2K."
+            },
+            "quality": {
+              "type": "string",
+              "enum": [
+                "fast",
+                "premium"
+              ],
+              "description": "fast (rapide) ou premium (qualité maximale)."
+            },
+            "referenceImage": {
+              "type": "string",
+              "description": "URL d'une affiche de référence à cloner ou dont s'inspirer."
+            },
+            "templateId": {
+              "type": "string",
+              "description": "Identifiant d'un modèle du catalogue (voir search_templates)."
+            },
+            "locale": {
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "description": "Langue des textes rédigés par l'IA. Défaut fr."
+            }
+          },
+          "required": [
+            "prompt"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_job_status",
+        "title": "Statut d'une génération",
+        "description": "Renvoie l'état d'un job de génération d'affiche (pending, processing, completed avec l'URL de l'image, ou failed avec le message d'erreur).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant du job renvoyé par generate_poster ou modify_poster."
+            }
+          },
+          "required": [
+            "job_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "modify_poster",
+        "title": "Modifier une affiche",
+        "description": "Relance une affiche déjà générée en appliquant une modification précise (couleur, texte, mise en page). Gratuit, sans débit de crédits. Renvoie un job_id à suivre avec get_job_status.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "poster_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'affiche existante à modifier (voir list_my_posters)."
+            },
+            "modification": {
+              "type": "string",
+              "description": "Modification demandée, en une ou deux phrases précises."
+            }
+          },
+          "required": [
+            "poster_id",
+            "modification"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "rate_poster",
+        "title": "Noter une affiche",
+        "description": "Enregistre une note (1 à 5) et un commentaire sur une affiche générée par l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "poster_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'affiche."
+            },
+            "rating": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Note de 1 à 5."
+            },
+            "comment": {
+              "type": "string",
+              "description": "Commentaire libre sur le résultat."
+            }
+          },
+          "required": [
+            "poster_id",
+            "rating"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "admin_list_generation_requests",
+        "title": "Journal des générations (admin)",
+        "description": "Réservé aux administrateurs. Liste les demandes de génération d'affiches, y compris celles des visiteurs non inscrits, avec leur statut et leurs erreurs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Nombre max de lignes (défaut 50)."
+            },
+            "status": {
+              "type": "string",
+              "description": "Filtrer par statut : received, processing, completed, failed."
+            },
+            "only_failed": {
+              "type": "boolean",
+              "description": "Ne renvoyer que les demandes en échec."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "admin_generation_stats",
+        "title": "Statistiques de génération (admin)",
+        "description": "Réservé aux administrateurs. Calcule le volume, le taux d'échec et la répartition par domaine des générations récentes.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "hours": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 720,
+              "description": "Fenêtre d'analyse en heures (défaut 24)."
+            },
+            "sample": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 1000,
+              "description": "Nombre max de demandes analysées (défaut 500)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "admin_list_users",
+        "title": "Utilisateurs (admin)",
+        "description": "Réservé aux administrateurs. Liste les utilisateurs GraphisteGPT avec leur plan, leurs crédits restants et leur statut d'abonnement.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "description": "Filtre libre sur le nom, l'email ou l'entreprise."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Nombre max de résultats (défaut 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "admin_moderate_showcase",
+        "title": "Modérer la vitrine (admin)",
+        "description": "Réservé aux administrateurs. Ajoute ou retire une affiche générée de la vitrine publique de GraphisteGPT.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "poster_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'affiche générée."
+            },
+            "publish": {
+              "type": "boolean",
+              "description": "true pour publier dans la vitrine, false pour la retirer."
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999,
+              "description": "Position d'affichage dans la vitrine."
+            }
+          },
+          "required": [
+            "poster_id",
+            "publish"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "admin_set_subscription",
+        "title": "Attribuer un abonnement (admin)",
+        "description": "Réservé aux administrateurs. Active ou prolonge un abonnement pour un utilisateur (offert ou manuel), avec un plan, des crédits et une durée en mois.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'utilisateur bénéficiaire (voir admin_list_users)."
+            },
+            "plan_slug": {
+              "type": "string",
+              "description": "Slug du plan : free, essentiel, illimite…"
+            },
+            "credits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "description": "Crédits à créditer sur la période."
+            },
+            "duration_months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 36,
+              "description": "Durée de l'abonnement en mois."
+            }
+          },
+          "required": [
+            "user_id",
+            "plan_slug",
+            "credits",
+            "duration_months"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
