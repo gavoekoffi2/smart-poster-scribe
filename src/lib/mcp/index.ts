@@ -1,4 +1,5 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import { withMcpGuard } from "./tools/_shared";
 import getMyCreditsTool from "./tools/get-my-credits";
 import listMyPostersTool from "./tools/list-my-posters";
 import getPosterTool from "./tools/get-poster";
@@ -41,6 +42,6 @@ export default defineMcp({
     adminListUsersTool,
     adminModerateShowcaseTool,
     adminSetSubscriptionTool,
-  ],
+  ].map(withMcpGuard),
 });
 

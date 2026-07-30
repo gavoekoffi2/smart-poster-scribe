@@ -49,3 +49,39 @@ export async function callGenerateImage(ctx: ToolContext, payload: Record<string
   }
   return { ok: res.ok, status: res.status, body };
 }
+
+/**
+ * Vérifie la configuration MCP définie par l'administrateur (page /admin/mcp)
+ * avant d'exécuter un outil : coupe-circuit global, liste d'agents autorisés,
+ * outils désactivés et accès aux outils d'administration.
+ */
+export async function checkMcpAccess(ctx: ToolContext, toolName: string) {
+  try {
+    const { data, error } = await userClient(ctx).rpc("mcp_check_access", {
+      _user_id: ctx.getUserId(),
+      _tool: toolName,
+    });
+    if (error) return { allowed: true as const, reason: null };
+    const result = data as { allowed?: boolean; reason?: string | null } | null;
+    if (result && result.allowed === false) {
+      return { allowed: false as const, reason: result.reason ?? "Accès MCP refusé par l'administrateur." };
+    }
+    return { allowed: true as const, reason: null };
+  } catch {
+    return { allowed: true as const, reason: null };
+  }
+}
+
+/** Enveloppe un outil pour appliquer la configuration MCP de l'administrateur. */
+export function withMcpGuard<T extends { name: string; handler: (...args: any[]) => any }>(tool: T): T {
+  const original = tool.handler;
+  return {
+    ...tool,
+    handler: async (input: any, ctx: ToolContext) => {
+      if (!ctx.isAuthenticated()) return notAuth();
+      const gate = await checkMcpAccess(ctx, tool.name);
+      if (!gate.allowed) return fail(gate.reason);
+      return original(input, ctx);
+    },
+  } as T;
+}

@@ -24,6 +24,7 @@ import {
   Wallet,
   Settings,
   Tag,
+  Plug,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +47,7 @@ const navItems = [
   { id: "roles", label: "Rôles", icon: Shield, path: "/admin/roles", permission: "manage_admins" },
   { id: "contact", label: "Messages", icon: Mail, path: "/admin/contact", permission: "view_dashboard" },
   { id: "payouts", label: "Paiements", icon: Wallet, path: "/admin/payouts", permission: "manage_users" },
+  { id: "mcp", label: "Agents (MCP)", icon: Plug, path: "/admin/mcp", permission: "manage_admins" },
   { id: "settings", label: "Paramètres", icon: Settings, path: "/admin/settings", permission: "manage_admins" },
 ];
 

@@ -5,136 +5,10 @@
 // src/lib/mcp/index.ts
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.22.1";
 
-// src/lib/mcp/tools/get-my-credits.ts
-import { createClient } from "npm:@supabase/supabase-js@^2.89.0";
-import { defineTool } from "npm:@lovable.dev/mcp-js@0.22.1";
-var get_my_credits_default = defineTool({
-  name: "get_my_credits",
-  title: "Obtenir mes cr\xE9dits",
-  description: "Renvoie le solde de cr\xE9dits et le plan d'abonnement de l'utilisateur GraphisteGPT connect\xE9.",
-  inputSchema: {},
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async (_input, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
-    }
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-    const { data, error } = await supabase.from("user_subscriptions").select("plan_id, status, credits_remaining, free_generations_used, current_period_end").eq("user_id", ctx.getUserId()).maybeSingle();
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const summary = data ? `Plan : ${data.plan_id} (${data.status}) \u2014 Cr\xE9dits restants : ${data.credits_remaining}. P\xE9riode jusqu'au ${data.current_period_end}.` : "Aucun abonnement actif \u2014 l'utilisateur est sur l'offre d'essai gratuite.";
-    return {
-      content: [{ type: "text", text: summary }],
-      structuredContent: { subscription: data }
-    };
-  }
-});
-
-// src/lib/mcp/tools/list-my-posters.ts
-import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.89.0";
-import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.22.1";
-import { z } from "npm:zod@^3.25.76";
-var list_my_posters_default = defineTool2({
-  name: "list_my_posters",
-  title: "Lister mes affiches",
-  description: "Liste les affiches g\xE9n\xE9r\xE9es par l'utilisateur GraphisteGPT connect\xE9, les plus r\xE9centes d'abord.",
-  inputSchema: {
-    limit: z.number().int().min(1).max(50).optional().describe("Nombre max d'affiches \xE0 renvoyer (d\xE9faut 10)."),
-    domain: z.string().optional().describe("Filtrer par domaine (ex : restaurant, mode, immobilier).")
-  },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ limit, domain }, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
-    }
-    const supabase = createClient2(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-    let q = supabase.from("generated_images").select("id, prompt, domain, aspect_ratio, resolution, image_url, created_at").eq("user_id", ctx.getUserId()).order("created_at", { ascending: false }).limit(limit ?? 10);
-    if (domain) q = q.eq("domain", domain);
-    const { data, error } = await q;
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const text = (data ?? []).length ? (data ?? []).map((p) => `\u2022 ${p.created_at} \u2014 ${p.domain ?? "n/a"} \u2014 ${p.aspect_ratio} \u2014 ${p.image_url}`).join("\n") : "Aucune affiche g\xE9n\xE9r\xE9e pour cet utilisateur.";
-    return {
-      content: [{ type: "text", text }],
-      structuredContent: { posters: data ?? [] }
-    };
-  }
-});
-
-// src/lib/mcp/tools/get-poster.ts
-import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.89.0";
-import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.22.1";
-import { z as z2 } from "npm:zod@^3.25.76";
-var get_poster_default = defineTool3({
-  name: "get_poster",
-  title: "D\xE9tails d'une affiche",
-  description: "Renvoie les d\xE9tails complets d'une affiche g\xE9n\xE9r\xE9e appartenant \xE0 l'utilisateur connect\xE9.",
-  inputSchema: {
-    id: z2.string().uuid().describe("Identifiant de l'affiche.")
-  },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ id }, ctx) => {
-    if (!ctx.isAuthenticated()) {
-      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
-    }
-    const supabase = createClient3(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    });
-    const { data, error } = await supabase.from("generated_images").select("*").eq("id", id).eq("user_id", ctx.getUserId()).maybeSingle();
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    if (!data) return { content: [{ type: "text", text: "Affiche introuvable." }], isError: true };
-    return {
-      content: [{ type: "text", text: `Affiche ${data.id} \u2014 ${data.image_url}
-Prompt : ${data.prompt}` }],
-      structuredContent: { poster: data }
-    };
-  }
-});
-
-// src/lib/mcp/tools/search-templates.ts
-import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.89.0";
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.22.1";
-import { z as z3 } from "npm:zod@^3.25.76";
-var search_templates_default = defineTool4({
-  name: "search_templates",
-  title: "Rechercher des mod\xE8les",
-  description: "Recherche dans le catalogue public de mod\xE8les d'affiches GraphisteGPT par domaine ou mot-cl\xE9.",
-  inputSchema: {
-    domain: z3.string().optional().describe("Domaine (restaurant, mode, immobilier, \xE9v\xE9nement\u2026)."),
-    query: z3.string().optional().describe("Mot-cl\xE9 libre \xE0 rechercher dans les tags ou la description."),
-    limit: z3.number().int().min(1).max(50).optional().describe("Nombre max de r\xE9sultats (d\xE9faut 12).")
-  },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ domain, query, limit }, ctx) => {
-    const supabase = ctx.isAuthenticated() ? createClient4(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }) : createClient4(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY);
-    let q = supabase.from("reference_templates").select("id, domain, design_category, description, image_url, tags").eq("is_active", true).limit(limit ?? 12);
-    if (domain) q = q.eq("domain", domain);
-    if (query) q = q.or(`description.ilike.%${query}%,tags.cs.{${query}}`);
-    const { data, error } = await q;
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const text = (data ?? []).length ? (data ?? []).map((t) => `\u2022 [${t.domain}/${t.design_category}] ${t.description ?? ""} \u2014 ${t.image_url}`).join("\n") : "Aucun mod\xE8le trouv\xE9.";
-    return {
-      content: [{ type: "text", text }],
-      structuredContent: { templates: data ?? [] }
-    };
-  }
-});
-
-// src/lib/mcp/tools/get-my-account.ts
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.22.1";
-
 // src/lib/mcp/tools/_shared.ts
-import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.89.0";
+import { createClient } from "npm:@supabase/supabase-js@^2.89.0";
 function userClient(ctx) {
-  return createClient5(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
     auth: { persistSession: false, autoRefreshToken: false }
   });
@@ -174,8 +48,160 @@ async function callGenerateImage(ctx, payload) {
   }
   return { ok: res.ok, status: res.status, body };
 }
+async function checkMcpAccess(ctx, toolName) {
+  try {
+    const { data, error } = await userClient(ctx).rpc("mcp_check_access", {
+      _user_id: ctx.getUserId(),
+      _tool: toolName
+    });
+    if (error) return { allowed: true, reason: null };
+    const result = data;
+    if (result && result.allowed === false) {
+      return { allowed: false, reason: result.reason ?? "Acc\xE8s MCP refus\xE9 par l'administrateur." };
+    }
+    return { allowed: true, reason: null };
+  } catch {
+    return { allowed: true, reason: null };
+  }
+}
+function withMcpGuard(tool) {
+  const original = tool.handler;
+  return {
+    ...tool,
+    handler: async (input, ctx) => {
+      if (!ctx.isAuthenticated()) return notAuth();
+      const gate = await checkMcpAccess(ctx, tool.name);
+      if (!gate.allowed) return fail(gate.reason);
+      return original(input, ctx);
+    }
+  };
+}
+
+// src/lib/mcp/tools/get-my-credits.ts
+import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.89.0";
+import { defineTool } from "npm:@lovable.dev/mcp-js@0.22.1";
+var get_my_credits_default = defineTool({
+  name: "get_my_credits",
+  title: "Obtenir mes cr\xE9dits",
+  description: "Renvoie le solde de cr\xE9dits et le plan d'abonnement de l'utilisateur GraphisteGPT connect\xE9.",
+  inputSchema: {},
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async (_input, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
+    }
+    const supabase = createClient2(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    const { data, error } = await supabase.from("user_subscriptions").select("plan_id, status, credits_remaining, free_generations_used, current_period_end").eq("user_id", ctx.getUserId()).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const summary = data ? `Plan : ${data.plan_id} (${data.status}) \u2014 Cr\xE9dits restants : ${data.credits_remaining}. P\xE9riode jusqu'au ${data.current_period_end}.` : "Aucun abonnement actif \u2014 l'utilisateur est sur l'offre d'essai gratuite.";
+    return {
+      content: [{ type: "text", text: summary }],
+      structuredContent: { subscription: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-my-posters.ts
+import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.89.0";
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z } from "npm:zod@^3.25.76";
+var list_my_posters_default = defineTool2({
+  name: "list_my_posters",
+  title: "Lister mes affiches",
+  description: "Liste les affiches g\xE9n\xE9r\xE9es par l'utilisateur GraphisteGPT connect\xE9, les plus r\xE9centes d'abord.",
+  inputSchema: {
+    limit: z.number().int().min(1).max(50).optional().describe("Nombre max d'affiches \xE0 renvoyer (d\xE9faut 10)."),
+    domain: z.string().optional().describe("Filtrer par domaine (ex : restaurant, mode, immobilier).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit, domain }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
+    }
+    const supabase = createClient3(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    let q = supabase.from("generated_images").select("id, prompt, domain, aspect_ratio, resolution, image_url, created_at").eq("user_id", ctx.getUserId()).order("created_at", { ascending: false }).limit(limit ?? 10);
+    if (domain) q = q.eq("domain", domain);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const text = (data ?? []).length ? (data ?? []).map((p) => `\u2022 ${p.created_at} \u2014 ${p.domain ?? "n/a"} \u2014 ${p.aspect_ratio} \u2014 ${p.image_url}`).join("\n") : "Aucune affiche g\xE9n\xE9r\xE9e pour cet utilisateur.";
+    return {
+      content: [{ type: "text", text }],
+      structuredContent: { posters: data ?? [] }
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-poster.ts
+import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.89.0";
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z2 } from "npm:zod@^3.25.76";
+var get_poster_default = defineTool3({
+  name: "get_poster",
+  title: "D\xE9tails d'une affiche",
+  description: "Renvoie les d\xE9tails complets d'une affiche g\xE9n\xE9r\xE9e appartenant \xE0 l'utilisateur connect\xE9.",
+  inputSchema: {
+    id: z2.string().uuid().describe("Identifiant de l'affiche.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ id }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Non authentifi\xE9." }], isError: true };
+    }
+    const supabase = createClient4(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    const { data, error } = await supabase.from("generated_images").select("*").eq("id", id).eq("user_id", ctx.getUserId()).maybeSingle();
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    if (!data) return { content: [{ type: "text", text: "Affiche introuvable." }], isError: true };
+    return {
+      content: [{ type: "text", text: `Affiche ${data.id} \u2014 ${data.image_url}
+Prompt : ${data.prompt}` }],
+      structuredContent: { poster: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/search-templates.ts
+import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.89.0";
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.22.1";
+import { z as z3 } from "npm:zod@^3.25.76";
+var search_templates_default = defineTool4({
+  name: "search_templates",
+  title: "Rechercher des mod\xE8les",
+  description: "Recherche dans le catalogue public de mod\xE8les d'affiches GraphisteGPT par domaine ou mot-cl\xE9.",
+  inputSchema: {
+    domain: z3.string().optional().describe("Domaine (restaurant, mode, immobilier, \xE9v\xE9nement\u2026)."),
+    query: z3.string().optional().describe("Mot-cl\xE9 libre \xE0 rechercher dans les tags ou la description."),
+    limit: z3.number().int().min(1).max(50).optional().describe("Nombre max de r\xE9sultats (d\xE9faut 12).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ domain, query, limit }, ctx) => {
+    const supabase = ctx.isAuthenticated() ? createClient5(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    }) : createClient5(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY);
+    let q = supabase.from("reference_templates").select("id, domain, design_category, description, image_url, tags").eq("is_active", true).limit(limit ?? 12);
+    if (domain) q = q.eq("domain", domain);
+    if (query) q = q.or(`description.ilike.%${query}%,tags.cs.{${query}}`);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const text = (data ?? []).length ? (data ?? []).map((t) => `\u2022 [${t.domain}/${t.design_category}] ${t.description ?? ""} \u2014 ${t.image_url}`).join("\n") : "Aucun mod\xE8le trouv\xE9.";
+    return {
+      content: [{ type: "text", text }],
+      structuredContent: { templates: data ?? [] }
+    };
+  }
+});
 
 // src/lib/mcp/tools/get-my-account.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.22.1";
 var get_my_account_default = defineTool5({
   name: "get_my_account",
   title: "Mon compte",
@@ -543,7 +569,7 @@ var mcp_default = defineMcp({
     admin_list_users_default,
     admin_moderate_showcase_default,
     admin_set_subscription_default
-  ]
+  ].map(withMcpGuard)
 });
 
 // lovable-mcp-supabase-entry.ts

@@ -36,6 +36,7 @@ const AdminContact = lazy(() => import("./pages/AdminContact"));
 const AdminPayouts = lazy(() => import("./pages/AdminPayouts"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const AdminPromoCodes = lazy(() => import("./pages/AdminPromoCodes"));
+const AdminMcp = lazy(() => import("./pages/AdminMcp"));
 // Lazy load designer pages
 const DesignerRegistration = lazy(() => import("./pages/DesignerRegistration"));
 const DesignerDashboard = lazy(() => import("./pages/DesignerDashboard"));
@@ -76,6 +77,7 @@ const App = () => (
           <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/generations" element={<AdminRoute><AdminGenerations /></AdminRoute>} />
+          <Route path="/admin/mcp" element={<AdminRoute><AdminMcp /></AdminRoute>} />
           <Route path="/admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
           <Route path="/admin/designers" element={<AdminRoute><AdminDesigners /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
