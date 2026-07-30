@@ -588,6 +588,54 @@ export type Database = {
           },
         ]
       }
+      generation_requests: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string
+          domain: string | null
+          error_message: string | null
+          id: string
+          is_anonymous: boolean
+          is_modification: boolean
+          job_id: string | null
+          prompt: string | null
+          resolution: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string
+          domain?: string | null
+          error_message?: string | null
+          id?: string
+          is_anonymous?: boolean
+          is_modification?: boolean
+          job_id?: string | null
+          prompt?: string | null
+          resolution?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string
+          domain?: string | null
+          error_message?: string | null
+          id?: string
+          is_anonymous?: boolean
+          is_modification?: boolean
+          job_id?: string | null
+          prompt?: string | null
+          resolution?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       image_jobs: {
         Row: {
           created_at: string
@@ -1716,6 +1764,27 @@ export type Database = {
           processed_at: string
           requested_at: string
           status: string
+        }[]
+      }
+      admin_list_generation_requests: {
+        Args: { p_admin_id: string; p_limit?: number }
+        Returns: {
+          aspect_ratio: string
+          created_at: string
+          domain: string
+          error_message: string
+          id: string
+          is_anonymous: boolean
+          is_modification: boolean
+          job_id: string
+          job_status: string
+          prompt: string
+          resolution: string
+          result_url: string
+          status: string
+          user_email: string
+          user_id: string
+          user_name: string
         }[]
       }
       admin_list_promo_redemptions: {

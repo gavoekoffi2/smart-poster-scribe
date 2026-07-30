@@ -34,6 +34,7 @@ interface AdminLayoutProps {
 
 const navItems = [
   { id: "dashboard", label: "Vue d'ensemble", icon: LayoutDashboard, path: "/admin/dashboard", permission: "view_dashboard" },
+  { id: "generations", label: "Générations", icon: Sparkles, path: "/admin/generations", permission: "view_dashboard" },
   { id: "templates", label: "Templates", icon: Image, path: "/admin/templates", permission: "manage_templates" },
   { id: "marquee", label: "Marquee", icon: Palette, path: "/admin/marquee", permission: "manage_templates" },
   { id: "showcase", label: "Showcase", icon: Palette, path: "/admin/showcase", permission: "manage_templates" },

@@ -1267,6 +1267,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestLogId: string | null = null;
+  const adminSupabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
   try {
     const KIE_API_KEY = Deno.env.get("KIE_AI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -1286,6 +1292,7 @@ serve(async (req) => {
 
     // ===== AUTHENTIFICATION UTILISATEUR =====
     let userId: string | null = null;
+    let isAnonymousUser = false;
     const authHeader = req.headers.get("authorization");
     const internalUserId = req.headers.get("x-internal-user-id");
 
@@ -1308,7 +1315,8 @@ serve(async (req) => {
 
         if (!authError && user) {
           userId = user.id;
-          console.log("Authenticated user:", userId);
+          isAnonymousUser = (user as any).is_anonymous === true || user.app_metadata?.provider === "anonymous";
+          console.log("Authenticated user:", userId, "anonymous:", isAnonymousUser);
         } else {
           console.log("Auth error or no user:", authError?.message);
         }
@@ -1346,6 +1354,30 @@ serve(async (req) => {
     // Reliability mode still starts with GPT Image 2, but allows bounded
     // fallbacks before the Edge execution window can terminate the worker.
     const quality: "fast" | "premium" = (apiStrictPremium || apiReliabilityMode) ? "premium" : (rawQuality === "premium" ? "premium" : "fast");
+
+    // ===== JOURNALISATION DE LA DEMANDE (visible dans le dashboard admin) =====
+    // Enregistré AVANT toute vérification de crédits pour tracer aussi les demandes
+    // des visiteurs non inscrits et les tentatives qui échouent.
+    try {
+      const { data: logRow } = await supabase
+        .from("generation_requests")
+        .insert({
+          user_id: userId,
+          is_anonymous: isAnonymousUser || !userId,
+          prompt: typeof prompt === "string" ? Array.from(prompt).slice(0, 4000).join("") : null,
+          domain: typeof domain === "string" ? domain.slice(0, 100) : null,
+          aspect_ratio: typeof aspectRatio === "string" ? aspectRatio : null,
+          resolution: typeof resolution === "string" ? resolution : null,
+          is_modification: isModification === true,
+          status: "received",
+        })
+        .select("id")
+        .single();
+      requestLogId = logRow?.id ?? null;
+    } catch (logErr) {
+      console.warn("generation_requests log failed:", logErr);
+    }
+
 
     let userProvidedReferenceImage = typeof rawReferenceImage === "string" && rawReferenceImage.trim().length > 0;
     let referenceImage = rawReferenceImage as string | undefined;
@@ -1559,6 +1591,12 @@ serve(async (req) => {
     }
     const jobId = jobRow.id as string;
     console.log("📋 Job created:", jobId);
+    if (requestLogId) {
+      await adminSupabase
+        .from("generation_requests")
+        .update({ job_id: jobId, status: "processing" })
+        .eq("id", requestLogId);
+    }
 
     const backgroundWork = async () => {
       try {
@@ -2209,6 +2247,17 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Generate image error:", error);
+    if (requestLogId) {
+      try {
+        await adminSupabase
+          .from("generation_requests")
+          .update({
+            status: "failed",
+            error_message: error instanceof Error ? error.message.slice(0, 500) : "Erreur inconnue",
+          })
+          .eq("id", requestLogId);
+      } catch (_e) { /* noop */ }
+    }
     return new Response(
       JSON.stringify({
         success: false,
