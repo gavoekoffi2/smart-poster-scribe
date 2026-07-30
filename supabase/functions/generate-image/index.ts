@@ -1591,6 +1591,12 @@ serve(async (req) => {
     }
     const jobId = jobRow.id as string;
     console.log("📋 Job created:", jobId);
+    if (requestLogId) {
+      await adminSupabase
+        .from("generation_requests")
+        .update({ job_id: jobId, status: "processing" })
+        .eq("id", requestLogId);
+    }
 
     const backgroundWork = async () => {
       try {
