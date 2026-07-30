@@ -2247,6 +2247,17 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Generate image error:", error);
+    if (requestLogId) {
+      try {
+        await adminSupabase
+          .from("generation_requests")
+          .update({
+            status: "failed",
+            error_message: error instanceof Error ? error.message.slice(0, 500) : "Erreur inconnue",
+          })
+          .eq("id", requestLogId);
+      } catch (_e) { /* noop */ }
+    }
     return new Response(
       JSON.stringify({
         success: false,
