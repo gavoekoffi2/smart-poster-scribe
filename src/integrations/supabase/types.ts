@@ -1906,6 +1906,10 @@ export type Database = {
           score: number
         }[]
       }
+      mcp_check_access: {
+        Args: { _tool: string; _user_id: string }
+        Returns: Json
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
