@@ -75,6 +75,7 @@ const App = () => (
           {/* Admin routes with guard */}
           <Route path="/admin/upload" element={<AdminRoute><AdminUploadPage /></AdminRoute>} />
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/generations" element={<AdminRoute><AdminGenerations /></AdminRoute>} />
           <Route path="/admin/templates" element={<AdminRoute><AdminTemplates /></AdminRoute>} />
           <Route path="/admin/designers" element={<AdminRoute><AdminDesigners /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
