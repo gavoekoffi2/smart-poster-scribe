@@ -175,16 +175,42 @@ export function pickTypographyDuo(
 }
 
 /**
+ * Polices d'accent (3ᵉ famille) : utilisée UNIQUEMENT sur des micro-éléments
+ * (badge, date, prix, tag, mention "NEW", numéro) pour créer du contraste premium.
+ */
+export const ACCENT_FONTS: Array<{ name: string; treatment: string; pairsWith: string[] }> = [
+  { name: "Bebas Neue", treatment: "casse haute, tracking large, petits labels/dates", pairsWith: ["editorial-classic", "luxury-serif", "organic-warm", "lora-nunito", "libre-ibm"] },
+  { name: "JetBrains Mono", treatment: "majuscules, chiffres tabulaires, badges & prix", pairsWith: ["tech-geometric", "urbanist-epilogue", "outfit-figtree", "sora-manrope", "syne-jakarta"] },
+  { name: "Playfair Display Italic", treatment: "italique fine sur 1 à 3 mots d'accroche", pairsWith: ["bold-modern", "brutalist", "bebas-barlow", "tech-geometric", "urbanist-epilogue"] },
+  { name: "Cormorant Garamond Italic", treatment: "italique élégante sur une accroche courte", pairsWith: ["bold-modern", "outfit-figtree", "sora-manrope", "mono-technical"] },
+  { name: "Archivo Black", treatment: "bloc massif sur un chiffre ou un mot-clé unique", pairsWith: ["editorial-classic", "instrument-worksans", "dm-serif-fira", "lora-nunito"] },
+  { name: "Space Mono", treatment: "petites capitales espacées pour tags & coordonnées", pairsWith: ["retro-poster", "abril-cabin", "libre-ibm", "organic-warm"] },
+];
+
+export function pickAccentFont(duo: TypographyDuo) {
+  const matches = ACCENT_FONTS.filter((f) => f.pairsWith.includes(duo.id));
+  const pool = matches.length > 0 ? matches : ACCENT_FONTS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
  * Construit le brief typographique injecté dans le prompt de génération.
- * Compact (~350-450 chars) pour ne pas gonfler le prompt.
+ * Objectif : DIVERSITÉ typographique maîtrisée (2 familles principales + 1 accent)
+ * avec variation de graisses, casses et styles — rendu premium type studio.
  */
 export function buildTypographyBrief(duo: TypographyDuo): string {
+  const accent = pickAccentFont(duo);
   const lines: string[] = [];
-  lines.push(`═══ 🔤 DUO TYPOGRAPHIQUE IMPOSÉ (${duo.mood}) ═══`);
+  lines.push(`═══ 🔤 SYSTÈME TYPOGRAPHIQUE IMPOSÉ (${duo.mood}) ═══`);
   lines.push(`• TITRE / DISPLAY → "${duo.display.name}" — ${duo.display.treatment}.`);
-  lines.push(`• SOUS-TITRE / ACCROCHE → "${duo.display.name}" (variante Regular / italique) OU "${duo.body.name}" en Semibold.`);
+  lines.push(`• SOUS-TITRE / ACCROCHE → "${duo.display.name}" (variante Regular / Italique) OU "${duo.body.name}" en Semibold.`);
   lines.push(`• CORPS / INFOS → "${duo.body.name}" — ${duo.body.treatment}.`);
-  lines.push(`• RÈGLE : EXACTEMENT 2 familles typographiques sur toute l'affiche. AUCUNE 3ᵉ police, aucune substitution générique (pas d'Arial/Helvetica/Times par défaut).`);
-  lines.push(`• Hiérarchie : Titre ≥ 2.5× sous-titre ; sous-titre ≥ 1.6× corps.`);
+  lines.push(`• ACCENT (3ᵉ police, obligatoire mais LIMITÉE) → "${accent.name}" — ${accent.treatment}. À utiliser sur 1 à 3 micro-éléments MAXIMUM (date, prix, badge, numéro, tag, mention spéciale).`);
+  lines.push(`• DIVERSITÉ OBLIGATOIRE : l'affiche doit montrer au moins 5 traitements typographiques distincts (ex. Black casse haute / Regular casse mixte / Italique / Small caps trackées / Light grande taille). Une affiche mono-police ou mono-graisse est REFUSÉE.`);
+  lines.push(`• Varier délibérément : graisses (Light→Black), casses (UPPERCASE / Sentence case / small caps), tracking (serré sur titres, large sur labels), et 1 mot-clé mis en valeur (italique, couleur accent ou taille XXL).`);
+  lines.push(`• LIMITE STRICTE : 3 familles maximum au total (${duo.display.name}, ${duo.body.name}, ${accent.name}). Aucune 4ᵉ police, aucune substitution générique (pas d'Arial/Helvetica/Times par défaut).`);
+  lines.push(`• Hiérarchie : Titre ≥ 2.5× sous-titre ; sous-titre ≥ 1.6× corps ; accent ≤ 0.8× corps sauf si c'est un chiffre vedette.`);
+  lines.push(`• Cohérence : toutes les infos de même nature partagent EXACTEMENT le même style (pas de mélange aléatoire).`);
   return lines.join("\n");
 }
+
