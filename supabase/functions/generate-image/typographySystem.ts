@@ -214,3 +214,91 @@ export function buildTypographyBrief(duo: TypographyDuo): string {
   return lines.join("\n");
 }
 
+
+// ============================================================================
+// SAVOIR-FAIRE TYPOGRAPHIQUE DES GRAPHISTES PRO (inspiration métier)
+// ============================================================================
+// Techniques réellement utilisées par les directeurs artistiques / graphistes
+// affiche : la police n'est pas "posée", elle est COMPOSÉE (lockup).
+// ============================================================================
+
+export const DESIGNER_TYPE_TECHNIQUES: string[] = [
+  "LOCKUP EMPILÉ : titre découpé en 2-3 lignes de largeurs égales (justification optique), interlignage serré 0.85-0.95, chaque ligne dans une graisse/casse différente.",
+  "MOT-VEDETTE : un seul mot du titre en police display XXL, les autres mots réduits 40-60% en small caps trackées — contraste d'échelle brutal.",
+  "TYPE AS IMAGE : le titre déborde volontairement du cadre ou passe DERRIÈRE le sujet détouré (chevauchement texte/photo) pour créer de la profondeur.",
+  "BLOC MASSE : bloc typographique plein (fond coloré derrière le texte, padding serré) posé comme une étiquette graphique sur la composition.",
+  "BASELINE SHIFT : chiffres (date, prix, %) surdimensionnés et alignés en pied de mot, avec exposant en petite capitale mono.",
+  "FILET & LABELS : petites capitales trackées (+150) séparées par des filets fins 1px ou des points médians pour les infos secondaires.",
+  "COURBE / ARC : une ligne de texte (accroche ou nom d'événement) suit un arc ou une diagonale, le reste reste sur grille stricte.",
+  "CONTRE-FORME : titre en outline (contour uniquement) superposé à une version pleine décalée de quelques pixels — effet sérigraphie.",
+  "MIXED CASE DRAMATIQUE : Sentence case en display serif pour l'émotion + UPPERCASE condensé pour l'information factuelle.",
+  "ANCRAGE : bloc d'infos pratiques (date, lieu, contact) aligné à gauche en colonne étroite, corps 1/6 du titre, interligne 1.4.",
+];
+
+// Familles de polices réellement plébiscitées en studio, par registre
+export const DESIGNER_FONT_SHELF: Record<string, string[]> = {
+  grotesk: ["Helvetica Now Display", "Neue Haas Grotesk", "Inter Display", "Archivo", "Söhne"],
+  condensed: ["Bebas Neue", "Anton", "Oswald", "Barlow Condensed", "Druk-like condensed"],
+  serif_editorial: ["Playfair Display", "Instrument Serif", "DM Serif Display", "Canela-like", "Cormorant Garamond"],
+  geometric: ["Space Grotesk", "Poppins", "Outfit", "Syne", "Sora"],
+  mono: ["JetBrains Mono", "Space Mono", "IBM Plex Mono"],
+  script: ["Playfair Display Italic", "Cormorant Italic", "signature script (accroche uniquement)"],
+};
+
+function pickN<T>(arr: T[], n: number): T[] {
+  const copy = [...arr];
+  const out: T[] = [];
+  while (copy.length > 0 && out.length < n) {
+    out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+  }
+  return out;
+}
+
+/**
+ * Brief compact "savoir-faire graphiste" : 3 techniques de composition
+ * typographique tirées du répertoire pro, à appliquer sur l'affiche.
+ */
+export function buildTypeCraftBrief(): string {
+  const techniques = pickN(DESIGNER_TYPE_TECHNIQUES, 3);
+  const lines: string[] = [];
+  lines.push("═══ ✒️ SAVOIR-FAIRE TYPOGRAPHIQUE (COMPOSITION DE GRAPHISTE) ═══");
+  lines.push("Le texte doit être COMPOSÉ comme un lockup de studio, jamais simplement posé sur le fond.");
+  techniques.forEach((t) => lines.push(`• ${t}`));
+  lines.push("• Kerning optique sur le titre (pas d'espacement mécanique), veuves/orphelines interdites, césures maîtrisées.");
+  return lines.join("\n");
+}
+
+/**
+ * Déduit une direction typographique à partir des affiches réellement
+ * présentes en base (catégories de design + tags des templates du domaine).
+ */
+export function buildTemplateTypoInspiration(
+  templates: Array<{ design_category?: string | null; tags?: string[] | null; description?: string | null }>,
+): string {
+  if (!templates || templates.length === 0) return "";
+
+  const catCount = new Map<string, number>();
+  const tagCount = new Map<string, number>();
+  for (const t of templates) {
+    const c = (t.design_category || "").trim().toLowerCase();
+    if (c) catCount.set(c, (catCount.get(c) || 0) + 1);
+    for (const raw of t.tags || []) {
+      const tag = String(raw).trim().toLowerCase();
+      if (tag) tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+    }
+  }
+
+  const top = (m: Map<string, number>, n: number) =>
+    [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+
+  const cats = top(catCount, 3);
+  const tags = top(tagCount, 6);
+  if (cats.length === 0 && tags.length === 0) return "";
+
+  const lines: string[] = [];
+  lines.push("═══ 🗂️ RÉFÉRENCE STUDIO (affiches réelles de la base) ═══");
+  if (cats.length) lines.push(`Styles dominants de ce domaine : ${cats.join(" / ")}.`);
+  if (tags.length) lines.push(`Codes visuels récurrents : ${tags.join(", ")}.`);
+  lines.push("S'inspirer de ces codes pour le CHOIX et le TRAITEMENT des polices (échelle, graisse, casse, effets), sans copier le contenu de ces affiches.");
+  return lines.join("\n");
+}

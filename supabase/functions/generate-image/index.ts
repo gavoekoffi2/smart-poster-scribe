@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectDomainFromPrompt, buildExpertSkillsPrompt, getRandomTypographyStyle, getRandomLayoutStyle } from "./expertSkills.ts";
-import { pickTypographyDuo, buildTypographyBrief, type TypographyDuo } from "./typographySystem.ts";
+import { pickTypographyDuo, buildTypographyBrief, buildTypeCraftBrief, buildTemplateTypoInspiration, type TypographyDuo } from "./typographySystem.ts";
 // professionalStandards no longer injected into prompt to stay within API limits
 
 const corsHeaders = {
@@ -614,6 +614,7 @@ function buildProfessionalPrompt({
   modificationRequest = "",
   templateSourceDomain = null,
   typographyDuo = null,
+  templateTypoInspiration = null,
 }: {
   userPrompt: string;
   hasReferenceImage: boolean;
@@ -626,6 +627,7 @@ function buildProfessionalPrompt({
   modificationRequest?: string;
   templateSourceDomain?: string | null;
   typographyDuo?: TypographyDuo | null;
+  templateTypoInspiration?: string | null;
 }): string {
   const detectedDomain = detectDomainFromPrompt(userPrompt);
   console.log(`Expert skills: Detected domain "${detectedDomain}" for prompt (templateSourceDomain="${templateSourceDomain}")`);
@@ -949,6 +951,8 @@ function buildProfessionalPrompt({
   instructions.push("");
   if (typographyDuo) {
     instructions.push(buildTypographyBrief(typographyDuo));
+    instructions.push(buildTypeCraftBrief());
+    if (templateTypoInspiration) instructions.push(templateTypoInspiration);
     instructions.push("TITRE : traitement graphique spectaculaire (ombre portée épaisse, contour double, dégradé métallique, glow, relief 3D ou biseauté). Le titre est un élément graphique, pas un simple mot.");
     instructions.push("Taille titre 60-100pt, occupe 20-30% de la surface. Hiérarchie DRAMATIQUE: Titre ≥ 3× sous-titre.");
     instructions.push("INTERDITS: Arial, Helvetica brut, Times New Roman par défaut, plus de 2 familles typographiques, texte plat sans effet sur le titre.");
@@ -1965,6 +1969,7 @@ serve(async (req) => {
     
     // Sélection d'un duo typographique (rotation utilisateur)
     let typographyDuo: TypographyDuo | null = null;
+    let templateTypoInspiration: string | null = null;
     try {
       const detectedDomainForTypo = detectDomainFromPrompt(userPromptFull);
       let recentDuoIds: string[] = [];
@@ -1980,6 +1985,23 @@ serve(async (req) => {
           .filter((x: unknown): x is string => typeof x === "string");
       }
       typographyDuo = pickTypographyDuo(detectedDomainForTypo, recentDuoIds);
+
+      // Inspiration typographique tirée des affiches réelles de la base
+      try {
+        let tplQuery = supabase
+          .from("reference_templates")
+          .select("design_category, tags, description")
+          .eq("is_active", true)
+          .limit(25);
+        if (detectedDomainForTypo) tplQuery = tplQuery.eq("domain", detectedDomainForTypo);
+        const { data: typoTpls } = await tplQuery;
+        if (typoTpls && typoTpls.length > 0) {
+          templateTypoInspiration = buildTemplateTypoInspiration(typoTpls as any[]);
+          console.log(`🗂️ Typo inspiration from ${typoTpls.length} DB templates`);
+        }
+      } catch (e) {
+        console.warn("Template typo inspiration failed:", e);
+      }
       console.log(`🔤 Typography duo picked: ${typographyDuo.id} (${typographyDuo.mood})`);
       // Log dans le job pour alimenter la rotation future
       await supabase.from("image_jobs").update({
@@ -2001,6 +2023,7 @@ serve(async (req) => {
       modificationRequest: typeof rawModificationRequest === "string" ? rawModificationRequest : "",
       templateSourceDomain: pickedTemplateDomain,
       typographyDuo,
+      templateTypoInspiration,
     });
 
     console.log("Professional prompt built, length:", professionalPrompt.length);
