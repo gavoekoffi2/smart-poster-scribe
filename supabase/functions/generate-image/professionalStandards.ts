@@ -125,7 +125,10 @@ export function buildProfessionalStandardsPrompt(): string {
   lines.push("");
   
   // Typographie critique
-  lines.push("【TYPO】Max 2-3 polices | Titre 50-80pt | Corps ≥14pt | Ratio 2:1 niveaux");
+  lines.push("【TYPO】2 polices principales + 1 accent OBLIGATOIRE (jamais mono-police) | ≥5 traitements distincts");
+  lines.push("【ÉCHELLE】Titre = 12-18% hauteur affiche | Sous-titre 5-8% | Infos clés ≥3.5% en Bold | Mentions ≥2.2%");
+  lines.push("【ÉCHELLE】Textes GRANDS et IMPOSANTS, lisibles en miniature 200px | Moins de mots, plus gros — jamais l'inverse");
+  lines.push("【INTERDIT】Petits textes fins, paragraphes denses, listes de détails illisibles");
   lines.push("【TYPO】Ligne max 80 car | Corps aligné gauche | Majuscules +10% espacement");
   lines.push("【TYPO DESIGN】JAMAIS de texte plat/basique | Titres avec effets 3D, ombres épaisses, contours, dégradés, glow ou metallic | Texte = élément graphique designé");
   lines.push("【LAYOUT PRO】Courbes, vagues, arcs, formes organiques pour structurer | Bandeaux obliques, rubans 3D | Séparateurs décoratifs | Superposition de couches avec profondeur");
