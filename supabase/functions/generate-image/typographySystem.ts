@@ -210,6 +210,14 @@ export function buildTypographyBrief(duo: TypographyDuo): string {
   lines.push(`• Varier délibérément : graisses (Light→Black), casses (UPPERCASE / Sentence case / small caps), tracking (serré sur titres, large sur labels), et 1 mot-clé mis en valeur (italique, couleur accent ou taille XXL).`);
   lines.push(`• LIMITE STRICTE : 3 familles maximum au total (${duo.display.name}, ${duo.body.name}, ${accent.name}). Aucune 4ᵉ police, aucune substitution générique (pas d'Arial/Helvetica/Times par défaut).`);
   lines.push(`• Hiérarchie : Titre ≥ 2.5× sous-titre ; sous-titre ≥ 1.6× corps ; accent ≤ 0.8× corps sauf si c'est un chiffre vedette.`);
+  lines.push(`═══ 📏 ÉCHELLE DE TEXTE — LISIBILITÉ IMPOSANTE (RÈGLE CRITIQUE) ═══`);
+  lines.push(`• TITRE PRINCIPAL : hauteur de casse = 12-18% de la hauteur de l'affiche, largeur du lockup = 70-90% de la largeur utile. Il doit être lisible sur une miniature de 200px.`);
+  lines.push(`• SOUS-TITRE / ACCROCHE : 5-8% de la hauteur de l'affiche.`);
+  lines.push(`• INFOS CLÉS (date, heure, lieu, prix, téléphone) : minimum 3.5% de la hauteur de l'affiche, en graisse Semibold/Bold — JAMAIS en texte fin minuscule.`);
+  lines.push(`• TEXTE LE PLUS PETIT DE L'AFFICHE (mentions, site web, hashtags) : jamais en dessous de 2.2% de la hauteur de l'affiche.`);
+  lines.push(`• INTERDIT : blocs de texte minuscules, paragraphes denses, listes de détails en corps réduit illisibles. Résumer en 3-6 lignes courtes et grandes plutôt que 12 lignes petites.`);
+  lines.push(`• Si le contenu est trop long pour rester grand : réduire le nombre de mots, agrandir la police — jamais l'inverse.`);
+  lines.push(`• Chaque texte doit rester lisible une fois l'affiche affichée en petit format sur smartphone (test miniature obligatoire).`);
   lines.push(`• Cohérence : toutes les infos de même nature partagent EXACTEMENT le même style (pas de mélange aléatoire).`);
   return lines.join("\n");
 }
