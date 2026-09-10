@@ -310,11 +310,13 @@ async function generateWithOpenRouter(
   imageInputs: string[],
   quality: "fast" | "premium" = "fast",
   timeoutMs = OPENROUTER_PREMIUM_TIMEOUT_MS,
+  task: "generate" | "edit" = "generate",
 ): Promise<string> {
+  // GPT Image 2.5 : "sunburst" = génération pure, "flare" = édition/modification
   const model = quality === "premium"
-    ? "openai/gpt-5.4-image-2"
+    ? (task === "edit" ? "openai/gpt-image-2.5-flare" : "openai/gpt-image-2.5-sunburst")
     : "google/gemini-3-pro-image-preview";
-  console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality})...`);
+  console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality}, task=${task})...`);
 
   const content: any[] = [{ type: "text", text: prompt }];
   const inlineInputs = await prepareInlineImageInputs(imageInputs);
