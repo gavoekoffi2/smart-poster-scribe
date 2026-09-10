@@ -2103,6 +2103,7 @@ serve(async (req) => {
           imageInputs,
           "premium",
           OPENROUTER_PREMIUM_TIMEOUT_MS,
+          orTask,
         );
       } catch (premiumError) {
         console.warn("⚠️ [Reliability] Premium attempt failed:", getErrorMessage(premiumError));
