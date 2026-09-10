@@ -310,11 +310,13 @@ async function generateWithOpenRouter(
   imageInputs: string[],
   quality: "fast" | "premium" = "fast",
   timeoutMs = OPENROUTER_PREMIUM_TIMEOUT_MS,
+  task: "generate" | "edit" = "generate",
 ): Promise<string> {
+  // GPT Image 2.5 : "sunburst" = génération pure, "flare" = édition/modification
   const model = quality === "premium"
-    ? "openai/gpt-5.4-image-2"
+    ? (task === "edit" ? "openai/gpt-image-2.5-flare" : "openai/gpt-image-2.5-sunburst")
     : "google/gemini-3-pro-image-preview";
-  console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality})...`);
+  console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality}, task=${task})...`);
 
   const content: any[] = [{ type: "text", text: prompt }];
   const inlineInputs = await prepareInlineImageInputs(imageInputs);
@@ -2064,6 +2066,9 @@ serve(async (req) => {
     
     let generationError: unknown = null;
 
+    // Choix du modèle GPT Image 2.5 : édition pour les modifications, sinon génération
+    const orTask: "generate" | "edit" = isModification ? "edit" : "generate";
+
     // ===== GÉNÉRATION PRINCIPALE: OpenRouter (Nano Banana Pro) =====
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
@@ -2098,6 +2103,7 @@ serve(async (req) => {
           imageInputs,
           "premium",
           OPENROUTER_PREMIUM_TIMEOUT_MS,
+          orTask,
         );
       } catch (premiumError) {
         console.warn("⚠️ [Reliability] Premium attempt failed:", getErrorMessage(premiumError));
@@ -2124,7 +2130,7 @@ serve(async (req) => {
         try {
           console.log("🔒 [API strict] Génération avec OpenRouter GPT Image 2 uniquement (aucun fallback)...");
           taskId = `openrouter-${crypto.randomUUID()}`;
-          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium");
+          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium", OPENROUTER_PREMIUM_TIMEOUT_MS, orTask);
           console.log("✅ OpenRouter (gpt-image-2) succeeded — strict API mode.");
         } catch (orError) {
           console.warn("⚠️ OpenRouter (gpt-image-2) failed in strict API mode:", getErrorMessage(orError));
@@ -2137,7 +2143,7 @@ serve(async (req) => {
       try {
         console.log("🟣 Tentative de génération avec OpenRouter Nano Banana Pro (PRIMARY)...");
         taskId = `openrouter-${crypto.randomUUID()}`;
-        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, quality);
+        resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, quality, OPENROUTER_PREMIUM_TIMEOUT_MS, orTask);
         console.log("✅ OpenRouter generation succeeded.");
       } catch (orError) {
         console.warn("⚠️ OpenRouter failed:", getErrorMessage(orError));
@@ -2214,8 +2220,9 @@ serve(async (req) => {
             : tid.startsWith("lovable-")
               ? "lovable"
               : "kie";
+        const premiumModelId = orTask === "edit" ? "gpt-image-2.5-flare" : "gpt-image-2.5-sunburst";
         const modelUsed = tid.startsWith("openrouter-")
-          ? (quality === "premium" ? "gpt-image-2" : "gemini-3-pro-image-preview")
+          ? (quality === "premium" ? premiumModelId : "gemini-3-pro-image-preview")
           : tid.startsWith("gemini-")
             ? "gemini-2.5-flash-image"
             : tid.startsWith("lovable-")
@@ -2238,7 +2245,7 @@ serve(async (req) => {
         const { error: finalizeError } = await supabase.rpc('fail_image_job_and_refund', {
           p_job_id: jobId,
           p_error_message: msg.slice(0, 1000),
-          p_model_used: apiStrictPremium ? 'gpt-image-2' : null,
+          p_model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
           p_provider_used: apiStrictPremium ? 'openai' : null,
         });
         if (finalizeError) {
@@ -2248,7 +2255,7 @@ serve(async (req) => {
           await supabase.from('image_jobs').update({
             status: 'failed',
             error_message: msg.slice(0, 1000),
-            model_used: apiStrictPremium ? 'gpt-image-2' : null,
+            model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
             provider_used: apiStrictPremium ? 'openai' : null,
             fallback_used: false,
           }).eq('id', jobId);
