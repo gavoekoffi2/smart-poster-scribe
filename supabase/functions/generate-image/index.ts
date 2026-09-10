@@ -2130,7 +2130,7 @@ serve(async (req) => {
         try {
           console.log("🔒 [API strict] Génération avec OpenRouter GPT Image 2 uniquement (aucun fallback)...");
           taskId = `openrouter-${crypto.randomUUID()}`;
-          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium");
+          resultUrl = await generateWithOpenRouter(OPENROUTER_API_KEY, finalPrompt, imageInputs, "premium", OPENROUTER_PREMIUM_TIMEOUT_MS, orTask);
           console.log("✅ OpenRouter (gpt-image-2) succeeded — strict API mode.");
         } catch (orError) {
           console.warn("⚠️ OpenRouter (gpt-image-2) failed in strict API mode:", getErrorMessage(orError));
