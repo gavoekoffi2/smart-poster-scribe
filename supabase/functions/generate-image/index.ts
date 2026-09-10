@@ -2066,6 +2066,9 @@ serve(async (req) => {
     
     let generationError: unknown = null;
 
+    // Choix du modèle GPT Image 2.5 : édition pour les modifications, sinon génération
+    const orTask: "generate" | "edit" = isModification ? "edit" : "generate";
+
     // ===== GÉNÉRATION PRINCIPALE: OpenRouter (Nano Banana Pro) =====
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
