@@ -2220,8 +2220,9 @@ serve(async (req) => {
             : tid.startsWith("lovable-")
               ? "lovable"
               : "kie";
+        const premiumModelId = orTask === "edit" ? "gpt-image-2.5-flare" : "gpt-image-2.5-sunburst";
         const modelUsed = tid.startsWith("openrouter-")
-          ? (quality === "premium" ? "gpt-image-2" : "gemini-3-pro-image-preview")
+          ? (quality === "premium" ? premiumModelId : "gemini-3-pro-image-preview")
           : tid.startsWith("gemini-")
             ? "gemini-2.5-flash-image"
             : tid.startsWith("lovable-")
