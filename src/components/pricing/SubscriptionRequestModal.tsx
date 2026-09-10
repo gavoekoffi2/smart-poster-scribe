@@ -21,7 +21,7 @@ interface SubscriptionRequestModalProps {
   planName: string;
   planSlug: string;
   planPrice?: string;
-  /** Auto-appliqué (ex: BOOST20 depuis le pop-up de crédits épuisés) */
+  /** Auto-appliqué (ex: BOOST50 depuis le pop-up de crédits épuisés) */
   initialPromoCode?: string;
   /** Prix FCFA de base du plan (pour le slider). */
   basePriceFcfa?: number;
