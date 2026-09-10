@@ -42,7 +42,7 @@ export function SubscribeFloatingButton() {
     <>
       <button
         onClick={() => setOpenModal(true)}
-        aria-label="S'abonner avec -20%"
+        aria-label="S'abonner avec -50%"
         className="fixed bottom-24 right-5 z-[60] group animate-fade-up"
       >
         <span className="absolute inset-0 rounded-full bg-primary/40 blur-xl animate-pulse" />
@@ -50,7 +50,7 @@ export function SubscribeFloatingButton() {
           <Sparkles className="w-5 h-5" />
           <span className="text-sm">S'abonner</span>
           <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-bold">
-            -20%
+            -50%
           </span>
         </span>
         <span
@@ -68,7 +68,7 @@ export function SubscribeFloatingButton() {
         onClose={() => setOpenModal(false)}
         creditError={{
           error: "promo",
-          message: "Débloquez toutes les fonctionnalités avec -20% pendant 30 minutes.",
+          message: "Débloquez toutes les fonctionnalités avec -50% pendant 30 minutes.",
           is_free: !subscription || planSlug === "free",
         }}
       />

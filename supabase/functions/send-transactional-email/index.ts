@@ -68,7 +68,7 @@ function render(template: Template, data: Record<string, any>) {
         subject: "Plus que quelques crédits — Offre flash -20%",
         html: shell(
           "Vos crédits diminuent",
-          `Il vous reste <b>${data.credits ?? 0} crédits</b>. Profitez du code <b>BOOST20</b> (24h) pour <b>-20%</b> sur tout abonnement.`,
+          `Il vous reste <b>${data.credits ?? 0} crédits</b>. Profitez du code <b>BOOST50</b> (30 min) pour <b>-50%</b> sur tout abonnement.`,
           { label: "Recharger maintenant", href: `${APP_URL}/pricing` },
         ),
       };

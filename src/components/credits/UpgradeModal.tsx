@@ -22,7 +22,7 @@ interface UpgradeModalProps {
   creditError: CreditError | null;
 }
 
-const PROMO_CODE = "BOOST20";
+const PROMO_CODE = "BOOST50";
 const PROMO_DURATION_MS = 30 * 60 * 1000;
 const PROMO_STORAGE_KEY = "upgradePromoExpiresAt";
 
@@ -152,7 +152,7 @@ export function UpgradeModal({ open, onClose, creditError }: UpgradeModalProps) 
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Tag className="w-4 h-4 text-primary" />
-                  Offre flash : -20% appliqué automatiquement
+                  Offre flash : -50% appliqué automatiquement
                 </div>
                 <div className="flex items-center gap-1 text-sm font-mono font-bold text-primary tabular-nums">
                   <Timer className="w-4 h-4" />
