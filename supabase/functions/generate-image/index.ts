@@ -2245,7 +2245,7 @@ serve(async (req) => {
         const { error: finalizeError } = await supabase.rpc('fail_image_job_and_refund', {
           p_job_id: jobId,
           p_error_message: msg.slice(0, 1000),
-          p_model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
+          p_model_used: apiStrictPremium ? 'gpt-5.4-image-2' : null,
           p_provider_used: apiStrictPremium ? 'openai' : null,
         });
         if (finalizeError) {
@@ -2255,7 +2255,7 @@ serve(async (req) => {
           await supabase.from('image_jobs').update({
             status: 'failed',
             error_message: msg.slice(0, 1000),
-            model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
+            model_used: apiStrictPremium ? 'gpt-5.4-image-2' : null,
             provider_used: apiStrictPremium ? 'openai' : null,
             fallback_used: false,
           }).eq('id', jobId);
