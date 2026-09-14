@@ -312,9 +312,9 @@ async function generateWithOpenRouter(
   timeoutMs = OPENROUTER_PREMIUM_TIMEOUT_MS,
   task: "generate" | "edit" = "generate",
 ): Promise<string> {
-  // GPT Image 2.5 : "sunburst" = génération pure, "flare" = édition/modification
+  // Modèles image OpenRouter réellement disponibles (vérifiés sur /api/v1/models)
   const model = quality === "premium"
-    ? (task === "edit" ? "openai/gpt-image-2.5-flare" : "openai/gpt-image-2.5-sunburst")
+    ? "openai/gpt-5.4-image-2"
     : "google/gemini-3-pro-image-preview";
   console.log(`🟣 Generating with OpenRouter (${model}, quality=${quality}, task=${task})...`);
 
@@ -2220,7 +2220,7 @@ serve(async (req) => {
             : tid.startsWith("lovable-")
               ? "lovable"
               : "kie";
-        const premiumModelId = orTask === "edit" ? "gpt-image-2.5-flare" : "gpt-image-2.5-sunburst";
+        const premiumModelId = "gpt-5.4-image-2";
         const modelUsed = tid.startsWith("openrouter-")
           ? (quality === "premium" ? premiumModelId : "gemini-3-pro-image-preview")
           : tid.startsWith("gemini-")
@@ -2245,7 +2245,7 @@ serve(async (req) => {
         const { error: finalizeError } = await supabase.rpc('fail_image_job_and_refund', {
           p_job_id: jobId,
           p_error_message: msg.slice(0, 1000),
-          p_model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
+          p_model_used: apiStrictPremium ? 'gpt-5.4-image-2' : null,
           p_provider_used: apiStrictPremium ? 'openai' : null,
         });
         if (finalizeError) {
@@ -2255,7 +2255,7 @@ serve(async (req) => {
           await supabase.from('image_jobs').update({
             status: 'failed',
             error_message: msg.slice(0, 1000),
-            model_used: apiStrictPremium ? (orTask === 'edit' ? 'gpt-image-2.5-flare' : 'gpt-image-2.5-sunburst') : null,
+            model_used: apiStrictPremium ? 'gpt-5.4-image-2' : null,
             provider_used: apiStrictPremium ? 'openai' : null,
             fallback_used: false,
           }).eq('id', jobId);
